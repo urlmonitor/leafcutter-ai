@@ -114,7 +114,13 @@ def _read_ticket_frontmatter(ticket_path: Path) -> dict[str, Any]:
         )
 
     try:
-        frontmatter = yaml.safe_load(text[3:end])
+        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): this
+        # module backs the ac-fulfillment-gate phase gate (AC coverage
+        # resolution decides pass/fail for a ticket phase) -- a guardrail
+        # decision point (criterion 4) regardless of this call site's
+        # already-fail-closed shape. No measured benefit either (criterion
+        # 1); single ticket frontmatter parse.
+        frontmatter = yaml.load(text[3:end], Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         raise FrontmatterParseError(
             f"Ticket file {ticket_path} frontmatter is invalid YAML: {exc}"
@@ -135,8 +141,10 @@ def _load_ac_record(ac_yaml_path: Path) -> dict[str, Any] | None:
         ``load_error`` failed field rather than silently dropping the AC.
     """
     try:
+        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): same
+        # ac-fulfillment-gate reasoning as _parse_frontmatter above.
         with open(ac_yaml_path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            data = yaml.load(fh, Loader=yaml.SafeLoader)
     except (OSError, yaml.YAMLError) as exc:
         logger.warning(
             "ac_coverage_resolver: cannot load AC YAML %s: %s", ac_yaml_path, exc

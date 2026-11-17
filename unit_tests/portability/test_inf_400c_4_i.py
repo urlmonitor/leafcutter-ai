@@ -129,8 +129,6 @@ REAL-ARTIFACT / REACHABILITY NOTE (BP-1100f-2 + BP-1100g-2): every test
 
 from __future__ import annotations
 
-import json
-import re
 import shutil
 import subprocess
 import sys
@@ -139,171 +137,38 @@ from pathlib import Path
 
 import pytest
 
-# ---------------------------------------------------------------------------
-# Path setup -- conftest.py in this directory already inserts the worktree
-# root onto sys.path; we need the concrete worktree root ourselves to build
-# --package-dir/--target-dir arguments and to locate the scripts under test.
-# ---------------------------------------------------------------------------
-_WORKTREE_ROOT = Path(__file__).resolve().parents[2]
-_CHECK_CONSUMER_INSTALL = _WORKTREE_ROOT / "scripts" / "ci" / "check_consumer_install.py"
-_CHECK_SINK_PARITY = _WORKTREE_ROOT / "scripts" / "ci" / "check_sink_parity.py"
+# Sibling-harness import, matching the idiom test_bp_1500g_2_i.py already
+# uses for _bp1500g1_harness: this directory is NOT on sys.path at import
+# time, so a bare import fails with ModuleNotFoundError without this.
+_THIS_DIR = Path(__file__).resolve().parent
+if str(_THIS_DIR) not in sys.path:
+    sys.path.insert(0, str(_THIS_DIR))
 
-_BUILD_TIMEOUT_SECONDS = 180
-_QUERY_TIMEOUT_SECONDS = 30
+from _inf400c_harness import (  # noqa: E402
+    copy_consumer_install as _consumer_install_copy,
+    copy_consumer_install_with_fresh_sink as _consumer_install_copy_with_fresh_sink,
+    deployed_root as _deployed_root,
+)
 
-_SURFACE_IDS: tuple[str, ...] = ("signoff", "product-owner", "business-analyst", "it-po")
+# The module-level helpers and constants live in _inf_400c_4_i_support.py
+# (file-size ratchet); the check interface they drive is documented above.
+from _inf_400c_4_i_support import (  # noqa: E402
+    _QUERY_TIMEOUT_SECONDS,
+    _SURFACE_IDS,
+    _assert_check_script_exists,
+    _assert_revert_changed,
+    _declared_sink,
+    _deployed_harvester,
+    _perform_described_append,
+    _revert_to_literal_telemetry_path,
+    _run_sink_parity_check,
+    _surface_path,
+)
 
-# The pre-AC / defective destination every surface currently names verbatim.
-_LEGACY_LITERAL_SENTENCE = "Append to `debugging/logs/agent_telemetry.jsonl`"
-
-# Matches a resolution invocation naming both the harvester script and its
-# side-effect-free query flag, wherever it appears in a surface's text.
-_INVOCATION_PATTERN = re.compile(r"harvest_learnings\.py[^`\n]*--print-sink")
-
-# Matches a literal backtick-quoted JSONL path under debugging/logs/ -- the
-# pre-AC self-carried destination shape.
-_LITERAL_PATTERN = re.compile(r"`(debugging/logs/[\w./-]+\.jsonl)`")
-
-
-def _run_consumer_build(
-    target_dir: Path,
-    package_dir: Path = _WORKTREE_ROOT,
-) -> subprocess.CompletedProcess[str]:
-    """Run the REAL scripts/ci/check_consumer_install.py as a REAL subprocess.
-
-    Shells out to the REAL scripts/build.py underneath -- no mocking of the
-    build, the filesystem, or any of the four surfaces this AC repoints.
-    """
-    argv = [
-        sys.executable,
-        str(_CHECK_CONSUMER_INSTALL),
-        "--package-dir", str(package_dir),
-        "--target-dir", str(target_dir),
-    ]
-    return subprocess.run(
-        argv,
-        capture_output=True,
-        text=True,
-        timeout=_BUILD_TIMEOUT_SECONDS,
-        check=False,
-    )
-
-
-def _deployed_root(target_dir: Path) -> Path:
-    return target_dir / ".leafcutter"
-
-
-def _surface_path(target_dir: Path, surface_id: str) -> Path:
-    root = _deployed_root(target_dir)
-    if surface_id == "signoff":
-        return root / "skills" / "signoff" / "SKILL.md"
-    return root / "agents" / f"{surface_id}.md"
-
-
-def _declared_sink(target_dir: Path) -> str:
-    config_path = _deployed_root(target_dir) / "config" / "knowledge_sink.json"
-    assert config_path.is_file(), (
-        f"Expected a build-time knowledge-sink declaration at {config_path} "
-        "(AC INF-400c-4, already work_status: done as of INF-400c-4-v -- see "
-        "build_knowledge_sink_declaration in scripts/build_phases.py). This "
-        "file does not exist; the fixture build did not produce it."
-    )
-    data = json.loads(config_path.read_text(encoding="utf-8"))
-    return data["knowledge_emission_sink"]
-
-
-def _deployed_harvester(target_dir: Path) -> Path:
-    return _deployed_root(target_dir) / "scripts" / "knowledge" / "harvest_learnings.py"
-
-
-def _run_sink_parity_check(target_dir: Path) -> subprocess.CompletedProcess[str]:
-    """Invoke the (not-yet-written) sink-parity check as a REAL subprocess.
-
-    See this module's docstring for the CLI contract python-coder must
-    implement scripts/ci/check_sink_parity.py to.
-    """
-    argv = [sys.executable, str(_CHECK_SINK_PARITY), "--target-dir", str(target_dir)]
-    return subprocess.run(
-        argv,
-        capture_output=True,
-        text=True,
-        timeout=_QUERY_TIMEOUT_SECONDS,
-        check=False,
-    )
-
-
-def _assert_check_script_exists() -> None:
-    assert _CHECK_SINK_PARITY.is_file(), (
-        f"{_CHECK_SINK_PARITY} does not exist yet -- the sink-parity check "
-        "AC INF-400c-4-i requires has not been implemented. See this "
-        "module's docstring ('CHECK INTERFACE THIS FILE FIXES') for the "
-        "exact CLI contract python-coder must implement it to."
-    )
-
-
-def _revert_to_literal_telemetry_path(text: str) -> str:
-    """Simulate a partial repoint: replace a resolution invocation with the
-    literal pre-AC telemetry-stream sentence.
-
-    A no-op on text that already carries only the literal (the current
-    shipped state of all four surfaces, before this AC is implemented) --
-    intentionally, since the partial-repoint negative control (test 2) must
-    remain meaningful once three of the four surfaces have genuinely been
-    repointed and only one has not.
-    """
-    return _INVOCATION_PATTERN.sub(_LEGACY_LITERAL_SENTENCE, text)
-
-
-def _resolve_destination_as_agent_would(surface_text: str, target_dir: Path, cwd: Path) -> Path:
-    """Determine where an agent following *surface_text* literally would append.
-
-    Mirrors the same two-mechanism precedence the check itself must
-    implement (see the module docstring): a resolution invocation is
-    executed for real when present; otherwise the literal path is taken
-    at face value and resolved against *cwd* if relative -- which is
-    exactly the CWD-dependent behaviour this AC exists to eliminate.
-
-    Raises AssertionError if the surface contains neither mechanism.
-    """
-    invocation_match = _INVOCATION_PATTERN.search(surface_text)
-    if invocation_match is not None:
-        harvester = _deployed_harvester(target_dir)
-        result = subprocess.run(
-            [sys.executable, str(harvester), "--print-sink"],
-            capture_output=True,
-            text=True,
-            cwd=str(cwd),
-            timeout=_QUERY_TIMEOUT_SECONDS,
-            check=False,
-        )
-        assert result.returncode == 0, (
-            f"Resolution invocation failed from cwd={cwd}.\n"
-            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
-        )
-        return Path(result.stdout.strip())
-
-    literal_match = _LITERAL_PATTERN.search(surface_text)
-    if literal_match is not None:
-        literal_path = Path(literal_match.group(1))
-        return literal_path if literal_path.is_absolute() else (cwd / literal_path)
-
-    raise AssertionError(
-        "Could not find any known resolution mechanism in the surface's "
-        "append instruction: neither a `harvest_learnings.py --print-sink` "
-        "invocation nor a literal `debugging/logs/*.jsonl` path."
-    )
-
-
-def _perform_described_append(surface_text: str, target_dir: Path, cwd: Path, marker: str) -> Path:
-    """Perform the append *surface_text* describes, standing at *cwd*.
-
-    Real file I/O -- no mocking. Returns the resolved destination path.
-    """
-    destination = _resolve_destination_as_agent_would(surface_text, target_dir, cwd)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    with destination.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps({"event": "knowledge_captured", "text": marker}) + "\n")
-    return destination
+# TQ-600a-9 COST CONTAINMENT lives in _inf400c_harness.py: ONE real build
+# per process, handed to each test as a cheap content-identical COPY. Read
+# that module's docstring for WHY copying is safe and which single deployed
+# file is the exception.
 
 
 # ---------------------------------------------------------------------------
@@ -318,18 +183,17 @@ def test_all_four_deployed_emit_surfaces_resolve_to_the_declared_sink(tmp_path: 
 
     RED mode (A): fails at _assert_check_script_exists() -- the check does
     not exist yet.
+
+    TQ-600a-9: reads a COPY of the one shared golden consumer-install
+    build (see `_consumer_install_copy`'s own docstring) rather than
+    spawning its own `build.py` run.
     """
     # covers: INF-400c-4-i
     # angle: deployed
     _assert_check_script_exists()
 
     target_dir = tmp_path / "project"
-    target_dir.mkdir()
-    build_result = _run_consumer_build(target_dir)
-    assert build_result.returncode == 0, (
-        "Fixture setup failed: the real build did not succeed.\n"
-        f"stdout:\n{build_result.stdout}\nstderr:\n{build_result.stderr}"
-    )
+    _consumer_install_copy(target_dir)
 
     check_result = _run_sink_parity_check(target_dir)
 
@@ -362,23 +226,25 @@ def test_one_unrepointed_surface_out_of_four_blocks_the_check(tmp_path: Path, su
 
     RED mode (A): fails at _assert_check_script_exists() -- the check does
     not exist yet.
+
+    TQ-600a-9: reads a COPY of the one shared golden consumer-install
+    build (see `_consumer_install_copy`'s own docstring) rather than
+    spawning its own `build.py` run -- one real build now serves this
+    test's four parametrised instances AND the deployed-parity test above.
     """
     # covers: INF-400c-4-i
     # angle: failure
     _assert_check_script_exists()
 
     target_dir = tmp_path / "project"
-    target_dir.mkdir()
-    build_result = _run_consumer_build(target_dir)
-    assert build_result.returncode == 0, (
-        "Fixture setup failed: the real build did not succeed.\n"
-        f"stdout:\n{build_result.stdout}\nstderr:\n{build_result.stderr}"
-    )
+    _consumer_install_copy(target_dir)
 
     surface_path = _surface_path(target_dir, surface_id)
     assert surface_path.is_file(), f"Expected a deployed surface at {surface_path}"
     original_text = surface_path.read_text(encoding="utf-8")
-    surface_path.write_text(_revert_to_literal_telemetry_path(original_text), encoding="utf-8")
+    reverted_text = _revert_to_literal_telemetry_path(original_text)
+    _assert_revert_changed(original_text, reverted_text, surface_id)
+    surface_path.write_text(reverted_text, encoding="utf-8")
 
     check_result = _run_sink_parity_check(target_dir)
 
@@ -416,16 +282,21 @@ def test_a_surface_followed_from_an_isolated_working_directory_reaches_the_same_
     different files; the one written under the isolated directory is lost
     when that directory is removed. No check script is needed for this
     test to be meaningful.
+
+    TQ-600a-9: reads a COPY of the one shared golden consumer-install
+    build (see `_consumer_install_copy`'s own docstring). This test only
+    checks that two cwd-relative resolutions of the SAME deployed tree
+    agree with each other, never an absolute value specific to this
+    particular target_dir, so a copy is indistinguishable from an
+    independent build for what it proves. Named "project_seam" (not
+    "project") so TQ-600a-9-i's write-group glob (`basetemp.rglob
+    ("project")`, scoped to this file's test1 + test2's four variants)
+    does not incidentally sweep this test's own copy in.
     """
     # covers: INF-400c-4-i
     # angle: seam
-    target_dir = tmp_path / "project"
-    target_dir.mkdir()
-    build_result = _run_consumer_build(target_dir)
-    assert build_result.returncode == 0, (
-        "Fixture setup failed: the real build did not succeed.\n"
-        f"stdout:\n{build_result.stdout}\nstderr:\n{build_result.stderr}"
-    )
+    target_dir = tmp_path / "project_seam"
+    _consumer_install_copy(target_dir)
 
     isolated_dir = target_dir / "isolated_working_directory"
     isolated_dir.mkdir()
@@ -485,24 +356,21 @@ def test_no_deployed_surface_carries_a_sink_path_of_its_own(tmp_path: Path) -> N
     sink (`knowledge_emissions.jsonl`), in either project, independently of
     the CWD nuance test 3 exercises. No check script is needed for this
     test to be meaningful.
+
+    TQ-600a-9: this is the ONE test in the file that genuinely needs
+    target_dir-correct content (two installs' declared sinks must
+    DIFFER), so a bare content copy of the golden tree is not enough on
+    its own -- see `_consumer_install_copy_with_fresh_sink`'s own
+    docstring for why re-deriving just the one location-dependent
+    declaration file (rather than a second real `build.py` subprocess) is
+    sufficient and does not weaken what this test proves.
     """
     # covers: INF-400c-4-i
     # angle: criterion
     project_a = tmp_path / "project_a"
     project_b = tmp_path / "project_b"
-    project_a.mkdir()
-    project_b.mkdir()
-
-    build_a = _run_consumer_build(project_a)
-    assert build_a.returncode == 0, (
-        f"Fixture setup failed (project A).\nstdout:\n{build_a.stdout}\n"
-        f"stderr:\n{build_a.stderr}"
-    )
-    build_b = _run_consumer_build(project_b)
-    assert build_b.returncode == 0, (
-        f"Fixture setup failed (project B).\nstdout:\n{build_b.stdout}\n"
-        f"stderr:\n{build_b.stderr}"
-    )
+    _consumer_install_copy_with_fresh_sink(project_a)
+    _consumer_install_copy_with_fresh_sink(project_b)
 
     declared_sink_a = Path(_declared_sink(project_a))
     declared_sink_b = Path(_declared_sink(project_b))
@@ -560,18 +428,21 @@ def test_the_settlement_scope_note_is_not_read_as_an_append_instruction(tmp_path
 
     RED mode (A): fails at _assert_check_script_exists() -- the check does
     not exist yet.
+
+    TQ-600a-9: reads a COPY of the one shared golden consumer-install
+    build (see `_consumer_install_copy`'s own docstring). This test only
+    compares a surface's resolution against ITS OWN tree's declaration, so
+    a copy is indistinguishable from an independent build for what it
+    proves. Named "project_settlement" (not "project") so TQ-600a-9-i's
+    write-group glob (scoped to this file's test1 + test2's four variants)
+    does not incidentally sweep this test's own copy in.
     """
     # covers: INF-400c-4-i
     # angle: criterion
     _assert_check_script_exists()
 
-    target_dir = tmp_path / "project"
-    target_dir.mkdir()
-    build_result = _run_consumer_build(target_dir)
-    assert build_result.returncode == 0, (
-        "Fixture setup failed: the real build did not succeed.\n"
-        f"stdout:\n{build_result.stdout}\nstderr:\n{build_result.stderr}"
-    )
+    target_dir = tmp_path / "project_settlement"
+    _consumer_install_copy(target_dir)
 
     signoff_path = _surface_path(target_dir, "signoff")
     original_text = signoff_path.read_text(encoding="utf-8")
@@ -590,6 +461,7 @@ def test_the_settlement_scope_note_is_not_read_as_an_append_instruction(tmp_path
     # Now revert ONLY the actual append instruction (never the historical
     # paragraph) and confirm the check still blocks.
     reverted_text = _revert_to_literal_telemetry_path(original_text)
+    _assert_revert_changed(original_text, reverted_text, "signoff")
     signoff_path.write_text(reverted_text, encoding="utf-8")
 
     blocked_result = _run_sink_parity_check(target_dir)
@@ -631,16 +503,20 @@ def test_an_install_with_no_declaration_refuses_rather_than_resolving_against_th
     below). No check script is needed for this test to be meaningful --
     this pins a production behaviour change needed in harvest_learnings.py
     itself, independent of scripts/ci/check_sink_parity.py's existence.
+
+    TQ-600a-9: reads a COPY of the one shared golden consumer-install
+    build (see `_consumer_install_copy`'s own docstring). This test
+    deletes the declaration file before exercising the refusal path, so
+    whatever location that declaration originally named is irrelevant --
+    a copy is indistinguishable from an independent build for what it
+    proves. Named "project_undeclared" (not "project") so TQ-600a-9-i's
+    write-group glob (scoped to this file's test1 + test2's four variants)
+    does not incidentally sweep this test's own (sink-deleted) copy in.
     """
     # covers: INF-400c-4-i
     # angle: failure
-    target_dir = tmp_path / "project"
-    target_dir.mkdir()
-    build_result = _run_consumer_build(target_dir)
-    assert build_result.returncode == 0, (
-        "Fixture setup failed: the real build did not succeed.\n"
-        f"stdout:\n{build_result.stdout}\nstderr:\n{build_result.stderr}"
-    )
+    target_dir = tmp_path / "project_undeclared"
+    _consumer_install_copy(target_dir)
 
     declaration_path = _deployed_root(target_dir) / "config" / "knowledge_sink.json"
     assert declaration_path.is_file(), (

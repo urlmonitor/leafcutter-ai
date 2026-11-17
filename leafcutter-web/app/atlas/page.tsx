@@ -6,10 +6,16 @@ import { fmt } from "@/lib/utils";
 
 // The AC Atlas — the hero view. Server component: reads the live repo via
 // getAtlas() and hands a serializable AC slice to the client graph explorer.
-export default function AtlasPage() {
+export default function AtlasPage({
+  searchParams,
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
   const { acs, acCounts } = getAtlas();
   const componentCount = Object.keys(acCounts.byComponent).length;
   const flowIndex = flowAppearancesByAc();
+  // /atlas?ac=<id> (the step drawer's criterion chips) opens that criterion; an unknown id is ignored.
+  const ac = Array.isArray(searchParams?.ac) ? searchParams?.ac[0] : searchParams?.ac;
 
   return (
     <div className="flex flex-col">
@@ -34,7 +40,7 @@ export default function AtlasPage() {
         </div>
       </PageHeader>
 
-      <AtlasExplorer acs={acs} flowIndex={flowIndex} />
+      <AtlasExplorer acs={acs} flowIndex={flowIndex} initialAc={ac} />
     </div>
   );
 }

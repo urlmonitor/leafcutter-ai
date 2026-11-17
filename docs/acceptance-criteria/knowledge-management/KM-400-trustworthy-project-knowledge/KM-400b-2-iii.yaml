@@ -1,0 +1,53 @@
+id: KM-400b-2-iii
+title: "Publishing the same snapshot object again is recognised as the same content after the collapse changed it in place"
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: done
+parent: KM-400b-2
+criteria: |
+  Given a snapshot published once, whose relationships KM-400b-2-i collapsed in place (its
+    diagnostics gained the collapse lines and, where copies existed, its edges lost them)
+  When the same snapshot object is published again under the same generation identity
+  Then the publication finds the generation it already wrote and succeeds, writing no node
+    or relationship again, instead of failing with "generation identity already belongs to
+    different content"
+  And a snapshot whose content really differs under that identity is still refused
+  And a generation recorded earlier with the digest of the loaded, uncollapsed snapshot is
+    still recognised as the same content.
+depends_on: [KM-400b-2, KM-400b-2-i]
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-2-i.yaml
+    relationship: context
+    status: exists
+    relevance: The in-place collapse whose diagnostics changed the content digest of a re-published snapshot.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  - ac_id: KM-400b-2-i
+    contract: collapse_identical_edges updates the snapshot in place and replaces its own diagnostics on every call.
+origin_agent: BrainCandy
+created: '2026-10-24'
+amended_by: []
+superseded_by: null
+covered_by:
+  - tests/knowledge/test_km_400b_2_i.py
+implemented_by:
+  - knowledge/projection/validation.py
+  - knowledge/adapters/neo4j_projection.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Found 2026-10-24 by Proof-of-done on #1342: tests/knowledge_live/neo4j_checks.py::
+  test_live_idempotence_scope_metadata_and_rebuild failed on its second publish of the same
+  snapshot with "generation identity already belongs to different content", on main as well
+  (probe #1345, traceback from probe #1346). The digest was taken before the collapse, which
+  changes the snapshot in place, so the second call hashed a different serialization. The
+  live test runs only when a criterion it covers changes, so it went unnoticed from #1203
+  (2026-10-14) until KM-400b-5 was marked done again.
+test_required: true

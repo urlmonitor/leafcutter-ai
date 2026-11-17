@@ -1,0 +1,42 @@
+id: BO-4400e
+title: "You are warned before workspaces fill the disk, and see what they cost"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  No new workspace when the disk is nearly full -- and a clear view of what they use.
+
+  Before a new workspace is made, free space is checked; when it is running low you
+  are warned, and below a firm limit the workspace is refused with a plain reason,
+  and at any time you can see how much space all workspaces together are taking.
+depends_on: [BO-4400]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400e-1, BO-4400e-2, BO-4400e-3, BO-4400e-4, BO-4400e-5]
+implemented_by: []
+documentation_triggers:
+  - how-to
+notes: |
+  Gap G5. Under WSL the check must include the Windows host drive as well as the Linux
+  volume (the virtual disk grows on the host and cannot be capped after creation -- user
+  memory reference_wsl_disk_size_cap). Thresholds are configurable (warn vs refuse); the
+  refusal is a "clear no" in the sense of BO-4300c, so callers halt rather than carry on
+  without a workspace. Total-space-used report reuses the BO-4100e listing.
+  how-to: reading the space report and adjusting the thresholds.

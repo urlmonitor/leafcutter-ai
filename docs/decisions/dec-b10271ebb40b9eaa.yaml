@@ -1,0 +1,357 @@
+schema_version: '1.0'
+kind: decision
+id: dec-b10271ebb40b9eaa
+repository_id: leafcutter-ai
+title: the same standing pass, plus a ticket now that schedules INF-1300
+description: DK-400 E1 ticket 17 (DK-400c-4, a component diagram of where the split sits among the ...
+decision_type: design
+question: DK-400 E1 ticket 17 (DK-400c-4, a component diagram of where the split sits among the kernel's containers) stopped
+  because the write-c4-diagram skill requires every new diagram to start from scripts/scaffold/new_arch_doc.py, which has
+  never existed in this repository, and forbids improvising the frontmatter and Legend. How should this diagram, and the later
+  diagram tickets blocked the same way, be produced?
+components: []
+change_target: []
+risk_surface: []
+roadmap_phase: []
+file_globs: []
+repository_wide: true
+selected_option_id: opt.pass_until_scaffold_and_schedule
+supersedes: []
+superseded_by: []
+related: []
+task_context:
+  goal: DK-400 E1 ticket 17 (DK-400c-4, a component diagram of where the split sits among the kernel's containers) stopped
+    because the write-c4-diagram skill requires every new diagram to start from scripts/scaffold/new_arch_doc.py, which has
+    never existed in this repository, and forbids improvising the frontmatter and Legend. How should this diagram, and the
+    later diagram tickets blocked the same way, be produced?
+  component_ids: []
+  technologies: []
+  constraints:
+    - '[must] requirement: Every code change is driven by a ticket (CLAUDE.md ticket mandate).'
+    - '[must] requirement: Setting aside a skill rule needs the user''s explicit decision; no agent may authorise it.'
+rationale:
+  text: 'Design decision settled by a human. Kernel ranking (Jev''s per-criterion judgement, evidence not authority; stopped
+    researching because design_judgement after 0 research round(s)): 1. [opt.pass_until_scaffold] authorise the same recorded
+    pass for every blocked diagram until a scaffold exists (required mean 0.80, 3/4 passed); 2. [opt.pass_ticket17_only] authorise
+    a recorded scaffold-free pass for ticket 17 only (required mean 0.79, 3/4 passed); 3. [opt.pass_until_scaffold_and_schedule]
+    the same standing pass, plus a ticket now that schedules INF-1300 (required mean 0.78, 2/4 passed); 4. [opt.defer_17]
+    park ticket 17 until a scaffold exists, finish E1 without it (required mean 0.43, 1/4 passed); 5. [opt.build_scaffold_first]
+    build INF-1300 first, then draw the diagram (required mean 0.30, 0/4 passed); 6. [opt.port_bybit_scaffold] port Bybit-Trader''s
+    new_arch_doc.py as a stopgap, then draw through it (required mean 0.27, 0/4 passed). user chose option [opt.pass_until_scaffold_and_schedule]
+    the same standing pass, plus a ticket now that schedules INF-1300 (kernel rank 3 of 6).'
+  origin: template
+assumptions: []
+unresolved_risks: []
+assessment:
+  basis: kernel_ranking
+  design_reason: design_judgement
+  confidence: 0.7775
+  selected_rank: 3
+  ranking:
+    - option_id: opt.pass_until_scaffold
+      rank: 1
+      required_passed: 3
+      required_total: 4
+      required_mean: 0.7975
+      scores:
+        crit.e1_finishes_soon: 0.9
+        crit.hooks_pass: 0.68
+        crit.no_repeat_stops: 0.92
+        crit.scaffold_scheduled: 0.05
+        crit.unchecked_conventions_met: 0.5
+        crit.waiver_recorded: 0.92
+        crit.waiver_scope_minimal: 0.87
+    - option_id: opt.pass_ticket17_only
+      rank: 2
+      required_passed: 3
+      required_total: 4
+      required_mean: 0.7875
+      scores:
+        crit.e1_finishes_soon: 0.86
+        crit.hooks_pass: 0.64
+        crit.no_repeat_stops: 0.08
+        crit.scaffold_scheduled: 0.04
+        crit.unchecked_conventions_met: 0.56
+        crit.waiver_recorded: 0.92
+        crit.waiver_scope_minimal: 0.81
+    - option_id: opt.pass_until_scaffold_and_schedule
+      rank: 3
+      required_passed: 2
+      required_total: 4
+      required_mean: 0.7775
+      scores:
+        crit.e1_finishes_soon: 0.81
+        crit.hooks_pass: 0.77
+        crit.no_repeat_stops: 0.92
+        crit.scaffold_scheduled: 0.93
+        crit.unchecked_conventions_met: 0.61
+        crit.waiver_recorded: 0.92
+        crit.waiver_scope_minimal: 0.77
+    - option_id: opt.defer_17
+      rank: 4
+      required_passed: 1
+      required_total: 4
+      required_mean: 0.4325
+      scores:
+        crit.e1_finishes_soon: 0.89
+        crit.hooks_pass: 0.4
+        crit.no_repeat_stops: 0.54
+        crit.scaffold_scheduled: 0.05
+        crit.unchecked_conventions_met: 0.2
+        crit.waiver_recorded: 0.06
+        crit.waiver_scope_minimal: 0.58
+    - option_id: opt.build_scaffold_first
+      rank: 5
+      required_passed: 0
+      required_total: 4
+      required_mean: 0.3
+      scores:
+        crit.e1_finishes_soon: 0.04
+        crit.hooks_pass: 0.55
+        crit.no_repeat_stops: 0.61
+        crit.scaffold_scheduled: 0.69
+        crit.unchecked_conventions_met: 0.42
+        crit.waiver_recorded: 0.07
+        crit.waiver_scope_minimal: 0.67
+    - option_id: opt.port_bybit_scaffold
+      rank: 6
+      required_passed: 0
+      required_total: 4
+      required_mean: 0.2675
+      scores:
+        crit.e1_finishes_soon: 0.31
+        crit.hooks_pass: 0.53
+        crit.no_repeat_stops: 0.67
+        crit.scaffold_scheduled: 0.25
+        crit.unchecked_conventions_met: 0.15
+        crit.waiver_recorded: 0.07
+        crit.waiver_scope_minimal: 0.54
+final_outcome:
+  status: pending
+  observed_at: null
+  note: ''
+options:
+  - id: opt.pass_ticket17_only
+    title: authorise a recorded scaffold-free pass for ticket 17 only
+    description: 'Ticket 17 gets a user-authorised scaffold-free pass (BO-1800f-3 resolution 2): frontmatter shape from an
+      existing same-tier C4Component diagram, a Legend with one entry per notation element this diagram uses (general meanings
+      from that example, per-element meanings written for this diagram''s own components), source_ticket set to the ticket,
+      no ADR-015 citation, and the deviation recorded in the diagram''s decision-history block; ticket 17''s AC-1/AC-2 lines
+      corrected to the c3-023 file (and c2-007''s children) before the re-run; no skill text edited. The authorisation is
+      recorded in this decision record. DK-400c-5, DK-400d-5, DK-400e-5 and BO-1800f-3 each come back to the user when they
+      reach the same stop.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.pass_until_scaffold
+    title: authorise the same recorded pass for every blocked diagram until a scaffold exists
+    description: 'One authorisation, recorded in this decision record, covers DK-400c-4 now and DK-400c-5, DK-400d-5, DK-400e-5
+      and BO-1800f-3 later, each produced as a user-authorised scaffold-free pass (BO-1800f-3 resolution 2): frontmatter shape
+      from an existing same-tier C4Component diagram, a Legend with one entry per notation element this diagram uses (general
+      meanings from that example, per-element meanings written for this diagram''s own components), source_ticket set to the
+      ticket, no ADR-015 citation, and the deviation recorded in the diagram''s decision-history block; ticket 17''s AC-1/AC-2
+      lines corrected to the c3-023 file (and c2-007''s children) before the re-run; no skill text edited. It ends when INF-1300''s
+      means ships. Nothing schedules INF-1300.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.pass_until_scaffold_and_schedule
+    title: the same standing pass, plus a ticket now that schedules INF-1300
+    description: As the standing pass above, and in the same change a ticket (or epic stub) is filed for INF-1300, so the
+      scaffold is planned rather than only tracked as a todo AC tree.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.port_bybit_scaffold
+    title: port Bybit-Trader's new_arch_doc.py as a stopgap, then draw through it
+    description: A ticket ports the 681-line script from Bybit-Trader so the skill's step 4 works as written; ticket 17 then
+      re-runs through it. The script emits one fixed Legend block, which INF-1300b-2 says is wrong.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.build_scaffold_first
+    title: build INF-1300 first, then draw the diagram
+    description: Generate and build an epic for INF-1300's 31 open ACs before ticket 17 re-runs; E1 waits for it.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.defer_17
+    title: park ticket 17 until a scaffold exists, finish E1 without it
+    description: Move ticket 17 out of E1 as deferred (like ticket 08) and draw it once INF-1300 ships; E1 finishes without
+      its component diagram.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+criteria:
+  - id: crit.e1_finishes_soon
+    question: Can E1 finish without waiting for other work to be built first?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-a7be2dc123d2b963
+  - id: crit.unchecked_conventions_met
+    question: 'Does the diagram meet the conventions no hook checks: a Legend whose entries match the notation it uses, source_ticket
+      naming its ticket, and no false ADR-015 citation?'
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-7534bcfa4568a7f8
+      - ev-b195c1132dfabe4e
+      - ev-338dba429b8ba3d5
+      - ev-67f817eb51cc38cd
+      - ev-aa5d12c2c3ec10eb
+  - id: crit.waiver_recorded
+    question: If the scaffold rule is set aside, is the user's authorisation written down where later agents read it (a decision
+      record and the diagram's decision history)?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-338dba429b8ba3d5
+      - ev-67f817eb51cc38cd
+      - ev-aa5d12c2c3ec10eb
+      - ev-deb804b7b56c70b5
+      - ev-7534bcfa4568a7f8
+  - id: crit.waiver_scope_minimal
+    question: Does it relax only the 'start from the script' step, keep step 5's prohibition text unchanged, and edit no skill
+      text?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-9e8ed6d69cd832ce
+      - ev-338dba429b8ba3d5
+      - ev-aa5d12c2c3ec10eb
+      - ev-b195c1132dfabe4e
+  - id: crit.hooks_pass
+    question: Will the diagram pass check-doc-frontmatter and check-mermaid-parent-link when committed?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-7534bcfa4568a7f8
+      - ev-67f817eb51cc38cd
+      - ev-aa5d12c2c3ec10eb
+      - ev-338dba429b8ba3d5
+  - id: crit.no_repeat_stops
+    question: Does it avoid stopping each later diagram ticket on the same question?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-aa5d12c2c3ec10eb
+      - ev-338dba429b8ba3d5
+      - ev-b195c1132dfabe4e
+      - ev-67f817eb51cc38cd
+      - ev-7f1fcb355be8c564
+  - id: crit.scaffold_scheduled
+    question: Does it file a ticket or epic that schedules INF-1300?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-e1ac6646bb1ee5ab
+      - ev-aa5d12c2c3ec10eb
+      - ev-7f1fcb355be8c564
+      - ev-338dba429b8ba3d5
+      - ev-9e8ed6d69cd832ce
+evidence:
+  - id: ev-aa5d12c2c3ec10eb
+    locator: 'C:/Users/Hendrik/Code/leafcutter/worktrees/EPIC-ABundledRequestThatRoutingTurnsAwayIs/tickets/00_inbox/epics/EPIC-ABundledRequestThatRoutingTurnsAwayIs/17_TICKET-20261006-DK-400c-4.md
+      ## Comments'
+    category: task_context
+    content_hash: 01e86c37272f188da680bf19d2a566aacdfc5c78924d2f5e18d110d5225acfdc
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-338dba429b8ba3d5
+    locator: git log -S on templates/skills/write-c4-diagram/SKILL.md; BO-1800f-3.yaml it_requirements
+    category: existing_patterns
+    content_hash: a2a0ce5fe0671a38ca84837c74eeb00a64631def7427134b42194f3f7c2cb82e
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-b195c1132dfabe4e
+    locator: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b-2.yaml:96-100; docs/architecture/diagrams/
+    category: existing_patterns
+    content_hash: ed2146e0691c23969e6510d64084c31e1f1f90de6500c772616b1c1a35a3ed81
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-deb804b7b56c70b5
+    locator: docs/architecture/diagrams/*.md
+    category: existing_patterns
+    content_hash: c33bf658785cd47b34049ea3330b5475fb883bb1fd5cc16e09d166fd9c166652
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-7534bcfa4568a7f8
+    locator: .leafcutter/config/commit_guardian/commit_guardian.json:246-254, 704-715; check_mermaid_parent_link.py:224-272;
+      frontmatter_validators.py:568-574
+    category: existing_patterns
+    content_hash: ac0bef8bdecd6e7a28c9176f0d80813ec51bdbaa2133ab55640054db82124886
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-67f817eb51cc38cd
+    locator: docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800f-3.yaml:114-133
+    category: prior_decisions
+    content_hash: cf3c0728a847e8054e6171c790ba6815946e5594ed7a7b38339af1d9cca89403
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-9e8ed6d69cd832ce
+    locator: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b-4.yaml:100-104
+    category: prior_decisions
+    content_hash: 98383aef5cab6f5e7507a3a7726921e98c5895c84ae946a4e91a7ef29ed31ecb
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-e1ac6646bb1ee5ab
+    locator: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/; docs/roadmap.json
+    category: existing_patterns
+    content_hash: 82d8b1128a7737b0f4faf35b2c91d3c5683058e9c0aeda32f23cd741c7d408c2
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-7f1fcb355be8c564
+    locator: C:/Users/Hendrik/Code/leafcutter/worktrees/EPIC-ABundledRequestThatRoutingTurnsAwayIs/tickets/00_inbox/epics/EPIC-ABundledRequestThatRoutingTurnsAwayIs/17_TICKET-20261006-DK-400c-4.md:98-99
+    category: task_context
+    content_hash: e6737b185ece8b4e796f8167cad6a72570de11cfe55c3d21208aa50c7d7cd961
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-a7be2dc123d2b963
+    locator: E1 worktree git log
+    category: task_context
+    content_hash: 1d9636b5a9070c6c755fbfa78cbc6337724c098c01e947516f1340e275a3925e
+    verification: unverified
+    relevance: null
+    source_version: null
+precedents_considered: []
+approval:
+  approval_status: approved
+  approved_by: human:user
+  approved_at: '2026-10-10T09:45:36Z'
+  note: ''
+provenance:
+  origin: learned
+  created_by_capability: decision
+  created_at: '2026-10-10T09:45:36Z'
+  run_id: run-07f97d4c03604ef1
+  root_task_id: task-5b52d844376a454b
+  langfuse_trace_id: 09cb9fbe19d58253286bcdd097959580
+  langfuse_trace_url: null
+  repository_revision:
+    commit: null
+    dirty: false
+  policy_version: null
+  template_version: decision.assess@1
+  model_version: jev-latest
+  kernel_version: 0.1.0.dev0
+  decision_versions:
+    options: 2126787b1461
+    criteria: 072219d2cd2b
+    templates: decision.assess@1
+corrections: []

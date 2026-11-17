@@ -144,6 +144,7 @@ class TestCancelWhileWaiting(CancelCase):
         self.assertEqual(len(self.rig.executors["decide.root"].invocations), before)
 
     async def test_cancel_while_waiting_human_cancels_the_question(self) -> None:
+        # covers: DK-600b-2-iii
         self.rig = human_rig()
         paused = await self.service().start_run(self.rig.task_input())
         self.assertEqual(paused.status, RunStatus.WAITING_HUMAN)

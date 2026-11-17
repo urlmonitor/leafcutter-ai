@@ -1,0 +1,29 @@
+{
+  "writes": false,
+  "inventory": {
+    "nodes": [
+      {
+        "count": 0
+      }
+    ],
+    "relationships": [
+      {
+        "count": 0
+      }
+    ],
+    "repositories": [],
+    "generations": [],
+    "indexes": [
+      {
+        "name": "index_1b9dcc97",
+        "type": "LOOKUP",
+        "state": "ONLINE"
+      },
+      {
+        "name": "index_460996c0",
+        "type": "LOOKUP",
+        "state": "ONLINE"
+      }
+    ]
+  }
+}

@@ -384,17 +384,16 @@ class TestHandoffTargetResolvedFromRecord(_DriveCase):
     def test_handoff_naming_a_known_agent_redispatches_exactly_that_agent(self):
         # covers: BO-3000a
         # angle: criterion
+        # Unresolved case: only the SECOND test-writer dispatch writes no entry, so
+        # its OLD passing entry exists and must not confirm the handoff.
         observation, ticket_path = self._drive(
             ["test-writer", "python-coder", "sql-coder"],
             {
-                "test-writer": {"status": "ok"},
+                "test-writer": [{"status": "ok"}, {"status": "ok", "record": False}],
                 "python-coder": {
                     "status": "handoff",
                     "handoff_target": "test-writer",
                     "message": "4 of 6 red-baseline tests need a fixture-path fix",
-                    # A DIFFERENT agent named in the ticket body. The explicit
-                    # field is the driver's ONLY source for the target, so this
-                    # must be ignored, not raced against handoff_target.
                     "adds_implementation_task": "architect-review",
                 },
                 "sql-coder": {"status": "ok"},
@@ -404,19 +403,9 @@ class TestHandoffTargetResolvedFromRecord(_DriveCase):
         self.assertEqual(
             ["test-writer", "python-coder", "test-writer"],
             dispatched,
-            "python-coder handed off to test-writer via handoff_target, and "
-            f"test-writer was not re-dispatched next: {dispatched}",
         )
-        self.assertNotIn(
-            "architect-review",
-            dispatched,
-            f"a body-named agent was dispatched instead of handoff_target: {dispatched}",
-        )
-        self.assertNotIn(
-            "sql-coder",
-            dispatched,
-            f"a later phase ran after an unresolved handoff: {dispatched}",
-        )
+        self.assertNotIn("architect-review", dispatched)
+        self.assertNotIn("sql-coder", dispatched)
         records = observation.get("records") or {}
         self.assertEqual(
             "handoff",
@@ -675,14 +664,13 @@ class TestHandoffTargetResolvedFromRecord(_DriveCase):
         #
         # Proof that the routing above is executed by build-feature.js's own
         # top-level body via the real harness — not by calling an extracted
-        # helper function directly. The re-dispatch of test-writer performs a
-        # REAL second write to the REAL ticket file (a second '(status: ok)'
-        # sign-off entry); that side-effect can only exist if the actual
-        # driver script ran the actual agent() dispatch a second time.
+        # helper function directly. Under F1 only a NEW entry confirms a
+        # handoff, so the SECOND test-writer dispatch writes none: the stop
+        # stays, and the third dispatch proves the real driver re-dispatched.
         observation, ticket_path = self._drive(
             ["test-writer", "python-coder", "sql-coder"],
             {
-                "test-writer": {"status": "ok"},
+                "test-writer": [{"status": "ok"}, {"status": "ok", "record": False}],
                 "python-coder": {
                     "status": "handoff",
                     "handoff_target": "test-writer",
@@ -698,11 +686,10 @@ class TestHandoffTargetResolvedFromRecord(_DriveCase):
         self.assertEqual(["test-writer", "python-coder", "test-writer"], dispatched)
         records = observation.get("records") or {}
         self.assertEqual(
-            2,
+            1,
             _signoff_count(records, ticket_path, "test-writer"),
-            "the re-dispatch did not produce a second real sign-off entry in "
-            "the real ticket file, so this did not prove genuine execution "
-            f"through the top-level body: {records.get(ticket_path)}",
+            "the unconfirmed re-dispatch must leave only the first real "
+            f"sign-off entry in the real ticket file: {records.get(ticket_path)}",
         )
         result = observation.get("result") or {}
         self.assertEqual("blocked", result.get("status"))

@@ -42,11 +42,11 @@ ARCHITECTURE: ``_eval_static_path()`` is a thin dispatcher (AC BP-100n-4
 from __future__ import annotations
 
 import ast
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 
-def _iter_same_scope(node: ast.AST) -> ast.AST:
+def _iter_same_scope(node: ast.AST) -> Iterator[ast.AST]:
     """Yield *node* and its descendants, without crossing into a nested function/class.
 
     Used to collect a scope's OWN local assignments without leaking in (or
@@ -64,11 +64,28 @@ def _iter_same_scope(node: ast.AST) -> ast.AST:
         yield from _iter_same_scope(child)
 
 
+def _tree_nodes(tree: ast.AST) -> list[ast.AST]:
+    """Return ``list(ast.walk(tree))``, computed once per tree and kept on it (BP-900g-8-iv).
+
+    Every detector iterates the whole tree; sharing one traversal keeps
+    ``ast.walk``'s own breadth-first order, so detection and warning order are
+    unchanged. Callers must not mutate the returned list.
+    """
+    nodes = getattr(tree, "_closure_nodes", None)
+    if nodes is None:
+        nodes = list(ast.walk(tree))
+        tree._closure_nodes = nodes  # type: ignore[attr-defined]  # noqa: SLF001
+    return nodes
+
+
 def _annotate_parents(tree: ast.AST) -> None:
-    """Attach a ``_closure_parent`` back-reference to every node in *tree*."""
-    for node in ast.walk(tree):
+    """Attach a ``_closure_parent`` back-reference to every node in *tree* (once per tree)."""
+    if getattr(tree, "_closure_parents_annotated", False):
+        return
+    tree._closure_parents_annotated = True  # type: ignore[attr-defined]  # noqa: SLF001
+    for node in _tree_nodes(tree):
         for child in ast.iter_child_nodes(node):
-            child._closure_parent = node  # noqa: SLF001
+            child._closure_parent = node  # type: ignore[attr-defined]  # noqa: SLF001
 
 
 def _enclosing_scope(node: ast.AST, tree: ast.AST) -> ast.AST:
@@ -144,6 +161,28 @@ def _build_local_assignments(
         elif isinstance(node, ast.AnnAssign) and node.value is not None:
             if isinstance(node.target, ast.Name):
                 assignments[node.target.id] = node.value
+    return assignments
+
+
+def _scope_assignments(scope: ast.AST, tree: ast.AST) -> dict[str, ast.AST]:
+    """Return ``_build_local_assignments(scope, tree)``, built once per scope (BP-900g-8-iv).
+
+    The map is kept on the *scope* node, so every path expression evaluated in
+    that scope shares it. A function scope's map is the module map overlaid with
+    the function's own assignments -- the same result, key order included, as
+    ``_build_local_assignments(scope, tree)``, but built from the memoised module
+    map instead of rescanning the module body once per function. The returned
+    dict is shared: callers only read it (``_eval_static_path`` never writes).
+    """
+    cached = getattr(scope, "_closure_assignments", None)
+    if cached is not None:
+        return cached
+    if scope is tree:
+        assignments = _build_local_assignments(tree)
+    else:
+        assignments = dict(_scope_assignments(tree, tree))
+        assignments.update(_build_local_assignments(scope))
+    scope._closure_assignments = assignments  # type: ignore[attr-defined]  # noqa: SLF001
     return assignments
 
 
@@ -267,7 +306,7 @@ def _eval_parent_attr_path(
 
 
 def _eval_call_resolve_path(
-    node: ast.AST,
+    node: ast.Call,
     script: Path,
     assignments: dict[str, ast.AST],
     _seen: frozenset[str],
@@ -283,7 +322,7 @@ def _eval_call_resolve_path(
 
 
 def _eval_call_str_path(
-    node: ast.AST,
+    node: ast.Call,
     script: Path,
     assignments: dict[str, ast.AST],
     _seen: frozenset[str],
@@ -303,7 +342,7 @@ def _eval_call_str_path(
 
 
 def _eval_call_path_from_file(
-    node: ast.AST,
+    node: ast.Call,
     script: Path,
     assignments: dict[str, ast.AST],
     _seen: frozenset[str],
@@ -325,7 +364,7 @@ def _eval_call_path_from_file(
 
 
 def _eval_call_path_literal(
-    node: ast.AST,
+    node: ast.Call,
     script: Path,
     assignments: dict[str, ast.AST],
     _seen: frozenset[str],
@@ -353,7 +392,7 @@ def _eval_call_path_literal(
 
 
 _CALL_PATH_HANDLERS: tuple[
-    Callable[[ast.AST, Path, dict[str, ast.AST], frozenset[str]], list[Path] | None], ...
+    Callable[[ast.Call, Path, dict[str, ast.AST], frozenset[str]], list[Path] | None], ...
 ] = (
     _eval_call_resolve_path,
     _eval_call_str_path,

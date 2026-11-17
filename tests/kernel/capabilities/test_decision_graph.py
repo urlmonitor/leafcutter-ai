@@ -92,6 +92,7 @@ class TestResolvedGate(DecisionTestCase):
         self.assertTrue(all(narrow(a.provider_answer).probabilities for a in raw))
 
     def test_one_jev_call_per_assessment_with_atomic_questions(self) -> None:
+        # covers: DK-600a-4
         self.params["satisfies"] = {("c1", "A"): 0.95}
         self.first()
         asked = self.jev.questions_asked("decision.assess")
@@ -236,7 +237,7 @@ class TestConflict(DecisionTestCase):
                        {"free_text": "ADR 2 supersedes ADR 1."})
         done = self.run_decision(resume(inv, asked, [ruling]), ctx)
         self.assertEqual(done.status, ResultStatus.COMPLETED)
-        self.assertIn("ADR 2 supersedes ADR 1.", as_json(self.jev.batches[-1].state)["constraints"])
+        self.assertIn("human-stated: ADR 2 supersedes ADR 1.", as_json(self.jev.batches[-1].state)["constraints"])
 
 
 class TestProviderFailure(DecisionTestCase):

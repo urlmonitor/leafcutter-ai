@@ -1,0 +1,12 @@
+{
+  "reason": "Complete normal synthesis or clarification waits from the original six runs; no question changes or success-seeking reruns.",
+  "authorized_by": "Root agent within user Prove it authorization, before any public host results submitted",
+  "prior_public_host_acceptance_limit": 8,
+  "public_host_acceptance_limit": 16,
+  "per_run_host_limit": 3,
+  "jev_per_run_limit": 12,
+  "jev_total_limit": 72,
+  "graph_writes": 0,
+  "catalog_writes": 0,
+  "telemetry_exports": 0
+}

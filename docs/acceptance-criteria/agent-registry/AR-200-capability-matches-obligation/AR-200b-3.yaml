@@ -1,0 +1,190 @@
+id: AR-200b-3
+title: "An agent permitted to dispatch sub-agents is permitted the tool by which an agent is dispatched"
+component: agent-registry
+components:
+  - agent_registry
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the set of agents whose own definition declares at least one permitted
+    sub-agent,
+  When each such agent's permission is compared against the tools its own
+    definition permits it to use,
+  Then every one of them is permitted the tool by which another agent is
+    dispatched, matched as that exact tool and not as part of a longer tool
+    name,
+    And an agent that permits sub-agents without that tool is reported, naming
+      the agent, the sub-agents it is permitted and the tools it does declare,
+      and the build stops until the tool is granted,
+    And the remedy the report suggests is to grant the tool, never to remove the
+      permission,
+    And both sides of the comparison are derived from the agents' own
+      definitions, so an agent given a permission tomorrow is checked with no
+      edit to the comparison,
+    And the comparison states how many agents it examined and how many held a
+      permission, so a comparison that resolved to no agents is not read as one
+      that found no violations,
+  So a specialist told it may call on another specialist can actually make the
+    call, rather than silently doing the work itself.
+depends_on:
+  - AR-200b
+doc_links:
+  - path: templates/agents/build-ac.md
+    relationship: modifies
+    status: exists
+    relevance: "Permitted to dispatch ac-triage; its tools omit the dispatch tool."
+  - path: templates/agents/business-analyst.md
+    relationship: modifies
+    status: exists
+    relevance: "Permitted to dispatch research-agent; its tools omit the dispatch tool."
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
+    relevance: "The header block that declares the permitted tools and -- once AR-300c-5 lands -- the permitted sub-agents beside them. Both sides of this comparison come from here."
+  - path: docs/acceptance-criteria/agent-registry/AR-200-capability-matches-obligation/AR-200b-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The abilities analogue: grant-versus-invoking-tool, exact match, derived population, refuse, grant the tool never delete the grant."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Puts the sub-agent permission beside the tools declaration, which is what makes this comparison possible from the definition alone."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - prompt
+risk_surface: internal
+it_requirements:
+  - "ONE CHECK, TWO PAIRS (preferred so the two cannot drift): generalise the slice-4 module scripts/skill_tool_grant_validator.py over (declaration-key, invoking-tool) pairs -- ('skills', 'Skill') and ('spawn_allowlist', 'Agent') -- rather than writing a sibling spawn checker. Same parse of `tools:`, same finding shape, same counts, same refuse path. If generalising is not possible without breaking AR-200b-2's tests, a sibling module in the identical shape is the fallback, and the shared `tools:` parse must still be a single function both import."
+  - "WIRING: called from registry_validator.validate_agent_registry exactly as the skills check is. scripts/registry_validator.py is over the 400-content-line limit (count_content_lines), so the wiring must be net-neutral -- one call site serving both pairs, not a second call block."
+  - "BOTH SIDES FROM THE AGENT'S OWN FRONTMATTER: the `spawn_allowlist` declaration (the key AR-300c-5 fixes) and the `tools:` line, read by the single frontmatter parse AR-300c-5 delivers. The registry spawn_allowlist field is not consulted."
+  - "EXACT TOKEN MATCH: `tools:` is a bare comma-separated string; strip any trailing YAML comment (business-analyst: 'tools: Skill, Read, Write, Edit, Bash  # Write/Edit scoped to ...') before splitting on commas and trimming, then compare whole tokens. `Agent` inside a longer token must not count."
+  - "REFUSE: a shortfall is a registry validation error and the build stops. The finding names the agent, its declared sub-agents (macro shown as declared) and the tools it declares, and its suggested action is 'grant the Agent tool' -- never 'remove the permission'."
+  - "Report agents examined and agents holding a permission; a zero examined population fails rather than reading as no violations. Populations are derived; build-ac and business-analyst are 2026-10-09 measurements, not constants."
+  - "REMEDIATION so the real build does not refuse: add `Agent` to the `tools:` line of templates/agents/build-ac.md and templates/agents/business-analyst.md, editing only that token into the line and preserving business-analyst's trailing comment byte-for-byte. Do not empty either agent's `spawn_allowlist`. Adding Agent (not Edit/Write) does not trigger the requires_verification rule."
+test_spec:
+  - name: test_agent_with_sub_agents_but_without_agent_tool_is_reported
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "An agent declaring a non-empty spawn_allowlist whose tools omit Agent is reported, naming the agent, its sub-agents and its declared tools, and validation refuses."
+  - name: test_suggested_action_is_grant_the_agent_tool
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The finding's suggested action is to grant the Agent tool, never to remove the permission."
+  - name: test_newly_permitted_agent_is_checked_with_no_edit_to_the_check
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Adding a spawn_allowlist to a template without Agent produces a finding with no change to the checker; both sides are read from the frontmatter and editing only the registry changes nothing."
+  - name: test_agent_tool_is_matched_exactly_after_stripping_a_trailing_comment
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "A tools line with a longer token embedding 'Agent' does not count; a tools line with 'Agent' followed by a trailing YAML comment does."
+    must_catch:
+      - "substring match on the raw tools string"
+      - "the trailing comment is parsed as part of the last tool token"
+  - name: test_counts_examined_and_permitted_and_fails_on_zero
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Both counts are reported; a run over zero agents fails rather than reporting no violations."
+  - name: test_skill_and_spawn_pairs_share_one_check
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "The same validator call yields both the Skill-tool and the Agent-tool findings in one result for a template lacking both, with the same finding shape."
+    must_catch:
+      - "a separate spawn checker with its own tools parse"
+  - name: test_real_tree_passes_after_remediation_and_failed_before
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "On a copy of the real templates with the Agent remediation reverted, build-ac and business-analyst are reported; on the real templates, no Agent-tool finding remains."
+test_rationale: >-
+  An agent lacking the dispatch tool does the delegated work itself and reports
+  success, so there is no runtime signal; the evidence must be the static comparison
+  over the real definitions. The trailing-comment trap is real data, which is why it
+  carries must_catch. The shared-check descriptor encodes the preference for one
+  validator over two pairs, so the skills and spawn rules cannot drift.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A grant-versus-invoking-tool verdict over (declaration-key, invoking-tool)
+    pairs -- {examined_count: int, holding_count: {skills: int, spawn_allowlist:
+    int}, findings: [{agent: str, declaration_key: "skills" | "spawn_allowlist",
+    declared: list[str], declared_tools: list[str], missing_tool: "Skill" |
+    "Agent", suggested_action: str}]} -- whose spawn boundary cases AR-200b-3-i
+    fixes.
+expects_from:
+  ac_id: AR-300c-5
+  contract: "The single frontmatter parse returning both `tools` and `spawn_allowlist_declared` (None when absent, [] when empty, macro verbatim) per agent."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by:
+  - AR-200b-3-i
+implemented_by:
+  - scripts/skill_tool_grant_validator.py
+  - scripts/registry_validator.py
+  - templates/agents/build-ac.md
+  - templates/agents/business-analyst.md
+notes: |
+  THE SPAWN ANALOGUE OF AR-200b-2. AR-200b's criteria (as amended 2026-09-30 and
+  re-approved 2026-10-01) already cover an obligation "when a specialist's own
+  definition declares that it may use something". A declared sub-agent
+  permission is such a declaration, so this leaf sits inside the parent's
+  promise without widening it.
+
+  MEASURED (orchestrator probe, 2026-10-09, production code): of the 25 agents
+  with a non-empty spawn allowlist after macro expansion, 2 lack the `Agent`
+  tool in their frontmatter `tools:` -- build-ac (permitted ac-triage) and
+  business-analyst (permitted research-agent). They are permitted sub-agents
+  they cannot dispatch. Measurements, not constants: derive both populations.
+
+  THIS LEAF STATES ITS OWN DERIVATION. Like AR-200b-2, the obligation comes from
+  a STRUCTURED declaration, not from body prose naming a tool, so AR-200b-1's
+  prose detector, its control case and its mutating-tools scope do not apply.
+  The dispatch tool is not state-mutating, and an agent lacking it does not stop
+  loudly -- it does the delegated work itself, in its own context, which is the
+  failure delegation was meant to avoid.
+
+  REFUSE, AND WHY THAT IS SAFE HERE. Same reasoning as AR-200b-2 (as corrected
+  2026-10-09): the contradiction is caught when the agent is defined, and the
+  fix -- adding the dispatch tool -- sits in the same header block as the
+  permission, so refusing demands no second edit elsewhere. This differs from
+  the derived registry copy (AR-300c-5-ii), which reports rather than refuses.
+
+  GRANT THE CAPABILITY, DO NOT DELETE THE PERMISSION. The cheapest way to pass
+  is to empty build-ac's and business-analyst's permissions. That satisfies the
+  comparison and leaves both agents unable to delegate work their own bodies
+  describe delegating. The permission encodes the intended route; it is the
+  thing to preserve.
+
+  EXACT MATCH. `tools:` is a bare comma-separated string; the dispatch tool's
+  name must be matched as a whole token after a defined parse, never as a
+  substring, or a longer tool name embedding it produces a silent false pass.
+  The comparison should share AR-200b-2's parse rather than write a second one.
+  Real-data trap: business-analyst's tools line carries a trailing YAML comment
+  ("tools: Skill, Read, Write, Edit, Bash  # Write/Edit scoped to ..."), so the
+  parse must be checked against the on-disk templates, not hand-typed fixtures.

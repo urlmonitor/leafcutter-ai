@@ -1,0 +1,208 @@
+id: KM-400a-1-xi
+title: Mockup properties distinguish screen metadata from supporting renders
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+work_status: done
+priority: medium
+parent: KM-400a-1
+criteria: |
+  Given a canonical Mockup named fern-and-fig/cart has screen cart, authored summary and provenance, and a registration entry with different summary and tags
+  When the Mockup's native fields are exposed in the repository graph
+  Then its id, component, screen, title, summary, entities, source, renders, status, readiness, version and provenance retain their authored values
+  And any authored example_product, realization, superseded_by, shape_version, tags and mock_data_ref remain queryable without filling omitted fields
+  And every provenance entry retains its associated action, author, date string and note in source order
+  And registration metadata remains separate and cannot replace the Mockup's identity, summary or tags
+  And an explicitly null renders value remains distinguishable from a safe declared render that is missing, without guessing a render for the null value
+  And an existing declared render remains an exact supporting source with its path and content hash, without executing its content or creating another Mockup
+  And canonical unregistered Mockups remain visible, while duplicate identities, conflicting registered paths, malformed sources and render references outside the selected repository fail explicitly
+  And optional omissions, explicit nulls, empty collections and future nested fields retain their source meaning
+depends_on: [KM-400a-1]
+doc_links:
+- path: reports/native-fields/review-Mockup.json
+  relationship: describes
+  status: exists
+  relevance: Eighteen reviewed fields and separate registration/render provenance.
+- path: reports/native-fields/code-Mockup.json
+  relationship: verifies
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+- path: reports/native-fields/ac-linked-strict.xml
+  relationship: verifies
+  status: exists
+  relevance: 'Fresh strict execution after criterion-specific test tags: 388 passed and one Windows symlink-privilege
+    skip across 19 focused modules. Per-type cases resolve through the test catalog; no live database rerun is implied.'
+- path: reports/native-fields/review-Mockup.json
+  relationship: describes
+  status: exists
+  relevance: Eighteen reviewed fields and separate registration/render provenance.
+- path: reports/native-fields/code-Mockup.json
+  relationship: verifies
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-02'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_native_mockup.py::test_mockup_all_fields_unknown_extensions_and_shape_are_preserved
+- tests/knowledge/test_native_mockup.py::test_mockup_manifest_and_render_remain_separate_exact_supporting_sources
+- tests/knowledge/test_native_mockup.py::test_mockup_real_canonical_population_includes_unregistered_and_null_renders
+- tests/knowledge/test_native_mockup.py::test_mockup_missing_store_and_absent_optional_fields_are_not_manufactured
+- tests/knowledge/test_native_mockup.py::test_mockup_safe_missing_render_is_reported_without_losing_record
+- tests/knowledge/test_native_mockup.py::test_mockup_malformed_records_fail_explicitly
+- tests/knowledge/test_native_mockup.py::test_mockup_duplicate_records_and_manifest_ids_fail_explicitly
+- tests/knowledge/test_native_mockup.py::test_mockup_render_paths_cannot_escape_or_fetch_urls
+- tests/knowledge/test_native_mockup.py::test_mockup_manifest_path_and_identity_conflicts_fail
+- tests/knowledge/test_native_mockup.py::test_mockup_resolved_escape_is_rejected_before_read
+implemented_by:
+  - knowledge/native_types/mockup.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Retrospective type-specific refinement of the native-field contract in
+  KM-400a-3-i. The reader receipt verifies 23 cases and ten canonical Mockups,
+  including one unregistered record and five null render declarations.
+  Those dated observations do not make registration or render existence a
+  universal requirement. This reviewed specification makes no new user-approval claim.
+  Final bidirectional traceability and strict test evidence: reports/native-fields/ac-traceability.json.
+  Work status reflects linked test outcomes; reviewed readiness does not assert user approval.
+estimated_complexity: M
+it_requirements:
+- Supporting render reads must stay within the selected source snapshot and must not fetch external URLs or execute
+  HTML/render content.
+- A safe missing declared render is a separately reported supporting-source gap; it cannot remove the canonical
+  Mockup or manufacture a render for an explicit null.
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+- name: test_mockup_all_fields_unknown_extensions_and_shape_are_preserved
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Mockup all fields unknown extensions and shape are preserved.
+  covers:
+  - KM-400a-1-xi
+- name: test_mockup_manifest_and_render_remain_separate_exact_supporting_sources
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: seam
+  description: Mockup manifest and render remain separate exact supporting sources.
+  covers:
+  - KM-400a-1-xi
+- name: test_mockup_real_canonical_population_includes_unregistered_and_null_renders
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: Mockup real canonical population includes unregistered and null renders.
+  covers:
+  - KM-400a-1-xi
+- name: test_mockup_missing_store_and_absent_optional_fields_are_not_manufactured
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Mockup missing store and absent optional fields are not manufactured.
+  covers:
+  - KM-400a-1-xi
+- name: test_mockup_safe_missing_render_is_reported_without_losing_record
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Mockup safe missing render is reported without losing record.
+  covers:
+  - KM-400a-1-xi
+- name: test_mockup_malformed_records_fail_explicitly
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Mockup malformed records fail explicitly.
+  covers:
+  - KM-400a-1-xi
+- name: test_mockup_duplicate_records_and_manifest_ids_fail_explicitly
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Mockup duplicate records and manifest ids fail explicitly.
+  covers:
+  - KM-400a-1-xi
+- name: test_mockup_render_paths_cannot_escape_or_fetch_urls
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Mockup render paths cannot escape or fetch urls.
+  covers:
+  - KM-400a-1-xi
+- name: test_mockup_manifest_path_and_identity_conflicts_fail
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Mockup manifest path and identity conflicts fail.
+  covers:
+  - KM-400a-1-xi
+- name: test_mockup_resolved_escape_is_rejected_before_read
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Mockup resolved escape is rejected before read.
+  covers:
+  - KM-400a-1-xi
+test_rationale: The verified catalog supplies exact existing reader-function anchors, including source-fixture,
+  boundary and failure checks. Only catalog-confirmed type-specific integration links are added. Shared lossless
+  property encoding, physical Neo4j publication, readback and retained-generation behavior remain covered by KM-400a-3-i;
+  these focused tests do not claim 17 independent live database journeys. This is retrospective traceability over
+  dated implementation receipts, not a newly performed TDD sequence. Subsequent strict execution is separately recorded
+  in reports/native-fields/ac-linked-strict.xml (388 passed, one skipped); no database test was rerun for these
+  annotation-only changes.

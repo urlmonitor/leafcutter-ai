@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Source-reviewed pt-classifier prompt output",
+  "description": "Documentation transcription of templates/agents/pt-classifier.md S4 Output Contract. Distinct from labelled evaluation rows; no automatic prompt/schema parity or runtime registration.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "request",
+    "expected",
+    "outcome",
+    "reason",
+    "builds_with",
+    "component",
+    "entities",
+    "decision",
+    "dispatch",
+    "anomalies"
+  ],
+  "properties": {
+    "request": {
+      "type": "string"
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "needs_flow",
+        "needs_mock_data",
+        "needs_mockup"
+      ],
+      "properties": {
+        "needs_flow": {
+          "type": "boolean"
+        },
+        "needs_mock_data": {
+          "type": "boolean"
+        },
+        "needs_mockup": {
+          "type": "boolean"
+        }
+      }
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "full-set",
+        "mockup+data",
+        "mockup-only",
+        "mock-data-only",
+        "none"
+      ]
+    },
+    "reason": {
+      "type": "string"
+    },
+    "builds_with": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "component": {
+      "type": "string"
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "create",
+        "extend"
+      ]
+    },
+    "extends": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "dispatch": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "anomalies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

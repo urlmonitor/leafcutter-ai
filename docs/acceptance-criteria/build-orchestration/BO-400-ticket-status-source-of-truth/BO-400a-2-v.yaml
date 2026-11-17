@@ -1,0 +1,164 @@
+id: BO-400a-2-v
+components:
+  - build_orchestration
+title: "A phase the ticket marks failed, or that this drive skipped, keeps the ticket from being recorded done even when the record carries an ok entry for it"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  BO-400a-2-iii says a ticket with a needed phase that was dispatched and reported
+  a blocker is never recorded done. It holds when the blocker is the only entry
+  the phase ever wrote. It does not hold when the record also carries an ok entry
+  for that phase: an older ok from an earlier drive, a new blocker entry written
+  above an older ok so that the ok is last in file order, or an ok the phase agent
+  wrote before the action it reports on had happened. The completion decision
+  takes the last entry in file order and reads it as the phase's verdict, so
+  the failure the drive itself observed is overruled by stale or premature
+  evidence, and the ticket is recorded done.
+
+  Scenario: A phase the ticket's frontmatter marks failed is outstanding
+    Given a ticket whose `agents:` map marks the ac-fulfillment-gate phase `failed`,
+    And whose record carries an ok sign-off entry for that phase written by an
+      earlier drive, placed last in file order,
+    When the drive takes the ticket's completion decision,
+    Then the ticket is not recorded done and its lifecycle state is left as found,
+    And the drive reports the ticket as not completed, naming that phase and
+      stating that the ticket's own frontmatter marks it failed,
+    Because the frontmatter is the record's current statement about the phase, and
+      an ok entry that disagrees with it is evidence of an earlier moment.
+
+  Scenario: A phase this drive skipped after a cross_agent blocker is outstanding
+    Given a drive in which the commit phase returned a blocker that the failure
+      classifier classed as cross_agent, so the drive skipped the phase,
+    And the ticket's record carries an ok sign-off entry for the commit phase that
+      the commit agent wrote before its commit was refused by a pre-commit hook,
+    When the drive takes the ticket's completion decision,
+    Then the ticket is not recorded done,
+    And the drive reports the ticket as not completed, naming the commit phase and
+      stating that this drive skipped it after a cross_agent blocker,
+    Because a phase the drive itself chose not to finish cannot be finished by an
+      entry the drive has every reason to distrust.
+
+  Scenario: The same holds for any skipped phase, not only commit
+    Given a drive that skipped ac-fulfillment-gate after a cross_agent blocker,
+    And an older ok entry for that phase in the record,
+    When the drive takes the completion decision,
+    Then the ticket is not recorded done.
+
+  Scenario: A genuine completion is still recorded done
+    Given a ticket whose `agents:` map marks every required phase `signed_off` or
+      `not_needed`,
+    And whose record carries a passing sign-off entry for every required phase,
+    And for which this drive skipped no phase,
+    When the drive takes the completion decision,
+    Then the ticket is recorded done,
+    Because the cheapest way to satisfy every refusal above is to stop writing done
+      records at all, and BO-400a-2-ii exists to prevent that.
+
+  Scenario: Both drivers decide identically
+    Given each of the scenarios above,
+    When it is run against the epic driver and against the single-ticket driver,
+    Then both reach the same decision.
+depends_on:
+  - BO-400a-2
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "completionVerdictFromRecord takes entries[entries.length - 1] as the phase verdict and consults ctx.skippedAgents only to word the reason for a phase with no entry; concludeTicket writes done when the verdict completes. TWIN of build-ticket.js."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket driver with the same completion decision. TWIN of build-feature.js; the same change lands here."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "The behavioral harness that drives the real workflow scripts against a ticket fixture."
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400a-2-iii.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling refusal for skipped, blocked and unrecorded phases. This record closes the case it leaves open: the failure is real, and an ok entry in the same record overrules it."
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400a-2-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "The positive write this refusal must not cross. A genuine completion still records done."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20261009-completion-write-closes-a-ticket-whose-gate-failed.md
+    relationship: context
+    status: exists
+    relevance: "The two recorded occurrences (2026-09-30 ac-fulfillment-gate, 2026-10-12 commit) and the four mechanisms. This record fixes mechanisms 3 and 4; mechanism 1 (a level-2 heading inside ## Comments misplacing new entries) and an ordering key for 'latest' are follow-ups."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+it_requirements:
+  - "BOTH TWINS IN ONE CHANGE. templates/workflows-js/build-feature.js and templates/workflows-js/build-ticket.js carry the same completionVerdictFromRecord and concludeTicket; change both identically. They are the canonical sources (ADR-001); deployed copies are build outputs."
+  - "DECIDE IN completionVerdictFromRecord, NOT AT A CALL SITE. A required phase is outstanding when (a) the record's frontmatter marks it failed, or (b) it appears in ctx.skippedAgents, regardless of its Comments entries. Check these before reading the latest entry. Use the read-back field that already exists (record.failed_phases); do not add a second parse of the ticket."
+  - "A FRONTMATTER VALUE OF needed IS NOT A SIGNAL (decided 2026-10-14 by BrainCandy). The BO-400e-1 demanded-set contract and its tests count a needed phase with a passing entry as satisfied, and scripts/set_ticket_status.py already refuses to write done while any phase reads needed, so that case cannot produce a phantom done. The drive's report in that case (a completion write attempted and refused, outstanding_phases empty) is misleading and is a follow-up, not part of this record."
+  - "THE REASON NAMES THE SIGNAL. The outstanding reason states which signal made the phase outstanding: the frontmatter value, or this drive's cross_agent skip. It must not tell the operator to add a sign-off the record already carries."
+  - "DO NOT WIDEN THE REQUIRED SET. demandedPhasesFromRecord already unions needed, signed_off and failed phases. A phase marked not_needed stays not required, and a phase skipped by this drive that the record does not demand is not added."
+  - "KEEP THE EXISTING ORDER OF GUARDS. The unreadable check and the empty-required-set refusal (BO-400a-2-iii, BO-400a-2-iv) answer first, unchanged. The handoff-resolution path (BO-400e-1-i) applies only to a phase that is not failed or skipped."
+  - "VERIFY BY EXECUTION. Drive the real workflow scripts through unit_tests/prompt_assembly/harness_build_ticket_guard.mjs (or the existing driver harness the BO-400a-2-iii and -iv tests use) and assert on the ticket record left on disk and the payload returned. A source-grep test does not count."
+  - "OUT OF SCOPE (follow-ups): stopping agent templates from writing level-2 headings inside ## Comments (architect-review.md's ## Escalation), and an ordering key for the latest entry that the writer cannot misplace."
+test_spec:
+  - name: test_failed_frontmatter_phase_with_later_ok_entry_is_not_recorded_done
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "agents: marks ac-fulfillment-gate failed; the record's last entry for it is an older ok. Drive the real workflow; assert status unchanged on disk, ticket reported not completed, reason names the frontmatter value."
+  - name: test_commit_phase_skipped_after_cross_agent_with_premature_ok_is_not_recorded_done
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The 2026-10-12 shape: the commit phase returns a blocker classed cross_agent, and the record carries an ok entry for commit written before the refused commit. Assert not recorded done, reason names the cross_agent skip."
+  - name: test_gate_phase_skipped_after_cross_agent_with_older_ok_is_not_recorded_done
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "ac-fulfillment-gate skipped after cross_agent, an older ok entry present; assert not recorded done."
+  - name: test_genuine_completion_with_every_phase_signed_off_is_still_recorded_done
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "CONTROL. Every required phase signed_off in frontmatter with a passing entry, nothing skipped; assert recorded done. Catches a fix that stops writing done altogether."
+  - name: test_both_drivers_reach_the_same_decision
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Run the failed-frontmatter and cross_agent-skip scenarios against build-feature.js and build-ticket.js as they exist on disk; assert identical decisions."
+test_rationale: |
+  The defect is a disagreement between two pieces of evidence in the same record,
+  resolved the wrong way. A test must therefore present both pieces at once: the
+  failure signal (frontmatter failed, or this drive's cross_agent skip)
+  and a passing entry that contradicts it. A test with only a blocker entry passes
+  on the current code, which is how BO-400a-2-iii was closed with this case open.
+
+  The control is load-bearing: refusing every completion satisfies every negative
+  test. The twin test exists because both drivers must decide identically and the
+  obligation is otherwise carried by a comment.
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/prompt_assembly/test_bo_400a_2_v.py
+implemented_by:
+  - templates/workflows-js/build-feature.js
+  - templates/workflows-js/build-ticket.js
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Authored by /quick-fix for KI-BO-20261009 (severity blocker). Two recorded
+  occurrences: 2026-09-30, ticket 02 of EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+  recorded done with ac-fulfillment-gate failed and its AC todo; 2026-10-12, run
+  wf_54e15913-aea, ticket 46 recorded done after the commit phase was refused and no
+  commit existed.

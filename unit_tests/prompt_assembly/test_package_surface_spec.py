@@ -14,7 +14,8 @@ These tests are intentionally RED before implementation:
   - AC-1/AC-2 (BO-2000d-1, BO-2000d-1-i): schema conditional enforcement
     (currently the schema allows package-surface ACs without impl fields)
   - AC-3 (BO-2000d-2): validate_ac.py does not yet exist
-  - AC-4 (BO-2000d-3): obligation statement absent from it-po.md
+  - AC-4 (BO-2000d-3): obligation statement absent from it-po.md (amended: four fields + marker,
+    test-designer owns reference_file_path; rewritten by ACD-2500e-2, ticket 43)
 """
 
 from __future__ import annotations
@@ -240,49 +241,59 @@ class TestValidatorRejectsFictionalReference(unittest.TestCase):
 # AC-4 (BO-2000d-3): it-po template states the obligation
 # ---------------------------------------------------------------------------
 
+def _it_po_paragraphs() -> list[str]:
+    """Flattened paragraphs of templates/agents/it-po.md (emphasis dropped, wrapped lines joined)."""
+    import re
+
+    template_path = _REPO_ROOT / "templates" / "agents" / "it-po.md"
+    assert template_path.exists(), f"it-po.md template not found at {template_path}"
+    text = template_path.read_text(encoding="utf-8")
+    blocks = re.split(r"\n\s*\n", text)
+    return [re.sub(r"\s+", " ", b.replace("`", "").replace("**", "")).strip() for b in blocks if b.strip()]
+
+
 class TestItPoTemplateStatesObligation(unittest.TestCase):
-    """Covers AC-4 (BO-2000d-3)."""
+    """Covers AC-4 (BO-2000d-3), as amended 2026-09-25 and shrunk by ACD-2500e-2 (ticket 43)."""
 
     def test_it_po_template_states_obligation(self):
         # covers: BO-2000d-3
+        # covers: ACD-2500e-2
         """
-        AC-4 (BO-2000d-3): templates/agents/it-po.md must contain text that states
-        the obligation for IT POs to populate the implementation-requirement fields for
-        package-surface ACs (those assigned to python-coder in build_pipeline or
-        build-orchestration components).
-
-        This test reads the template file and asserts the obligation is stated.
-        Currently the template does NOT contain this obligation, so this test is RED.
+        AC-4 (BO-2000d-3, amended): templates/agents/it-po.md states the obligation for IT POs to
+        populate the FOUR planner-owned implementation fields of a package-surface AC's
+        ``it_requirements`` (config_schema_fragment, n_location_rule, required_skills,
+        post_write_commands) and to set ``hold_reason: reference file pending`` (the marker, ADR-072
+        section 6) in a paragraph of the template. It no longer asks for
+        ``reference_file_path`` there (the test-designer chooses it), so the old five-field
+        assertion is replaced, never dropped.
         """
-        template_path = _REPO_ROOT / "templates" / "agents" / "it-po.md"
+        paragraphs = _it_po_paragraphs()
+        everything = " ".join(paragraphs)
+        self.assertIn("package-surface", everything.lower(), "it-po.md must name the package-surface obligation")
+        self.assertIn("it_requirements", everything)
+        for field in ("config_schema_fragment", "n_location_rule", "required_skills", "post_write_commands"):
+            self.assertIn(field, everything, f"it-po.md must name the planner-owned field {field!r}")
+        marker = [p for p in paragraphs if "hold_reason" in p and "reference file pending" in p]
         self.assertTrue(
-            template_path.exists(),
-            f"it-po.md template not found at {template_path}",
+            marker,
+            "it-po.md must tell the planner to set hold_reason: reference file pending on package-surface "
+            "records (ADR-072 section 6)",
         )
+        self.assertIn("reference_file_path", " ".join(marker))
 
-        content = template_path.read_text(encoding="utf-8")
-
-        # The template must explicitly state the package-surface impl-field obligation.
-        # Check for the key terms that the obligation statement must include:
-        self.assertIn(
-            "package-surface",
-            content,
-            "it-po.md must contain the term 'package-surface' as part of the "
-            "obligation to populate impl fields. "
-            "The obligation statement is not yet present.",
-        )
-        self.assertIn(
-            "it_requirements",
-            content,
-            "it-po.md must mention 'it_requirements' in the obligation section. "
-            "The obligation statement is not yet present.",
-        )
-        # The obligation must reference the required sub-fields
-        self.assertIn(
-            "reference_file_path",
-            content,
-            "it-po.md must mention 'reference_file_path' as a required field for "
-            "package-surface ACs. The obligation statement is not yet present.",
+    def test_it_po_template_names_test_designer_as_owner_of_reference_file_path(self):
+        # covers: BO-2000d-3
+        # covers: ACD-2500e-2
+        """
+        AC-4 (BO-2000d-3, amended): the planner does not choose ``reference_file_path``. Some paragraph
+        of it-po.md names the ``test-designer`` agent (the file-aware step) as the owner of that field,
+        so the planner is not left to guess or to block on it.
+        """
+        owner = [p for p in _it_po_paragraphs() if "reference_file_path" in p and "test-designer" in p]
+        self.assertTrue(
+            owner,
+            "it-po.md must name test-designer as the owner of reference_file_path "
+            "(the planner writes four fields and the marker, ADR-072)",
         )
 
 

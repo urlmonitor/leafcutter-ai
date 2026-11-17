@@ -84,7 +84,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Made the floor predicate a function of declares[] alone with pins[] excluded by construction, ordered verdict-then-message so the pin can only enrich the report, and forbade any code path or configuration key that requires a pin per declared criterion. Test contract uses a differential assertion against an unpinned control, which is the only shape that covers 'satisfy, reduce or downgrade' as three claims. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/13_TICKET-20261022-GE-124b-2.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -106,3 +107,4 @@ notes: |
   flattening the PO warned against.
 
   How many findings scenario 1 produces (one, not two) is GE-124c-1-i.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

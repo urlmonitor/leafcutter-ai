@@ -1,0 +1,7 @@
+{
+  "host_root": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-public-host-dg5b4rp0",
+  "source_mode": "local",
+  "code_revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+  "model_transport": "production TypeSafeJevAdapter + blind external host packets",
+  "expected_labels_sent": false
+}

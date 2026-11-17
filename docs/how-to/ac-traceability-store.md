@@ -4,7 +4,7 @@ description: "How-to guide for delivering approved ACs via the reviewed-PR path,
 type: how-to
 status: active
 created: 2026-06-04
-last_updated: 2026-08-25
+last_updated: 2026-10-15
 components:
   - build_pipeline
   - build_orchestration
@@ -438,34 +438,34 @@ git commit -m "amend <ID>: <one-line summary of the change>"
 
 ---
 
-## How do I deprecate an AC?
+## How do I deprecate or retire an AC?
 
-Deprecated ACs are retained for audit purposes. Set `status: deprecated`
-and do not delete the file.
-
-### Step 1: Update the status field
-
-```yaml
-status: deprecated
-```
-
-If this AC is superseded by a newer one, also set:
+Never delete the file. `status: deprecated` is not a retirement: it keeps
+every forward-build rule (`check_ac_coverage.py` just stops requiring `covered_by`).
+To retire an AC whose behaviour was removed or replaced, set:
 
 ```yaml
-status: superseded_by
-superseded_by: MYC-003    # ID of the replacement AC
+status: superseded_by      # or the older `superseded`
+superseded_by: [MYC-003]   # existing successor ID(s), string or list
 ```
 
-### Step 2: Validate and commit
+Retired needs a superseded status and at least one successor, all existing, none the AC itself.
+Leave `work_status` as it was; editing `readiness`, `change_target`, `# covers:`
+tags or test contracts to pass a gate is wrong. A retired AC is exempt from
+`check-done-proof` (covering test), `check-ac-schema` (test contract) and
+unfinished-children blocking. `check-ac-schema` still refuses a missing, empty,
+null or self successor; `check-ac-parent-covered-by` still applies. A retired
+child neither blocks nor proves its parent; a live parent whose children are
+all retired needs its own `# covers:` tag or a waiver.
+
+Validate, then commit the child with its parent staged (example: `INF-600g-3`
+and `INF-600g-3-i`, retired by `AR-400c-1` by changing only those two fields):
 
 ```bash
 python .leafcutter/scripts/commit_guardian/check_ac_schema.py docs/acceptance-criteria/<component>/<ID>.yaml
-git add docs/acceptance-criteria/<component>/<ID>.yaml
-git commit -m "deprecate <ID>: <reason>"
+git add docs/acceptance-criteria/<component>/<ID>.yaml docs/acceptance-criteria/<component>/<PARENT-ID>.yaml
+git commit -m "retire <ID>: superseded by <successor>"
 ```
-
-After deprecation, the `check_ac_coverage.py` hook will no longer require
-`covered_by` entries for this AC.
 
 ---
 

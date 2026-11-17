@@ -1,0 +1,33 @@
+AC-ENFORCEMENT [STRICT]: tests/knowledge/test_native_test.py::test_test_reference_preserves_existing_classification_without_invention[tests/support.json] covers not-done AC KM-400a-3-i — NOT masked (AC_ENFORCE_STRICT=1); reported as a real failure.
+FFF                                                                      [100%]
+================================== FAILURES ===================================
+_ test_test_reference_preserves_existing_classification_without_invention[tests/support.json] _
+tests\knowledge\test_native_test.py:219: in test_test_reference_preserves_existing_classification_without_invention
+    assert record.derived == {}
+E   AssertionError: assert {'outcome': 'passed'} == {}
+E     
+E     Left contains 1 more item:
+E     {'outcome': 'passed'}
+E     Use -v to get more diff
+_ test_test_reference_preserves_existing_classification_without_invention[unit_tests/shared] _
+tests\knowledge\test_native_test.py:219: in test_test_reference_preserves_existing_classification_without_invention
+    ???
+E   AssertionError: assert {'outcome': 'passed'} == {}
+E     
+E     Left contains 1 more item:
+E     {'outcome': 'passed'}
+E     Use -v to get more diff
+_ test_test_reference_preserves_existing_classification_without_invention[historic/custom/location] _
+tests\knowledge\test_native_test.py:219: in test_test_reference_preserves_existing_classification_without_invention
+    ???
+E   AssertionError: assert {'outcome': 'passed'} == {}
+E     
+E     Left contains 1 more item:
+E     {'outcome': 'passed'}
+E     Use -v to get more diff
+shared-layout-routing: declared_mutators=0 undeclared=0
+=========================== short test summary info ===========================
+FAILED tests/knowledge/test_native_test.py::test_test_reference_preserves_existing_classification_without_invention[tests/support.json]
+FAILED tests/knowledge/test_native_test.py::test_test_reference_preserves_existing_classification_without_invention[unit_tests/shared]
+FAILED tests/knowledge/test_native_test.py::test_test_reference_preserves_existing_classification_without_invention[historic/custom/location]
+3 failed in 19.45s

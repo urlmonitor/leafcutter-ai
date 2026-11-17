@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PROPOSED gap criteria list",
+  "description": "Design-only list transcribed from the DK-500e-2 delivers_to contract (docs/acceptance-criteria/decision-kernel/DK-500-reusable-decision-criteria/DK-500e-2.yaml): criteria drafted only for the concerns the gap verdict names, proposed beside the reused criteria. DK-500e-2 names removed_repeats beside this list but defines no enclosing payload, so that list is not part of this schema. No kernel step, host response or validator implements this list yet; it is not a kernel Criterion, which forbids extra fields such as gap_concern.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "wording": {
+        "type": "string",
+        "description": "the drafted question; it never repeats the wording of a reused criterion"
+      },
+      "criterion_id": {
+        "type": "string",
+        "description": "the drafted criterion's id within the decision"
+      },
+      "priority": {
+        "type": "string",
+        "enum": ["required", "supporting"],
+        "description": "the drafted criterion's priority"
+      },
+      "kind": {
+        "type": "string",
+        "enum": ["evidence_answerable", "design_judgement"],
+        "description": "the drafted criterion's kind"
+      },
+      "gap_concern": {
+        "type": "string",
+        "description": "the missing concern from the gap verdict that this criterion addresses; the kernel drops criteria naming no such concern"
+      },
+      "proposal_status": {
+        "type": "string",
+        "enum": ["proposed"],
+        "description": "always proposed: drafted criteria stay proposals until approved"
+      }
+    },
+    "required": ["wording", "criterion_id", "priority", "kind", "gap_concern", "proposal_status"]
+  }
+}

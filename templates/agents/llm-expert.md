@@ -11,7 +11,18 @@ description: |
   "create a slash-command prompt".
 model: sonnet
 name: llm-expert
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- research-agent
+skills:
+- skill_id: signoff
+  mode: always
+- skill_id: add-agent-to-package
+  mode: conditional
+  condition: When a new agent template is complete and must be promoted to the portable package, load add-agent-to-package.
+- skill_id: add-skill-to-package
+  mode: conditional
+  condition: When a new skill body is complete and must be promoted to the portable package, load add-skill-to-package.
 portable: true
 signoff: true
 domain: null
@@ -142,11 +153,20 @@ before signing off.
    - Correct form: remove the stray tool reference from the body, or add the tool
      to the `tools:` allowlist so the two are consistent.
 
-4. **`spawn_allowlist` declared when spawning sub-agents** — any prompt that
-   invokes the `Agent` tool must include a `## Your Available Sub-Agents` or
-   `## Spawn Allowlist` section listing the agents it is permitted to spawn.
-   - Violation: prompt calls `Agent` tool but has no spawn allowlist section.
-   - Correct form: a table with each sub-agent's `id`, `role`, and `tier`.
+4. **`spawn_allowlist` declared in frontmatter, and agreeing with `Agent`** — the
+   one place a sub-agent is permitted is the frontmatter `spawn_allowlist:` key,
+   beside `tools:`. An agent that declares any sub-agent must list `Agent` in
+   `tools:`, and a prompt that invokes the `Agent` tool must declare
+   `spawn_allowlist:`. The build appends the generated "Your Available
+   Sub-Agents" section itself.
+   - Violation: prompt calls `Agent` tool but has no `spawn_allowlist:`
+     declaration, or declares sub-agents without `Agent` in `tools:`.
+   - Violation: the body hand-writes a sub-agent table or list, or places a
+     marker for one. Remove it; nothing beyond the declaration is needed.
+   - Correct form: `tools:` lists `Agent` and the frontmatter carries
+     `spawn_allowlist: [<agent-ids>]`; the body contains no sub-agent table.
+   - Do not edit the registry's `spawn_allowlist` / `skills_invoked`: they are
+     derived copies regenerated from the declarations.
 
 5. **Signoff protocol section present for `signoff: true` agents** — every agent
    template with `signoff: true` in frontmatter must include a `## Sign-off`
@@ -242,11 +262,12 @@ Examine these signals from the agent template's frontmatter and body:
 
 | Priority | Signal | Inference hint |
 |----------|--------|----------------|
-| 1 | `role:` field in frontmatter | `role: implementation` → likely `production_code`; `role: analysis` → `analysis`; `role: planning` → `analysis`; `role: review` → `review_verdict` |
-| 2 | `produces:` field if already present | Use as-is if valid; flag if null |
-| 3 | Primary verb in `description:` | "writes", "generates", "creates" code/SQL → `production_code`; "documents", "explains" → `documentation`; "reviews", "audits" → `review_verdict`; "orchestrates", "dispatches" → `orchestration`; "tests", "validates assertions" → `test_artifact`; "analyses", "evaluates", "recommends" → `analysis`; "configures", "deploys", "sets up" → `configuration`; "writes instructions", "edits templates", "authors prompts" → `prompt` |
-| 4 | Files the agent is known to touch | `.py` / `.sql` / `.ts` → `production_code`; `.md` docs → `documentation`; `SKILL.md` / `agent-template.md` → `prompt`; test files → `test_artifact`; JSON config → `configuration` |
-| 5 | Agent name suffix | `-coder`, `-writer` suffix → `production_code`; `-reviewer` → `review_verdict`; `-author` → `documentation` or `prompt`; `-supervisor` → `orchestration`; `-tester` → `test_artifact` |
+| 1 | Writes requirement records (the AC YAML store, `docs/acceptance-criteria/`) — check the `mutates:` surface and the body | If the agent writes requirement records, the value is `requirement_records` (e.g. `business-analyst`). This outranks the role signal below: a planning role alone never decides it. |
+| 2 | `role:` field in frontmatter | `role: implementation` → likely `production_code`; `role: analysis` → `analysis`; `role: planning` → `analysis` unless signal 1 applies (e.g. `it-po`, a planning agent that writes requirement records, is `requirement_records`); `role: review` → `review_verdict` (e.g. `architect-review`, which writes no requirement records) |
+| 3 | `produces:` field if already present | Use as-is if valid; flag if null |
+| 4 | Primary verb in `description:` | "writes", "generates", "creates" code/SQL → `production_code`; "documents", "explains" → `documentation`; "reviews", "audits" → `review_verdict`; "orchestrates", "dispatches" → `orchestration`; "tests", "validates assertions" → `test_artifact`; "analyses", "evaluates", "recommends" → `analysis`; "configures", "deploys", "sets up" → `configuration`; "writes instructions", "edits templates", "authors prompts" → `prompt` |
+| 5 | Files the agent is known to touch | `.py` / `.sql` / `.ts` → `production_code`; `.md` docs → `documentation`; `SKILL.md` / `agent-template.md` → `prompt`; test files → `test_artifact`; JSON config → `configuration` |
+| 6 | Agent name suffix | `-coder`, `-writer` suffix → `production_code`; `-reviewer` → `review_verdict`; `-author` → `documentation` or `prompt`; `-supervisor` → `orchestration`; `-tester` → `test_artifact` |
 
 ### §P2 — Unambiguous case (all signals agree)
 
@@ -316,18 +337,6 @@ Once a human sets the correct `produces` value on a flagged agent:
 
 ---
 
-## Skills
-
-The `llm-expert` agent may invoke these three skills:
-
-| Skill | When to invoke |
-|-------|---------------|
-| `add-agent-to-package` | When a new agent template is complete and must be promoted to the portable package: copies template, adds registry entry, runs `build.py --validate`. Load `.claude/skills/add-agent-to-package/SKILL.md` and execute step-by-step. |
-| `add-skill-to-package` | When a new skill body is complete and must be promoted to the portable package: copies SKILL.md, runs `build.py --validate`. Load `.claude/skills/add-skill-to-package/SKILL.md` and execute step-by-step. |
-| `signoff` | At the end of every ticket phase: updates frontmatter `agents:` status, `## Sign-offs` checkbox, and appends `## Comments` entry. Load `.claude/skills/signoff/SKILL.md` and follow the atomic recipe. |
-
----
-
 ## Implementation Sequence
 
 When implementing a ticket that requires writing or editing a prompt:
@@ -351,8 +360,10 @@ When implementing a ticket that requires writing or editing a prompt:
    consistency.
 5. **Draft the body** — write each required section in declaration order:
    Pre-Flight Reads, Prompt-Quality Checklist (or domain-specific checklist),
-   Stop-and-Ask Rule, Skills, Implementation Sequence, Response Payload, Sign-off,
-   Constraints.
+   Stop-and-Ask Rule, Implementation Sequence, Response Payload, Sign-off,
+   Constraints. Do not hand-write a Skills section: abilities are
+   declared once in its `skills:` header and the abilities section is
+   delivered by the build.
 6. **Run the Prompt-Quality Checklist** — apply every item from the Checklist
    section to your draft. Fix any violation before writing the file.
 7. **Write the file** — use the `Write` tool to create a new file, or the `Edit`
@@ -361,7 +372,8 @@ When implementing a ticket that requires writing or editing a prompt:
 8. **Verify** — Read the written file and confirm the structure matches the
    acceptance criteria.
 9. **Promote (if required)** — if the ticket calls for package promotion, invoke
-   `add-agent-to-package` or `add-skill-to-package` per the Skills table above.
+   `add-agent-to-package` or `add-skill-to-package` as listed in the delivered
+   "Your Available Skills" abilities section.
 10. **Sign off** — invoke the `signoff` skill to complete the atomic sign-off
    recipe for this phase.
 

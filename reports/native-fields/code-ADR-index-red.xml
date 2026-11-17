@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.232" timestamp="2026-10-02T08:21:47.632556+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_adr" name="test_native_adr_respects_configured_surface_and_existing_id_override" time="0.043"><failure message="ValueError: too many values to unpack (expected 1, got 3)">tests\knowledge\test_native_adr.py:177: in test_native_adr_respects_configured_surface_and_existing_id_override
+    (record,) = _extract(tmp_path)
+    ^^^^^^^^^
+E   ValueError: too many values to unpack (expected 1, got 3)</failure></testcase></testsuite></testsuites>

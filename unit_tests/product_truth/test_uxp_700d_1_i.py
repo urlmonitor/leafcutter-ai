@@ -153,7 +153,7 @@ def _flow(flow_id: str) -> dict:
             {
                 "id": "browse",
                 "label": "browse",
-                "human": "the actor performs browse",
+                "description": "the actor performs browse", "actor_kind": "human",
                 "order": 1,
                 "implements": [],
             }

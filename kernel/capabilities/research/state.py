@@ -11,9 +11,11 @@ ARCHITECTURE: ResearchContinuation is the JSON-serialisable part (frozen Pydanti
 
 from __future__ import annotations
 
+from kernel.contracts.verbatim import VerbatimJson
+
 from dataclasses import dataclass, field
 
-from pydantic import Field
+from pydantic import Field, JsonValue
 
 from kernel.contracts.base import KernelModel
 from kernel.contracts.enums import NeedStatus
@@ -26,6 +28,7 @@ from kernel.contracts.evidence import (
 )
 from kernel.contracts.payloads import OptionContext
 from kernel.contracts.work import RequestProposal
+from kernel.contracts.retrieval_needs import RetrievalNeedsOutput
 
 #: Prefix of the note of a bundle-level contradiction that names no evidence pair.
 UNLOCALISED = "unlocalised: "
@@ -36,6 +39,7 @@ STATUS_RANK = {NeedStatus.UNAVAILABLE: 0, NeedStatus.OPEN: 1, NeedStatus.PARTIAL
 class ResearchContinuation(KernelModel):
     """Persisted research state (phase: planned, collected or synthesizing)."""
 
+    retrieval_needs: RetrievalNeedsOutput | None = None
     phase: str = "planned"
     needs: list[EvidenceNeed] = Field(default_factory=list)
     child_map: dict[str, list[str]] = Field(default_factory=dict)
@@ -43,6 +47,7 @@ class ResearchContinuation(KernelModel):
     attempted: list[str] = Field(default_factory=list)
     evidence: list[Evidence] = Field(default_factory=list)
     coverage: dict[str, NeedStatus] = Field(default_factory=dict)
+    assessments: dict[str, dict[str, VerbatimJson]] = Field(default_factory=dict)
     contradictions: list[Contradiction] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
     truncated: bool = False
@@ -67,7 +72,10 @@ class Plan:
     expected_coverage: str
     mandated: list[EvidenceNeed]
     source_restrictions: list[str]
+    retrieval_needs: RetrievalNeedsOutput | None = None
     needs_only: bool = False
+    answer_requirements: dict[str, JsonValue] | None = None
+    assessment: dict[str, JsonValue] | None = None
     #: What the decision already knows: its options, approved criteria and named gaps.
     options: list[OptionContext] = field(default_factory=list)
     criteria: list[str] = field(default_factory=list)
@@ -82,6 +90,7 @@ class Collected:
 
     evidence: dict[str, Evidence] = field(default_factory=dict)
     coverage: dict[str, NeedStatus] = field(default_factory=dict)
+    assessments: dict[str, dict[str, VerbatimJson]] = field(default_factory=dict)
     attempted: list[str] = field(default_factory=list)
     unavailable: list[UnavailableSource] = field(default_factory=list)
     contradictions: list[Contradiction] = field(default_factory=list)
@@ -97,7 +106,11 @@ class Collected:
     unanswered: list[str] = field(default_factory=list)
 
     def add_contradictions(self, items: list[Contradiction]) -> None:
-        """Record contradictions once each (identity: the evidence pair, either order, and claim)."""
+        """Record contradictions once per evidence pair and claim.
+
+        Args:
+            items: Actual contradictory evidence to merge.
+        """
         seen = {contradiction_key(c) for c in self.contradictions}
         for item in items:
             key = contradiction_key(item)
@@ -138,3 +151,5 @@ class Collected:
 #   (beyond the design's field list) so the synthesis resume can rebuild the bundle even if the
 #   kernel's evidence lookup misses an item. (#KernelBootstrapV0/P5)
 # ====================================================================
+
+# - 2026-10-09 15:40 [python-coder]: Preserve typed question obligations through public research and scoped query selection. (#KM-500/KM-500e-1-i)

@@ -1,0 +1,1890 @@
+{
+  "scenario_id": "RS-03",
+  "request": {
+    "schema_version": "1.0",
+    "goal": "For KM-500c-2, what must tests demonstrate?",
+    "caller": {
+      "schema_version": "1.0",
+      "id": "scenario-evaluator",
+      "kind": "host"
+    },
+    "scope": {
+      "schema_version": "1.0",
+      "workspace_id": "leafcutter",
+      "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01",
+      "revision": {
+        "schema_version": "1.0",
+        "commit": "59269e024e4d0290b68b03d0d382745966e67e29",
+        "dirty": false,
+        "tree_fingerprint": null
+      },
+      "component_ids": [],
+      "read_roots": [
+        "docs"
+      ],
+      "source_ids": [],
+      "technologies": []
+    },
+    "requested_output_schema": "leafcutter.evidence_bundle.v1",
+    "input_payload_schema": "leafcutter.research_request.v1",
+    "input_payload": {
+      "question": "For KM-500c-2, what must tests demonstrate?"
+    },
+    "initial_evidence": [],
+    "context": {
+      "schema_version": "1.0",
+      "host": null,
+      "capabilities": [],
+      "conversation": [],
+      "observations": []
+    },
+    "constraints": [],
+    "permissions": [
+      "read_repo"
+    ]
+  },
+  "entry_point": "KernelService.start_run via actual build_environment",
+  "actors": {
+    "Jev": "real TypeSafe jev-latest",
+    "host": "not substituted; waits retained",
+    "human": "not substituted; waits retained",
+    "tracer": "local RecordingTracer; no remote export"
+  },
+  "actual_response": {
+    "schema_version": "1.0",
+    "run_id": "run-dd82be6f4c49430b",
+    "root_task_id": "task-d5844528c3fc454b",
+    "state_revision": 5,
+    "status": "waiting_human",
+    "output": null,
+    "report_ref": null,
+    "decision_ids": [],
+    "evidence_ids": [],
+    "open_questions": [],
+    "pending_interaction": {
+      "schema_version": "1.0",
+      "id": "int-2af6ca4e6a454e5b",
+      "created_at": "2026-10-02T17:53:30.143713Z",
+      "updated_at": "2026-10-02T17:53:30.143713Z",
+      "created_seq": 0,
+      "work_item_id": "work-6121a5f2a7944a85",
+      "decision_id": null,
+      "subject_ids": [
+        "need.internal_principles"
+      ],
+      "question": "Please supply the missing population choices: population, population. For inclusion choose root_excluded (exclude only the selected root), terminal_leaves (exclude every parent), or include_root. Reply with JSON containing scope and, if requested, required_fields. Population may be returned_entities, ac_descendants or declared_dependents; a whole-project enumeration is unsupported and must be scoped explicitly. Original question: The project's own stated rules, conventions and principles. Question: For KM-500c-2, what must tests demonstrate?",
+      "relevant_evidence_ids": [],
+      "choices": [],
+      "free_text_allowed": true,
+      "structured_allowed": false,
+      "why_research_cannot_settle": "Only the caller can define the intended count population.",
+      "required_actor_kind": "human",
+      "state_revision": 5
+    },
+    "limitations": [],
+    "gaps": [],
+    "usage_summary": {
+      "schema_version": "1.0",
+      "jev_calls": 5,
+      "host_operations": 0,
+      "input_tokens": 6513,
+      "output_tokens": 1158,
+      "cost_usd_known": 0.000273546,
+      "cost_unknown_calls": 0,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "jev",
+          "model_id": "jev-1.13.0",
+          "input_tokens": 6513,
+          "output_tokens": 1158,
+          "duration_ms": 1280,
+          "cost_usd": 0.000273546,
+          "cost_provenance": "estimated",
+          "calls": 5
+        }
+      ]
+    },
+    "trace_refs": {
+      "schema_version": "1.0",
+      "trace_id": "7cbbb4c0ea30ea19e7d5922faee13734",
+      "trace_url": null,
+      "observability": "ok"
+    },
+    "errors": []
+  },
+  "seconds": 2.267,
+  "trace": [
+    {
+      "index": 0,
+      "kind": "segment",
+      "name": "leafcutter.run.start",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "pending",
+        "task_id": null,
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {},
+      "closed": false
+    },
+    {
+      "index": 1,
+      "kind": "span",
+      "name": "kernel.intake",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": null,
+        "task_id": null,
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 2,
+      "kind": "span",
+      "name": "kernel.enrich_context",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 3,
+      "kind": "event",
+      "name": "context.enriched",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": "work-9d6dee5270cc468c",
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": 2,
+      "data": {
+        "level": "DEFAULT",
+        "payload": {
+          "status": "unavailable",
+          "sources_consulted": [],
+          "files_scanned": 0,
+          "evidence_count": 0,
+          "truncated": false,
+          "limitations": [
+            "context source unavailable: repo.docs",
+            "context source unavailable: repo.components",
+            "context source unavailable: repo.config",
+            "context source unavailable: repo.decisions",
+            "context source unavailable: repo.principles",
+            "context source unavailable: repo.patterns",
+            "no matching repository context found; missing facts remain unknown"
+          ]
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 4,
+      "kind": "span",
+      "name": "kernel.schedule",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 5,
+      "kind": "span",
+      "name": "kernel.route",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 6,
+      "kind": "event",
+      "name": "routing.assessed",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": "work-9d6dee5270cc468c",
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": 5,
+      "data": {
+        "level": "DEFAULT",
+        "payload": {
+          "outcome": "selected",
+          "selected": "research",
+          "reason_codes": [
+            "intent_bound"
+          ]
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 7,
+      "kind": "span",
+      "name": "capability.research",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": "work-9d6dee5270cc468c",
+        "request_id": "req-de21cc7598df42cd",
+        "invocation_id": "inv-f1eb075de153428e",
+        "decision_id": null,
+        "capability_id": "research",
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "capability",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 8,
+      "kind": "generation",
+      "name": "jev.research.plan_needs",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": "work-9d6dee5270cc468c",
+        "request_id": null,
+        "invocation_id": "inv-f1eb075de153428e",
+        "decision_id": null,
+        "capability_id": "research",
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": 7,
+      "data": {
+        "model": "jev-1.13.0",
+        "input": {
+          "questions": [
+            {
+              "id": "need.authoritative_guidance",
+              "kind": "noul",
+              "template_id": "research.need",
+              "template_version": "1"
+            },
+            {
+              "id": "need.internal_principles",
+              "kind": "noul",
+              "template_id": "research.need",
+              "template_version": "1"
+            },
+            {
+              "id": "need.prior_decisions",
+              "kind": "noul",
+              "template_id": "research.need",
+              "template_version": "1"
+            },
+            {
+              "id": "need.existing_patterns",
+              "kind": "noul",
+              "template_id": "research.need",
+              "template_version": "1"
+            },
+            {
+              "id": "need.task_context",
+              "kind": "noul",
+              "template_id": "research.need",
+              "template_version": "1"
+            },
+            {
+              "id": "need.external_practices",
+              "kind": "noul",
+              "template_id": "research.need",
+              "template_version": "1"
+            }
+          ],
+          "state_chars": 1871,
+          "input_fingerprint": "6630378470364f31d620d98f5d1274c02cc7226db46aff894d111c10cc79aae0"
+        },
+        "output": {
+          "answers": {
+            "need.authoritative_guidance": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "need.authoritative_guidance",
+              "probability": 0.79,
+              "confidence": null
+            },
+            "need.internal_principles": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "need.internal_principles",
+              "probability": 0.56,
+              "confidence": null
+            },
+            "need.prior_decisions": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "need.prior_decisions",
+              "probability": 0.47,
+              "confidence": null
+            },
+            "need.existing_patterns": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "need.existing_patterns",
+              "probability": 0.39,
+              "confidence": null
+            },
+            "need.task_context": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "need.task_context",
+              "probability": 0.65,
+              "confidence": null
+            },
+            "need.external_practices": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "need.external_practices",
+              "probability": 0.24,
+              "confidence": null
+            }
+          }
+        },
+        "usage": {
+          "schema_version": "1.0",
+          "provider": "jev",
+          "model_id": "jev-1.13.0",
+          "input_tokens": 927,
+          "output_tokens": 124,
+          "duration_ms": 319,
+          "cost_usd": 3.8934e-05,
+          "cost_provenance": "estimated",
+          "calls": 1
+        },
+        "metadata": {
+          "purpose": "research.plan_needs",
+          "adapter_version": "typesafe-classifier/0.0.1a3",
+          "latency_ms": 320,
+          "question_count": 6,
+          "status": "ok",
+          "template_ids": [
+            "research.need@1"
+          ],
+          "request_id": "req_01a0fdbfedaa74aca580caa85dec3a4b",
+          "calls": 1,
+          "input_fingerprint": "6630378470364f31d620d98f5d1274c02cc7226db46aff894d111c10cc79aae0",
+          "chunk_index": 0,
+          "chunk_count": 1,
+          "attempts": 1
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 9,
+      "kind": "span",
+      "name": "kernel.integrate",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 10,
+      "kind": "span",
+      "name": "kernel.schedule",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 11,
+      "kind": "span",
+      "name": "kernel.route",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 12,
+      "kind": "event",
+      "name": "routing.assessed",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": "work-3fab6e9ad2eb4cdb",
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": 11,
+      "data": {
+        "level": "DEFAULT",
+        "payload": {
+          "outcome": "selected",
+          "selected": "retrieve.repository",
+          "reason_codes": [
+            "deterministic"
+          ]
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 13,
+      "kind": "span",
+      "name": "capability.retrieve.repository",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": "work-3fab6e9ad2eb4cdb",
+        "request_id": "req-60eee6f36a2740a7",
+        "invocation_id": "inv-7a46c8339cd14a63",
+        "decision_id": null,
+        "capability_id": "retrieve.repository",
+        "interaction_id": null,
+        "parent_work_item_id": "work-9d6dee5270cc468c",
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "capability",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 14,
+      "kind": "generation",
+      "name": "jev.knowledge.answer_contract",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": "work-3fab6e9ad2eb4cdb",
+        "request_id": null,
+        "invocation_id": "inv-7a46c8339cd14a63",
+        "decision_id": null,
+        "capability_id": "retrieve.repository",
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": 13,
+      "data": {
+        "model": "jev-1.13.0",
+        "input": {
+          "questions": [
+            {
+              "id": "field.canonical_id",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.kind",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.title",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.source_sha",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.source_locator",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.priority",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.level",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.test_required",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.work_status",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.status",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.criteria",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.req_status",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.readiness",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.covered_by",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.implemented_by",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.depends_on",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "population",
+              "kind": "choice",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "inclusion",
+              "kind": "choice",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "root",
+              "kind": "choice",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "level.L0",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            }
+          ],
+          "state_chars": 2567,
+          "input_fingerprint": "a9d8b55d93711083c96ff3b3ace76314128d6112671536b899b062f3d0b0a93a"
+        },
+        "output": {
+          "answers": {
+            "field.canonical_id": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.canonical_id",
+              "probability": 0.63,
+              "confidence": null
+            },
+            "field.kind": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.kind",
+              "probability": 0.27,
+              "confidence": null
+            },
+            "field.title": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.title",
+              "probability": 0.32,
+              "confidence": null
+            },
+            "field.source_sha": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.source_sha",
+              "probability": 0.36,
+              "confidence": null
+            },
+            "field.source_locator": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.source_locator",
+              "probability": 0.51,
+              "confidence": null
+            },
+            "field.priority": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.priority",
+              "probability": 0.13,
+              "confidence": null
+            },
+            "field.level": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.level",
+              "probability": 0.2,
+              "confidence": null
+            },
+            "field.test_required": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.test_required",
+              "probability": 0.86,
+              "confidence": null
+            },
+            "field.work_status": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.work_status",
+              "probability": 0.09,
+              "confidence": null
+            },
+            "field.status": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.status",
+              "probability": 0.14,
+              "confidence": null
+            },
+            "field.criteria": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.criteria",
+              "probability": 0.77,
+              "confidence": null
+            },
+            "field.req_status": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.req_status",
+              "probability": 0.16,
+              "confidence": null
+            },
+            "field.readiness": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.readiness",
+              "probability": 0.11,
+              "confidence": null
+            },
+            "field.covered_by": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.covered_by",
+              "probability": 0.41,
+              "confidence": null
+            },
+            "field.implemented_by": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.implemented_by",
+              "probability": 0.12,
+              "confidence": null
+            },
+            "field.depends_on": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.depends_on",
+              "probability": 0.18,
+              "confidence": null
+            },
+            "population": {
+              "schema_version": "1.0",
+              "kind": "choice",
+              "question_id": "population",
+              "choice": "clarify",
+              "probabilities": {
+                "clarify": 0.52,
+                "declared_dependents": 0.0,
+                "ac_descendants": 0.04,
+                "returned_entities": 0.44
+              },
+              "confidence": 0.35
+            },
+            "inclusion": {
+              "schema_version": "1.0",
+              "kind": "choice",
+              "question_id": "inclusion",
+              "choice": "clarify",
+              "probabilities": {
+                "terminal_leaves": 0.0,
+                "clarify": 0.99,
+                "root_excluded": 0.0,
+                "include_root": 0.01
+              },
+              "confidence": 0.99
+            },
+            "root": {
+              "schema_version": "1.0",
+              "kind": "choice",
+              "question_id": "root",
+              "choice": "KM-500c-2",
+              "probabilities": {
+                "clarify": 0.08,
+                "KM-500c-2": 0.92
+              },
+              "confidence": 0.83
+            },
+            "level.L0": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "level.L0",
+              "probability": 0.06,
+              "confidence": null
+            }
+          }
+        },
+        "usage": {
+          "schema_version": "1.0",
+          "provider": "jev",
+          "model_id": "jev-1.13.0",
+          "input_tokens": 1743,
+          "output_tokens": 459,
+          "duration_ms": 271,
+          "cost_usd": 7.3206e-05,
+          "cost_provenance": "estimated",
+          "calls": 1
+        },
+        "metadata": {
+          "purpose": "knowledge.answer_contract",
+          "adapter_version": "typesafe-classifier/0.0.1a3",
+          "latency_ms": 271,
+          "question_count": 20,
+          "status": "ok",
+          "template_ids": [
+            "knowledge.answer_contract.v1@1"
+          ],
+          "request_id": "req_01a0fdbff0be7092965f7480d6b19217",
+          "calls": 1,
+          "input_fingerprint": "a9d8b55d93711083c96ff3b3ace76314128d6112671536b899b062f3d0b0a93a",
+          "chunk_index": 0,
+          "chunk_count": 2,
+          "attempts": 1
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 15,
+      "kind": "generation",
+      "name": "jev.knowledge.answer_contract",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": "work-3fab6e9ad2eb4cdb",
+        "request_id": null,
+        "invocation_id": "inv-7a46c8339cd14a63",
+        "decision_id": null,
+        "capability_id": "retrieve.repository",
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": 13,
+      "data": {
+        "model": "jev-1.13.0",
+        "input": {
+          "questions": [
+            {
+              "id": "level.L1",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "level.L2",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "level.L3",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            }
+          ],
+          "state_chars": 2567,
+          "input_fingerprint": "386a48ce67afcd97e44b643cbd2dec7b43c62dda43f57acab783e5395c439fda"
+        },
+        "output": {
+          "answers": {
+            "level.L1": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "level.L1",
+              "probability": 0.06,
+              "confidence": null
+            },
+            "level.L2": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "level.L2",
+              "probability": 0.07,
+              "confidence": null
+            },
+            "level.L3": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "level.L3",
+              "probability": 0.06,
+              "confidence": null
+            }
+          }
+        },
+        "usage": {
+          "schema_version": "1.0",
+          "provider": "jev",
+          "model_id": "jev-1.13.0",
+          "input_tokens": 1046,
+          "output_tokens": 58,
+          "duration_ms": 227,
+          "cost_usd": 4.3932e-05,
+          "cost_provenance": "estimated",
+          "calls": 1
+        },
+        "metadata": {
+          "purpose": "knowledge.answer_contract",
+          "adapter_version": "typesafe-classifier/0.0.1a3",
+          "latency_ms": 227,
+          "question_count": 3,
+          "status": "ok",
+          "template_ids": [
+            "knowledge.answer_contract.v1@1"
+          ],
+          "request_id": "req_01a0fdbff1cf765cbadafb1285d998ff",
+          "calls": 1,
+          "input_fingerprint": "386a48ce67afcd97e44b643cbd2dec7b43c62dda43f57acab783e5395c439fda",
+          "chunk_index": 1,
+          "chunk_count": 2,
+          "attempts": 1
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 16,
+      "kind": "span",
+      "name": "kernel.integrate",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 17,
+      "kind": "span",
+      "name": "kernel.schedule",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 18,
+      "kind": "span",
+      "name": "kernel.route",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 19,
+      "kind": "event",
+      "name": "interaction.opened",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": "work-6121a5f2a7944a85",
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": "int-2af6ca4e6a454e5b",
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "level": "DEFAULT",
+        "payload": {
+          "kind": "human",
+          "state_revision": 2
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 20,
+      "kind": "span",
+      "name": "kernel.integrate",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 21,
+      "kind": "span",
+      "name": "kernel.schedule",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 22,
+      "kind": "span",
+      "name": "kernel.route",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 23,
+      "kind": "event",
+      "name": "routing.assessed",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": "work-992a14fc293c4bf4",
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": 22,
+      "data": {
+        "level": "DEFAULT",
+        "payload": {
+          "outcome": "selected",
+          "selected": "retrieve.repository",
+          "reason_codes": [
+            "deterministic"
+          ]
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 24,
+      "kind": "span",
+      "name": "capability.retrieve.repository",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": "work-992a14fc293c4bf4",
+        "request_id": "req-3ff9726eb4f044e4",
+        "invocation_id": "inv-82e8ca67d2f445f7",
+        "decision_id": null,
+        "capability_id": "retrieve.repository",
+        "interaction_id": null,
+        "parent_work_item_id": "work-9d6dee5270cc468c",
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "capability",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 25,
+      "kind": "generation",
+      "name": "jev.knowledge.answer_contract",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": "work-992a14fc293c4bf4",
+        "request_id": null,
+        "invocation_id": "inv-82e8ca67d2f445f7",
+        "decision_id": null,
+        "capability_id": "retrieve.repository",
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": 24,
+      "data": {
+        "model": "jev-1.13.0",
+        "input": {
+          "questions": [
+            {
+              "id": "field.canonical_id",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.kind",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.title",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.source_sha",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.source_locator",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.priority",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.level",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.test_required",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.work_status",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.status",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.criteria",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.req_status",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.readiness",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.covered_by",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.implemented_by",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "field.depends_on",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "population",
+              "kind": "choice",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "inclusion",
+              "kind": "choice",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "root",
+              "kind": "choice",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "level.L0",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            }
+          ],
+          "state_chars": 2592,
+          "input_fingerprint": "0348d18d8eff569a2abeb2f63894ddd04c0757b4650f9a5ff1553a39bb9ce6b3"
+        },
+        "output": {
+          "answers": {
+            "field.canonical_id": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.canonical_id",
+              "probability": 0.62,
+              "confidence": null
+            },
+            "field.kind": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.kind",
+              "probability": 0.26,
+              "confidence": null
+            },
+            "field.title": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.title",
+              "probability": 0.29,
+              "confidence": null
+            },
+            "field.source_sha": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.source_sha",
+              "probability": 0.29,
+              "confidence": null
+            },
+            "field.source_locator": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.source_locator",
+              "probability": 0.47,
+              "confidence": null
+            },
+            "field.priority": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.priority",
+              "probability": 0.1,
+              "confidence": null
+            },
+            "field.level": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.level",
+              "probability": 0.18,
+              "confidence": null
+            },
+            "field.test_required": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.test_required",
+              "probability": 0.85,
+              "confidence": null
+            },
+            "field.work_status": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.work_status",
+              "probability": 0.09,
+              "confidence": null
+            },
+            "field.status": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.status",
+              "probability": 0.13,
+              "confidence": null
+            },
+            "field.criteria": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.criteria",
+              "probability": 0.79,
+              "confidence": null
+            },
+            "field.req_status": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.req_status",
+              "probability": 0.16,
+              "confidence": null
+            },
+            "field.readiness": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.readiness",
+              "probability": 0.12,
+              "confidence": null
+            },
+            "field.covered_by": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.covered_by",
+              "probability": 0.38,
+              "confidence": null
+            },
+            "field.implemented_by": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.implemented_by",
+              "probability": 0.11,
+              "confidence": null
+            },
+            "field.depends_on": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "field.depends_on",
+              "probability": 0.16,
+              "confidence": null
+            },
+            "population": {
+              "schema_version": "1.0",
+              "kind": "choice",
+              "question_id": "population",
+              "choice": "returned_entities",
+              "probabilities": {
+                "clarify": 0.43,
+                "ac_descendants": 0.02,
+                "returned_entities": 0.55,
+                "declared_dependents": 0.0
+              },
+              "confidence": 0.39
+            },
+            "inclusion": {
+              "schema_version": "1.0",
+              "kind": "choice",
+              "question_id": "inclusion",
+              "choice": "clarify",
+              "probabilities": {
+                "clarify": 1.0,
+                "terminal_leaves": 0.0,
+                "include_root": 0.0,
+                "root_excluded": 0.0
+              },
+              "confidence": 0.99
+            },
+            "root": {
+              "schema_version": "1.0",
+              "kind": "choice",
+              "question_id": "root",
+              "choice": "KM-500c-2",
+              "probabilities": {
+                "clarify": 0.06,
+                "KM-500c-2": 0.94
+              },
+              "confidence": 0.88
+            },
+            "level.L0": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "level.L0",
+              "probability": 0.05,
+              "confidence": null
+            }
+          }
+        },
+        "usage": {
+          "schema_version": "1.0",
+          "provider": "jev",
+          "model_id": "jev-1.13.0",
+          "input_tokens": 1747,
+          "output_tokens": 459,
+          "duration_ms": 230,
+          "cost_usd": 7.337399999999999e-05,
+          "cost_provenance": "estimated",
+          "calls": 1
+        },
+        "metadata": {
+          "purpose": "knowledge.answer_contract",
+          "adapter_version": "typesafe-classifier/0.0.1a3",
+          "latency_ms": 230,
+          "question_count": 20,
+          "status": "ok",
+          "template_ids": [
+            "knowledge.answer_contract.v1@1"
+          ],
+          "request_id": "req_01a0fdbff38e7e908e5c51867031adcf",
+          "calls": 1,
+          "input_fingerprint": "0348d18d8eff569a2abeb2f63894ddd04c0757b4650f9a5ff1553a39bb9ce6b3",
+          "chunk_index": 0,
+          "chunk_count": 2,
+          "attempts": 1
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 26,
+      "kind": "generation",
+      "name": "jev.knowledge.answer_contract",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": "work-992a14fc293c4bf4",
+        "request_id": null,
+        "invocation_id": "inv-82e8ca67d2f445f7",
+        "decision_id": null,
+        "capability_id": "retrieve.repository",
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": 24,
+      "data": {
+        "model": "jev-1.13.0",
+        "input": {
+          "questions": [
+            {
+              "id": "level.L1",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "level.L2",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            },
+            {
+              "id": "level.L3",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1"
+            }
+          ],
+          "state_chars": 2592,
+          "input_fingerprint": "609f6f3044419b1f1c2bbc0595bced1ec792d5ffedefe98ca60d90a59beed6ff"
+        },
+        "output": {
+          "answers": {
+            "level.L1": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "level.L1",
+              "probability": 0.06,
+              "confidence": null
+            },
+            "level.L2": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "level.L2",
+              "probability": 0.06,
+              "confidence": null
+            },
+            "level.L3": {
+              "schema_version": "1.0",
+              "kind": "noul",
+              "question_id": "level.L3",
+              "probability": 0.05,
+              "confidence": null
+            }
+          }
+        },
+        "usage": {
+          "schema_version": "1.0",
+          "provider": "jev",
+          "model_id": "jev-1.13.0",
+          "input_tokens": 1050,
+          "output_tokens": 58,
+          "duration_ms": 231,
+          "cost_usd": 4.41e-05,
+          "cost_provenance": "estimated",
+          "calls": 1
+        },
+        "metadata": {
+          "purpose": "knowledge.answer_contract",
+          "adapter_version": "typesafe-classifier/0.0.1a3",
+          "latency_ms": 231,
+          "question_count": 3,
+          "status": "ok",
+          "template_ids": [
+            "knowledge.answer_contract.v1@1"
+          ],
+          "request_id": "req_01a0fdbff4787df4a2aef90c15d56ff7",
+          "calls": 1,
+          "input_fingerprint": "609f6f3044419b1f1c2bbc0595bced1ec792d5ffedefe98ca60d90a59beed6ff",
+          "chunk_index": 1,
+          "chunk_count": 2,
+          "attempts": 1
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 27,
+      "kind": "span",
+      "name": "kernel.integrate",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 28,
+      "kind": "span",
+      "name": "kernel.schedule",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 29,
+      "kind": "span",
+      "name": "kernel.route",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 30,
+      "kind": "event",
+      "name": "interaction.opened",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": "work-234bc25f21fd48a2",
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": "int-bb0ba57584774c97",
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "level": "DEFAULT",
+        "payload": {
+          "kind": "human",
+          "state_revision": 4
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 31,
+      "kind": "span",
+      "name": "kernel.integrate",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 32,
+      "kind": "span",
+      "name": "kernel.schedule",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-dd82be6f4c49430b",
+        "root_task_id": "task-d5844528c3fc454b",
+        "task_id": "task-d5844528c3fc454b",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    }
+  ],
+  "independent_verdict": "pending independent review"
+}

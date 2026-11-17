@@ -1,0 +1,820 @@
+<!doctype html><html lang=en><meta charset=utf-8><title>Public retrieval: observed baseline</title>
+    <style>body{font:16px/1.55 system-ui;max-width:1080px;margin:40px auto;padding:0 22px;color:#1e293b;background:#f8fafc}h1,h2{line-height:1.2}section{background:white;border:1px solid #dbe3ed;border-radius:12px;padding:24px;margin:24px 0}.badge{padding:4px 10px;background:#fef3c7;border-radius:6px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f1f5f9;padding:14px;border-radius:6px;font-size:12px}summary{cursor:pointer;font-weight:600;margin-top:12px}a{color:#1d4ed8}li{margin:8px 0}.note{background:#e0f2fe;padding:16px;border-radius:10px}small{color:#64748b}</style>
+    <h1>What retrieval actually did</h1><p>Preserved baseline, 9 October 2026. <b>0 of 5 positive cases reached a complete answer.</b> The stale-source control passed; all six runs reported their limitations.</p>
+    <p class=note>Actual TypeSafe Jev decisions + independent blind host responses. Repository evidence comes from 18 committed AC files through the real mapper and Git disclosure, with local storage replacing Neo4j. This proves the public workflow against that source subset, not a successful live Aura query.</p>
+    <p>7 actual Jev calls · 8 accepted host results · no graph/catalog writes · no telemetry export.</p>
+    <p><a href=baseline-summary.json>Machine report</a> · <a href=public-evaluation/working-source-freeze.json>Exact working-code hashes</a> · <a href=baseline-source-comparison.json>Actual canonical fields</a> · <a href=public-evaluation/host-artifacts/manifest.json>Archived host receipts</a></p>
+    <p>Source revision <code>fb7c073bbc93ac4751685c5b45d1b4efeb108ac2</code>. Host model identity and provider-call counts were not available; no model identity was invented.</p>
+    <h2>Separate interpretation evaluation</h2><p>The unchanged 12 accepted gold cases and four independently authored holdouts passed semantic checks after their 16 responses were accepted through real host waits. This is field-interpretation evidence, not an end-to-end answer score. An initial controller actor-ID error rejected the same bytes before interpretation; corrected envelopes reused them without regeneration.</p><p><a href=needs-evaluation/controller-envelope-repair/summary.json>Authoritative 12 + 4 receipt</a></p><section id=P01><h2>P01 · <span class=badge>partial</span></h2><p><b>For KM-500c-2, what must tests demonstrate?</b></p><small>Catalog/admission disabled; caller supplied a question and trusted source scope, no operation or answer fields.</small><ol><li><b>Host interpreted the need.</b> Types: ac; targets: KM-500c-2; fields: criteria, test_spec; scope resolution: sufficient.<details><summary>Complete accepted fields</summary><pre>{
+  &quot;schema_version&quot;: &quot;1.0&quot;,
+  &quot;original_question&quot;: &quot;For KM-500c-2, what must tests demonstrate?&quot;,
+  &quot;source_scope&quot;: {
+    &quot;read_roots&quot;: [
+      &quot;docs&quot;
+    ],
+    &quot;repository_id&quot;: &quot;public-needs-acceptance&quot;,
+    &quot;revision&quot;: &quot;fb7c073bbc93ac4751685c5b45d1b4efeb108ac2&quot;,
+    &quot;source_ids&quot;: [
+      &quot;knowledge.graph&quot;
+    ]
+  },
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;KM-500c-2&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;criteria&quot;,
+      &quot;test_spec&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: []
+  },
+  &quot;uncertain&quot;: {
+    &quot;entity_types&quot;: [],
+    &quot;target_ids&quot;: [],
+    &quot;required_fields&quot;: [],
+    &quot;document_types&quot;: [],
+    &quot;relationships&quot;: []
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;single_entity&quot;,
+  &quot;hierarchy_scope&quot;: &quot;not_applicable&quot;,
+  &quot;hierarchy_levels&quot;: [],
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: [],
+  &quot;rationale&quot;: &quot;The named acceptance criterion&#x27;s exact clauses and declared expected assertions establish what its tests must demonstrate. Test links, a test-required flag, and progress statuses do not provide those obligations.&quot;,
+  &quot;engine&quot;: &quot;host_llm&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;model_id&quot;: null
+}</pre></details></li><li><b>Jev selected from the available operations.</b> get_entities (probability 0.95, confidence 0.94)<details><summary>Selected arguments and actual provider receipt</summary><pre>{
+  &quot;bound&quot;: [
+    {
+      &quot;operation&quot;: &quot;get_entities&quot;,
+      &quot;arguments&quot;: &quot;{\&quot;entity_ids\&quot;:[\&quot;KM-500c-2\&quot;]}&quot;
+    }
+  ],
+  &quot;selector&quot;: [
+    {
+      &quot;model&quot;: &quot;jev-1.13.0&quot;,
+      &quot;input&quot;: {
+        &quot;questions&quot;: [
+          {
+            &quot;id&quot;: &quot;operation&quot;,
+            &quot;kind&quot;: &quot;choice&quot;,
+            &quot;template_id&quot;: &quot;knowledge.operation_select.v1&quot;,
+            &quot;template_version&quot;: &quot;1&quot;
+          }
+        ],
+        &quot;state_chars&quot;: 2537,
+        &quot;input_fingerprint&quot;: &quot;ebdb7b1bdce3bb6d6ac0660a9147f770020ca9a13a1c4461464ab5e46c4284a4&quot;
+      },
+      &quot;output&quot;: {
+        &quot;answers&quot;: {
+          &quot;operation&quot;: {
+            &quot;schema_version&quot;: &quot;1.0&quot;,
+            &quot;kind&quot;: &quot;choice&quot;,
+            &quot;question_id&quot;: &quot;operation&quot;,
+            &quot;choice&quot;: &quot;get_entities&quot;,
+            &quot;probabilities&quot;: {
+              &quot;get_entities&quot;: 0.95,
+              &quot;get_related_tests&quot;: 0.04,
+              &quot;get_declared_dependents&quot;: 0.0,
+              &quot;unsupported&quot;: 0.01,
+              &quot;unsupported_population&quot;: 0.0
+            },
+            &quot;confidence&quot;: 0.94
+          }
+        }
+      },
+      &quot;usage&quot;: {
+        &quot;schema_version&quot;: &quot;1.0&quot;,
+        &quot;provider&quot;: &quot;jev&quot;,
+        &quot;model_id&quot;: &quot;jev-1.13.0&quot;,
+        &quot;input_tokens&quot;: 1641,
+        &quot;output_tokens&quot;: 62,
+        &quot;duration_ms&quot;: 340,
+        &quot;cost_usd&quot;: 6.8922e-05,
+        &quot;cost_provenance&quot;: &quot;estimated&quot;,
+        &quot;calls&quot;: 1
+      },
+      &quot;metadata&quot;: {
+        &quot;purpose&quot;: &quot;knowledge.operation_select&quot;,
+        &quot;adapter_version&quot;: &quot;typesafe-classifier/0.0.1a3&quot;,
+        &quot;latency_ms&quot;: 340,
+        &quot;question_count&quot;: 1,
+        &quot;status&quot;: &quot;ok&quot;,
+        &quot;template_ids&quot;: [
+          &quot;knowledge.operation_select.v1@1&quot;
+        ],
+        &quot;request_id&quot;: &quot;req_01a1215bab6c7065bf7c7b28f32ac1a3&quot;,
+        &quot;calls&quot;: 1,
+        &quot;input_fingerprint&quot;: &quot;ebdb7b1bdce3bb6d6ac0660a9147f770020ca9a13a1c4461464ab5e46c4284a4&quot;,
+        &quot;chunk_index&quot;: 0,
+        &quot;chunk_count&quot;: 1,
+        &quot;attempts&quot;: 1
+      }
+    }
+  ]
+}</pre></details></li><li><b>Read source evidence.</b> 1 evidence items; 2 recorded source retrieval spans.<details><summary>Source execution and citations</summary><pre>[
+  {
+    &quot;repository_id&quot;: &quot;public-needs-acceptance&quot;,
+    &quot;request_id&quot;: &quot;inv-2be31754cf6c4e8a&quot;,
+    &quot;requested_mode&quot;: &quot;exact&quot;,
+    &quot;operation&quot;: &quot;get_entities&quot;,
+    &quot;disclosure_level&quot;: 0,
+    &quot;retrieval_id&quot;: &quot;091ea444-b651-41d5-a092-ea3d3908f89b&quot;,
+    &quot;generation_id&quot;: &quot;bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2&quot;,
+    &quot;source_sha&quot;: &quot;fb7c073bbc93ac4751685c5b45d1b4efeb108ac2&quot;,
+    &quot;executed_mode&quot;: &quot;exact&quot;,
+    &quot;status&quot;: &quot;ok&quot;,
+    &quot;evidence_count&quot;: 1
+  },
+  {
+    &quot;repository_id&quot;: &quot;public-needs-acceptance&quot;,
+    &quot;request_id&quot;: &quot;inv-2be31754cf6c4e8a&quot;,
+    &quot;requested_mode&quot;: &quot;exact&quot;,
+    &quot;operation&quot;: &quot;get_entities&quot;,
+    &quot;disclosure_level&quot;: 3,
+    &quot;retrieval_id&quot;: &quot;440f0138-cffd-45eb-8870-2a67004d28cb&quot;,
+    &quot;generation_id&quot;: &quot;bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2&quot;,
+    &quot;source_sha&quot;: &quot;fb7c073bbc93ac4751685c5b45d1b4efeb108ac2&quot;,
+    &quot;executed_mode&quot;: &quot;exact&quot;,
+    &quot;status&quot;: &quot;ok&quot;,
+    &quot;evidence_count&quot;: 1
+  }
+]</pre></details></li><p><b>Judge the original question against the evidence actually retrieved</b><br><small>knowledge://public-needs-acceptance@fb7c073bbc93ac4751685c5b45d1b4efeb108ac2/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&amp;locator=%2Fcriteria</small></p><pre>Given the original research has obtained results from an existing or newly verified query
+When its existing evidence evaluation decides whether the question can be answered
+Then the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied
+And a successful build, successful query execution and successful answer assessment remain separate recorded outcomes
+And zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact
+And any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.
+</pre><li><b>Assess the original obligations.</b> <details><summary>Structured answer requirements and missing facts</summary><pre>{
+  &quot;need.question&quot;: {
+    &quot;kind&quot;: &quot;retrieval_answer&quot;,
+    &quot;status&quot;: &quot;partial&quot;,
+    &quot;original_question&quot;: &quot;For KM-500c-2, what must tests demonstrate?&quot;,
+    &quot;required_fields&quot;: [
+      &quot;criteria&quot;,
+      &quot;test_spec&quot;
+    ],
+    &quot;scope&quot;: {
+      &quot;population&quot;: &quot;returned_entities&quot;,
+      &quot;root_id&quot;: null,
+      &quot;levels&quot;: null,
+      &quot;inclusion&quot;: null
+    },
+    &quot;missing_fields&quot;: [
+      {
+        &quot;canonical_id&quot;: &quot;KM-500c-2&quot;,
+        &quot;field&quot;: &quot;test_spec&quot;,
+        &quot;reason&quot;: &quot;unknown&quot;
+      }
+    ],
+    &quot;completeness&quot;: {
+      &quot;complete&quot;: true,
+      &quot;known_count&quot;: 1,
+      &quot;exact_total&quot;: 1,
+      &quot;limitations&quot;: []
+    },
+    &quot;work_status_counts&quot;: null,
+    &quot;known_work_status_counts&quot;: {},
+    &quot;limitations&quot;: []
+  }
+}</pre></details></li><li><b>Host summarized cited evidence.</b><ul><li>For KM-500c-2, tests must demonstrate that, after research obtains results from an existing or newly verified query, its existing evidence evaluation assesses answerability and the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied.</li><li>Tests must demonstrate that successful build, successful query execution, and successful answer assessment remain separate recorded outcomes.</li><li>Tests must demonstrate that zero matches, contradictory evidence, and insufficient evidence remain distinguishable, with their limitations preserved.</li><li>Tests must demonstrate that any bounded synthesis or follow-up uses the existing research policy and does not silently equate query availability with answer quality.</li></ul></li><li><b>Return with limitations.</b><ul><li>knowledge status: ok</li><li>retrieval choice: Jev selected a supported registered operation and authorized target</li><li>Original answer requirements remain partial</li><li>Retrieved evidence requires the existing research sufficiency assessment.</li><li>need need.question: conditional assessment remains partial</li><li>required need need.question is partial</li></ul><a href=public-evaluation/P01/P01.current.json>Final public receipt</a></li></ol></section><section id=P02><h2>P02 · <span class=badge>partial</span></h2><p><b>For KM-500c-2, what must tests demonstrate?</b></p><small>Catalog/admission enabled; caller supplied a question and trusted source scope, no operation or answer fields.</small><ol><li><b>Host interpreted the need.</b> Types: ac; targets: KM-500c-2; fields: criteria, test_spec; scope resolution: sufficient.<details><summary>Complete accepted fields</summary><pre>{
+  &quot;schema_version&quot;: &quot;1.0&quot;,
+  &quot;original_question&quot;: &quot;For KM-500c-2, what must tests demonstrate?&quot;,
+  &quot;source_scope&quot;: {
+    &quot;read_roots&quot;: [
+      &quot;docs&quot;
+    ],
+    &quot;repository_id&quot;: &quot;public-needs-acceptance&quot;,
+    &quot;revision&quot;: &quot;fb7c073bbc93ac4751685c5b45d1b4efeb108ac2&quot;,
+    &quot;source_ids&quot;: [
+      &quot;knowledge.graph&quot;
+    ]
+  },
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;KM-500c-2&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;criteria&quot;,
+      &quot;test_spec&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: []
+  },
+  &quot;uncertain&quot;: {
+    &quot;entity_types&quot;: [],
+    &quot;target_ids&quot;: [],
+    &quot;required_fields&quot;: [],
+    &quot;document_types&quot;: [],
+    &quot;relationships&quot;: []
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;single_entity&quot;,
+  &quot;hierarchy_scope&quot;: &quot;not_applicable&quot;,
+  &quot;hierarchy_levels&quot;: [],
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: [],
+  &quot;rationale&quot;: &quot;The named acceptance criterion&#x27;s exact clauses and declared expected assertions establish what its tests must demonstrate. Test links, a test-required flag, and progress statuses do not provide those obligations.&quot;,
+  &quot;engine&quot;: &quot;host_llm&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;model_id&quot;: null
+}</pre></details></li><li><b>Jev selected from the available operations.</b> get_entities (probability 0.95, confidence 0.94)<details><summary>Selected arguments and actual provider receipt</summary><pre>{
+  &quot;bound&quot;: [
+    {
+      &quot;operation&quot;: &quot;get_entities&quot;,
+      &quot;arguments&quot;: &quot;{\&quot;entity_ids\&quot;:[\&quot;KM-500c-2\&quot;]}&quot;
+    }
+  ],
+  &quot;selector&quot;: [
+    {
+      &quot;model&quot;: &quot;jev-1.13.0&quot;,
+      &quot;input&quot;: {
+        &quot;questions&quot;: [
+          {
+            &quot;id&quot;: &quot;operation&quot;,
+            &quot;kind&quot;: &quot;choice&quot;,
+            &quot;template_id&quot;: &quot;knowledge.operation_select.v1&quot;,
+            &quot;template_version&quot;: &quot;1&quot;
+          }
+        ],
+        &quot;state_chars&quot;: 2537,
+        &quot;input_fingerprint&quot;: &quot;ebdb7b1bdce3bb6d6ac0660a9147f770020ca9a13a1c4461464ab5e46c4284a4&quot;
+      },
+      &quot;output&quot;: {
+        &quot;answers&quot;: {
+          &quot;operation&quot;: {
+            &quot;schema_version&quot;: &quot;1.0&quot;,
+            &quot;kind&quot;: &quot;choice&quot;,
+            &quot;question_id&quot;: &quot;operation&quot;,
+            &quot;choice&quot;: &quot;get_entities&quot;,
+            &quot;probabilities&quot;: {
+              &quot;get_entities&quot;: 0.95,
+              &quot;get_related_tests&quot;: 0.04,
+              &quot;get_declared_dependents&quot;: 0.0,
+              &quot;unsupported&quot;: 0.01,
+              &quot;unsupported_population&quot;: 0.0
+            },
+            &quot;confidence&quot;: 0.94
+          }
+        }
+      },
+      &quot;usage&quot;: {
+        &quot;schema_version&quot;: &quot;1.0&quot;,
+        &quot;provider&quot;: &quot;jev&quot;,
+        &quot;model_id&quot;: &quot;jev-1.13.0&quot;,
+        &quot;input_tokens&quot;: 1641,
+        &quot;output_tokens&quot;: 62,
+        &quot;duration_ms&quot;: 325,
+        &quot;cost_usd&quot;: 6.8922e-05,
+        &quot;cost_provenance&quot;: &quot;estimated&quot;,
+        &quot;calls&quot;: 1
+      },
+      &quot;metadata&quot;: {
+        &quot;purpose&quot;: &quot;knowledge.operation_select&quot;,
+        &quot;adapter_version&quot;: &quot;typesafe-classifier/0.0.1a3&quot;,
+        &quot;latency_ms&quot;: 325,
+        &quot;question_count&quot;: 1,
+        &quot;status&quot;: &quot;ok&quot;,
+        &quot;template_ids&quot;: [
+          &quot;knowledge.operation_select.v1@1&quot;
+        ],
+        &quot;request_id&quot;: &quot;req_01a1215c41eb7469b3ba497ba54a8ac5&quot;,
+        &quot;calls&quot;: 1,
+        &quot;input_fingerprint&quot;: &quot;ebdb7b1bdce3bb6d6ac0660a9147f770020ca9a13a1c4461464ab5e46c4284a4&quot;,
+        &quot;chunk_index&quot;: 0,
+        &quot;chunk_count&quot;: 1,
+        &quot;attempts&quot;: 1
+      }
+    }
+  ]
+}</pre></details></li><li><b>Read source evidence.</b> 1 evidence items; 2 recorded source retrieval spans.<details><summary>Source execution and citations</summary><pre>[
+  {
+    &quot;repository_id&quot;: &quot;public-needs-acceptance&quot;,
+    &quot;request_id&quot;: &quot;inv-677131e5c05949db&quot;,
+    &quot;requested_mode&quot;: &quot;exact&quot;,
+    &quot;operation&quot;: &quot;get_entities&quot;,
+    &quot;disclosure_level&quot;: 0,
+    &quot;retrieval_id&quot;: &quot;a35e7a33-3de5-4456-8fea-198d4d094c07&quot;,
+    &quot;generation_id&quot;: &quot;bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2&quot;,
+    &quot;source_sha&quot;: &quot;fb7c073bbc93ac4751685c5b45d1b4efeb108ac2&quot;,
+    &quot;executed_mode&quot;: &quot;exact&quot;,
+    &quot;status&quot;: &quot;ok&quot;,
+    &quot;evidence_count&quot;: 1
+  },
+  {
+    &quot;repository_id&quot;: &quot;public-needs-acceptance&quot;,
+    &quot;request_id&quot;: &quot;inv-677131e5c05949db&quot;,
+    &quot;requested_mode&quot;: &quot;exact&quot;,
+    &quot;operation&quot;: &quot;get_entities&quot;,
+    &quot;disclosure_level&quot;: 3,
+    &quot;retrieval_id&quot;: &quot;ac8ea80b-c6e2-4088-a1b3-f4c65fe59807&quot;,
+    &quot;generation_id&quot;: &quot;bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2&quot;,
+    &quot;source_sha&quot;: &quot;fb7c073bbc93ac4751685c5b45d1b4efeb108ac2&quot;,
+    &quot;executed_mode&quot;: &quot;exact&quot;,
+    &quot;status&quot;: &quot;ok&quot;,
+    &quot;evidence_count&quot;: 1
+  }
+]</pre></details></li><p><b>Judge the original question against the evidence actually retrieved</b><br><small>knowledge://public-needs-acceptance@fb7c073bbc93ac4751685c5b45d1b4efeb108ac2/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&amp;locator=%2Fcriteria</small></p><pre>Given the original research has obtained results from an existing or newly verified query
+When its existing evidence evaluation decides whether the question can be answered
+Then the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied
+And a successful build, successful query execution and successful answer assessment remain separate recorded outcomes
+And zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact
+And any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.
+</pre><li><b>Assess the original obligations.</b> <details><summary>Structured answer requirements and missing facts</summary><pre>{
+  &quot;need.question&quot;: {
+    &quot;kind&quot;: &quot;retrieval_answer&quot;,
+    &quot;status&quot;: &quot;partial&quot;,
+    &quot;original_question&quot;: &quot;For KM-500c-2, what must tests demonstrate?&quot;,
+    &quot;required_fields&quot;: [
+      &quot;criteria&quot;,
+      &quot;test_spec&quot;
+    ],
+    &quot;scope&quot;: {
+      &quot;population&quot;: &quot;returned_entities&quot;,
+      &quot;root_id&quot;: null,
+      &quot;levels&quot;: null,
+      &quot;inclusion&quot;: null
+    },
+    &quot;missing_fields&quot;: [
+      {
+        &quot;canonical_id&quot;: &quot;KM-500c-2&quot;,
+        &quot;field&quot;: &quot;test_spec&quot;,
+        &quot;reason&quot;: &quot;unknown&quot;
+      }
+    ],
+    &quot;completeness&quot;: {
+      &quot;complete&quot;: true,
+      &quot;known_count&quot;: 1,
+      &quot;exact_total&quot;: 1,
+      &quot;limitations&quot;: []
+    },
+    &quot;work_status_counts&quot;: null,
+    &quot;known_work_status_counts&quot;: {},
+    &quot;limitations&quot;: []
+  }
+}</pre></details></li><li><b>Host summarized cited evidence.</b><ul><li>For KM-500c-2, tests must demonstrate that, after research obtains results from an existing or newly verified query, its existing evidence evaluation assesses answerability and the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied.</li><li>Tests must demonstrate that successful build, successful query execution, and successful answer assessment remain separate recorded outcomes.</li><li>Tests must demonstrate that zero matches, contradictory evidence, and insufficient evidence remain distinguishable, with their limitations preserved.</li><li>Tests must demonstrate that any bounded synthesis or follow-up uses the existing research policy and does not silently equate query availability with answer quality.</li></ul></li><li><b>Return with limitations.</b><ul><li>knowledge status: ok</li><li>retrieval choice: Jev selected a supported registered operation and authorized target</li><li>Original answer requirements remain partial</li><li>Retrieved evidence requires the existing research sufficiency assessment.</li><li>need need.question: conditional assessment remains partial</li><li>required need need.question is partial</li></ul><a href=public-evaluation/P02/P02.current.json>Final public receipt</a></li></ol></section><section id=P03><h2>P03 · <span class=badge>partial</span></h2><p><b>Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.</b></p><small>Catalog/admission disabled; caller supplied a question and trusted source scope, no operation or answer fields.</small><ol><li><b>Host interpreted the need.</b> Types: ac; targets: TQ-500f; fields: level, work_status; scope resolution: sufficient.<details><summary>Complete accepted fields</summary><pre>{
+  &quot;schema_version&quot;: &quot;1.0&quot;,
+  &quot;original_question&quot;: &quot;Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.&quot;,
+  &quot;source_scope&quot;: {
+    &quot;read_roots&quot;: [
+      &quot;docs&quot;
+    ],
+    &quot;repository_id&quot;: &quot;public-needs-acceptance&quot;,
+    &quot;revision&quot;: &quot;fb7c073bbc93ac4751685c5b45d1b4efeb108ac2&quot;,
+    &quot;source_ids&quot;: [
+      &quot;knowledge.graph&quot;
+    ]
+  },
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;TQ-500f&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;level&quot;,
+      &quot;work_status&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: [
+      &quot;all_descendants&quot;
+    ]
+  },
+  &quot;uncertain&quot;: {
+    &quot;entity_types&quot;: [],
+    &quot;target_ids&quot;: [],
+    &quot;required_fields&quot;: [],
+    &quot;document_types&quot;: [],
+    &quot;relationships&quot;: []
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;exhaustive_count&quot;,
+  &quot;hierarchy_scope&quot;: &quot;exclude_root&quot;,
+  &quot;hierarchy_levels&quot;: [
+    &quot;L2&quot;,
+    &quot;L3&quot;
+  ],
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: [],
+  &quot;rationale&quot;: &quot;Count every qualifying L2 and L3 AC in the named root&#x27;s full descendant population, grouped by implementation progress. Only the root is excluded; intermediate parent ACs remain eligible.&quot;,
+  &quot;engine&quot;: &quot;host_llm&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;model_id&quot;: null
+}</pre></details></li><li><b>Jev selected from the available operations.</b> get_ac_descendants (probability 0.76, confidence 0.71)<details><summary>Selected arguments and actual provider receipt</summary><pre>{
+  &quot;bound&quot;: [],
+  &quot;selector&quot;: [
+    {
+      &quot;model&quot;: &quot;jev-1.13.0&quot;,
+      &quot;input&quot;: {
+        &quot;questions&quot;: [
+          {
+            &quot;id&quot;: &quot;operation&quot;,
+            &quot;kind&quot;: &quot;choice&quot;,
+            &quot;template_id&quot;: &quot;knowledge.operation_select.v1&quot;,
+            &quot;template_version&quot;: &quot;1&quot;
+          }
+        ],
+        &quot;state_chars&quot;: 2837,
+        &quot;input_fingerprint&quot;: &quot;961367f667e0145c9538166ca2a75b8a3d3636dc326a55edce73c6aceb549aa5&quot;
+      },
+      &quot;output&quot;: {
+        &quot;answers&quot;: {
+          &quot;operation&quot;: {
+            &quot;schema_version&quot;: &quot;1.0&quot;,
+            &quot;kind&quot;: &quot;choice&quot;,
+            &quot;question_id&quot;: &quot;operation&quot;,
+            &quot;choice&quot;: &quot;get_ac_descendants&quot;,
+            &quot;probabilities&quot;: {
+              &quot;get_entities&quot;: 0.0,
+              &quot;get_related_tests&quot;: 0.0,
+              &quot;get_ac_descendants&quot;: 0.76,
+              &quot;get_declared_dependents&quot;: 0.0,
+              &quot;unsupported&quot;: 0.01,
+              &quot;unsupported_population&quot;: 0.23
+            },
+            &quot;confidence&quot;: 0.71
+          }
+        }
+      },
+      &quot;usage&quot;: {
+        &quot;schema_version&quot;: &quot;1.0&quot;,
+        &quot;provider&quot;: &quot;jev&quot;,
+        &quot;model_id&quot;: &quot;jev-1.13.0&quot;,
+        &quot;input_tokens&quot;: 1813,
+        &quot;output_tokens&quot;: 76,
+        &quot;duration_ms&quot;: 337,
+        &quot;cost_usd&quot;: 7.6146e-05,
+        &quot;cost_provenance&quot;: &quot;estimated&quot;,
+        &quot;calls&quot;: 1
+      },
+      &quot;metadata&quot;: {
+        &quot;purpose&quot;: &quot;knowledge.operation_select&quot;,
+        &quot;adapter_version&quot;: &quot;typesafe-classifier/0.0.1a3&quot;,
+        &quot;latency_ms&quot;: 337,
+        &quot;question_count&quot;: 1,
+        &quot;status&quot;: &quot;ok&quot;,
+        &quot;template_ids&quot;: [
+          &quot;knowledge.operation_select.v1@1&quot;
+        ],
+        &quot;request_id&quot;: &quot;req_01a1215c59ae7a9191539358ac77f486&quot;,
+        &quot;calls&quot;: 1,
+        &quot;input_fingerprint&quot;: &quot;961367f667e0145c9538166ca2a75b8a3d3636dc326a55edce73c6aceb549aa5&quot;,
+        &quot;chunk_index&quot;: 0,
+        &quot;chunk_count&quot;: 1,
+        &quot;attempts&quot;: 1
+      }
+    }
+  ]
+}</pre></details></li><li><b>Read source evidence.</b> 0 evidence items; 0 recorded source retrieval spans.<details><summary>Source execution and citations</summary><pre>[]</pre></details></li><li><b>Assess the original obligations.</b> <details><summary>Structured answer requirements and missing facts</summary><pre>{}</pre></details></li><li><b>Return with limitations.</b><ul><li>operation selection confidence is uncertain; assessment={&quot;confidence&quot;:0.71,&quot;minimum_confidence&quot;:0.5,&quot;minimum_selected_probability&quot;:0.8,&quot;selected_probability&quot;:0.76,&quot;selected_value&quot;:&quot;get_ac_descendants&quot;}</li><li>required need need.question is unavailable</li></ul><a href=public-evaluation/P03/P03.current.json>Final public receipt</a></li></ol></section><section id=P04><h2>P04 · <span class=badge>partial</span></h2><p><b>Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.</b></p><small>Catalog/admission enabled; caller supplied a question and trusted source scope, no operation or answer fields.</small><ol><li><b>Host interpreted the need.</b> Types: ac; targets: TQ-500f; fields: level, work_status; scope resolution: sufficient.<details><summary>Complete accepted fields</summary><pre>{
+  &quot;schema_version&quot;: &quot;1.0&quot;,
+  &quot;original_question&quot;: &quot;Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.&quot;,
+  &quot;source_scope&quot;: {
+    &quot;read_roots&quot;: [
+      &quot;docs&quot;
+    ],
+    &quot;repository_id&quot;: &quot;public-needs-acceptance&quot;,
+    &quot;revision&quot;: &quot;fb7c073bbc93ac4751685c5b45d1b4efeb108ac2&quot;,
+    &quot;source_ids&quot;: [
+      &quot;knowledge.graph&quot;
+    ]
+  },
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;TQ-500f&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;level&quot;,
+      &quot;work_status&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: [
+      &quot;all_descendants&quot;
+    ]
+  },
+  &quot;uncertain&quot;: {
+    &quot;entity_types&quot;: [],
+    &quot;target_ids&quot;: [],
+    &quot;required_fields&quot;: [],
+    &quot;document_types&quot;: [],
+    &quot;relationships&quot;: []
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;exhaustive_count&quot;,
+  &quot;hierarchy_scope&quot;: &quot;exclude_root&quot;,
+  &quot;hierarchy_levels&quot;: [
+    &quot;L2&quot;,
+    &quot;L3&quot;
+  ],
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: [],
+  &quot;rationale&quot;: &quot;Count every qualifying L2 and L3 AC in the named root&#x27;s full descendant population, grouped by implementation progress. Only the root is excluded; intermediate parent ACs remain eligible.&quot;,
+  &quot;engine&quot;: &quot;host_llm&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;model_id&quot;: null
+}</pre></details></li><li><b>Jev selected from the available operations.</b> get_ac_descendants (probability 0.75, confidence 0.7)<details><summary>Selected arguments and actual provider receipt</summary><pre>{
+  &quot;bound&quot;: [],
+  &quot;selector&quot;: [
+    {
+      &quot;model&quot;: &quot;jev-1.13.0&quot;,
+      &quot;input&quot;: {
+        &quot;questions&quot;: [
+          {
+            &quot;id&quot;: &quot;operation&quot;,
+            &quot;kind&quot;: &quot;choice&quot;,
+            &quot;template_id&quot;: &quot;knowledge.operation_select.v1&quot;,
+            &quot;template_version&quot;: &quot;1&quot;
+          }
+        ],
+        &quot;state_chars&quot;: 2837,
+        &quot;input_fingerprint&quot;: &quot;961367f667e0145c9538166ca2a75b8a3d3636dc326a55edce73c6aceb549aa5&quot;
+      },
+      &quot;output&quot;: {
+        &quot;answers&quot;: {
+          &quot;operation&quot;: {
+            &quot;schema_version&quot;: &quot;1.0&quot;,
+            &quot;kind&quot;: &quot;choice&quot;,
+            &quot;question_id&quot;: &quot;operation&quot;,
+            &quot;choice&quot;: &quot;get_ac_descendants&quot;,
+            &quot;probabilities&quot;: {
+              &quot;get_entities&quot;: 0.0,
+              &quot;get_related_tests&quot;: 0.0,
+              &quot;get_ac_descendants&quot;: 0.75,
+              &quot;get_declared_dependents&quot;: 0.0,
+              &quot;unsupported&quot;: 0.01,
+              &quot;unsupported_population&quot;: 0.24
+            },
+            &quot;confidence&quot;: 0.7
+          }
+        }
+      },
+      &quot;usage&quot;: {
+        &quot;schema_version&quot;: &quot;1.0&quot;,
+        &quot;provider&quot;: &quot;jev&quot;,
+        &quot;model_id&quot;: &quot;jev-1.13.0&quot;,
+        &quot;input_tokens&quot;: 1813,
+        &quot;output_tokens&quot;: 76,
+        &quot;duration_ms&quot;: 314,
+        &quot;cost_usd&quot;: 7.6146e-05,
+        &quot;cost_provenance&quot;: &quot;estimated&quot;,
+        &quot;calls&quot;: 1
+      },
+      &quot;metadata&quot;: {
+        &quot;purpose&quot;: &quot;knowledge.operation_select&quot;,
+        &quot;adapter_version&quot;: &quot;typesafe-classifier/0.0.1a3&quot;,
+        &quot;latency_ms&quot;: 314,
+        &quot;question_count&quot;: 1,
+        &quot;status&quot;: &quot;ok&quot;,
+        &quot;template_ids&quot;: [
+          &quot;knowledge.operation_select.v1@1&quot;
+        ],
+        &quot;request_id&quot;: &quot;req_01a1215c66ee7b6ba89238e420cc6234&quot;,
+        &quot;calls&quot;: 1,
+        &quot;input_fingerprint&quot;: &quot;961367f667e0145c9538166ca2a75b8a3d3636dc326a55edce73c6aceb549aa5&quot;,
+        &quot;chunk_index&quot;: 0,
+        &quot;chunk_count&quot;: 1,
+        &quot;attempts&quot;: 1
+      }
+    }
+  ]
+}</pre></details></li><li><b>Read source evidence.</b> 0 evidence items; 0 recorded source retrieval spans.<details><summary>Source execution and citations</summary><pre>[]</pre></details></li><li><b>Assess the original obligations.</b> <details><summary>Structured answer requirements and missing facts</summary><pre>{}</pre></details></li><li><b>Return with limitations.</b><ul><li>operation selection confidence is uncertain; assessment={&quot;confidence&quot;:0.7,&quot;minimum_confidence&quot;:0.5,&quot;minimum_selected_probability&quot;:0.8,&quot;selected_probability&quot;:0.75,&quot;selected_value&quot;:&quot;get_ac_descendants&quot;}</li><li>required need need.question is unavailable</li></ul><a href=public-evaluation/P04/P04.current.json>Final public receipt</a></li></ol></section><section id=P05><h2>P05 · <span class=badge>partial</span></h2><p><b>How many ACs concern test writing? Exclude parent requirements.</b></p><small>Catalog/admission enabled; caller supplied a question and trusted source scope, no operation or answer fields.</small><ol><li><b>Host interpreted the need.</b> Types: ac; targets: none known; fields: criteria; scope resolution: discovery_needed.<details><summary>Complete accepted fields</summary><pre>{
+  &quot;schema_version&quot;: &quot;1.0&quot;,
+  &quot;original_question&quot;: &quot;How many ACs concern test writing? Exclude parent requirements.&quot;,
+  &quot;source_scope&quot;: {
+    &quot;read_roots&quot;: [
+      &quot;docs&quot;
+    ],
+    &quot;repository_id&quot;: &quot;public-needs-acceptance&quot;,
+    &quot;revision&quot;: &quot;fb7c073bbc93ac4751685c5b45d1b4efeb108ac2&quot;,
+    &quot;source_ids&quot;: [
+      &quot;knowledge.graph&quot;
+    ]
+  },
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [],
+    &quot;required_fields&quot;: [
+      &quot;criteria&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: []
+  },
+  &quot;uncertain&quot;: {
+    &quot;entity_types&quot;: [],
+    &quot;target_ids&quot;: [],
+    &quot;required_fields&quot;: [],
+    &quot;document_types&quot;: [],
+    &quot;relationships&quot;: []
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;exhaustive_count&quot;,
+  &quot;hierarchy_scope&quot;: &quot;exclude_parents&quot;,
+  &quot;hierarchy_levels&quot;: [],
+  &quot;scope_resolution&quot;: &quot;discovery_needed&quot;,
+  &quot;unresolved&quot;: [],
+  &quot;rationale&quot;: &quot;The count requires discovering all ACs whose acceptance obligations concern writing tests, then excluding every parent requirement using hierarchy membership. No particular family, root, or level was specified, and lacking an identifier does not require a user choice.&quot;,
+  &quot;engine&quot;: &quot;host_llm&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;model_id&quot;: null
+}</pre></details></li><li><b>Jev selected from the available operations.</b> No Jev operation selection ran; interpretation left an unsupported population.<details><summary>Selected arguments and actual provider receipt</summary><pre>{
+  &quot;bound&quot;: [],
+  &quot;selector&quot;: []
+}</pre></details></li><li><b>Read source evidence.</b> 0 evidence items; 0 recorded source retrieval spans.<details><summary>Source execution and citations</summary><pre>[]</pre></details></li><li><b>Assess the original obligations.</b> <details><summary>Structured answer requirements and missing facts</summary><pre>{
+  &quot;retrieval_needs&quot;: {
+    &quot;kind&quot;: &quot;retrieval_needs&quot;,
+    &quot;status&quot;: &quot;unresolved&quot;,
+    &quot;original_question&quot;: &quot;How many ACs concern test writing? Exclude parent requirements.&quot;,
+    &quot;limitations&quot;: [
+      &quot;unsupported_population: no offered operation establishes the requested exhaustive population&quot;
+    ]
+  }
+}</pre></details></li><li><b>Return with limitations.</b><ul><li>unsupported_population: no offered operation establishes the requested exhaustive population</li></ul><a href=public-evaluation/P05/P05.current.json>Final public receipt</a></li></ol></section><section id=P06><h2>P06 · <span class=badge>partial</span></h2><p><b>For KM-500c-2, what must tests demonstrate?</b></p><small>Catalog/admission disabled; caller supplied a question and trusted source scope, no operation or answer fields.</small><ol><li><b>Host interpreted the need.</b> Types: ac; targets: KM-500c-2; fields: criteria, test_spec; scope resolution: sufficient.<details><summary>Complete accepted fields</summary><pre>{
+  &quot;schema_version&quot;: &quot;1.0&quot;,
+  &quot;original_question&quot;: &quot;For KM-500c-2, what must tests demonstrate?&quot;,
+  &quot;source_scope&quot;: {
+    &quot;read_roots&quot;: [
+      &quot;docs&quot;
+    ],
+    &quot;repository_id&quot;: &quot;public-needs-acceptance&quot;,
+    &quot;revision&quot;: &quot;0000000000000000000000000000000000000000&quot;,
+    &quot;source_ids&quot;: [
+      &quot;knowledge.graph&quot;
+    ]
+  },
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;KM-500c-2&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;criteria&quot;,
+      &quot;test_spec&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: []
+  },
+  &quot;uncertain&quot;: {
+    &quot;entity_types&quot;: [],
+    &quot;target_ids&quot;: [],
+    &quot;required_fields&quot;: [],
+    &quot;document_types&quot;: [],
+    &quot;relationships&quot;: []
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;single_entity&quot;,
+  &quot;hierarchy_scope&quot;: &quot;not_applicable&quot;,
+  &quot;hierarchy_levels&quot;: [],
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: [],
+  &quot;rationale&quot;: &quot;The named acceptance criterion&#x27;s exact clauses and declared expected assertions establish what its tests must demonstrate. The supplied source revision is preserved without claiming it has been verified.&quot;,
+  &quot;engine&quot;: &quot;host_llm&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;model_id&quot;: null
+}</pre></details></li><li><b>Jev selected from the available operations.</b> get_entities (probability 0.88, confidence 0.85)<details><summary>Selected arguments and actual provider receipt</summary><pre>{
+  &quot;bound&quot;: [
+    {
+      &quot;operation&quot;: &quot;get_entities&quot;,
+      &quot;arguments&quot;: &quot;{\&quot;entity_ids\&quot;:[\&quot;KM-500c-2\&quot;]}&quot;
+    }
+  ],
+  &quot;selector&quot;: [
+    {
+      &quot;model&quot;: &quot;jev-1.13.0&quot;,
+      &quot;input&quot;: {
+        &quot;questions&quot;: [
+          {
+            &quot;id&quot;: &quot;operation&quot;,
+            &quot;kind&quot;: &quot;choice&quot;,
+            &quot;template_id&quot;: &quot;knowledge.operation_select.v1&quot;,
+            &quot;template_version&quot;: &quot;1&quot;
+          }
+        ],
+        &quot;state_chars&quot;: 2528,
+        &quot;input_fingerprint&quot;: &quot;1a8108432a24a09ba3ecb0744fa23bbc3ba8119e78c439eed726070bb6e416fa&quot;
+      },
+      &quot;output&quot;: {
+        &quot;answers&quot;: {
+          &quot;operation&quot;: {
+            &quot;schema_version&quot;: &quot;1.0&quot;,
+            &quot;kind&quot;: &quot;choice&quot;,
+            &quot;question_id&quot;: &quot;operation&quot;,
+            &quot;choice&quot;: &quot;get_entities&quot;,
+            &quot;probabilities&quot;: {
+              &quot;get_entities&quot;: 0.88,
+              &quot;get_related_tests&quot;: 0.11,
+              &quot;get_declared_dependents&quot;: 0.0,
+              &quot;unsupported&quot;: 0.01,
+              &quot;unsupported_population&quot;: 0.0
+            },
+            &quot;confidence&quot;: 0.85
+          }
+        }
+      },
+      &quot;usage&quot;: {
+        &quot;schema_version&quot;: &quot;1.0&quot;,
+        &quot;provider&quot;: &quot;jev&quot;,
+        &quot;model_id&quot;: &quot;jev-1.13.0&quot;,
+        &quot;input_tokens&quot;: 1644,
+        &quot;output_tokens&quot;: 62,
+        &quot;duration_ms&quot;: 350,
+        &quot;cost_usd&quot;: 6.9048e-05,
+        &quot;cost_provenance&quot;: &quot;estimated&quot;,
+        &quot;calls&quot;: 1
+      },
+      &quot;metadata&quot;: {
+        &quot;purpose&quot;: &quot;knowledge.operation_select&quot;,
+        &quot;adapter_version&quot;: &quot;typesafe-classifier/0.0.1a3&quot;,
+        &quot;latency_ms&quot;: 350,
+        &quot;question_count&quot;: 1,
+        &quot;status&quot;: &quot;ok&quot;,
+        &quot;template_ids&quot;: [
+          &quot;knowledge.operation_select.v1@1&quot;
+        ],
+        &quot;request_id&quot;: &quot;req_01a1215c7d6b76b591b57641d81c5aae&quot;,
+        &quot;calls&quot;: 1,
+        &quot;input_fingerprint&quot;: &quot;1a8108432a24a09ba3ecb0744fa23bbc3ba8119e78c439eed726070bb6e416fa&quot;,
+        &quot;chunk_index&quot;: 0,
+        &quot;chunk_count&quot;: 1,
+        &quot;attempts&quot;: 1
+      }
+    }
+  ]
+}</pre></details></li><li><b>Read source evidence.</b> 0 evidence items; 1 recorded source retrieval spans.<details><summary>Source execution and citations</summary><pre>[
+  {
+    &quot;repository_id&quot;: &quot;public-needs-acceptance&quot;,
+    &quot;request_id&quot;: &quot;inv-73bde5987dbf42f7&quot;,
+    &quot;requested_mode&quot;: &quot;exact&quot;,
+    &quot;operation&quot;: &quot;get_entities&quot;,
+    &quot;disclosure_level&quot;: 0,
+    &quot;retrieval_id&quot;: &quot;683ba234-4e89-4baf-96b1-490b38e91487&quot;,
+    &quot;generation_id&quot;: &quot;bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2&quot;,
+    &quot;source_sha&quot;: &quot;fb7c073bbc93ac4751685c5b45d1b4efeb108ac2&quot;,
+    &quot;executed_mode&quot;: &quot;exact&quot;,
+    &quot;status&quot;: &quot;stale&quot;,
+    &quot;evidence_count&quot;: 0
+  }
+]</pre></details></li><li><b>Assess the original obligations.</b> <details><summary>Structured answer requirements and missing facts</summary><pre>{
+  &quot;need.question&quot;: {
+    &quot;kind&quot;: &quot;retrieval_answer&quot;,
+    &quot;status&quot;: &quot;unresolved&quot;,
+    &quot;original_question&quot;: &quot;For KM-500c-2, what must tests demonstrate?&quot;,
+    &quot;required_fields&quot;: [
+      &quot;criteria&quot;,
+      &quot;test_spec&quot;
+    ],
+    &quot;scope&quot;: {
+      &quot;population&quot;: &quot;returned_entities&quot;,
+      &quot;root_id&quot;: null,
+      &quot;levels&quot;: null,
+      &quot;inclusion&quot;: null
+    },
+    &quot;missing_fields&quot;: [],
+    &quot;completeness&quot;: {
+      &quot;complete&quot;: false,
+      &quot;known_count&quot;: 0,
+      &quot;exact_total&quot;: null,
+      &quot;limitations&quot;: [
+        &quot;execution is stale&quot;,
+        &quot;requested source revision is not established&quot;,
+        &quot;requested identities are missing from returned evidence&quot;,
+        &quot;no evidence for the requested facts&quot;
+      ]
+    },
+    &quot;work_status_counts&quot;: null,
+    &quot;known_work_status_counts&quot;: {},
+    &quot;limitations&quot;: [
+      &quot;execution is stale&quot;,
+      &quot;requested source revision is not established&quot;,
+      &quot;requested identities are missing from returned evidence&quot;,
+      &quot;no evidence for the requested facts&quot;
+    ]
+  }
+}</pre></details></li><li><b>Return with limitations.</b><ul><li>requested revision is not published</li><li>knowledge status: stale</li><li>retrieval choice: Jev selected a supported registered operation and authorized target</li><li>execution is stale</li><li>requested source revision is not established</li><li>requested identities are missing from returned evidence</li><li>no evidence for the requested facts</li><li>Original answer requirements remain unresolved</li><li>need need.question: conditional assessment remains unresolved</li><li>required need need.question is unavailable</li></ul><a href=public-evaluation/P06/P06.current.json>Final public receipt</a></li></ol></section><h2>Remaining gaps</h2><ul><li>P01/P02: criteria are retrieved and synthesized with citations, but requested authored test_spec does not survive disclosure; final answer remains partial.</li><li>P03/P04: correct proposed get_ac_descendants operation falls below unchanged probability gate (0.76/0.75 versus 0.80); no source query executes.</li><li>P05: host chooses discovery_needed without a known root; runtime cannot establish that exhaustive population. The frozen clarification expectation is unmet. Choosing discovery is not necessarily wrong; the missing discovery capability is a functional gap.</li><li>Controlled test separately demonstrates default six-result budget cannot enumerate all fifteen TQ-500f descendants. Live baseline did not reach this stage.</li><li>Aura connection works but canonical publication failed before a ready generation, so no live graph positive was run.</li></ul><p>This baseline is immutable evidence of the original attempt. Any code repair and retest is reported separately.</p></html>

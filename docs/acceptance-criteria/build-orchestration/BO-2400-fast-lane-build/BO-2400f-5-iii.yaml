@@ -12,9 +12,12 @@ priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a fast-lane run asks an agent to perform one of its steps,
-  When the agent's reply is a decline instead of the step's result — it refuses the
-    task, calls the task misrouted or injected, answers as a role other than the one
-    the step needs, or returns nothing the step can read as its result,
+  When the agent's reply is a decline instead of the step's result — at a command step,
+    the command-step-runner's explicit decline (declined, the step, the agent and a
+    reason, with no exit status; BO-2400a-1-i); at a specialist step (test-writer, coder,
+    pr-reviewer), a reply that refuses the task, calls the task misrouted or injected,
+    answers as a role other than the one the step needs, or returns nothing the step can
+    read as its result,
   Then the run halts at that step,
   And the halt names the step, the agent that was asked, and the agent's own stated
     reason, quoted from its reply,
@@ -23,6 +26,13 @@ criteria: |
     unproducible set (BO-2400f-12),
   And the halt does not say that the set is already claimed, in progress elsewhere, or
     owned by a concurrent run.
+
+  Given a command step's reply carries no exit status and is not the command-step-runner's
+    explicit decline — an unfinished reply, an empty reply, a reply saying the command was
+    moved to the background, or text that is not one of the runner's reply shapes,
+  When the run reads it,
+  Then the run does not halt as a declined step; it halts as "state unknown"
+    (BO-2400f-7-vii).
 
   Given the resolve step's agent declines,
   When the run reads the reply,
@@ -38,8 +48,14 @@ criteria: |
   Given the halt payload observed on 2026-09-25 — contention wording, target_refused
     true, and a detail that is the agent's own refusal ("Refusing this task. I am
     status-checker, scoped to investigating ticket state …"),
-  When the same agent reply is given to the run at any of its steps,
+  When the same agent reply is given to the run at any of its specialist steps,
   Then the halt names the declined step, names status-checker, and quotes that reason,
+  And no contention wording appears in it.
+
+  Given the same prose refusal is the reply at a command step,
+  When the run reads it,
+  Then the run halts as "state unknown" (BO-2400f-7-vii), because prose is not the
+    command-step-runner's decline shape,
   And no contention wording appears in it.
 depends_on: [BO-2400f-5, BO-2400f-7-iii, BO-2400f-2, BO-2400f-12, BO-2400a-1-i]
 doc_links:
@@ -67,10 +83,15 @@ it_requirements:
     branch.
   - >-
     A reply is a result only if it parses into that step's expected result shape. For a
-    command-step-runner dispatch, a reply without exit_status is a decline. A reply with a
-    non-zero exit_status is the step's own command failure and goes to that step's
-    existing failure handling, never to the declined-step halt. For any other agent, a
-    refusal, a role-mismatch answer, an empty reply or an unparseable reply is a decline.
+    command-step-runner dispatch, a reply is a decline only when it has the runner's
+    explicit decline shape (declined true, step, agent, reason, no exit_status), read from
+    its shape and never from words in free text; any other reply without exit_status
+    (unfinished, empty, backgrounded, unparseable) is state unknown and is owned by
+    BO-2400f-7-vii, not by this record (amended 2026-11-16). A reply with a non-zero
+    exit_status is the step's own command failure and goes to that step's existing
+    failure handling, never to the declined-step halt. For any other agent (the
+    specialist steps), a refusal, a role-mismatch answer, an empty reply or an
+    unparseable reply is a decline, unchanged.
   - >-
     The declined-step halt payload is {halt_kind: 'declined_step', step: string, agent:
     string, reason: string, target: {workspace, branch, ac_id} or null}. reason is the
@@ -78,8 +99,8 @@ it_requirements:
     When the reply was empty or unreadable, reason says so explicitly. target is null
     only before the worktree step has confirmed a workspace.
   - >-
-    declined_step is distinct from contention, gate failure and the unproducible-set
-    refusal (BO-2400f-12). Contention wording, and a contention reading of
+    declined_step is distinct from contention, gate failure, the unproducible-set
+    refusal (BO-2400f-12) and state unknown (BO-2400f-7-vii). Contention wording, and a contention reading of
     target_refused, is reachable only on the contention branch, and that branch still
     requires a non-empty held-member list (BO-2400f-7-iii).
   - >-
@@ -104,7 +125,7 @@ test_spec:
     framework: pytest
     type: integration
     angle: criterion
-    description: "Parametrised over every step the lane dispatches (discovered from the harness's recorded dispatches, not a hand list): a refusal reply at that step halts with halt_kind declined_step, the step, the asked agent and the refusal text quoted verbatim."
+    description: "Parametrised over every step the lane dispatches (discovered from the harness's recorded dispatches, not a hand list): a decline at that step halts with halt_kind declined_step, the step, the asked agent and the stated reason quoted verbatim. At a command step the decline is the command-step-runner's decline object; at a specialist step it is a prose refusal."
   - name: test_declined_step_is_classified_apart_from_contention_gate_failure_and_unproducible
     target_dir: unit_tests/workflows/
     framework: pytest
@@ -132,7 +153,7 @@ test_spec:
     framework: pytest
     type: integration
     angle: real_artifact
-    description: "The verbatim status-checker refusal from the 2026-09-25 run ('Refusing this task. I am status-checker, scoped to investigating ticket state ...'), replayed at each step, yields a declined-step halt naming status-checker and quoting it, with no 'already claimed', 'in progress' or 'concurrent run' wording."
+    description: "The verbatim status-checker refusal from the 2026-09-25 run ('Refusing this task. I am status-checker, scoped to investigating ticket state ...'), replayed at each specialist step, yields a declined-step halt naming status-checker and quoting it; replayed at each command step it yields a state_unknown halt (BO-2400f-7-vii). At every step there is no 'already claimed', 'in progress' or 'concurrent run' wording."
   - name: test_command_step_runner_reply_without_exit_status_is_a_decline_and_nonzero_exit_is_a_result
     target_dir: unit_tests/workflows/
     framework: pytest
@@ -145,7 +166,7 @@ test_spec:
     framework: pytest
     type: integration
     angle: boundary
-    description: "An empty reply and a non-JSON prose reply at a command step each halt as declined_step with a reason stating no readable result was returned."
+    description: "Re-pointed 2026-11-16 (BO-2400f-7-vii). An empty reply and a non-JSON prose reply at a specialist step each halt as declined_step with a reason stating no readable result was returned. The same two replies at a command step each halt as state_unknown, not declined_step; that arm is asserted here as the boundary and owned by BO-2400f-7-vii."
 test_rationale: |
   The two dangerous misreadings are those that look like success or permission: a declined
   resolve ending as a clean no-op, and a declined producibility going on to claim. Each has
@@ -172,6 +193,11 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-09-27'
+- action: narrowed-by
+  agent: business-analyst
+  date: '2026-11-16'
+  by_record: BO-2400f-7-vii
+  reason: "BO-2400f-7-vii (approved at the BA gate 2026-11-16) narrows what this record calls a decline at a command step. Before: any command-step-runner reply without exit_status was a decline, and an empty or unparseable command-step reply halted as declined_step. After: at a command step only the runner's explicit decline shape (declined, step, agent, reason, no exit_status; BO-2400a-1-i) is a decline, read from its shape and not from words in free text; every other command-step reply without an exit status (unfinished, empty, backgrounded, unparseable, prose such as the 2026-09-25 refusal) halts as state unknown under BO-2400f-7-vii. Specialist-step replies (test-writer, coder, pr-reviewer) are classified exactly as before. Reworded: the first scenario's decline list, a new command-step boundary scenario, the 2026-09-25 replay scenario (split into specialist and command steps), it_requirements items 2 and 4, and the descriptions of three test_spec entries, whose names are kept: the existing tests are re-pointed at state_unknown for command steps, not deleted. work_status reset done -> todo because the lane's behaviour at command steps changes and the existing tests prove the old reading."
 superseded_by: null
 covered_by: []
 implemented_by: []

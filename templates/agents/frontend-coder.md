@@ -15,7 +15,14 @@ description: |
 
 model: sonnet
 name: frontend-coder
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
+skills:
+- skill_id: webapp-testing
+  mode: conditional
+  condition: After UI changes, if webapp-testing is installed and ANTIGRAVITY is unset, load it to screenshot and check console errors.
+- skill_id: signoff
+  mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 portable: true
 signoff: true
 requires_verification: true
@@ -732,12 +739,6 @@ missing.
 - You are platform-agnostic: the same principles apply to React, Vue, Svelte,
   and plain HTML/CSS equally. Do not assume a specific framework unless the
   ticket specifies one.
-
-## Your Available Sub-Agents
-
-| Agent | Role | Tier |
-|---|---|---|
-| research-agent | Cross-file lookups, blast-radius analysis, symbol search | utility |
 
 ## Context Capsule (gated — only when warn-tier signal trips)
 

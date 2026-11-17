@@ -43,30 +43,24 @@ it_requirements:
   calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
   silently swallowing.'
 test_spec:
-- name: test_fresh_authoring_worktree_has_precommit_config_after_bootstrap
-  target_dir: unit_tests/build_orchestration/
-  framework: unittest
-  type: integration
-  description: A worktree created without .pre-commit-config.yaml or .leafcutter resolves both to readable
-    targets after the bootstrap step, on the symlink path and on the copy fallback.
-- name: test_ac_hooks_execute_against_staged_ac_files_in_the_authoring_worktree
+- name: test_ac_hooks_run_and_block_a_bad_stage_commit_in_a_fresh_authoring_workspace
   target_dir: unit_tests/build_orchestration/
   framework: unittest
   type: behavioral
-  description: Committing a staged AC YAML in the bootstrapped worktree produces observable AC-hook output
-    (the hook ran), rather than the PRE_COMMIT_ALLOW_NO_CONFIG no-config skip path.
-- name: test_stage_commit_violating_an_ac_hook_is_blocked
+  description: Given a plain clone of the fixture hub (the control, since the workspace maker makes its
+    own clone) has no .pre-commit-config.yaml, no .leafcutter and no pre-commit hook, the maker's fresh
+    --kind ac workspace has its pre-commit configuration and hook in place before any commit; committing
+    a staged schema-invalid AC YAML there runs the AC schema and parent-link hooks (not the
+    PRE_COMMIT_ALLOW_NO_CONFIG skip), the schema hook fails, only AC hooks fail, the commit exits non-zero
+    and HEAD does not move. The workspace is set up by the install build writing the config into it (no
+    symlink, so no NTFS copy-fallback path exists to exercise).
+- name: test_same_bad_commit_lands_in_a_checkout_the_maker_never_set_up
   target_dir: unit_tests/build_orchestration/
   framework: unittest
   type: behavioral
-  description: Staging a schema-invalid AC YAML and committing in the bootstrapped worktree exits non-zero
-    and leaves the branch HEAD unmoved, proving the hook gates rather than decorates the commit.
-- name: test_unbootstrapped_worktree_would_have_let_the_bad_commit_through
-  target_dir: unit_tests/build_orchestration/
-  framework: unittest
-  type: behavioral
-  description: Negative control — the same schema-invalid commit in a worktree without the bootstrap succeeds,
-    proving the previous test's block is caused by the bootstrap and not by unrelated validation.
+  description: Negative control — a plain clone of the same hub, which has no hook config, no .leafcutter
+    and no hook, takes the same schema-invalid commit (it lands and no AC schema hook reports), proving the
+    block above is caused by the maker's set-up and not by unrelated validation.
 delivers_to: null
 expects_from:
   ac_id: BO-1500a-1
@@ -75,7 +69,8 @@ origin_agent: business-analyst
 created: 2026-06-24
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_1500b_1_i_ac_hooks_in_maker_workspace.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-SafeAcAuthoring/06_TICKET-20260624-BO-1500b-1-i.md
 change_target: infrastructure

@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a requirement whose criteria change the retry cap applied when a build step fails,
     and whose declared files are (a) the runbook in which that cap is defined and (b) a
@@ -72,9 +72,18 @@ expects_from:
     stands'', reason: str, by: ''it-po''}} plus the list of files opened. Written by the code-aware agent
     (decision null); decision filled only by the technical planner''s next pass.'
 test_required: false
+test_rationale: "Prompt-only deliverable (the file-findings procedure in templates/agents/test-designer.md) whose behaviour is an LLM following instructions; the structural tests under unit_tests/ (paragraph-scoped rules, the prompt's examples validated against the real schema, the real render CLI) pin the instructions, and the requirement rule check enforces what the agent writes."
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by:
+- reason: "expects_from contract on ACD-2500d-3-i restored after EPIC-RightJobRightAgent shipped (PR #1245); it had been removed on 2026-10-12 only so the epic could be ordered, and both records are now done"
+  date: '2026-10-15'
+  by: main-session
+  directed_by: user
+- reason: "ordering edge removed: it closed a dependency cycle with the child's parent link, so the epic could not be ordered; the contract stays on the producer's delivers_to and both ship in the same epic PR (d-1 -> d-3-i -> d-3 -> d-1)"
+  date: '2026-10-12'
+  by: main-session
+  directed_by: user
 - reason: "hold released: ACD-1600c-4 done (PR #948); promoted reviewed -> approved"
   date: '2026-09-30'
   by: it-po
@@ -89,7 +98,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - ACD-2500d-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/35_TICKET-20261012-ACD-2500d-1.md
 change_target: prompt
 risk_surface: internal
 notes: |
@@ -113,3 +123,15 @@ notes: |
   same host is fine (both need the declared files open, both run before approval) as long
   as the outputs stay separate (test design vs surface findings). Left to IT-PO / user -
   see open questions.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: testDesign
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

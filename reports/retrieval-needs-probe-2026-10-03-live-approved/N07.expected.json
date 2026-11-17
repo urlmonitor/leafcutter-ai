@@ -1,0 +1,29 @@
+{
+  "expected": {
+    "include": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-2"
+      ],
+      "required_fields": [
+        "status",
+        "work_status"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ]
+    },
+    "completeness": [
+      "single_entity"
+    ],
+    "hierarchy_scope": [
+      "not_applicable"
+    ],
+    "status": [
+      "decided"
+    ]
+  },
+  "human_gold": "Both fields are explicitly required and distinct. Neither readiness nor lifecycle active can substitute for implementation done. Missing fields remain a gap after actual retrieval."
+}

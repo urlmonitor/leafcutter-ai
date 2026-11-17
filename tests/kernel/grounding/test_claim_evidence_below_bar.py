@@ -60,6 +60,18 @@ class TestClaimEvidenceBelowBar(unittest.TestCase):
         self.assertEqual(sorted(out.need_evidence.get(CLAIM_NEED, [])),
                          sorted(e.id for e in BELOW_BAR))
 
+    def test_claim_evidence_retains_its_conditional_assessment(self) -> None:
+        # covers: KM-500f-2
+        # angle: seam
+        payload = _bundle(CLAIM_NEED, BELOW_BAR)
+        report = {"status": "unresolved", "limitations": ["Historical proof is unverified."]}
+        payload["assessments"] = {CLAIM_NEED: report}
+        out = Collected()
+        _absorb_bundle(out, payload, BAR)
+        self.assertEqual(out.assessments[CLAIM_NEED], report)
+        self.assertEqual(sorted(out.need_evidence[CLAIM_NEED]), sorted(e.id for e in BELOW_BAR))
+        self.assertEqual(out.coverage[CLAIM_NEED], NeedStatus.PARTIAL)
+
     def test_non_claim_need_keeps_the_relevance_gate(self) -> None:
         items = [_scored(f"docs/pattern{i}.md#L1-L2", 0.3, EvidenceCategory.EXISTING_PATTERNS)
                  for i in range(3)]

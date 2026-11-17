@@ -1,0 +1,130 @@
+{
+  "checked_at": "2026-10-09T21:39:54.514532+00:00",
+  "mode": "Saved-output equivalence and synthetic scorer discrimination controls only; not new host responses or semantic model evidence.",
+  "unchanged_original_case_grades": 12,
+  "synthetic_holdout_controls": 12,
+  "model_calls": 0,
+  "graph_calls": 0,
+  "checks": [
+    {
+      "case": "IP01",
+      "unchanged_old_new_grade": true
+    },
+    {
+      "case": "IP02",
+      "unchanged_old_new_grade": true
+    },
+    {
+      "case": "IP03",
+      "unchanged_old_new_grade": true
+    },
+    {
+      "case": "IP04",
+      "unchanged_old_new_grade": true
+    },
+    {
+      "case": "IP05",
+      "unchanged_old_new_grade": true
+    },
+    {
+      "case": "IP06",
+      "unchanged_old_new_grade": true
+    },
+    {
+      "case": "IP07",
+      "unchanged_old_new_grade": true
+    },
+    {
+      "case": "IP08",
+      "unchanged_old_new_grade": true
+    },
+    {
+      "case": "IP09",
+      "unchanged_old_new_grade": true
+    },
+    {
+      "case": "IP10",
+      "unchanged_old_new_grade": true
+    },
+    {
+      "case": "IP11",
+      "unchanged_old_new_grade": true
+    },
+    {
+      "case": "IP12",
+      "unchanged_old_new_grade": true
+    },
+    {
+      "control": "H01 direct declaration",
+      "expected_pass": true,
+      "actual_pass": true,
+      "synthetic_scorer_control_only": true
+    },
+    {
+      "control": "H01 unwanted traversal",
+      "expected_pass": false,
+      "actual_pass": false,
+      "synthetic_scorer_control_only": true
+    },
+    {
+      "control": "H02 linked excerpt",
+      "expected_pass": true,
+      "actual_pass": true,
+      "synthetic_scorer_control_only": true
+    },
+    {
+      "control": "H02 missing traversal",
+      "expected_pass": false,
+      "actual_pass": false,
+      "synthetic_scorer_control_only": true
+    },
+    {
+      "control": "H03 complete linked locators",
+      "expected_pass": true,
+      "actual_pass": true,
+      "synthetic_scorer_control_only": true
+    },
+    {
+      "control": "H03 sample",
+      "expected_pass": false,
+      "actual_pass": false,
+      "synthetic_scorer_control_only": true
+    },
+    {
+      "control": "H03 identity_only",
+      "expected_pass": false,
+      "actual_pass": false,
+      "synthetic_scorer_control_only": true
+    },
+    {
+      "control": "H03 declaration_only",
+      "expected_pass": false,
+      "actual_pass": false,
+      "synthetic_scorer_control_only": true
+    },
+    {
+      "control": "H04 explicit gap without leads",
+      "expected_pass": true,
+      "actual_pass": true,
+      "synthetic_scorer_control_only": true
+    },
+    {
+      "control": "H04 unrequested content",
+      "expected_pass": false,
+      "actual_pass": false,
+      "synthetic_scorer_control_only": true
+    },
+    {
+      "control": "H04 unrequested covered_by",
+      "expected_pass": false,
+      "actual_pass": false,
+      "synthetic_scorer_control_only": true
+    },
+    {
+      "control": "H04 unrequested relationship",
+      "expected_pass": false,
+      "actual_pass": false,
+      "synthetic_scorer_control_only": true
+    }
+  ]
+}

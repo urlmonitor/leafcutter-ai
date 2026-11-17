@@ -18,7 +18,8 @@
     {
       "id": "plan",
       "label": "Plan",
-      "human": "Say what you want; the ACs get authored.",
+      "description": "You say what you want and AI agents author the acceptance criteria for it.",
+      "actor_kind": "llm",
       "order": 1,
       "implements": ["UXP-550"],
       "impl_status": "done",
@@ -27,7 +28,8 @@
     {
       "id": "build",
       "label": "Build",
-      "human": "The wired ticket is driven through its phase agents until green and committed.",
+      "description": "AI phase agents drive the wired ticket through its build phases until it is green and committed.",
+      "actor_kind": "llm",
       "order": 2,
       "implements": ["UXP-551"],
       "impl_status": "done",
@@ -36,7 +38,8 @@
     {
       "id": "finalize",
       "label": "Finalize",
-      "human": "The PR is merged and the epic/ticket is closed.",
+      "description": "The finalize pipeline merges the pull request and closes the epic or ticket.",
+      "actor_kind": "deterministic",
       "order": 3,
       "implements": ["UXP-552"],
       "impl_status": "done",

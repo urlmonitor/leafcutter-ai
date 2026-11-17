@@ -44,6 +44,7 @@ import json
 import sys
 from pathlib import Path
 
+from agent_ability_gate import refuse_on_ability_findings
 from build_colors import (
     RESET,
     GREEN,
@@ -63,7 +64,9 @@ from build_helpers import (
     shim_map,
     file_shims,
 )
+from build_log_root import add_log_root_arguments, apply_log_root_input
 from build_ownership import assemble_claim_set
+from project_ability_slots import project_ids
 from seed_example_product import run_as_build_step as _seed_example_product
 from build_halt_guard import (
     check_halt_guard,
@@ -146,6 +149,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "config key (default: 'warning' when the key is absent)."
         ),
     )
+    add_log_root_arguments(parser)
     return parser
 
 
@@ -174,6 +178,16 @@ def _run_validation_guards(
             same reasoning as ``validate_all`` above.
     """
     if validate_all(config, package_root, args.validate_only, args.dry_run):
+        return 1
+
+    if apply_log_root_input(args, config) is not None:
+        return 1  # relative --log-root (INF-500d-4-iii): refused before any write
+
+    # AR-300c-3: report a registry copy that disagrees with the declarations
+    # (continues); refuse when a declared ability resolves to no installed skill.
+    given = getattr(args, "target_dir", None)  # a bare namespace (tests) carries none
+    target_dir = Path(given).resolve() if given else Path.cwd()  # == build.main()'s target_root
+    if refuse_on_ability_findings(package_root, config, args.dry_run, project_root=target_dir):
         return 1
 
     # Script reference guard: exit non-zero and halt before writing any output
@@ -412,11 +426,11 @@ def _write_version_files(
     """
     if not dry_run:
         version_file = target_root / "VERSION"
-        version_file.write_text(computed_version + "\n", encoding="utf-8")
+        version_file.write_text(computed_version + "\n", encoding="utf-8", newline="\n")
         # Write LEAFCUTTER_VERSION file so deployed consumers can determine the
         # package version without reading the source package directly (ACD-1100e-2).
         lv_file = target_root / "LEAFCUTTER_VERSION"
-        lv_file.write_text(package_version + "\n", encoding="utf-8")
+        lv_file.write_text(package_version + "\n", encoding="utf-8", newline="\n")
     else:
         _dry_run_msg(f"would write {target_root / 'VERSION'}")
         _dry_run_msg(f"would write {target_root / 'LEAFCUTTER_VERSION'}")
@@ -507,6 +521,8 @@ def _run_clean_mode_if_requested(
     print()
     _heading("Clean mode")
     source_manifests = build_source_manifests(output_root)
+    # AR-400d-2-ii: an id any agent marks provided_by: project is the project's own; never stale (KI-BP-009).
+    source_manifests["skills"] = set(source_manifests["skills"]) | project_ids()
     clean_stale_artifacts(target_root, source_manifests)
 
 
@@ -597,5 +613,10 @@ DECISION HISTORY
   named otherwise. Wired here rather than in build.py, which the
   file-size ratchet forbids from growing.
   (#TICKET-20260930-RetireRenamedCommandOutputs)
+- 2026-10-16 [python-coder/AR-400d-2-ii]: _run_clean_mode_if_requested() adds every id
+  an agent marks ``provided_by: project`` (project_ability_slots.project_ids()) to the
+  expected skills set, so ``--clean`` never reaps a project's own ability as a stale
+  artifact (KI-BP-009). Wired here, not in build.py's _build_source_manifests, which the
+  file-size ratchet forbids from growing. (#AR-400d-2-ii)
 ====================================================================
 """

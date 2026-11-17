@@ -1,5 +1,5 @@
 id: GE-117d-2
-readiness: draft
+readiness: approved
 priority: medium
 title: "A commit whose in-scope declarations are all satisfied proceeds"
 component: guardrail-engine
@@ -29,19 +29,56 @@ doc_links:
   - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117d.yaml"
     relationship: parent
     status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
 it_requirements:
   - "Proceed (exit 0, no violation reported) when every in-scope verdict is 'satisfied' AND when the diff contains nothing in scope at all (out-of-scope-only diff: unchanged files, private symbols, pre-existing entries) — an empty in-scope set must never produce a false-positive block."
   - "An out-of-scope-only diff produces zero verdicts, not satisfied verdicts; ensure the aggregator treats an empty verdict set as proceed."
-  - "Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+  - "Edit only templates/scripts/commit_guardian/ (ADR-001); verify via the deployed hook after a build.py round-trip."
 delivers_to: null
 expects_from:
   ac_id: GE-117d-1
   contract: "The block/proceed decision whose proceed branch this AC specifies"
+test_spec:
+  - name: test_ge_117d_2_all_satisfied_declarations_let_the_commit_proceed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Stage a new module whose docstring names a registered component, whose public function cites a resolvable AC and whose new decision-history entry cites a resolvable AC, then run the hook: exit 0 and no violation text in its output."
+  - name: test_ge_117d_2_out_of_scope_only_diff_proceeds_silently
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Against a HEAD with legacy undeclared code, stage only a private-helper edit and a non-entry edit below a pre-existing AC-less decision-history entry: exit 0 and no violation text."
+    must_catch:
+      - "treats an empty in-scope verdict set as a failure or reports a 'nothing checked' violation"
+      - "flags pre-existing decision-history entries in a file that has any staged change"
+  - name: test_ge_117d_2_non_python_only_commit_proceeds
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Stage only a Markdown file and a YAML file: the hook exits 0 and reports no declaration violation."
+test_rationale: |
+  The clean pass is where a false-positive block would come from, and a false positive in a
+  fail-closed gate blocks every commit. The first test proves an all-satisfied commit passes.
+  The second proves the empty case, which is the subtle one: an aggregator that equates 'no
+  verdicts' with 'could not check' passes the first test and blocks every refactor of legacy
+  code. The non-Python boundary test pins that the hook stays silent on commits it has no
+  business with.
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Added change_target, declared_files, test_spec and test_rationale; corrected the source path to templates/scripts/commit_guardian/ (ADR-001). criteria untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []

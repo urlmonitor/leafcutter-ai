@@ -3,7 +3,7 @@ title: 'Reference: skills_config.json Fields'
 type: reference
 status: active
 created: 2026-05-27
-last_updated: 2026-09-28
+last_updated: 2026-10-14
 components:
 - infrastructure
 related_docs:
@@ -114,7 +114,7 @@ Controls how `build.py` and agents locate project-wide resources.
 | `changelog_folder` | string | `changelogs/` | Folder where per-entry changelog Markdown files are written. |
 | `changelog_categories_path` | string | `.claude/changelog_categories.md` | Path to a Markdown file containing project-specific commit categorization rules. Read by changelog-agent at runtime. If absent, changelog-agent falls back to conventional-commit prefix heuristics only. |
 | `precommit_autofix_config_path` | string | `.claude/precommit-autofix.json` | Path to the precommit-autofix routing config JSON used by the pre-commit autofix hook. |
-| `test_output_dir` | string | `%TEMP%/leafcutter-tests/` | Directory for test output files. Must be outside the project root. The `%TEMP%` placeholder is expanded at runtime on Windows; use `/tmp/` on Linux/macOS. |
+| `test_output_dir` | string | `""` | Folder for longer-lived test output. Empty (default) means the scratch home: `scratch.py test-output-dir` prints a fresh labelled folder in `worktree_cleanup.scratch_root`. A legacy system-temp value (`%TEMP%/...`, `/tmp/...`) is treated as empty; any other value is used as given and should be outside the project root. |
 
 ---
 
@@ -133,7 +133,7 @@ Controls the pre-removal process and log cleanup in the `close-worktree` flow.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `worktree_cleanup.kill_residual_processes` | boolean | `true` | When `true`, background processes whose `cmdline` matches the worktree path are terminated before `git worktree remove`. When `false`, a summary is printed and the user must act manually. |
+| `worktree_cleanup.kill_residual_processes` | boolean | `true` | When `true`, background processes whose `cmdline` matches the worktree path are terminated before the workspace maker removes the workspace. When `false`, a summary is printed and the user must act manually. |
 | `worktree_cleanup.log_globs` | string[] | `["*.log", "precommit-autofix*.log", ".sql_test_results.json"]` | Glob patterns for files to delete from the worktree directory before removal. |
 | `worktree_cleanup.protected_paths` | string[] | `[]` | Path substrings — any process whose `cmdline` contains any listed entry aborts the cleanup instead of being killed. Use to protect production processes (e.g. a live trading daemon). |
 
@@ -142,12 +142,10 @@ Controls the pre-removal process and log cleanup in the `close-worktree` flow.
 ## Code Structure
 
 Paths and identifiers that describe the consumer project's Python package
-structure. Used by import-scanner, blast-radius analysis, and the
-collector-enforcer skill.
+structure. Used by import-scanner and blast-radius analysis.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `collector_enforcer_paths` | string[] | `["collector/"]` | List of path prefixes that activate the collector-enforcer skill on commit. Paths are matched against changed files. |
 | `top_level_packages` | string[] | `["live_trader", "collector", "dashboards", "api", "model_trainer", "trades_aggregator", "sql_functions", "models", "scripts"]` | List of top-level Python packages in the project. Used by import-scanner and blast-radius analysis to scope cross-module impact detection. |
 
 ---
@@ -197,6 +195,7 @@ marked below.
 | `testing_context.max_test_duration_seconds` | integer | yes | `5` | Maximum allowed wall-clock duration for any auto-running test. Tests that exceed this limit must use `manual_test_suffix`. |
 | `testing_context.manual_test_suffix` | string | no | `_MANUAL` | Suffix appended to test function names excluded from the standard pre-commit suite (slow or DB-requiring tests). |
 | `testing_context.db_connection_test` | string | no | — | Connection string for the test database environment, e.g. `postgresql://<user>:<password>@<host>:<port>/<database>`. Used in `setUp` for DB-requiring tests. Ships with no default; each project must set its own address. |
+| `testing_context.test_command` | string | no | — | The command that runs the project's tests; the test runner runs a named file as `<test_command> <file>`, and falls back to `python -m pytest <file>` when it is unset. |
 | `testing_context.naming_pattern` | string | no | `test_*.py` | Glob pattern that test files must match. Enforced by the pre-commit hook and `test-runner`. |
 | `testing_context.test_output_rules` | string | no | `"Never write to project dirs; use tmp_path or %TEMP%"` | Human-readable constraint injected into `test-writer` prompts to prevent tests from writing to project directories. |
 

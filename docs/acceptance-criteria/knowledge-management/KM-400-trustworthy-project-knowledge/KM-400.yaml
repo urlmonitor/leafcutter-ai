@@ -1,0 +1,85 @@
+id: KM-400
+title: Make decisions with project knowledge you can check and trust
+component: knowledge-management
+components:
+- knowledge_management
+level: L0
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: in_progress
+criteria: 'Make informed decisions with evidence you can revisit.
+
+
+  People and agents can find the requirements, rules and lessons relevant to their work, check where each answer
+  came from, and return to the same project version later. Changes become available without disturbing evidence
+  already in use. Missing or unavailable knowledge is visible, so an incomplete search cannot quietly become a false
+  assurance.
+
+  '
+depends_on: []
+doc_links:
+- path: docs/reference/artifact-knowledge-graph-data-map.md
+  relationship: context
+  status: exists
+  relevance: Reuse canonical identities and declared relationship semantics; do not create competing models.
+- path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse existing graph-surface and requirement-to-test traceability requirements without relabeling them
+    as implemented.
+- path: docs/acceptance-criteria/knowledge-management/KM-ADM-100.yaml
+  relationship: context
+  status: exists
+  relevance: Inherit honest treatment of declared, inferred and missing connections.
+- path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+  relationship: context
+  status: exists
+  relevance: Inherit the standing requirement that reported figures state coverage and method.
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: '2026-10-01'
+amended_by:
+- '2026-10-01 PO coverage audit: replace obsolete all-work-todo notes with measured-scope and rollout boundaries.'
+- '2026-10-09: business-analyst moved work_status from done to in_progress. KM-400b and
+  KM-400e were both moved to in_progress in the same pass after five new L2 children
+  were authored for the retention and capacity incident, so this L0 could no longer be
+  a proven-done composite. No criteria, covered_by or L1 title changed — this edit
+  exists so the parent is not left stale, since the AC hooks only validate files
+  present in a commit index and would never have been shown this one.'
+- '2026-10-09: product-owner added a sixth L1, KM-400f, on the user''s instruction, and
+  covered_by gains it. KM-400f holds the retention and capacity work that had been
+  forced into KM-400b and KM-400e behind child_limit_override waivers of 7 and 8; four
+  of those five L2s were re-parented into it as KM-400f-1 through KM-400f-4. This L0
+  held 5 L1s against a cap of 7 and now holds 6, so no waiver is needed here. KM-400b
+  returns to work_status done — all five of its remaining children are done. KM-400e
+  stays in_progress (KM-400e-5 in_progress, KM-400e-8 todo) with its override reduced
+  to 6. This L0 stays in_progress, since KM-400e and the new KM-400f are both
+  unfinished. No criteria, no vision and no roadmap change.'
+superseded_by: null
+covered_by:
+- KM-400a
+- KM-400b
+- KM-400c
+- KM-400d
+- KM-400e
+- KM-400f
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'User-authorized Knowledge Retrieval guide stages 0-4. Stage 0 alignment and the bounded child behaviors
+  have implementation and test evidence; done describes that accepted scope, including explicitly synthetic vector/hybrid
+  demonstrations and honest unavailability. It does not claim a production historical-memory corpus, real-model
+  semantic quality, configured CI credentials or universal deployment readiness. Operational and representative
+  evaluation obligations are tracked by KM-500d; real-provider planning validation by KM-500a-4. Current Aura publication
+  has graph readiness with semantic_ready false. No roadmap or vision change is made.
+
+  Original-guide long-material chunking is an implementation gap pending KM-500d-4; bounded child completion is
+  not a claim that every guide requirement is implemented. The recipe-language boundary is unresolved as described
+  by the coverage audit and KM-500b-4.
+
+  '

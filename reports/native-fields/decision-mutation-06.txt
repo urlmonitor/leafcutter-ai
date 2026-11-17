@@ -1,0 +1,5 @@
+F                                                                        [100%]
+shared-layout-routing: declared_mutators=0 undeclared=0
+=========================== short test summary info ===========================
+FAILED tests/knowledge/test_native_decision.py::test_decision_changed_source_schema_cannot_weaken_trusted_validator
+1 failed in 0.23s

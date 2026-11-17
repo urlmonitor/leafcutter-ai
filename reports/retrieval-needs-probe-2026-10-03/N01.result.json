@@ -1,0 +1,22 @@
+{
+  "case_id": "N01",
+  "question": "For KM-500c-2, what must tests demonstrate?",
+  "origin": [
+    "RS-03",
+    "QA-01"
+  ],
+  "human_gold": "Retrieve the named criterion's required behavior. Test specification is useful if recorded, not mandatory when criteria are authoritative. No count population or parent/root clarification. Full bounded AC is an acceptable alternative to field projection.",
+  "result": null,
+  "error": {
+    "type": "JevUnavailable",
+    "message": "jev unavailable after 1 attempts: connection error calling jev (ConnectError)"
+  },
+  "grade": {
+    "passed": false,
+    "checks": [],
+    "invalid_run": true
+  },
+  "physical_http_calls": 1,
+  "wire_questions": 35,
+  "elapsed_seconds": 0.293
+}

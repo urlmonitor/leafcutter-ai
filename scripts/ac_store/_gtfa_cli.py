@@ -86,6 +86,19 @@ _DEFAULT_TICKETS_ROOT = _gtfa_constants._DEFAULT_TICKETS_ROOT
 _UNASSIGNED_WORK_AGENT_REFUSAL = "ERROR: generation refused — AC '{ac_id}': {exc}"
 
 
+def _body_or_refusal(
+    ac: AcRecord, ac_id: str, agents: dict, ac_root: Path
+) -> str | None:
+    """Build the ticket body, or print the refusal and return None when the AC's test design is
+    pending (ACD-2500b-2-i). Both generation paths call this, so they refuse on identical terms
+    and before anything is printed or written."""
+    try:
+        return _gtfa_body._build_ticket_body(ac, ac_id, agents_map=agents, ac_root=ac_root)
+    except _gtfa_tests_section.TestDesignPendingError as exc:
+        print(_UNASSIGNED_WORK_AGENT_REFUSAL.format(ac_id=ac_id, exc=exc), file=sys.stderr)
+        return None
+
+
 def _build_agents_map_for_write_path(
     assigned_agent: str | None,
     *,
@@ -251,7 +264,9 @@ def _run_preview(
     frontmatter = _gtfa_frontmatter._build_frontmatter(
         ac, ac_id, files_touched, agents, ac_store_path, tickets_root=tickets_root
     )
-    body = _gtfa_body._build_ticket_body(ac, ac_id, agents_map=agents, ac_root=ac_root)
+    body = _body_or_refusal(ac, ac_id, agents, ac_root)
+    if body is None:
+        return 1
     print(frontmatter)
     print()
     print(body)
@@ -338,7 +353,9 @@ def _write_ticket(
     frontmatter = _gtfa_frontmatter._build_frontmatter(
         ac, ac_id, files_touched, agents, ac_store_path, tickets_root=tickets_root
     )
-    body = _gtfa_body._build_ticket_body(ac, ac_id, agents_map=agents, ac_root=ac_root)
+    body = _body_or_refusal(ac, ac_id, agents, ac_root)
+    if body is None:
+        return 1
     ticket_content = frontmatter + "\n\n" + body
 
     # Write ticket file

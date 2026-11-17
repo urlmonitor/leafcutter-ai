@@ -1,7 +1,7 @@
 id: BP-1100g-4-ii
 components:
   - build_pipeline
-title: "A plan is not yet a hand-off: work still declared as only planned is not refused for a proof it has not reached the point of owing, and anything that cannot be read as still-planned is"
+title: "A plan is not yet a hand-off: work still planned (todo) or parked (deferred) is not refused for a proof it has not reached the point of owing, and anything that cannot be read as still-planned is"
 component: build-pipeline
 level: L3
 status: active
@@ -12,15 +12,15 @@ priority: critical
 roadmap_phase: phase_1
 criteria: |
   Given a piece of work whose plan promises a kind of proof,
-  And that work declares itself as still only planned — not started, not
-    offered for hand-off,
+  And that work declares itself as still planned (todo) or parked (deferred) —
+    not started, not offered for hand-off,
   And no test yet claims the promised kind,
   When the promise-versus-claim check runs over it,
   Then it is not refused, and the outcome states that the work was passed over
-    because it is still a plan, so being passed over is distinguishable in the
+    because it is still a plan or parked, so being passed over is distinguishable in the
     output from having been examined and found complete,
   And given the same work, with the same promise and the same absent claim, now
-    declaring itself as started or as offered for hand-off,
+    declaring itself as started, as offered for hand-off, or as blocked,
   When the check runs again,
   Then it is refused exactly as before, naming the piece of work, the stated
     behaviour and the unclaimed kind — the point at which a claim falls due
@@ -61,7 +61,7 @@ it_requirements:
     - "python scripts/build.py --target-dir ."
   constraints:
     - "THE PARENT ALREADY SAYS THIS. BP-1100g-4's criteria read 'When the work is offered for hand-off, then it is refused'. The shipped check never implemented that trigger — it refuses on any staged ticket, including one created moments earlier that no coder has touched. This edge case pins down what 'offered for hand-off' means operationally; it does not add a rule the parent lacked."
-    - "Exempt ONLY the still-planned state. Everything else — started, offered, blocked, deferred — remains subject to the check. Reducing the trigger to the finished state alone would open a real hole: this repository mandates that the test writer runs before the coder, so by the time work is started the claims genuinely should exist."
+    - "Exempt ONLY the still-planned (todo) or parked (deferred) states. Everything else — started, offered for hand-off, blocked — remains subject to the check. Reducing the trigger to the finished state alone would open a real hole: this repository mandates that the test writer runs before the coder, so by the time work is started the claims genuinely should exist."
     - "FAIL CLOSED on anything unclear. Absent, unparseable, or unrecognised state must be examined, never passed over. This module already models the posture: it reports work it cannot read as its own non-zero condition rather than folding it into 'no claim'."
     - "Do not touch the promise extraction, the claim index, the comparison, or the refusal wording. The comparison is correct; only the decision about WHICH work is subject to it is wrong. Widening or narrowing what counts as a claim would change the parent's meaning, which is out of scope."
     - "The passed-over outcome must be stated. Work skipped as still-planned that produced no output at all would be indistinguishable from work that was examined and found complete — the exact conflation this whole L1 exists to prevent."
@@ -92,6 +92,16 @@ test_spec:
     framework: unittest
     type: behavioral
     description: "Work offered for hand-off whose promised kind is claimed by a tagged test exits zero, and its output describes it as examined and complete rather than as passed over — the two outcomes stay distinguishable."
+  - name: test_deferred_work_with_an_unclaimed_promise_is_passed_over_and_says_so
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The check, executed as a process over work that declares itself parked (status deferred) and carries an unclaimed promised kind, terminates with exit status zero and states in its output that the work was passed over, naming deferred as the status rather than describing it as a plan."
+  - name: test_the_same_work_once_blocked_is_still_refused_by_name
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Byte-identical work apart from its declared state, moved from parked to blocked, is refused by the executed check with a non-zero exit and names the piece of work and the unclaimed kind — the mutation proof that parked work is passed over without widening the exemption to every state that is not finished."
 test_rationale: "The defect is a trigger condition, and a trigger condition is invisible to any test that reads the module: an implementation that checks everything and one that checks only what is due are source-shaped alike, differing solely in a decision made at run time against a value in the input. Per CLAUDE.md ('Gate / Workflow ACs — Verify Behaviorally, Not by Grep') a source-reading test is forbidden here. Every descriptor therefore executes the check as a process and asserts on its exit status and emitted output. Two of them are load-bearing against the obvious wrong fix: exempting on the finished state alone would leave started work unchecked, and passing over anything whose state cannot be read would turn a parse failure into a free pass — the fail-open inversion this register exists to catch. The pair of started and offered descriptors exists so that a fix which exempts 'anything not finished' is caught rather than accepted."
 delivers_to: null
 expects_from:
@@ -113,9 +123,19 @@ amended_by:
       which the workflow's mutation proof would then have read as "the test is
       not coupled to the fix" and halted on. Sibling suite: 66 passed under
       AC_ENFORCE_STRICT=1; ruff clean on the changed file.
+  - by: BrainCandy
+    at: 2026-10-06
+    note: >-
+      User decision (option "a") per
+      TICKET-20261006-ProofPromiseCheckPassesOverDeferredTickets: status
+      deferred joins todo as a not-yet-due state, so parking a ticket is not
+      blocked by a proof that is not due. This reverses the earlier constraint
+      that deferred stays examined. in_progress, blocked, done and every
+      unreadable or unknown state remain examined. work_status stays done.
 superseded_by: null
 covered_by:
   - unit_tests/commit_guardian/test_bp_1100g_4_ii.py
+  - unit_tests/commit_guardian/test_bp_1100g_4_ii_parked.py
 implemented_by:
   - templates/scripts/commit_guardian/check_proof_promise_claim.py
 change_target: pipeline

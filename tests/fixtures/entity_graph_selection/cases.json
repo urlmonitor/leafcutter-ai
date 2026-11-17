@@ -1,0 +1,27 @@
+{
+  "questions": [
+    {"name": "exact-ac", "goal": "Explain EC-1100a-1-i in plain language.", "operation": "get_entities", "arguments": {"entity_ids": ["EC-1100a-1-i"]}, "mode": "exact"},
+    {"name": "real-adr-stem", "goal": "Explain ADR-012-retire-create-ticket-js in plain language.", "operation": "get_entities", "arguments": {"entity_ids": ["ADR-012-retire-create-ticket-js"]}, "mode": "exact"},
+    {"name": "relationship-paraphrase", "goal": "Which executable checks demonstrate EC-1100a-1-i holds?", "operation": "get_related_tests", "arguments": {"entity_ids": ["EC-1100a-1-i"]}, "mode": "graph"},
+    {"name": "trusted-component", "goal": "Which architectural choices govern this part of the system?", "operation": "get_relevant_adrs", "arguments": {"component_id": "decision_kernel"}, "mode": "graph", "components": ["decision_kernel"]}
+  ],
+  "failures": ["low_probability", "low_confidence", "missing_confidence", "unknown_choice", "missing_answer", "wrong_answer_type", "exhausted_budget", "provider_failure", "oversized_state"],
+  "scope_failures": ["graph_source_denied", "read_root_denied", "owner_glob_denied", "repository_mismatch", "foreign_result", "wrong_revision", "wrong_request", "graph_response_denied"],
+  "ordinary_modes": ["disabled", "unavailable", "not_selected", "empty_graph"],
+  "population_nodes": [
+    {"id": "EC-1100", "level": "L0", "parent": null, "has_children": true, "depends_on": []},
+    {"id": "EC-1100a", "level": "L1", "parent": "EC-1100", "has_children": false, "depends_on": []},
+    {"id": "EC-1200", "level": "L0", "parent": null, "has_children": false, "depends_on": ["EC-1100"]}
+  ],
+  "failure_reasons": {
+    "low_probability": ["uncertain", "confidence", "probability"],
+    "low_confidence": ["uncertain", "confidence"],
+    "missing_confidence": ["uncertain", "confidence"],
+    "unknown_choice": ["invalid", "unoffered", "unsupported"],
+    "missing_answer": ["invalid", "missing", "omitted"],
+    "wrong_answer_type": ["invalid", "choice", "omitted"],
+    "exhausted_budget": ["budget", "exhaust"],
+    "provider_failure": ["unavailable"],
+    "oversized_state": ["large", "size", "limit"]
+  }
+}

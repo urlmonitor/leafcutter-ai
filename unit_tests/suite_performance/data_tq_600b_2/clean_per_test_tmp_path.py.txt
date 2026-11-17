@@ -1,0 +1,11 @@
+"""False-positive control: per-test scratch that is unique to the running test."""
+import tempfile
+
+
+def test_uses_pytests_per_test_directory(tmp_path):
+    (tmp_path / "out.txt").write_text("scratch")
+
+
+def test_uses_a_fresh_unique_directory():
+    with tempfile.TemporaryDirectory() as unique:
+        assert unique

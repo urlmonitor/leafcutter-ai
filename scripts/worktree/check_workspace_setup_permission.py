@@ -7,8 +7,8 @@ GOAL: Executable pre-flight that answers "may the configured workspace-setup
     read it.
 
 BUSINESS CONTEXT: The plan-feature workflow's Pre-Stage-0 step dispatches
-    the isolated-workspace setup (fetch, branch-create, `git worktree add`
-    via setup_ticket_worktree.py). That step must only ever run on an agent
+    the isolated-workspace setup (the one workspace maker, worktree.py --
+    see docs/how-to/get-a-workspace.md). That step must only ever run on an agent
     whose registered charter (config/agent_registry.json) grants
     `permits_shell: true`. The workflow used to establish that fact by
     dispatching a status-checker agent to run a shell command and return the
@@ -75,117 +75,65 @@ ARCHITECTURE: Pure stdlib. Resolves the repository root the run is actually
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import logging
-import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_AGENT_ID = "worktree-agent"
 REGISTRY_RELATIVE_PATH = Path(".leafcutter") / "config" / "agent_registry.json"
-GIT_COMMON_DIR_TIMEOUT_SECONDS = 10
 
 
-def _git_common_dir(candidate_dir: Path) -> str | None:
-    """Return ``git rev-parse --git-common-dir``'s stdout for ``candidate_dir``.
+def _load_workspace_root() -> ModuleType | None:
+    """Load the workspace maker's project resolver (``workspace_root.py``) by path.
 
-    Returns None when the directory is not inside a git repository, or when
-    the ``git`` invocation itself fails for any reason. This is external
-    I/O (a subprocess call), so any failure is logged at WARNING per the
-    repository error-handling policy; callers treat None as "not a repo
-    here" and continue probing, exactly as
-    templates/workflows-js/plan-feature.js's own
-    ``_buildRepoRootResolutionSnippet()`` does.
+    The resolver is the ONE place that decides which project a request means
+    (BO-4300b-1); this script no longer searches for a repository of its own
+    (BO-4300f-2). Deployed, it sits one folder above this script
+    (``<install>/scripts/workspace_root.py``); in the package source tree it is
+    ``templates/scripts/workspace_root.py``. Returns None when neither can be
+    loaded -- the caller fails closed.
     """
-    try:
-        result = subprocess.run(
-            ["git", "-C", str(candidate_dir), "rev-parse", "--git-common-dir"],
-            capture_output=True,
-            text=True,
-            timeout=GIT_COMMON_DIR_TIMEOUT_SECONDS,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        logger.warning(
-            "git rev-parse --git-common-dir failed for %s: %s", candidate_dir, exc
-        )
-        return None
-    if result.returncode != 0:
-        return None
-    output = result.stdout.strip()
-    return output or None
-
-
-def _repo_root_from_common_dir(base_dir: Path, common_dir_output: str) -> Path:
-    """Resolve ``git-common-dir``'s (possibly relative) output to the
-    repository root (its parent directory), anchored at ``base_dir`` if the
-    output itself is relative.
-    """
-    common_path = Path(common_dir_output)
-    if not common_path.is_absolute():
-        common_path = (base_dir / common_path).resolve()
-    return common_path.parent
-
-
-def _probe_children_for_repo_root(probe_base: Path) -> Path | None:
-    """Return the repo root of the first immediate, non-hidden child
-    directory of ``probe_base`` that is itself a git repository (sorted for
-    determinism), or None if none is.
-
-    Mirrors templates/workflows-js/plan-feature.js's
-    ``_buildRepoRootResolutionSnippet()`` child-probe fallback (its `*/`
-    shell glob, which likewise never matches hidden directories).
-    """
-    try:
-        candidates = sorted(
-            p for p in probe_base.iterdir() if p.is_dir() and not p.name.startswith(".")
-        )
-    except OSError as exc:
-        logger.warning("Could not list %s while resolving the repo root: %s", probe_base, exc)
-        return None
-    for candidate in candidates:
-        common_dir = _git_common_dir(candidate)
-        if common_dir:
-            return _repo_root_from_common_dir(candidate, common_dir)
+    here = Path(__file__).resolve().parent
+    for candidate in (here.parent / "workspace_root.py", here.parent.parent / "templates" / "scripts" / "workspace_root.py"):
+        if not candidate.is_file():
+            continue
+        sys.path.insert(0, str(candidate.parent))
+        try:
+            spec = importlib.util.spec_from_file_location("workspace_root", candidate)
+            if spec is None or spec.loader is None:
+                continue
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module
+        except (ImportError, OSError, SyntaxError) as exc:
+            logger.warning("Could not load the workspace maker's resolver %s: %s", candidate, exc)
+        finally:
+            sys.path.remove(str(candidate.parent))
     return None
 
 
 def resolve_repo_root(start_dir: Path) -> Path | None:
-    """Resolve the repository root this process is actually operating on,
-    worktree-aware, the SAME way ACD-2100a-1 / ACD-2100a-3 already
-    established for this workflow -- never a second, independent,
-    cwd-relative resolution (it_requirements: "the registry-location
-    semantics must not fork").
+    """Resolve the project this process is operating on with the maker's resolver.
 
-    Resolution order:
-      1. ``git rev-parse --git-common-dir``'s parent directory from
-         ``start_dir`` itself -- the same answer whether ``start_dir`` is
-         the main checkout or a linked worktree of it, since all worktrees
-         of a repository share one ``.git`` directory.
-      2. The immediate (non-hidden) children of ``start_dir``, each probed
-         the same way (the ADR-001 self-hosting layout: ``start_dir`` is
-         the untracked workspace parent, and the repository lives one
-         level down).
-      3. The immediate (non-hidden) children of ``start_dir``'s own parent
-         (i.e. ``start_dir``'s siblings), probed the same way (``start_dir``
-         is itself a directory with no filesystem relationship to the
-         repository, but shares a workspace parent with it).
-
-    Returns None if none of the above resolves -- callers must fail closed
-    rather than fall back to a cwd-relative guess that could silently
-    select the wrong physical registry.
+    Delegates to ``workspace_root.resolve`` -- the same answer the one
+    workspace maker gives (worktree.py ``where``) -- instead of a search of
+    its own. Returns None when the resolver is unavailable or does not answer
+    ``ok`` (no project, or more than one possible project); callers must fail
+    closed rather than guess a registry location.
     """
-    common_dir = _git_common_dir(start_dir)
-    if common_dir:
-        return _repo_root_from_common_dir(start_dir, common_dir)
-
-    child_result = _probe_children_for_repo_root(start_dir)
-    if child_result is not None:
-        return child_result
-
-    return _probe_children_for_repo_root(start_dir.parent)
+    resolver = _load_workspace_root()
+    if resolver is None:
+        return None
+    answer = resolver.resolve(str(start_dir))
+    if answer.get("status") != "ok":
+        logger.warning("The workspace maker's resolver did not find one project: %s", answer)
+        return None
+    return Path(answer["project_root"])
 
 
 def _load_registry(registry_path: Path) -> tuple[object | None, dict[str, object] | None]:
@@ -407,3 +355,7 @@ if __name__ == "__main__":
 #   config/agent_registry.json before naming it). All four production
 #   changes are additive fields alongside the existing six-value `outcome`
 #   enum -- no outcome value was renamed or collapsed.
+# - 2026-10-13 [python-coder]: BO-4300f-2 replaced this script's own
+#   first-match repository search (git-common-dir plus a child/sibling probe)
+#   with the workspace maker's resolver (workspace_root.resolve), loaded by
+#   path so the file stays a single-file deploy. (#BO-4300f-2)

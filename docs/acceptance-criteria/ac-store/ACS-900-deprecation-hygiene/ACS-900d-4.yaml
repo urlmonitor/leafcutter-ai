@@ -1,0 +1,182 @@
+id: ACS-900d-4
+components:
+  - ac_store
+  - commit_guardian
+readiness: approved
+priority: high
+title: "A superseded record naming existing successors is retired and no longer held to the is-it-built-and-tested-now rules"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: done
+criteria: |
+  Given the AC store contains an active record AR-400c-1,
+    And a commit stages an L2 record X-1 with status "superseded_by",
+    superseded_by: [AR-400c-1], work_status "done", readiness "approved",
+    change_target "code", no test contract, and no test anywhere tagged as
+    covering X-1,
+  When the AC-store commit gates run on that commit,
+  Then the done-proof gate does not refuse the commit on account of X-1
+    (no "no covering test found for X-1" refusal),
+  And no other gate refuses the commit for a reason that asks whether X-1's
+    behaviour is built or tested now (covering test, test contract, unfinished
+    children),
+  And X-1's work_status still reads "done" after the gates run, exactly as
+    authored, because for a retired record work_status records what it was
+    when retired,
+  And a record identical to X-1 except status "active" and superseded_by null
+    is still refused by the done-proof gate for the missing covering test.
+depends_on: [ACS-900d]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/known-issues/ac-store/open-high-ki-acs-20261015-superseded-records-held-to-forward-rules.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/done-proof-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Exactly ONE definition of the 'is this record retired' predicate may exist. A record is retired when, and only when: its status is 'superseded_by' or 'superseded'; AND its superseded_by value (accept both the scalar-string and the list form, per ac-schema.md) is non-empty; AND every successor id names a record present in the WHOLE AC store (not only the staged set); AND no successor id equals the record's own id. status 'deprecated' is NEVER retired by this predicate, whether or not superseded_by is set (user decision 1). req_status is not an input."
+  - "The predicate must live under scripts/ac_store/ so both the done-proof family and the commit_guardian hooks can import it (commit_guardian reaches ac_store via _ac_store_locator.ensure_ac_store_on_syspath). It must be pure: no file or git I/O inside it. The caller supplies the record mapping and the set of store ids."
+  - "The existing is_superseded_ac() in scripts/ac_store/_done_proof_composite.py (KI-ACS-016: 'superseded_by non-empty OR req_status == superseded') must be replaced by, or delegate to, the shared predicate. No second definition may remain. Its call sites that must move to the shared predicate are _done_proof_composite._unproven_composite_children (pre-commit composite rollup) and done_proof._resolve_all_child_ids (CI composite rollup)."
+  - "Forward-build call sites that must consult the predicate BEFORE applying their rule, so a retired record is skipped, with its own work_status never re-evaluated. In templates/scripts/commit_guardian/check_done_proof.py: check_staged_done_proofs (pre-commit covers-tag presence), check_changed_done_acs and check_all_done_acs (CI Proof-of-done). In scripts/ac_store/done_proof.py: verify_done_eligible and _verify_composite_eligible (also reached by mark_ac_done.py). The test-contract rule is owned by ACS-900d-4-i and the composite-children rollup by ACS-900d-4-iv. Both must use this same predicate."
+  - "The CI path builds its view from _done_proof_phase_helpers._build_ac_status_map. Every field the predicate reads (status, superseded_by, id) must be present in each status-map entry, so the CI and pre-commit paths cannot reach different verdicts about the same record."
+  - "Successor existence needs the set of all store ids. It must be computed at most once per hook or CI invocation and reused for every record. Do not walk the store again for each record or each successor. A hook run on a 10-record staged set must not get noticeably slower than it is on main."
+  - "The gates must never write to the retired record. work_status, readiness, change_target, test_spec and test_required stay byte-identical to what was staged. The exemption is a read-side decision only."
+  - "Discrimination is mandatory. A status-active twin with superseded_by null must still be refused by check-done-proof with the existing reason string. A status-deprecated record with no successor must also still be refused (user decision 1). An implementation that skips done-proof for every record, or for every non-active record, must fail this AC's tests."
+  - "Contract change to KI-ACS-016: the new predicate is stricter. It needs a superseded status and existing successors, and it ignores req_status. Before merge, run a store-wide census of every composite whose verdict changes between the old is_superseded_ac and the new predicate, and list every flipped id in the PR. The fixtures in unit_tests/commit_guardian/test_ki_acs_016_superseded_child.py that rely on req_status 'superseded' or on the nonexistent successor BO-9999 must be rewritten to the new retired shape. Do not delete or soften them."
+  - "Any new module imported by a commit_guardian hook must be added to the build_ac_store deploy list in scripts/build_phases.py in the same change. Verify by running the DEPLOYED hook after build.py, not only the unit tests (CLAUDE.md: New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest)."
+  - "Template and deployed copies of every touched commit_guardian hook must stay in parity (ADR-001). Error handling follows the project error-handling policy. An unreadable successor record makes the predicate return not-retired, so the gate fails closed and never fails open."
+delivers_to:
+  agent: python-coder
+  contract: "One shared, pure 'is this record retired' predicate under scripts/ac_store/. Input: a parsed AC record mapping or a _build_ac_status_map entry with keys id (str), status (str), superseded_by (str | list[str] | null), plus a set[str] of every AC id in the store. Output: bool. True only when status is in {superseded_by, superseded}, superseded_by is non-empty, every successor id is in the store-id set, and no successor equals the record's own id. Consumed by check_done_proof.py, done_proof.py, _done_proof_composite.py (composite rollup) and _ac_schema_validators.validate_test_contract (via check_ac_schema.py)."
+expects_from: null
+test_spec:
+  - name: test_retired_done_record_passes_staged_done_proof
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A staged L2 record with status superseded_by, superseded_by [AR-400c-1] (present in a temp store), work_status done and no covers tag gets no refusal from check_done_proof.py in pre-commit mode, run as a subprocess."
+    covers: [ACS-900d-4]
+  - name: test_retired_done_record_passes_ci_changed_done_proof
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "The same retired record passes the CI path (check_changed_done_acs and check_all_done_acs), which reads _build_ac_status_map, so the pre-commit and CI verdicts agree."
+    covers: [ACS-900d-4]
+  - name: test_retired_record_passes_every_forward_gate
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "Running check_done_proof.py and check_ac_schema.py on the staged retired record produces no covering-test, test-contract or unfinished-children refusal naming X-1."
+    covers: [ACS-900d-4]
+  - name: test_retired_record_work_status_unchanged_after_gates
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "After the gates run, the retired record's file is byte-identical to what was staged, and work_status still reads done."
+    covers: [ACS-900d-4]
+  - name: test_active_twin_still_refused_for_missing_covering_test
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "A record identical except status active and superseded_by null is refused by check_done_proof.py with the existing missing-covers-tag reason."
+    must_catch:
+      - "done-proof is skipped for every record"
+      - "done-proof is skipped for every record whose superseded_by field is merely present"
+    covers: [ACS-900d-4]
+  - name: test_deprecated_record_without_successor_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "A status deprecated record at work_status done with no covers tag is still refused by check_done_proof.py, because the exemption is for superseded records only."
+    must_catch:
+      - "the predicate treats any non-active status as retired"
+    covers: [ACS-900d-4]
+  - name: test_is_retired_accepts_both_status_spellings_and_successor_forms
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "The shared predicate returns True for status superseded_by and for status superseded, with superseded_by given as a string or as a list, when every successor exists. It returns False for status active or deprecated, and it ignores req_status."
+    covers: [ACS-900d-4]
+  - name: test_single_predicate_definition_drives_all_gates
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Patching the shared predicate to return False makes check_done_proof (both paths), the composite rollup and validate_test_contract all refuse the retired record, proving every one of them consults the single definition."
+    covers: [ACS-900d-4]
+test_rationale: "Test files: unit_tests/commit_guardian/test_acs_900d_4_retired_record_exemption.py (gate tests) and unit_tests/ac_store/test_acs_900d_4_is_retired_predicate.py (predicate unit test). These are gate ACs, so per CLAUDE.md the tests run the real hook entry points (check_done_proof.py and check_ac_schema.py as subprocesses against a temp git repo with the record staged) instead of grepping for predicate calls. The two discrimination tests catch the cheap wrong fix, skipping done-proof wholesale or for every non-active record. The seam test proves there is one predicate, not several copies that could drift apart."
+origin_agent: BrainCandy
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: [ACS-900d-4-i, ACS-900d-4-ii, ACS-900d-4-iii, ACS-900d-4-iv, ACS-900d-4-v]
+implemented_by: []
+notes: |
+  Source: KI-ACS-20261015-superseded-records-held-to-forward-rules. Today the
+  done-proof gate and the approved-code test-contract rule ignore status
+  superseded_by, so a done record whose behaviour was deliberately removed can
+  only be "retired" by gaming readiness/change_target or by leaving a false
+  done in the store. This L2 is the core exemption; its L3s pin the todo-shape
+  variant (-i), the structural rules that still apply (-ii), self-supersession
+  (-iii), the parent-composite interaction (-iv), and the first real use (-v).
+
+  Placement: parented under ACS-900d ("honestly reconciled retirements pass
+  cleanly") because this is the same promise from the gate side — an honest
+  retirement must commit without friction. ACS-900 owns the lifecycle of a
+  RETIRED AC (PROJECT_CONTEXT governance map); ACS-200 (coverage of LIVE ACs)
+  is the rule being exempted from, not the owner.
+
+  The last And clause is the discrimination contrast: an implementation that
+  simply turns off done-proof for everything passes the first Then but fails
+  the last one.
+
+  Scope decision for the user: the request names status superseded_by. The
+  schema calls "superseded" a functionally equivalent older form, so the BA
+  included it in the predicate. "deprecated" (no successor) is NOT covered here
+  — whether a deprecated record is also exempt was not asked and is left open.
+
+  IT-PO enrichment (2026-10-15): the user settled the scope. Only status
+  superseded_by or superseded counts as retired; deprecated does not. Call
+  sites were found by grep and named in it_requirements: check_done_proof.py
+  (three entry points), done_proof.py verify_done_eligible and
+  _verify_composite_eligible, the composite rollup in
+  _done_proof_composite._unproven_composite_children and
+  done_proof._resolve_all_child_ids, and
+  _ac_schema_validators.validate_test_contract (owned by -i). A shared
+  predicate ALREADY exists, is_superseded_ac (KI-ACS-016), but it is weaker:
+  any non-empty superseded_by, or req_status superseded, counts, with no
+  successor-existence or self check. This AC replaces it, which deliberately
+  changes the KI-ACS-016 contract. About 24 records in the store carry
+  req_status superseded, so a census is required before merge.
+  Complexity was raised from M to L because the wiring spans 4+ files plus the
+  deploy map.
+  Builder-side filters were left alone because they are not gates:
+  scan_ac_store.traverse_ac_tree (exclude_superseded) and
+  _xref_ac_store._RETIRED_AC_STATUSES (which also includes deprecated).
+
+  Final gate (2026-10-15, BrainCandy): approved, priority high. KI-ACS-016
+  decision: run the census, then fix the affected records honestly by giving
+  them a superseded status and an existing successor. The stricter predicate
+  stays the only rule. No legacy req_status path is kept.
+change_target: code
+risk_surface: contract_boundary

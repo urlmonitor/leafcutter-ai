@@ -89,3 +89,48 @@ kept open at reduced practical urgency, with the filename severity unchanged per
 convention.
 
 ---
+
+## 2026-09-30 — a THIRD trigger: any merge of main into a branch that predates the file
+
+The two narrow cases listed above — fresh checkout, delete-and-re-add — are not the whole
+remaining surface. **A merge commit is also an addition.**
+
+Observed while merging current `origin/main` into `fast-lane/inf-700a-2` (PR #877). The
+commit was refused:
+
+```text
+🚫 Root Directory Check Failed
+You are trying to commit unauthorized files to the root directory:
+  ❌ requirements-dev.txt
+```
+
+Nothing in that commit put a new file at the root. `requirements-dev.txt` is **main's own**,
+added in `e2d9cd0d` (TQ-600a-1) — verified before skipping with
+`git log origin/main -- requirements-dev.txt`, not assumed. The branch simply predated it,
+so `git diff --cached --name-status` on the merge reports it as `A`, and an `A`-matching
+gate cannot tell "the committer added this" from "the merge brought this across".
+
+**Why this is broader than the two cases above.** Those require a deliberate act on one of
+the five files. This one requires nothing: every branch that forked before `e2d9cd0d` trips
+it on its next merge from main, whatever that branch is about. In a repo with ~19 open PRs
+and a main that moves several times an hour, that is close to every branch. The practical
+urgency of the remaining half is therefore higher than the "narrower set of cases" reading
+above, without the allowlist having changed at all.
+
+**It also manufactures exactly the habit this register exists to discourage.** The only way
+past is `SKIP=check-root-files` on the merge commit, and a gate that must be skipped
+routinely stops being read as a gate. Each skip then has to be justified individually to
+stay honest, which is cost paid on every branch for a config that is simply stale for this
+repo.
+
+**No change to the fix.** Adding the five to `root_files.allowed_files` closes this trigger
+along with the other two — the diagnosis in this entry was already right, it is the blast
+radius that was understated. Nothing new is needed beyond what the Definition of Done above
+already asks for.
+
+**Distinguish from the `M`-filter bug PR #857 fixed.** That one was "an already-tracked root
+file may never be modified". This one is "an already-tracked root file arrives via merge and
+is read as new". Same allowlist gap, different diff status, and `A`-only matching does not
+help because a merge genuinely presents the path as `A`.
+
+---

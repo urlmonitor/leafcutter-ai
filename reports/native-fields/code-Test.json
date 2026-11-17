@@ -1,0 +1,29 @@
+{
+  "kind": "Test",
+  "reviewed_on": "2026-10-02",
+  "status": "implemented_and_verified",
+  "review": "reports/native-fields/review-Test.json",
+  "module": "knowledge/native_types/test.py",
+  "api": "from_entity(root: pathlib.Path, entity: Entity) -> NativeRecord",
+  "tests": "tests/knowledge/test_native_test.py",
+  "implementation": {
+    "identity": "Existing canonical_id, source.path, source.locator, title and summary remain exact, including empty materialized defaults.",
+    "metadata": "Complete six-field Entity envelope, full five-field SourceReference and open nested properties; Python value types and absence/null/empty distinctions preserved.",
+    "excluded_properties": ["_native_projection", "_native_identity", "_native_source_path"],
+    "exclusion_scope": "Only those exact top-level properties keys. Unknown _native_ names and nested names remain.",
+    "validation": "Requires an Entity of kind Test and revalidates its materialized strict contract, including source-path and SHA guards.",
+    "provenance": "No filesystem access, discovery, reclassification, hashing, existence refresh or inferred component membership.",
+    "derived": "Empty. No generated test outcomes, function inventory, durations, execution timestamps or coverage assertions.",
+    "ownership": "Returned metadata is an independent deep copy; input Entity and nested values remain unmodified. Relationship anchors remain outside this adapter."
+  },
+  "verification": {
+    "strict_environment": "AC_ENFORCE_STRICT=1",
+    "red": {"failed": 23, "passed": 0, "skipped": 0, "receipt": "reports/native-fields/Test-red.xml", "reason": "Reader module did not exist before implementation."},
+    "green": {"passed": 23, "failed": 0, "skipped": 0, "receipt": "reports/native-fields/Test-green.xml"},
+    "mutations": {"count": 10, "caught": 10, "receipt": "reports/native-fields/Test-mutations.json", "method": "Each defect injected into the actually imported reader in a separate Python process; repository implementation unchanged. Per-test XML and output receipts retained."},
+    "lint": "ruff format and ruff check passed for reader and tests."
+  },
+  "count_basis": "No repository test enumeration. Exactly the existing immutable Test entities supplied by the caller are enriched.",
+  "integration_scope": "Root agent wires the adapter into native_metadata dispatch and verifies immutable snapshot publication and physical Neo4j fields. This coder made no shared-code, database, Aura or user-checkout changes.",
+  "limitations": ["The reader intentionally does not assert test execution or source-file freshness; those facts cannot be derived from a reference node."]
+}

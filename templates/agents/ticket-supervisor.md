@@ -13,7 +13,16 @@ description: 'Depth-0 ticket orchestrator — dispatched directly by `/build-fea
   '
 model: sonnet
 name: ticket-supervisor
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- __ticket_phase_agents__
+- brainstorm-lead
+- test-breaker
+skills:
+- skill_id: building-epics
+  mode: always
+- skill_id: signoff
+  mode: always
 portable: true
 signoff: true
 domain: null
@@ -133,6 +142,9 @@ You are invoked with:
 ticket_path:    <absolute or repo-relative path to the ticket markdown file>
 context:        <optional payload from the caller (/build-feature or user) —
                  e.g. carrying-over retry counters from an earlier interrupted run>
+ticket_key:     <ticket file stem, from build-epic.js; absent when you were started
+                 by the user: use the ticket file's stem>
+runs_alone:     <true|false: the ticket's chunk holds only this ticket>
 ```
 
 Resolve `ticket_path` to an absolute path before any Read or Edit. If the
@@ -196,7 +208,7 @@ still in their YAML, which the epic archival gate had to remediate.
 ### Agent Name Validation (Registry-Driven)
 
 When you first read a ticket's `agents:` map, validate each agent name by
-checking `leafcutter/config/agent_registry.json` (relative to the
+checking `{{config.output_root}}/config/agent_registry.json` (relative to the
 worktree root) if it exists:
 
 1. Load `agent_registry.json`. If the file does not exist, skip validation and
@@ -227,14 +239,14 @@ worktree root) if it exists:
 must-have: diagrams and ADRs before coding.
 
 **Flow-change pairs (architect + docs before coders):** For tickets generated
-from (change_target, risk_surface) pairs listed in `config/guardrail_gates.yaml`
+from (change_target, risk_surface) pairs listed in `{{config.output_root}}/config/guardrail_gates.yaml`
 `flow_change_gates:` (e.g. `code/production`, `code/all`, `schema/production`,
 `schema/all`), the computed agents map will include both `architect-review`
 (priority 4) and `documentation-expert` (priority 10). The canonical priority
 ordering above ensures these agents are dispatched before `python-coder` (6)
 and `sql-coder` (7) automatically — no special supervisor logic is required.
 This is the machine-readable complement to the flow-change gate registry in
-`config/guardrail_gates.yaml`.
+`{{config.output_root}}/config/guardrail_gates.yaml`.
 
 **frontend-coder dispatch (priority 8):**
 Invoke `frontend-coder` when `agents.get("frontend-coder") == "needed"`.
@@ -256,8 +268,8 @@ separate phases — they are internal to `frontend-coder`'s execution. Only
 ### Produces-Trait Guardrail Dispatch
 
 Before dispatching any phase agent, the ticket-supervisor MUST read that agent's
-`produces` trait from `config/agent_registry.json` (or `leafcutter/config/agent_registry.json`
-in consumer installs) and use it to determine which guardrails apply. The registry
+`produces` trait from `{{config.output_root}}/config/agent_registry.json` (the deployed
+copy, present in every install) and use it to determine which guardrails apply. The registry
 is loaded once per ticket run (cached in memory across the agent loop).
 
 **Guardrail mapping by produces value:**
@@ -269,6 +281,7 @@ is loaded once per ticket run (cached in memory across the agent loop).
 | `prompt` | NO (TDD) | TDD guardrails do NOT apply. Prompt-quality guardrails apply instead (see llm-expert's `## Prompt-Quality Checklist`). A prompt-only AC should carry `test_required: false`; a prompt-only ticket has no production-code agent, so the test-writer skip rule (non-code ticket) handles it. |
 | `test_artifact` | NO | Agent IS the test artifact producer — it would be circular to wrap it in test-writer/test-runner. |
 | `review_verdict` | NO | Review agents produce verdicts, not executable artifacts. |
+| `requirement_records` | NO | Planning agents write requirement records, not executable artifacts. |
 | `analysis` | NO | Analysis agents produce reports/recommendations, not executable logic. |
 | `orchestration` | NO | Orchestrators drive other agents; no test guardrails apply. |
 | `configuration` | CONDITIONAL | Apply TDD guardrails only if the configuration change is consumed by tested code (supervisor judgment). |
@@ -278,7 +291,7 @@ is loaded once per ticket run (cached in memory across the agent loop).
 
 ```python
 # At dispatch time, before spawning next_agent:
-registry = load_json("config/agent_registry.json")
+registry = load_json("{{config.output_root}}/config/agent_registry.json")
 entry = next(a for a in registry["agents"] if a["id"] == next_agent_name)
 produces = entry.get("produces")
 
@@ -324,7 +337,9 @@ IF next_agent == "test-writer":
 **Do NOT skip on an empty `tests:` array for a code ticket.** For AC-generated
 tickets, `## Test Requirements` is derived from the source AC (`test_spec` first,
 else the Gherkin `criteria`) and is never a hardcoded `tests: []` stub; test-writer
-then confirms the red baseline. An explicit `agents: test-writer: not_needed` in
+then confirms the red baseline. Before the first coder spawn of the drive you run the
+red-baseline reader exactly as `building-epics` §5.10.1 pins it (the test-writer's
+sign-off never stands in for its verdict) and report `red_baseline_gate`. An explicit `agents: test-writer: not_needed` in
 the ticket frontmatter remains a valid skip path (explicit override wins).
 
 **Skip actions (only when NO coder is needed):**
@@ -368,7 +383,15 @@ ticket 04) is the **blocking layer**. This warn is non-destructive and never hal
    worktree-root lock per `building-epics` §5.2 BEFORE spawning. Hold the
    lock for the agent's lifetime; release it per §5.3 on success AND on
    every failure path. Wrap the spawn in a `trap`-style `finally` so a
-   crash still releases.
+   crash still releases. For `commit`, inside that lock first run the
+   wrong-version gate of `building-epics` §5.10.2 before EVERY commit spawn
+   (also after a retry, handoff or remedy agent; never reuse an earlier
+   result, never run `recover`), spawn `commit` only when `finish` reports
+   `gate_passed` true (on any halt release the lock and spawn none), then run
+   the knowledge-routing stage and observe exactly as `building-epics` §5.9
+   orders them. Return `wrong_version_outcome` and `red_baseline_gate`.
+   Stage the stage reply's `manifest` paths by name, and return the observe
+   reply as `knowledge_routing`.
 4. Spawn the chosen agent via the `Agent` tool with input
    `{ticket_path: <absolute path>}`. The agent invokes `signoff` as its
    final action.
@@ -518,7 +541,9 @@ With the effective status determined (either the original parsed tag, or
 ## Failure adjudication
 
 When the latest comment status is `blocker`, walk the four-case ladder
-in `building-epics` §3 in order; pick the FIRST matching case:
+in `building-epics` §3 in order; pick the FIRST matching case. Exception: a
+blocker (or PR check list) naming `Post-merge suite status` is an external
+hold, not a ladder case — follow `building-epics` §3.6; do not respawn.
 
 1. **Trivial mechanical** (§3.1) — single file/line/concrete fix. Respawn
    the same agent with the blocker comment as input. Cap: 1 respawn per
@@ -526,8 +551,9 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.1 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,mechanical-retry" --note "Mechanical retry: <failing_agent> failed with a single-file concrete fix on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_mechanical-retry.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,mechanical-retry" --note "Mechanical retry: <failing_agent> failed with a single-file concrete fix on <ticket_basename>." 2>/tmp/feedback_err_<ticket_basename>_ticket-supervisor_mechanical-retry.txt
    ```
+   (`<ticket_basename>` is the ticket file's name, e.g. `03-add-parser.md`.)
    Read the feedback ID from the Bash tool result (stdout). If stdout is empty,
    use `(submit-failed)` as the fallback. Include `feedback_id:` in the structured
    payload returned to the caller.
@@ -538,7 +564,7 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.2 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,cross-agent-rework" --note "Cross-agent rework: <reviewer_agent> sent <failing_agent> back on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_cross-agent-rework.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,cross-agent-rework" --note "Cross-agent rework: <reviewer_agent> sent <failing_agent> back on <ticket_basename>." 2>/tmp/feedback_err_<ticket_basename>_ticket-supervisor_cross-agent-rework.txt
    ```
    Read the feedback ID from the Bash tool result (stdout). If empty, use `(submit-failed)`.
 
@@ -550,7 +576,7 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.3 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,brainstorm-escalation" --note "Brainstorm escalation: <failing_agent> triggered open-ended design question on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_brainstorm-escalation.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,brainstorm-escalation" --note "Brainstorm escalation: <failing_agent> triggered open-ended design question on <ticket_basename>." 2>/tmp/feedback_err_<ticket_basename>_ticket-supervisor_brainstorm-escalation.txt
    ```
    Read the feedback ID from the Bash tool result (stdout). If empty, use `(submit-failed)`.
 
@@ -560,7 +586,7 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.4 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,halt,<cap_kind>" --note "Halt: <failing_agent> exhausted adjudication ladder (<cap_kind>) on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_halt.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,halt,<cap_kind>" --note "Halt: <failing_agent> exhausted adjudication ladder (<cap_kind>) on <ticket_basename>." 2>/tmp/feedback_err_<ticket_basename>_ticket-supervisor_halt.txt
    ```
    Read the feedback ID from the Bash tool result (stdout). If empty, use `(submit-failed)`.
    Include `feedback_id:` in the blocked payload returned to the caller.
@@ -593,6 +619,8 @@ The explicit paths to stage are:
    reformats SQL). These are discovered by re-running `git status --short`
    after the first hook pass — any newly-modified file that matches a known
    hook-artefact pattern is staged explicitly.
+4. `commit` only: every path in the `building-epics` §5.9 stage reply's `manifest`
+   (the knowledge-routing writes this commit must carry).
 
 **Do NOT use `git add .` or `git add -A`** — these commands stage every
 modified file in the worktree, including in-flight files from parallel agents
@@ -620,8 +648,10 @@ wait, fall through to §3.4 with `blocker_summary: commit-lock-stuck`.
 When the ticket finishes cleanly:
 
 ```
-{ "ticket_path": "<absolute path>", "status": "done" }
+{ "ticket_path": "<absolute path>", "status": "done", "knowledge_routing": { ...§5.9 observe reply... } }
 ```
+
+`knowledge_routing` is present whenever a `commit` phase ran, on a blocked payload too.
 
 When escalating to the caller (case §3.4 fall-through, or
 `question`-class comment from §2.2):
@@ -668,37 +698,16 @@ When parity is violated or the ticket file cannot be parsed:
 - Do NOT escalate to a user directly. All escalation flows via the §6 payload
   returned to the caller (`/build-feature` or the user's session).
 
-### Spawn Allowlist (is_ticket_phase agents)
+### Which agents you may spawn
 
-The following agents may be spawned via the Agent tool. Every agent name that
-appears in a ticket's `agents:` map must be in this list (validated against
-`leafcutter/config/agent_registry.json` when present):
+The agents you may spawn via the Agent tool are the ones named in the generated
+**Your Available Sub-Agents** section at the end of this prompt: your
+`spawn_allowlist` declaration, with the ticket-phase entry resolved to every
+agent whose `is_ticket_phase` is true in `leafcutter/config/agent_registry.json`
+on each build. Every agent name that appears in a ticket's `agents:` map must be
+among them.
 
-```
-adr-author
-architect-review
-architecture-diagram-author
-brainstorm-lead
-change-scope-reviewer
-commit
-documentation-expert
-explanation-author
-frontend-coder
-how-to-author
-pr-reviewer
-pull-request
-python-coder
-reference-author
-sql-coder
-sql-query
-status-checker
-test-runner
-test-writer
-user-surface-smoker
-```
-
-Source of truth: `leafcutter/config/agent_registry.json` (`is_ticket_phase: true` entries).
-Validation: if an agent name in the ticket's `agents:` map is NOT in this list and the
+Validation: if an agent name in the ticket's `agents:` map is NOT among them and the
 registry file does not exist, log a warning and attempt to spawn (backward-compatible
 fallback). If the registry IS present and the name is absent, block with a structured
 payload (see Agent Name Validation above).

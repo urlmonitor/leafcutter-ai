@@ -1,0 +1,255 @@
+id: KM-400a-1-xv
+title: Decision properties retain approved reasoning and reject unapproved history
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+work_status: done
+priority: medium
+parent: KM-400a-1
+criteria: |
+  Given a canonical Decision dec-0123456789abcdef has a human approval, a selected option and supporting reasoning
+  When its native fields are exposed in the repository graph
+  Then its authored id, title, repository_id, decision_type, question, task_context, options, selected_option_id, rationale, approval and provenance remain queryable
+  And authored schema_version, kind, description, components, repository_wide, change_target, risk_surface, roadmap_phase, file_globs, criteria, assessment, evidence, assumptions, unresolved_risks, final_outcome, corrections, precedents_considered, related, supersedes and superseded_by retain their original values
+  And nested options, criteria, rankings, evidence, corrections and provenance retain their identities, types, order and same-record associations without adding model defaults
+  And human approval status, approver and time remain attributable rather than being inferred from the presence of the record
+  And missing approval, invalid selected-option references, duplicate local identities, invalid source identity, unsupported schema or unknown declared vocabulary fail explicitly
+  And each target declared in supersedes, superseded_by, related or a non-null corrections entry's superseded_by must exist in the canonical store, while a precedent reference may identify a record outside that store
+  And when decision A declares decision B in superseded_by, B must declare A in supersedes, preserving the original decision and its correction history
+  And an absent or empty canonical Decision store yields no records rather than synthetic decisions or runtime-event substitutes
+  And pending records outside the selected immutable source are not imported as approved history
+depends_on: [KM-400a-1]
+doc_links:
+- path: reports/native-fields/review-Decision.json
+  relationship: describes
+  status: exists
+  relevance: Thirty-one reviewed fields, nested approval and correction rules, and portable validation boundaries.
+- path: reports/native-fields/code-Decision.json
+  relationship: verifies
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+- path: reports/native-fields/ac-linked-strict.xml
+  relationship: verifies
+  status: exists
+  relevance: 'Fresh strict execution after criterion-specific test tags: 388 passed and one Windows symlink-privilege
+    skip across 19 focused modules. Per-type cases resolve through the test catalog; no live database rerun is implied.'
+- path: reports/native-fields/review-Decision.json
+  relationship: describes
+  status: exists
+  relevance: Thirty-one reviewed fields, nested approval and correction rules, and portable validation boundaries.
+- path: reports/native-fields/code-Decision.json
+  relationship: verifies
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-02'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_native_decision.py::test_decision_complete_source_is_lossless_and_schema_pinned
+- tests/knowledge/test_native_decision.py::test_decision_minimal_retains_omission_null_and_empty
+- tests/knowledge/test_native_decision.py::test_decision_absent_or_empty_store_needs_no_schema_or_kernel
+- tests/knowledge/test_native_decision.py::test_decision_invalid_authored_fields_rejected_without_mutating
+- tests/knowledge/test_native_decision.py::test_decision_duplicate_local_ids_rejected
+- tests/knowledge/test_native_decision.py::test_decision_missing_approval_or_classification_rejected
+- tests/knowledge/test_native_decision.py::test_decision_filename_must_match_canonical_identity
+- tests/knowledge/test_native_decision.py::test_decision_unknown_filter_value_rejected
+- tests/knowledge/test_native_decision.py::test_decision_unresolved_store_links_rejected
+- tests/knowledge/test_native_decision.py::test_decision_supersession_requires_reciprocal_source_and_preserves_original
+- tests/knowledge/test_native_decision.py::test_decision_plain_yaml_and_size_bound_enforced
+- tests/knowledge/test_native_decision.py::test_decision_changed_source_schema_cannot_weaken_trusted_validator
+- tests/knowledge/test_native_decision.py::test_decision_malformed_source_fails_explicitly
+- tests/knowledge/test_native_decision.py::test_decision_source_resolution_cannot_escape_snapshot
+- tests/knowledge/test_native_metadata_integration.py::test_native_record_flag_cannot_bypass_decision_approval
+implemented_by:
+  - knowledge/native_types/decision.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  This reviewed mapping extension refines the native-field scope of KM-400a-3-i
+  and KM-400a-1; it does not introduce a competing Decision authoring store.
+  The reader receipt reports 61 passing cases. The active immutable source and
+  delivered Aura graph contained zero Decisions. One pending checkout record
+  was compared read-only and was neither copied nor published. Generated Decision
+  index freshness remains an upstream validation requirement, not a reader claim.
+  Final bidirectional traceability and strict test evidence: reports/native-fields/ac-traceability.json.
+  Work status reflects linked test outcomes; reviewed readiness does not assert user approval.
+estimated_complexity: M
+it_requirements:
+- Trusted portable Decision validation cannot be weakened by a schema supplied inside the source snapshot; approval,
+  classification and reciprocal-reference rules remain mandatory.
+- Only the selected immutable canonical Decision source may contribute history; no pending-merge record, runtime
+  event or empty-store placeholder is promoted into approved memory.
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+- name: test_decision_complete_source_is_lossless_and_schema_pinned
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Decision complete source is lossless and schema pinned.
+  covers:
+  - KM-400a-1-xv
+- name: test_decision_minimal_retains_omission_null_and_empty
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Decision minimal retains omission null and empty.
+  covers:
+  - KM-400a-1-xv
+- name: test_decision_absent_or_empty_store_needs_no_schema_or_kernel
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Decision absent or empty store needs no schema or kernel.
+  covers:
+  - KM-400a-1-xv
+- name: test_decision_invalid_authored_fields_rejected_without_mutating
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Decision invalid authored fields rejected without mutating.
+  covers:
+  - KM-400a-1-xv
+- name: test_decision_duplicate_local_ids_rejected
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Decision duplicate local ids rejected.
+  covers:
+  - KM-400a-1-xv
+- name: test_decision_missing_approval_or_classification_rejected
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Decision missing approval or classification rejected.
+  covers:
+  - KM-400a-1-xv
+- name: test_decision_filename_must_match_canonical_identity
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Decision filename must match canonical identity.
+  covers:
+  - KM-400a-1-xv
+- name: test_decision_unknown_filter_value_rejected
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Decision unknown filter value rejected.
+  covers:
+  - KM-400a-1-xv
+- name: test_decision_unresolved_store_links_rejected
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Decision unresolved store links rejected.
+  covers:
+  - KM-400a-1-xv
+- name: test_decision_supersession_requires_reciprocal_source_and_preserves_original
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Decision supersession requires reciprocal source and preserves original.
+  covers:
+  - KM-400a-1-xv
+- name: test_decision_plain_yaml_and_size_bound_enforced
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Decision plain yaml and size bound enforced.
+  covers:
+  - KM-400a-1-xv
+- name: test_decision_changed_source_schema_cannot_weaken_trusted_validator
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Decision changed source schema cannot weaken trusted validator.
+  covers:
+  - KM-400a-1-xv
+- name: test_decision_malformed_source_fails_explicitly
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Decision malformed source fails explicitly.
+  covers:
+  - KM-400a-1-xv
+- name: test_decision_source_resolution_cannot_escape_snapshot
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Decision source resolution cannot escape snapshot.
+  covers:
+  - KM-400a-1-xv
+- name: test_native_record_flag_cannot_bypass_decision_approval
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Decision fixture with proposed approval fails snapshot validation.
+  covers:
+  - KM-400a-1-xv
+test_rationale: The verified catalog supplies exact existing reader-function anchors, including source-fixture,
+  boundary and failure checks. Only catalog-confirmed type-specific integration links are added. Shared lossless
+  property encoding, physical Neo4j publication, readback and retained-generation behavior remain covered by KM-400a-3-i;
+  these focused tests do not claim 17 independent live database journeys. This is retrospective traceability over
+  dated implementation receipts, not a newly performed TDD sequence. Subsequent strict execution is separately recorded
+  in reports/native-fields/ac-linked-strict.xml (388 passed, one skipped); no database test was rerun for these
+  annotation-only changes.

@@ -9,6 +9,12 @@ description: |
   (internal — dispatched by documentation-expert only, for "design — C4 diagram" intent)
 model: opus
 tools: Bash, Read, Edit, Write, Skill
+skills:
+- skill_id: write-c4-diagram
+  mode: always
+- skill_id: signoff
+  mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 portable: true
 signoff: true
 domain: null
@@ -164,7 +170,7 @@ Signal(s) that triggered refusal: <quote the triggering phrase(s)>
 
 ---
 
-## Step 1 — Load the Write-C4-Diagram Skill
+## Step 1 — Load the `write-c4-diagram` Skill
 
 Before reading any files or producing any output, invoke the write-c4-diagram
 skill via the `Skill` tool:

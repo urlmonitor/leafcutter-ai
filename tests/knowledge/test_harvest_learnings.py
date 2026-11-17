@@ -1709,33 +1709,7 @@ class TestRealStreamReportsFragmentAtLine19(unittest.TestCase):
 # (timestamp, agent, component, destination, entry_kind), per INF-400b-2-ii's
 # reconciled shape. See KI-KM-010 second half.
 #
-# CONTRACT THESE TESTS ESTABLISH (test-writer runs before python-coder; this
-# is the target the implementation must satisfy, not a restatement of
-# existing behaviour):
-#
-#   1. ``_event_hash(event)`` must build its digest from exactly the fields
-#      (timestamp, agent, component, destination, entry_kind) and MUST NOT
-#      read ``ticket`` under any spelling, including a defaulted-to-empty
-#      ``event.get("ticket", "")`` lookup -- that lookup is the present bug.
-#   2. ``_event_hash`` must require each of those five fields to be an
-#      actual key in *event* -- not merely present-with-a-default. When a
-#      required field is absent, ``_event_hash`` must raise
-#      ``KeyError`` naming the missing field, rather than silently
-#      substituting ``""`` (the substitution path that produced this
-#      defect for ``ticket``).
-#   3. ``harvest()`` must catch that ``KeyError`` per-record (not per-line
-#      -- the record parsed as valid JSON, it is simply missing a field the
-#      digest requires), report it via a new ``HarvestResult`` counter/list
-#      pairing -- ``missing_required_field_count: int`` and
-#      ``missing_required_field_lines: list[int]`` (1-based source line
-#      numbers, mirroring ``malformed_line_numbers``) -- log a WARNING
-#      naming the line number and the missing field, and ``continue`` to
-#      the next line without crashing the run and without adding the
-#      record's hash to the idempotency state (so it is retried once the
-#      producer is fixed). This must be a distinct bucket from
-#      ``malformed_lines`` (KI-KM-011's territory; must not be conflated
-#      per this AC's it_requirements) and must not change the harvester's
-#      exit-code vocabulary (0/1/2/3).
+# Contract: the tests below (digest = required fields + text per INF-400b-2-iii).
 # ---------------------------------------------------------------------------
 
 
@@ -1895,10 +1869,11 @@ class TestDigestChangesWhenAnyRequiredFieldChanges(unittest.TestCase):
 
 
 class TestDigestIgnoresFieldsAbsentFromRequiredShape(unittest.TestCase):
-    """INF-400b-2-i: optional fields (``ticket``, ``text``) must NOT affect
-    the digest. Hashing the whole record (the tempting over-correction) would
-    restore discrimination and then break idempotency the instant an
-    optional field appears on a re-emitted record.
+    """INF-400b-2-i: the optional ``ticket`` field must NOT affect the digest
+    (amended by INF-400b-2-iii: ``text`` now does). Hashing the whole record
+    (the tempting over-correction) would restore discrimination and then
+    break idempotency the instant an optional field appears on a re-emitted
+    record.
     """
 
     def test_the_digest_ignores_fields_absent_from_the_required_shape(self) -> None:
@@ -1922,19 +1897,24 @@ class TestDigestIgnoresFieldsAbsentFromRequiredShape(unittest.TestCase):
             "optionality was not honoured",
         )
 
+        # INF-400b-2-iii (BrainCandy, 2026-10-12) AMENDS this test: `text` is
+        # now part of identity, so two same-second learnings are two records.
         with_text = dict(bare)
         with_text["text"] = "Some real learning content."
-        self.assertEqual(
+        self.assertNotEqual(
             bare_hash,
             _mod._event_hash(with_text),
-            "presence of the optional `text` field changed the digest -- "
-            "content must never be part of identity",
+            "the learning text must be part of identity (INF-400b-2-iii)",
         )
 
         with_both = dict(bare)
         with_both["ticket"] = "tickets/some-ticket.md"
         with_both["text"] = "Some real learning content."
-        self.assertEqual(bare_hash, _mod._event_hash(with_both))
+        self.assertEqual(
+            _mod._event_hash(with_text),
+            _mod._event_hash(with_both),
+            "`ticket` must still never contribute to identity",
+        )
 
 
 class TestEveryRequiredKeyComponentIsPopulatedAcrossTheRealCorpus(unittest.TestCase):

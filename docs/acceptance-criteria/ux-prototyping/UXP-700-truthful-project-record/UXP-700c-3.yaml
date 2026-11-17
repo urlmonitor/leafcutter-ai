@@ -46,6 +46,7 @@ superseded_by: null
 covered_by:
 - UXP-700c-3-i
 - UXP-700c-3-ii
+- UXP-700c-3-iii
 implemented_by:
 - tickets/00_inbox/TICKET-20260909-UXP-700c-3.md
 - docs/product-truth/scripts/product_truth_checks.py

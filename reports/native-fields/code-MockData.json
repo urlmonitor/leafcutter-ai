@@ -1,0 +1,63 @@
+{
+  "kind": "MockData",
+  "status": "implemented_verified",
+  "review": "reports/native-fields/review-MockData.json",
+  "implementation": "knowledge/native_types/mock_data.py",
+  "tests": "tests/knowledge/test_native_mock_data.py",
+  "behavior": "Every canonical *.mock.json dataset is one record; full authored JSON is retained including nested sample values; registration metadata remains separate.",
+  "real_corpus": {
+    "datasets": 2,
+    "registered": 1,
+    "unregistered": 1,
+    "entity_specifications": 8,
+    "sample_records": 48
+  },
+  "test_results": {
+    "red": {
+      "failed": 18,
+      "receipt": "reports/native-fields/mock-data-red.xml",
+      "cause": "reader absent before implementation"
+    },
+    "green": {
+      "passed": 18,
+      "receipt": "reports/native-fields/mock-data-green.xml"
+    }
+  },
+  "mutation_proofs": [
+    {
+      "test": "test_mock_data_real_corpus_preserves_all_records_and_unregistered_dataset",
+      "alteration": "omit unregistered canonical dataset",
+      "result": "failed_as_required"
+    },
+    {
+      "test": "test_mock_data_manifest_is_separate_and_unregistered_files_are_discovered",
+      "alteration": "omit unregistered canonical dataset",
+      "result": "failed_as_required"
+    },
+    {
+      "test": "test_mock_data_all_native_fields_and_nested_sample_values_are_preserved",
+      "alteration": "drop nested sample array item",
+      "result": "failed_as_required"
+    },
+    {
+      "test": "test_mock_data_missing_store_and_absent_values_are_not_defaulted",
+      "alteration": "inject absent realization default",
+      "result": "failed_as_required"
+    },
+    {
+      "test": "test_mock_data_manifest_is_separate_and_unregistered_files_are_discovered",
+      "alteration": "overlay stale manifest fields onto authored metadata",
+      "result": "failed_as_required"
+    },
+    {
+      "test": "test_mock_data_resolved_symlink_escape_fails_before_read",
+      "alteration": "replace resolved containment with lexical path check",
+      "result": "failed_as_required"
+    }
+  ],
+  "mutation_scope": "Process-local changes applied to the exact imported knowledge.native_types.mock_data module; restored in finally blocks; no persisted mutation.",
+  "limitations": [
+    "Identity and safety validation are explicit; authored fields are preserved without schema allowlist filtering or default insertion. Full product-truth schema conformance remains with its existing validator.",
+    "Sample entity records remain nested MockData values, not actual AC, Test, or Component graph nodes."
+  ]
+}

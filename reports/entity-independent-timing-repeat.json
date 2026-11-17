@@ -1,0 +1,87 @@
+{
+  "goal": "Explain Decision Kernel and kernel/entity_context.py::recognize_entities and DK-300a-1.",
+  "configured_seconds": 2.0,
+  "rows": [
+    {
+      "iteration": 1,
+      "wall_seconds": 1.5994915999472141,
+      "status": "recognized",
+      "scan_complete": true,
+      "index_status": "current",
+      "identities": [
+        "kernel.entity_context.recognize_entities",
+        "DK-300a-1",
+        "decision kernel",
+        "kernel.contracts.decision.Decision"
+      ],
+      "lookups": 4,
+      "jev_calls": 0,
+      "limitations": []
+    },
+    {
+      "iteration": 2,
+      "wall_seconds": 1.5493107999791391,
+      "status": "recognized",
+      "scan_complete": true,
+      "index_status": "current",
+      "identities": [
+        "kernel.entity_context.recognize_entities",
+        "DK-300a-1",
+        "decision kernel",
+        "kernel.contracts.decision.Decision"
+      ],
+      "lookups": 4,
+      "jev_calls": 0,
+      "limitations": []
+    },
+    {
+      "iteration": 3,
+      "wall_seconds": 1.5082605000352487,
+      "status": "recognized",
+      "scan_complete": true,
+      "index_status": "current",
+      "identities": [
+        "kernel.entity_context.recognize_entities",
+        "DK-300a-1",
+        "decision kernel",
+        "kernel.contracts.decision.Decision"
+      ],
+      "lookups": 4,
+      "jev_calls": 0,
+      "limitations": []
+    },
+    {
+      "iteration": 4,
+      "wall_seconds": 1.5376000999822281,
+      "status": "recognized",
+      "scan_complete": true,
+      "index_status": "current",
+      "identities": [
+        "kernel.entity_context.recognize_entities",
+        "DK-300a-1",
+        "decision kernel",
+        "kernel.contracts.decision.Decision"
+      ],
+      "lookups": 4,
+      "jev_calls": 0,
+      "limitations": []
+    },
+    {
+      "iteration": 5,
+      "wall_seconds": 1.5119158999877982,
+      "status": "recognized",
+      "scan_complete": true,
+      "index_status": "current",
+      "identities": [
+        "kernel.entity_context.recognize_entities",
+        "DK-300a-1",
+        "decision kernel",
+        "kernel.contracts.decision.Decision"
+      ],
+      "lookups": 4,
+      "jev_calls": 0,
+      "limitations": []
+    }
+  ],
+  "complete": 5
+}

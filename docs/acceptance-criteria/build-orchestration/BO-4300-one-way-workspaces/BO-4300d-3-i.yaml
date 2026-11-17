@@ -7,19 +7,21 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
 criteria: |
-  Given the location for "alpha" holds a workspace for "alpha" that was made the
-    old way, sharing the main copy's version history, with one commit not on the
-    shared main line,
+  Given a workspace for "alpha" that was made the old way, sharing the main copy's
+    version history, with one commit not on the shared main line, exists either at
+    the location for "alpha" or in the folder where the old way put it, under the
+    old way's name for "alpha",
   When "alpha" is requested,
   Then the answer is a refusal stating that an old-style workspace for this work
-    occupies the location and that it must be brought over first,
+    exists, where it is, and that it must be brought over first,
+  And no second workspace for "alpha" is made,
   And that workspace, its commit and its registration are identical before and
     after.
 depends_on: [BO-4300d-3]
@@ -54,6 +56,13 @@ it_requirements:
   location is refused OCCUPIED_LEGACY_WORKTREE with a message that it must be brought over first (BO-4300f-3);
   its folder, its commit and the main checkout's registration entry are untouched. Detecting it may read
   git metadata but must not run any git command that rewrites worktree admin state.
+- 'NEVER TWINNED ACROSS THE MOVE (Q4 + Q5, DECIDED user 2026-09-28): the new landing root (BO-4300b-2)
+  differs from where the old way put workspaces (<parent>/worktrees/<name>, a sibling EPIC-<Name> folder),
+  so a check "at the location" alone would make a twin beside the old one. Before creating, ensure reads
+  the main checkout''s legacy worktree registrations (read-only) and refuses OCCUPIED_LEGACY_WORKTREE, with
+  occupant.path the legacy folder, when any registration is on the canonical branch or on a declared legacy
+  alias of the requested identity (BO-4300a-2), wherever its folder is. Matching is on the exact normalised
+  identity, never a prefix or substring.'
 - Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
   delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
   bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
@@ -80,18 +89,49 @@ test_spec:
   angle: boundary
   description: The legacy worktree's files, its extra commit and the main checkout's .git/worktrees entry
     are identical before and after.
+- name: test_legacy_worktree_in_its_old_folder_under_legacy_name_is_refused_not_twinned
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: With a legacy git worktree on branch EPIC-Alpha registered in the main checkout at <parent>/worktrees/EPIC-Alpha
+    (outside the new landing root), a request for kind epic slug alpha is refused OCCUPIED_LEGACY_WORKTREE
+    with occupant.path that folder, and no folder exists at <landing-root>/epic/alpha afterwards.
 test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
   its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
   A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
   mock cannot show the half-made and occupied states this family exists to handle.
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: user-decisions-q4-q5
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Criteria tightened to the decided behaviour, as BO-4300d-4 was for Q9: with Q5 moving the landing
+    root, an old-style workspace for the same work is found under any declared legacy spelling (Q4) and
+    wherever the old way put it, and no second workspace is made beside it. it_requirement and one test
+    added. readiness stays approved (user decisions, 2026-09-28).
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/build_orchestration/test_bo_4300d_3_i.py
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300d-3-i.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06_TICKET-20260928-BO-4300-work-identity-and-ticket-location.md
 notes: |
   Bridges to the cut-over under BO-4300f-3: until an old-style worktree is brought over, the one
-  maker must not silently convert, reuse or overwrite it.
+  maker must not silently convert, reuse or overwrite it. Q4 and Q5 -- DECIDED (user,
+  2026-09-28): because the landing root moved and names changed to <kind>/<slug>, the old-style
+  workspace is recognised by its legacy name and old folder, never only by the new location.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 06_TICKET-20260928-BO-4300-work-identity-and-ticket-location.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06)
+#   Q4 + Q5 DECIDED (user, 2026-09-28): criteria tightened -- an old-style workspace is found by
+#   legacy name and old folder, never twinned; one test added.
+# ====================================================================

@@ -97,7 +97,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-124d-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/28_TICKET-20261023-GE-124d-2.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -122,3 +123,4 @@ notes: |
   GE-124d-1's warn list is central because it excuses an area, and GE-124d-2's
   reason is in-file because it excuses an item and must be reviewable in the
   diff. An implementer who unifies them for tidiness destroys this AC.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

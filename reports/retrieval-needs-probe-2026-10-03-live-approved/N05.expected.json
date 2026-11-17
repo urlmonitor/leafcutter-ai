@@ -1,0 +1,40 @@
+{
+  "expected": {
+    "include": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-2"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": [
+        "parent_direct"
+      ]
+    },
+    "exclude": {
+      "relationships": [
+        "children_direct",
+        "all_descendants"
+      ]
+    },
+    "detail_mode": [
+      "full_document",
+      "bounded_context"
+    ],
+    "completeness": [
+      "single_entity",
+      "selected_entities"
+    ],
+    "hierarchy_scope": [
+      "not_applicable",
+      "include_root"
+    ],
+    "status": [
+      "decided"
+    ]
+  },
+  "human_gold": "Keep the named target, fetch complete criterion plus exactly its immediate parent as bounded context. Do not invent parent ID or request the whole family. Related context is not an exhaustive population count."
+}

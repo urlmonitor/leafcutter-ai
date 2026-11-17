@@ -30,6 +30,10 @@ MIXED RED/GREEN, HONESTLY. Both descriptors here assert the FULL
 
 DECISION HISTORY
 - 2026-09-28 [GE-127e-4/test-writer]: Initial authoring.
+- 2026-10-02 [test-env-fixes]: The "no second artifact" snapshot raced git's
+  own auto-gc (a transient .git/objects/pack/tmp_pack_* in CI). The temp repo
+  now disables auto gc/maintenance (fixture init_repo) and the snapshot
+  ignores .git/objects (fixture snapshot_files, _ge_127e_3_fixture.py).
 """
 
 from __future__ import annotations

@@ -203,6 +203,7 @@ class TestOneRerankCallPerNeed(RerankCase):
                        f"# Note {n}\nDecision records as yaml files under docs, record fields {n}.\n")
 
     def test_a_need_sends_at_most_rerank_max_per_need_candidates_in_one_call(self) -> None:
+        # covers: DK-600a-2
         result = self.run_executor()
         (batch,) = self.jev.batches
         self.assertLessEqual(len(batch.questions), CFG.rerank_max_per_need)

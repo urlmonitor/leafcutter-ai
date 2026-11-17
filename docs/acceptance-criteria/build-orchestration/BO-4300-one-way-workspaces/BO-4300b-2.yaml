@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -22,7 +22,8 @@ criteria: |
   And the workspace is a copy of shop, started from shop's shared main line tip,
     with shop's own tools installed inside it,
   And that location is the same on every request for "alpha" in shop, and lies
-    in the one place set aside for shop's workspaces.
+    in the one place set aside for shop's workspaces: a folder beside shop, in
+    shop's parent folder and named after shop, never inside shop itself.
 depends_on: [BO-4300b]
 doc_links:
 - path: docs/analysis/2026-09-25-worktree-failure-modes.md
@@ -57,9 +58,21 @@ package_surface: false
 it_requirements:
 - Consumer layout (the maker deployed in a folder outside shop's version history) resolves shop by the
   BO-4300b-1 order, never from the maker's own location (F11, KI-ACD-004).
-- 'The landing place is ONE rule owned by the maker and reported as layout (Q5 open: inside the project
-  and ignored by git, or in the parent folder). Whichever is chosen, it is derived from the resolved project,
-  stable across requests, and -- if shared by several projects -- keeps them apart (BO-4300b-2-i).'
+- 'LANDING ROOT (Q5, DECIDED user 2026-09-28): the landing place is ONE rule owned by the maker (templates/scripts/worktree_layout.py):
+  landing root = <parent-of-project>/<project-dir-name>-worktrees/, where the project is the resolved main
+  checkout (BO-4300b-1) -- never cwd, never the maker''s or any install''s location. Each workspace lands
+  at <landing-root>/<kind>/<slug> for its canonical identity (Q4, BO-4300a-2). The same rule holds in the
+  consumer layout and in the package''s own dev layout (leafcutter-ai -> <parent>/leafcutter-ai-worktrees/);
+  layout is still reported as ''dev''|''consumer''. Nothing is created inside the project''s working tree
+  and no ignore entry is written, so tools and tests that scan the project never see a clone.'
+- 'LANDING-ROOT OVERRIDE (Q5): only an explicit --landing-root P argument overrides the rule -- never an
+  environment variable, a config setting or a remembered value. The maker validates it before writing anything:
+  it must resolve to an absolute folder outside the project''s working tree, not inside any existing workspace,
+  not inside any other git repository, and creatable and writable; an invalid override is a usage error
+  (status error, code USAGE, exit 64) naming the rule it breaks, and nothing is written. locate, list,
+  verify and remove apply the same rule and accept the same override; a workspace made under an override
+  is found only when the same override is given.'
+- The landing rule is stable across requests and keeps projects apart (BO-4300b-2-i).
 - shop's install inside the workspace is built from the workspace's own contents with shop's own derived
   config.
 - Answers conform to the result contract delivered by BO-4300c-2 (one JSON object on stdout, status/code/exit
@@ -98,21 +111,90 @@ test_spec:
   angle: boundary
   description: Repeated requests for alpha in shop return the same workspace_path, located in the one
     place set aside for shop's workspaces.
+- name: test_workspace_lands_in_the_sibling_folder_named_after_the_project
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: The ok workspace_path is <shop's parent>/shop-worktrees/<kind>/alpha, and shop's working
+    tree (git status --porcelain --ignored) is identical before and after -- no folder, file or ignore entry
+    appears inside shop.
+- name: test_dev_layout_lands_beside_the_package_repository
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: In a dev-layout fixture (package repository pkg as a child of a non-repo workspace folder
+    holding the current install), the ok workspace_path is <workspace folder>/pkg-worktrees/<kind>/alpha,
+    not <workspace folder>/worktrees/alpha and not inside pkg.
+- name: test_valid_landing_root_override_is_used_and_needed_to_find_it_again
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: With --landing-root naming a valid empty folder outside shop, the workspace lands at <override>/<kind>/alpha;
+    locate with the same override finds it, and locate without it answers NOT_FOUND.
+- name: test_invalid_landing_root_override_is_refused_as_usage_writing_nothing
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: --landing-root inside shop's working tree, and --landing-root inside an existing workspace,
+    each exit 64 with status error, code USAGE and a message naming the broken rule; no folder, lock, branch
+    or marker is created anywhere.
+- name: test_landing_place_is_not_taken_from_the_environment
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: seam
+  description: With environment variables named like a landing-root setting pointing elsewhere, the workspace
+    still lands at <shop's parent>/shop-worktrees/<kind>/alpha.
 test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
   its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
   A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
   mock cannot show the half-made and occupied states this family exists to handle.
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: user-decision-q5
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Q5 DECIDED (user, 2026-09-28). Criteria tightened to the decided place (a folder beside the project,
+    named after it, never inside it), as BO-4300d-4 was for Q9. it_requirements now state the landing
+    root <parent-of-project>/<project-dir-name>-worktrees/, the <kind>/<slug> leaf, the dev-layout
+    application and the validated explicit --landing-root override (USAGE when invalid). Five tests
+    added. readiness stays approved.
 superseded_by: null
 covered_by: [BO-4300b-2-i, BO-4300b-2-ii]
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300b-2.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04_TICKET-20260928-BO-4300-project-resolution.md
+- templates/scripts/worktree.py
+- templates/scripts/worktree_git.py
+- templates/scripts/worktree_admin.py
+- templates/scripts/workspace_root.py
+- templates/scripts/worktree_layout.py
+- scripts/build_phases_script_deploy_standalone.py
+- scripts/build_deploy_manifest_helpers.py
+- docs/architecture/adrs/worktree-maker-amendment-1-2026-09-27.md
 notes: |
   F11: the installed copy of today's script cannot find the repository when it lives outside
-  it (KI-ACD-004). OPEN (Q5, not decided here): whether shop's workspaces live inside shop
-  (ignored by version control) or beside it in the parent folder. This record requires only
-  that the place is predictable per project; BO-4300b-2-i adds the constraint that any
-  shared-parent choice must still keep projects apart.
+  it (KI-ACD-004). Q5 -- DECIDED (user, 2026-09-28): workspaces live in a SIBLING folder per
+  project, <parent-of-project>/<project-dir-name>-worktrees/<slug>, outside the project so tools
+  and tests never scan the clones and two projects in one parent folder never collide; this
+  applies to the package's own dev layout too, unless an explicit --landing-root override is
+  given, which the maker still validates. Criteria tightened to the decided place; BO-4300b-2-i
+  keeps the two-projects constraint.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 04_TICKET-20260928-BO-4300-project-resolution.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04)
+#   Q5 DECIDED (user, 2026-09-28): criteria tightened to the sibling folder; landing root rule
+#   and validated --landing-root override in it_requirements; five tests added.
+# ====================================================================

@@ -87,6 +87,10 @@ it_requirements:
 delivers_to:
   - agent: python-coder
     contract: "The triage list for a completed run: one entry per unproven record, each carrying {ac_id, outcome_reason, decision: prove|redo|retire|not_yet_decided}, plus the stated count of entries in the not_yet_decided state, plus the list-level inclusion-rule record {enumerated_root, levels_included, unproven_rule, identifier_normalisation, measured_at, continues_count}. Consumed by TQ-400d-2 (progress arithmetic), TQ-400d-3 (the clear-refusal gate operates on these entries) and TQ-400d-4 (which constrains how the list is derived)."
+  - agent: python-coder
+    ac_id: BO-2500f-4-ii
+    contract: The worked list where the migration records each record's decision (prove, redo,
+      retire) against a declared population.
 expects_from:
   - ac_id: TQ-400e-3
     contract: >-

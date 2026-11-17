@@ -1,0 +1,75 @@
+{
+  "outcome": {
+    "diagnostics": [],
+    "errors": [],
+    "limitations": [
+      "host-reported; not verified by the kernel",
+      "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+    ],
+    "open_questions": [],
+    "output": {
+      "payload": {
+        "completeness": "single_entity",
+        "detail_mode": "fields",
+        "engine": "host_llm",
+        "hierarchy_levels": [],
+        "hierarchy_scope": "not_applicable",
+        "model_id": null,
+        "original_question": "For KM-500c-1, what must tests demonstrate?",
+        "rationale": "The question asks what verification must establish for one criterion, requiring its acceptance clauses and authored test specification. Retrieval must establish whether those fields are present.",
+        "schema_version": "1.0",
+        "scope_resolution": "sufficient",
+        "selections": {
+          "document_types": [
+            "ac_yaml"
+          ],
+          "entity_types": [
+            "ac"
+          ],
+          "relationships": [],
+          "required_fields": [
+            "criteria",
+            "test_spec"
+          ],
+          "target_ids": [
+            "KM-500c-1"
+          ]
+        },
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "status": "decided",
+        "uncertain": {
+          "document_types": [],
+          "entity_types": [],
+          "relationships": [],
+          "required_fields": [],
+          "target_ids": []
+        },
+        "unresolved": []
+      },
+      "schema_id": "leafcutter.retrieval_needs_output.v1",
+      "schema_version": "1.0"
+    },
+    "report_ref": null,
+    "schema_version": "1.0",
+    "status": "completed"
+  },
+  "run_id": "run-33059e12e54a45d8",
+  "status": "completed",
+  "work_items": [
+    {
+      "binding": "host.retrieval_needs",
+      "depth": 0,
+      "id": "work-3fa6c360cd1c4f3b",
+      "status": "completed"
+    }
+  ]
+}

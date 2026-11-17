@@ -1,0 +1,33 @@
+id: DK-200
+title: "Understand requests using available context before asking the user"
+component: decision-kernel
+components: [decision_kernel]
+level: L0
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a user asks about a project or refers to earlier conversation,
+  When the kernel begins understanding the request,
+  Then it consults available context before deciding whether clarification is needed,
+  And facts it cannot establish and choices only the user can make remain explicit.
+covered_by:
+  - DK-200a
+  - DK-200b
+  - DK-200c
+  - DK-200d
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: specified-by
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: specified-by
+    status: exists
+origin_agent: Codex orchestrator (user-authorized BA and IT PO review)
+created: 2026-10-02
+notes: |
+  Parent scope transcribes the user's request for enrichment before intent and a
+  dedicated evaluation. It adds no new implementation scope or approval claim.
+  BA owns behavioral decomposition; IT PO owns technical and test contracts.

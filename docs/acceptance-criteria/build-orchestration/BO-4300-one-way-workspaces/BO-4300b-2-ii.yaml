@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -52,8 +52,11 @@ expects_from:
   contract: Project resolution order independent of any install copy.
 package_surface: false
 it_requirements:
-- 'Resolution never consults any installed copy''s location, including a stale gitignored install inside
-  the package repository (Q6 open: the copy may be removed or kept; the outcome must not depend on it).'
+- 'Resolution never consults any installed copy''s location or contents, including a stale gitignored install
+  inside the package repository. Q6 (DECIDED user 2026-09-28): leafcutter-ai/.leafcutter/ must not exist
+  -- it is deleted and build.py refuses to build into the package repository unless an explicit --target-dir
+  is given (BO-4300f-2, ticket 14). This record does not rely on that deletion: its tests still plant a stale
+  inner copy in the fixture, because any adopter project can carry one and the outcome must not depend on it.'
 - The install inside the workspace comes from the workspace's own build, never copied or linked from any
   existing install tree.
 - Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
@@ -89,15 +92,45 @@ test_rationale: Every assertion is made on what the deployed maker actually did 
   mock cannot show the half-made and occupied states this family exists to handle.
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: user-decision-q6
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Technical fields only; criteria unchanged. Q6 DECIDED (user, 2026-09-28): the package repository's
+    inner install copy is deleted and build.py refuses an implicit build into the package repository
+    (delivered by BO-4300f-2 in ticket 14). This record keeps its fixture-planted stale copy so the
+    resolver's independence from any install copy stays proven. readiness stays approved.
 superseded_by: null
-covered_by: []
+covered_by: [unit_tests/build_orchestration/test_bo_4300b_2_ii.py]
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300b-2-ii.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04_TICKET-20260928-BO-4300-project-resolution.md
+- templates/scripts/worktree.py
+- templates/scripts/worktree_git.py
+- templates/scripts/worktree_admin.py
+- templates/scripts/workspace_root.py
+- templates/scripts/worktree_layout.py
+- scripts/build_phases_script_deploy_standalone.py
+- scripts/build_deploy_manifest_helpers.py
+- docs/architecture/adrs/worktree-maker-amendment-1-2026-09-27.md
 notes: |
   Section 1 of the consolidation analysis: the resolver always preferred the stale gitignored
-  leafcutter-ai/.leafcutter copy (2026-09-09) over the current deployment (2026-09-24). OPEN
-  (Q6, not decided here): whether that inner copy should exist at all. This record holds
-  either way -- if the copy is removed it is trivially true; if it stays it must not steer the
+  leafcutter-ai/.leafcutter copy (2026-09-09) over the current deployment (2026-09-24). Q6 --
+  DECIDED (user, 2026-09-28): leafcutter-ai/.leafcutter/ must NOT exist; it is deleted and
+  build.py refuses to build into the package repository itself unless an explicit --target-dir
+  is given (BO-4300f-2, ticket 14). This record still holds on its own: the resolver never reads
+  any install copy, so a stale copy that reappears (or exists in an adopter) cannot steer the
   outcome.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 04_TICKET-20260928-BO-4300-project-resolution.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04)
+#   Q6 DECIDED (user, 2026-09-28): package-repo install copy deleted and implicit build refused
+#   (ticket 14); this record keeps its fixture-planted stale copy. criteria unchanged.
+# ====================================================================

@@ -61,6 +61,7 @@ superseded_by: null
 covered_by:
   - INF-400b-2-i
   - INF-400b-2-ii
+  - INF-400b-2-iii
 implemented_by: []
 change_target: schema
 risk_surface: contract_boundary

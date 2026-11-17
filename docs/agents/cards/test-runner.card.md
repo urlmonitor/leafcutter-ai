@@ -37,6 +37,7 @@ invokes this agent for its inner-loop test cycle.**
 
 - `ticket-supervisor`
 - `test-writer`
+- `python-coder`
 - `finalize-feature.js`
 ---
 
@@ -63,11 +64,13 @@ flowchart TD
 
     ticket_supervisor["ticket-supervisor\n(supervisor tier)"]:::supervisor
     test_writer["test-writer\n(phase tier)"]:::phase
+    python_coder["python-coder\n(phase tier)"]:::phase
     finalize_feature.js["finalize-feature.js\n(phase tier)"]:::phase
     test_runner["test-runner\n(phase tier, priority 9)"]:::target
 
     ticket_supervisor -->|dispatches| test_runner
     test_writer -->|dispatches| test_runner
+    python_coder -->|dispatches| test_runner
     finalize_feature.js -->|dispatches| test_runner
 ```
 ---
@@ -101,13 +104,14 @@ flowchart TD
 | `Bash` |
 | `Read` |
 | `Edit` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | always | — |
+| `signoff` | conditional | When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket. |
 ---
 
 ## Configuration
@@ -115,7 +119,7 @@ flowchart TD
 | Key | Required | Description |
 |-----|----------|-------------|
 | `test_command_live_trader` | No | Command to run the fast unit test suite |
-| `test_output_dir` | No | Temp directory for test output files |
+| `test_output_dir` | No | Folder for test output; empty means the scratch home (scratch.py test-output-dir) |
 ---
 
 ## Contributor Notes
@@ -126,16 +130,3 @@ flowchart TD
 |---------|---------|----------|---------------|
 | Conditional Behavior | invoked by `ticket-supervisor` | first check `git diff --name-only HEAD` | `None` |
 | Conditional Behavior | the user does not specify an action | default to `auto` | `None` |
----
-
-## AC Assignments
-
-### test-runner
-
-- BO-2100e-1: An opted-in ticket driven through ticket-supervisor demonstrably spawns live-surface-tester
-- BP-006a-2: test_no_orphaned_directories passes with no unregistered skill directories
-- BP-006a-3: Edge case: new skill directory added without registry entry is detected
-- BP-006c-2: test_build_workflow_phase validates .claude/workflows/ path
-- BP-1200a-1-i: Suite is green across repeated runs with both fixed and varied test-ordering seeds
-- TQ-100b-1-iii: The AC store is read once per session and the enforced set is stable across repeated runs
-- TQ-100e-1-iii: Switching enforcement modes changes behavior with no edits to any test

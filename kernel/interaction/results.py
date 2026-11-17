@@ -61,14 +61,16 @@ def _structured_text(response: dict[str, Any]) -> str:
 
 def answer_text(packet: HumanQuestion, response: dict[str, Any]) -> str:
     """Return the evidence text of a human answer (free text, structure summary or label)."""
-    if response.get("free_text"):
-        return str(response["free_text"])
+    text = str(response["free_text"]) if response.get("free_text") else ""
+    if text and response.get("choice_id") is None:
+        return text
     structured = _structured_text(response)
     if structured:
         return structured
     chosen: Choice | None = next((c for c in packet.choices if c.id == response.get("choice_id")),
                                  None)
-    return f"{chosen.label}" if chosen else f"choice {response.get('choice_id')}"
+    label = f"{chosen.label}" if chosen else f"choice {response.get('choice_id')}"
+    return f"{label}. Condition: {text}" if text else label
 
 
 def evidence_from_submission(packet: HostWorkRequest | HumanQuestion,
@@ -125,18 +127,25 @@ def result_from_submission(packet: HostWorkRequest | HumanQuestion,
 
 def repair_exhausted_result(packet: HostWorkRequest, invocation: CapabilityInvocation | None,
                             last_code: str) -> CapabilityResult:
-    """Return the failed result for a host interaction whose repair attempts ran out."""
+    """Return the failed result for a host interaction whose repair attempts ran out.
+
+    The last rejection's message is kept in the error, so a caller that abandons the work can
+    name why the host's proposal was refused.
+    """
+    reason = f": {packet.rejections[-1].message}" if packet.rejections else ""
     return CapabilityResult(
         invocation_id=invocation.id if invocation else packet.id,
         work_item_id=packet.work_item_id, status=ResultStatus.FAILED,
         error=ErrorInfo(code=REPAIR_EXHAUSTED_CODE, retryable=False,
                         message=f"host output stayed invalid after {len(packet.rejections)} "
-                                f"submissions (last: {last_code})"))
+                                f"submissions (last: {last_code}{reason})"))
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: answer_text renders the choice label and its condition.
+#   (#KernelChoiceWithCondition)
 # - 2026-10-02 [python-coder]: mypy: the human answer text is read after narrowing the packet; errors are ErrorInfo (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 11:05 [python-coder]: Host submissions for a capability with a host operation are
 #   converted by that operation (kernel.capabilities.host); the pass-through stays for human

@@ -1,0 +1,518 @@
+{
+  "case_id": "N03",
+  "question": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+  "origin": [
+    "RS-05",
+    "RS-19",
+    "RS-20"
+  ],
+  "human_gold": "Preserve explicitly specified L2/L3 population, all descendants and root-only exclusion. work_status is implementation progress, not lifecycle status. A later traversal depth cap cannot silently change all descendants to direct children. Do not re-ask the stated scope.",
+  "result": {
+    "schema_version": "1.0",
+    "original_question": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+    "source_scope": {
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only",
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "allow_retrieval": false
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "TQ-500f"
+      ],
+      "required_fields": [
+        "criteria",
+        "work_status",
+        "level",
+        "parent"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": [
+        "all_descendants"
+      ]
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [
+        "test_spec",
+        "covered_by",
+        "content",
+        "provenance"
+      ],
+      "document_types": [
+        "schema"
+      ],
+      "relationships": [
+        "parent_direct",
+        "children_direct",
+        "linked_tests"
+      ]
+    },
+    "rejected": {
+      "entity_types": [
+        "source_file",
+        "test",
+        "adr",
+        "schema",
+        "report",
+        "component"
+      ],
+      "target_ids": [],
+      "required_fields": [
+        "status",
+        "mapping",
+        "compatibility"
+      ],
+      "document_types": [
+        "source_code",
+        "test_source",
+        "adr",
+        "execution_report"
+      ],
+      "relationships": [
+        "incoming_dependencies_direct"
+      ]
+    },
+    "detail_mode": "unknown",
+    "completeness": "exhaustive_count",
+    "hierarchy_scope": "exclude_root",
+    "scope_resolution": "sufficient",
+    "unresolved": [
+      "detail_mode"
+    ],
+    "status": "needs_resolution",
+    "response": {
+      "schema_version": "1.0",
+      "model_id": "jev-1.13.0",
+      "request_id": "req_01a100c485297e1da294ed05c6fa5046",
+      "answers": {
+        "entity_types.ac": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.ac",
+          "probability": 0.84,
+          "confidence": null
+        },
+        "entity_types.source_file": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.source_file",
+          "probability": 0.19,
+          "confidence": null
+        },
+        "entity_types.test": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.test",
+          "probability": 0.14,
+          "confidence": null
+        },
+        "entity_types.adr": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.adr",
+          "probability": 0.1,
+          "confidence": null
+        },
+        "entity_types.schema": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.schema",
+          "probability": 0.22,
+          "confidence": null
+        },
+        "entity_types.report": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.report",
+          "probability": 0.08,
+          "confidence": null
+        },
+        "entity_types.component": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.component",
+          "probability": 0.15,
+          "confidence": null
+        },
+        "target_ids.TQ-500f": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "target_ids.TQ-500f",
+          "probability": 0.79,
+          "confidence": null
+        },
+        "required_fields.criteria": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.criteria",
+          "probability": 0.73,
+          "confidence": null
+        },
+        "required_fields.test_spec": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.test_spec",
+          "probability": 0.69,
+          "confidence": null
+        },
+        "required_fields.work_status": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.work_status",
+          "probability": 0.9,
+          "confidence": null
+        },
+        "required_fields.status": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.status",
+          "probability": 0.19,
+          "confidence": null
+        },
+        "required_fields.level": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.level",
+          "probability": 0.93,
+          "confidence": null
+        },
+        "required_fields.parent": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.parent",
+          "probability": 0.75,
+          "confidence": null
+        },
+        "required_fields.covered_by": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.covered_by",
+          "probability": 0.35,
+          "confidence": null
+        },
+        "required_fields.content": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.content",
+          "probability": 0.47,
+          "confidence": null
+        },
+        "required_fields.provenance": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.provenance",
+          "probability": 0.67,
+          "confidence": null
+        },
+        "required_fields.mapping": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.mapping",
+          "probability": 0.13,
+          "confidence": null
+        },
+        "required_fields.compatibility": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.compatibility",
+          "probability": 0.1,
+          "confidence": null
+        },
+        "document_types.ac_yaml": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.ac_yaml",
+          "probability": 0.72,
+          "confidence": null
+        },
+        "document_types.source_code": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.source_code",
+          "probability": 0.14,
+          "confidence": null
+        },
+        "document_types.test_source": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.test_source",
+          "probability": 0.08,
+          "confidence": null
+        },
+        "document_types.adr": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.adr",
+          "probability": 0.08,
+          "confidence": null
+        },
+        "document_types.schema": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.schema",
+          "probability": 0.33,
+          "confidence": null
+        },
+        "document_types.execution_report": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.execution_report",
+          "probability": 0.06,
+          "confidence": null
+        },
+        "relationships.parent_direct": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.parent_direct",
+          "probability": 0.48,
+          "confidence": null
+        },
+        "relationships.children_direct": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.children_direct",
+          "probability": 0.36,
+          "confidence": null
+        },
+        "relationships.all_descendants": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.all_descendants",
+          "probability": 0.88,
+          "confidence": null
+        },
+        "relationships.incoming_dependencies_direct": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.incoming_dependencies_direct",
+          "probability": 0.17,
+          "confidence": null
+        },
+        "relationships.linked_tests": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.linked_tests",
+          "probability": 0.58,
+          "confidence": null
+        },
+        "detail_mode": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "detail_mode",
+          "choice": "fields",
+          "probabilities": {
+            "fields": 0.58,
+            "bounded_context": 0.4,
+            "full_document": 0.01,
+            "unknown": 0.01
+          },
+          "confidence": 0.45
+        },
+        "completeness": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "completeness",
+          "choice": "exhaustive_count",
+          "probabilities": {
+            "selected_entities": 0.0,
+            "examples": 0.0,
+            "single_entity": 0.0,
+            "exhaustive_count": 0.98,
+            "unknown": 0.0,
+            "exhaustive_set": 0.02
+          },
+          "confidence": 0.97
+        },
+        "hierarchy_scope": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "hierarchy_scope",
+          "choice": "exclude_root",
+          "probabilities": {
+            "include_root": 0.0,
+            "exclude_root": 1.0,
+            "exclude_parents": 0.0,
+            "unknown": 0.0,
+            "not_applicable": 0.0
+          },
+          "confidence": 1.0
+        },
+        "scope_resolution": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "scope_resolution",
+          "choice": "sufficient",
+          "probabilities": {
+            "user_choice_missing": 0.0,
+            "discovery_needed": 0.2,
+            "sufficient": 0.8,
+            "unknown": 0.0
+          },
+          "confidence": 0.72
+        },
+        "needs_outside_catalog": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "needs_outside_catalog",
+          "probability": 0.16,
+          "confidence": null
+        }
+      },
+      "usage": {
+        "schema_version": "1.0",
+        "provider": "jev",
+        "model_id": "jev-1.13.0",
+        "input_tokens": 2798,
+        "output_tokens": 824,
+        "duration_ms": 295,
+        "cost_usd": null,
+        "cost_provenance": "unavailable",
+        "calls": 1
+      },
+      "latency_ms": 295,
+      "input_fingerprint": "6d038620cfa30fa914aeaf9ea6a3772438d6d83b028a12f0e8372cf26a6c3551",
+      "adapter_version": "http-direct/1"
+    },
+    "provider_calls": 1,
+    "max_relation_depth": 3,
+    "limitations": [
+      "Needs interpretation only: no retrieval, availability check, final answer or fulfillment claim.",
+      "Supplied context/known IDs are unverified candidates, not authority or permissions.",
+      "The execution depth bound does not narrow semantic all-descendant requirements."
+    ]
+  },
+  "error": null,
+  "grade": {
+    "passed": false,
+    "checks": [
+      {
+        "name": "one_actual_http_request",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "original_question_unchanged",
+        "passed": true,
+        "actual": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+        "expected": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status."
+      },
+      {
+        "name": "include.entity_types",
+        "passed": true,
+        "actual": [
+          "ac"
+        ],
+        "expected": [
+          "ac"
+        ]
+      },
+      {
+        "name": "include.target_ids",
+        "passed": true,
+        "actual": [
+          "TQ-500f"
+        ],
+        "expected": [
+          "TQ-500f"
+        ]
+      },
+      {
+        "name": "include.required_fields",
+        "passed": true,
+        "actual": [
+          "criteria",
+          "work_status",
+          "level",
+          "parent"
+        ],
+        "expected": [
+          "work_status",
+          "level"
+        ]
+      },
+      {
+        "name": "include.document_types",
+        "passed": true,
+        "actual": [
+          "ac_yaml"
+        ],
+        "expected": [
+          "ac_yaml"
+        ]
+      },
+      {
+        "name": "include.relationships",
+        "passed": true,
+        "actual": [
+          "all_descendants"
+        ],
+        "expected": [
+          "all_descendants"
+        ]
+      },
+      {
+        "name": "exclude.required_fields",
+        "passed": true,
+        "actual": [
+          "criteria",
+          "work_status",
+          "level",
+          "parent"
+        ],
+        "expected": {
+          "forbidden": [
+            "status"
+          ]
+        }
+      },
+      {
+        "name": "completeness",
+        "passed": true,
+        "actual": "exhaustive_count",
+        "expected": [
+          "exhaustive_count"
+        ]
+      },
+      {
+        "name": "hierarchy_scope",
+        "passed": true,
+        "actual": "exclude_root",
+        "expected": [
+          "exclude_root"
+        ]
+      },
+      {
+        "name": "status",
+        "passed": false,
+        "actual": "needs_resolution",
+        "expected": [
+          "decided"
+        ]
+      },
+      {
+        "name": "no_unoffered_id",
+        "passed": true,
+        "actual": [
+          "TQ-500f"
+        ],
+        "expected": "literal or independently supplied observed candidate"
+      }
+    ]
+  },
+  "physical_http_calls": 1,
+  "wire_questions": 35,
+  "elapsed_seconds": 0.474
+}

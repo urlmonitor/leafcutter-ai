@@ -114,7 +114,11 @@ class TestEveryFormOfDividingAdviceIsProducibleBySomeMeasuredKind(unittest.TestC
         never execute from any real refusal. That leaves exactly one
         unreachable form, and the assertion below fails naming it.
         """
-        probe_extensions = [".py", ".sql", ".md", ".js", ".ts", ".sh"]
+        # ".md" is no longer probed: GE-127d-3's measure has no tokenizer for it, so
+        # forcing it into scope yields INDETERMINATE (exit 2), never a refusal -- the
+        # standard can no longer refuse a ".md" file at all, so no advice form can come
+        # from it. Every kind the measure does read stays probed.
+        probe_extensions = [".py", ".sql", ".js", ".ts", ".sh"]
         capable_forms: set[str] = set()
         for ext in probe_extensions:
             capable_forms |= refusal_advice_for_extension(ext)

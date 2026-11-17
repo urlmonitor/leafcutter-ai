@@ -4,7 +4,7 @@ description: "The proposed single standalone component that replaces the seven w
 type: explanation
 status: active
 created: 2026-09-25
-last_updated: 2026-09-25
+last_updated: 2026-09-28
 components:
   - worktree_manager
   - build_orchestration
@@ -16,6 +16,17 @@ Part of [the worktree-consolidation analysis](2026-09-25-worktree-creation-conso
 (per-feature clones, real install files, `origin/main` everywhere, one script run from a skill)
 are in section 8 of that page and in [the decision memo](2026-09-25-worktree-isolation-decision-memo.md);
 where they change what is written here, they win.
+
+> **Delivered 2026-09-28 (`BO-4300a-1`).** This section is the *proposal* as it stood on
+> 2026-09-25; the shipped CLI differs in the details (verbs are `ensure`/`locate`/`list`/
+> `verify`/`remove`/`where` — `bootstrap` and `base` were folded into `ensure` and
+> `--repo-root` resolution respectively, and `list` was added; `ensure` dropped
+> `--reset-existing`, `--no-bootstrap` and `--base`; `refused`/`code: OCCUPIED` became
+> `status: "error"`/`code: "OCCUPIED"`). Treat this page as the historical proposal record.
+> The as-built shape is [the delivered-maker page
+> §9.3](2026-09-25-worktree-delivered-maker.md#93-reference--cli-json-and-marker-schema)
+> and [ADR-018 Amendment
+> 1](../architecture/adrs/ADR-018-agent-isolation-topology.md#amendment-1--2026-09-27--one-workspace-maker-hardlinked-clones-real-install-files).
 
 ## 5. Proposal: one standalone worktree component
 

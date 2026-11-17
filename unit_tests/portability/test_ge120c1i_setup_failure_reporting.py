@@ -19,7 +19,7 @@ WHY THIS MUST BE EXERCISED FOR REAL, NOT STUBBED (per the AC's own
     author's belief about how setup half-fails, and a harness that stands up
     infrastructure has far more ways to half-fail than a check does." Every
     test below therefore creates a REAL second working copy via
-    `git worktree add` and deliberately never builds it — this is the actual
+    the linked-checkout add and deliberately never builds it — this is the actual
     incomplete-setup condition, not a mock of it.
 
 CONTRACT THIS TEST FILE ESTABLISHES for whoever implements GE-120c-1
@@ -79,12 +79,13 @@ from __future__ import annotations
 
 import json
 import logging
-import subprocess
 import sys
 import tempfile
 import unittest
 import uuid
 from pathlib import Path
+
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout, unlink_checkout
 
 logger = logging.getLogger(__name__)
 
@@ -135,19 +136,12 @@ def _read_manifest_check_count() -> int:
 
 def _create_incomplete_second_copy(target_dir: Path) -> None:
     """Stand up a REAL second working copy of this repository via
-    `git worktree add`, and deliberately do NOT run `scripts/build.py`
+    the linked-checkout add, and deliberately do NOT run `scripts/build.py`
     inside it — this is the actual incomplete-setup condition the AC
     describes, not a stub of it."""
     try:
-        subprocess.run(
-            ["git", "worktree", "add", "--detach", str(target_dir), "HEAD"],
-            cwd=str(_REPO_ROOT),
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-    except (subprocess.CalledProcessError, OSError) as exc:
+        link_checkout(_REPO_ROOT, ["--detach", str(target_dir), "HEAD"])
+    except (AssertionError, OSError) as exc:
         logger.warning("Failed to create incomplete second copy at %s: %s",
                         target_dir, exc)
         raise
@@ -158,14 +152,7 @@ def _remove_second_copy(target_dir: Path) -> None:
     a worktree shares the git object store with this repo, so it must not be
     left behind even when the test itself failed."""
     try:
-        subprocess.run(
-            ["git", "worktree", "remove", "--force", str(target_dir)],
-            cwd=str(_REPO_ROOT),
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
+        unlink_checkout(_REPO_ROOT, ["--force", str(target_dir)], check=False)
     except OSError as exc:
         logger.warning("Failed to remove second copy worktree at %s: %s",
                         target_dir, exc)
@@ -180,7 +167,7 @@ class TestSetupFailureReportedNotVacuousSuccess(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
         # Use a uuid-suffixed subdirectory rather than the raw tempdir root:
-        # `git worktree add` requires a path that does not yet exist.
+        # the linked-checkout add requires a path that does not yet exist.
         self.second_copy_dir = Path(self._tmp.name) / f"incomplete-copy-{uuid.uuid4().hex[:8]}"
         _create_incomplete_second_copy(self.second_copy_dir)
         # Sanity-check the fixture itself: the deployed layout must genuinely

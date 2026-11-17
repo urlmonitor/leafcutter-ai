@@ -4,8 +4,8 @@ title: 'Agent Card: architect-review'
 description: Structural impact gatekeeper for proposed changes. Receives a refined
   ticket from create-ticket, calls research-agent for blast-radius analysis, classifies
   impact as small or large using a documented rubric, and either writes an inline
-  architectural note (Sonnet only) or escalates to an Opus sub-agent. (internal —
-  invoked by parent agents only)
+  architectural note, with a fuller structural analysis for large changes. (internal
+  — invoked by parent agents only)
 type: card
 status: active
 created: 2026-08-13
@@ -17,7 +17,7 @@ last_updated: '2026-08-13'
 **Structural impact gatekeeper for proposed changes. Receives a refined ticket
 from create-ticket, calls research-agent for blast-radius analysis, classifies
 impact as small or large using a documented rubric, and either writes an
-inline architectural note (Sonnet only) or escalates to an Opus sub-agent.
+inline architectural note, with a fuller structural analysis for large changes.
 (internal — invoked by parent agents only)**
 
 | Field | Value |
@@ -59,11 +59,9 @@ flowchart TD
     ticket_supervisor["ticket-supervisor\n(supervisor tier)"]:::supervisor
     architect_review["architect-review\n(phase tier, priority 4)"]:::target
     research_agent["research-agent\n(utility tier)"]:::utility
-    architect_review_deep["architect-review-deep\n(phase tier)"]:::phase
 
     ticket_supervisor -->|dispatches| architect_review
     architect_review -->|spawns| research_agent
-    architect_review -->|spawns| architect_review_deep
 ```
 ---
 
@@ -99,13 +97,14 @@ flowchart TD
 | `Edit` |
 | `Write` |
 | `Agent` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | conditional | — |
+| `signoff` | conditional | When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket. |
 ---
 
 ## Configuration
@@ -120,6 +119,5 @@ flowchart TD
 | Pattern | Trigger | Behavior | Related Agent |
 |---------|---------|----------|---------------|
 | Delegation to adr-author | task requiring adr-author capabilities | Delegates to adr-author via Agent tool | `adr-author` |
-| Delegation to architect-review-deep | task requiring architect-review-deep capabilities | Delegates to architect-review-deep via Agent tool | `architect-review-deep` |
 | Conditional Behavior | the change introduces a new cross-cutting policy decision (new abstraction | new constraint, new cross-component contract) that is not already covered by an | `None` |
 | Conditional Behavior | `requires_adr: true` | also set `adr-author: needed` in the `agents` map | `None` |

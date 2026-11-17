@@ -1,0 +1,66 @@
+id: TQ-600a-13-xxvii
+components:
+  - testing_quality
+title: "The live lane's own real-database test runs only inside the live-database lane, so the correctness lane, which starts no database, is not turned red by it"
+component: testing-quality
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the post-merge correctness lane selects every `manual` test under tests/ and
+    unit_tests/ (TQ-600a-13-xxi keeps that selection unchanged) and starts no database,
+  And tests/knowledge_live/lane/test_tq_600a_13_xxi.py, the live lane's real-database test,
+    is marked `manual` and, by design, fails rather than skips when a database is
+    unreachable,
+  When the correctness lane executes that test,
+  Then the test is skipped with a reason saying it runs only inside the live-database lane,
+    and does not fail, so it can no longer turn the post-merge verdict red from a lane that
+    has no database
+  And the skip is decided by an explicit lane marker that only the live-database lane sets
+    for its own pytest child, after its database check has passed — the post-merge
+    `live_run` and `live_retry` executions and the fix proof's live session — and never by
+    whether a database happens to be reachable
+  And inside the live-database lane the test still fails, never skips, when an instance is
+    unreachable
+  And the correctness lane's pytest child does not carry the lane marker, so every other
+    correctness test sees the environment it saw before.
+depends_on:
+  - TQ-600a-13-xxi
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xxi.yaml
+    relationship: context
+    status: exists
+    relevance: The live lane whose real-database test this record confines to that lane.
+  - path: .github/workflows/post-merge-suite.yml
+    relationship: describes
+    status: exists
+    relevance: The correctness lane's `-m "manual and not timing_ratio"` selection, which collects the live lane's `manual` test.
+assigned_agent: python-coder
+estimated_complexity: S
+test_required: true
+origin_agent: BrainCandy
+created: 2026-10-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/suite_performance/test_tq_600a_13_xxi.py
+  - unit_tests/suite_performance/test_tq_600a_13_xxv.py
+implemented_by:
+  - scripts/ci/_live_lane.py
+  - scripts/ci/post_merge_suite.py
+  - scripts/ci/post_merge_fix_proof.py
+  - tests/knowledge_live/lane/test_tq_600a_13_xxi.py
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Found 2026-10-24: main's post-merge suite had been red since 2026-10-23T21:37Z (notice
+  #1338) with this one test failing in the correctness lane on both executions
+  (connection refused on 127.0.0.1:17687), while the live lane, which ran it against real
+  databases, passed it. Every open pull request showed "Post-merge hold evaluation: fail"
+  as a result. Excluding tests/knowledge_live/ from the correctness lane was rejected:
+  TQ-600a-13-xxi requires that lane's selection to stay unchanged, and its own unit test
+  asserts a `manual` live test is collected there.

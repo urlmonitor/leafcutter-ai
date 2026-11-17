@@ -1,0 +1,124 @@
+id: BO-400a-2-vi
+components:
+  - build_orchestration
+title: "No agent template tells its agent to write a level-2 heading into its output, so a later sign-off entry is never placed above an earlier one"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A phase agent's output becomes its comment in the ticket's `## Comments`
+  section. The completion decision reads each phase's sign-off entries, the
+  `### ` headings, in file order. When an agent template tells its agent to
+  append a level-2 heading such as `## Escalation` to its output, that heading
+  lands inside `## Comments`, where it looks like the start of a new section.
+  On 2026-09-30 a later ac-fulfillment-gate entry was written directly above
+  architect-review's `## Escalation` heading, which put it above an older entry
+  for the same gate, and the drive read the older ok as the gate's latest word
+  (KI-BO-20261009, mechanism 1).
+
+  Scenario: The escalation section is not a level-2 heading
+    Given the architect-review, conflict-resolver and pr-reviewer agent templates,
+      each of which tells its agent to append an escalation section to its output
+      naming the branch taken and the one-line reason,
+    When each template's instruction and its examples are read,
+    Then the section they tell the agent to write is introduced by a bold
+      `**Escalation**` label, not by a `## ` heading,
+    And every other line the section carries (Branch, Reason) is unchanged,
+    Because a label carries the same information without looking like a section
+      boundary to anything that reads the ticket.
+
+  Scenario: No agent template asks for a level-2 heading in its output
+    Given every agent template under templates/agents/,
+    When the templates are scanned for an instruction to append, add or write a
+      `## ` heading to the agent's output or comment,
+    Then none is found,
+    Because the same misplacement would follow from any such heading, not only
+      from the escalation section.
+
+  Scenario: Templates that document their own structure are not affected
+    Given an agent template whose own layout uses `## ` headings for its sections,
+    When it is scanned,
+    Then those headings are not counted, since they structure the template and are
+      never written into a ticket.
+depends_on:
+  - BO-400a-2
+doc_links:
+  - path: templates/agents/architect-review.md
+    relationship: modifies
+    status: exists
+    relevance: "Step 5 — Escalation Log tells the agent to append `## Escalation` to its output; the 2026-09-30 misplacement happened above this heading."
+  - path: templates/agents/conflict-resolver.md
+    relationship: modifies
+    status: exists
+    relevance: "Its 'Escalation section (required on every run)' tells the agent to append `## Escalation` to its output."
+  - path: templates/agents/pr-reviewer.md
+    relationship: modifies
+    status: exists
+    relevance: "Its 'Escalation' section tells the agent to always append a `## Escalation` section."
+  - path: templates/workflows/pr-review.md
+    relationship: modifies
+    status: exists
+    relevance: "Describes the pr-reviewer output contract, including the `## Escalation` section; must match the template."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20261009-completion-write-closes-a-ticket-whose-gate-failed.md
+    relationship: context
+    status: exists
+    relevance: "Mechanism 1. Mechanisms 3 and 4 were fixed by BO-400a-2-v."
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+it_requirements:
+  - "CANONICAL SOURCES ONLY (ADR-001): edit templates/agents/architect-review.md, templates/agents/conflict-resolver.md, templates/agents/pr-reviewer.md and templates/workflows/pr-review.md. Compiled and deployed copies are build outputs."
+  - "Replace the instructed `## Escalation` heading, in the instruction text and in every fenced example of the agent's output, with a bold `**Escalation**` label line. Keep the Branch and Reason lines and their wording unchanged."
+  - "Do not touch the templates' own section headings (for example `## Step 5 — Escalation Log` or `## Escalation section (required on every run)` in the template body); only the heading the AGENT is told to write changes. Renaming a template's own section heading is allowed only if a test or another file depends on the old instruction wording, and must then be updated together."
+  - "Nothing in templates/, scripts/ or unit_tests/ parses `## Escalation` from agent output (checked 2026-10-14); re-check before changing, and update any consumer found in the same change."
+test_spec:
+  - name: test_escalation_section_is_a_bold_label_in_the_three_templates
+    target_dir: unit_tests/agents/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "For architect-review, conflict-resolver and pr-reviewer: locate the escalation instruction and its fenced output examples; assert they introduce the section with `**Escalation**` and that no fenced output example contains a line `## Escalation`."
+  - name: test_no_agent_template_instructs_a_level_two_heading_in_output
+    target_dir: unit_tests/agents/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Scan every templates/agents/*.md for an instruction to append/add/write a `## ` heading to the agent's output or comment, and for fenced output examples whose first line is a `## ` heading; assert none. Must not flag the template's own `## ` section headings."
+  - name: test_scan_flags_a_template_that_instructs_a_level_two_heading
+    target_dir: unit_tests/agents/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "NEGATIVE CONTROL. Run the same scan over a temporary template that says 'append `## Escalation` to your output'; assert it is flagged, so the store-wide test cannot pass by scanning nothing."
+test_rationale: |
+  The defect is in prompt text, so the honest seam is the text the agent receives.
+  The behavioural consequence (a misplaced sign-off overruling a failure) is now
+  blocked independently by BO-400a-2-v; this record removes the cause. The
+  store-wide scan keeps a new template from reintroducing it, and its negative
+  control keeps the scan from passing vacuously.
+origin_agent: BrainCandy
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/agents/test_bo_400a_2_vi.py
+implemented_by:
+  - templates/agents/architect-review.md
+  - templates/agents/conflict-resolver.md
+  - templates/agents/pr-reviewer.md
+  - templates/workflows/pr-review.md
+change_target: prompt
+risk_surface: internal
+notes: |
+  Requested by BrainCandy on 2026-10-14 ("put architect to work") as the follow-up
+  to BO-400a-2-v, the residual named in KI-BO-20261009's fix direction: "Stop agent
+  templates from writing level-2 headings inside ## Comments. Make architect-review's
+  ## Escalation a bold label or a #### heading." A bold label is used rather than
+  `####`, because a heading parser that matches `^###` without requiring a space
+  could still read `####` as a sign-off heading.

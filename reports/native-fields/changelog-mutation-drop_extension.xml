@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="21.893" timestamp="2026-10-02T09:12:31.651316+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_preserves_every_field_body_and_authored_types" time="0.017"><failure message="AssertionError: assert {'title': 'Co...pletion', ...} == {'title': 'Co...pletion', ...}&#10;  &#10;  Omitting 24 identical items, use -vv to show&#10;  Right contains 1 more item:&#10;  {'extension': {'empty': {}, 'false': False, 'null': None, 'zero': 0}}&#10;  Use -v to get more diff">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3060/test_changelog_preserves_every0')
+
+    def test_changelog_preserves_every_field_body_and_authored_types(tmp_path):
+        # covers: KM-400a-3-i
+        # angle: criterion
+        metadata = {
+            "title": "Complete entry",
+            "date": date(2026, 8, 1),
+            "time": 735,
+            "type": "ticket_completion",
+            "components": ["finalize", "finalize"],
+            "summary": "Business summary",
+            "description": "Technical description",
+            "epic": "Epic one",
+            "ticket": "Single ticket",
+            "pr": None,
+            "adrs": [],
+            "diagrams": ["docs/diagram.md"],
+            "tickets": ["Other ticket"],
+            "commits": [123456, "123456", "abcdef"],
+            "breaking": False,
+            "migration_steps": [{"Before status": "done"}, "Then verify"],
+            "scope": "source scope",
+            "merge_commit": "fedcba",
+            "acs": ["FIN-100"],
+            "created": "2026-08-01",
+            "last_updated": "2026-08-02",
+            "status": "active",
+            "extension": {"empty": {}, "null": None, "false": False, "zero": 0},
+            "current": "authored-current",
+            "payload": {"keep": True},
+        }
+        raw = yaml.safe_dump(metadata, sort_keys=False)
+        body = "\n## Entry\n\nAn authored table.\n\n| A | B |\n|---|---|\n| 1 | 2 |\n"
+        _write(tmp_path, "changelogs/entry.md", raw, body)
+        (record,) = _extract(tmp_path)
+        assert record.kind == "ChangelogEntry"
+        assert record.native_id == record.source_path == "changelogs/entry.md"
+        assert record.locator == ""
+&gt;       assert record.metadata == metadata
+E       AssertionError: assert {'title': 'Co...pletion', ...} == {'title': 'Co...pletion', ...}
+E         
+E         Omitting 24 identical items, use -vv to show
+E         Right contains 1 more item:
+E         {'extension': {'empty': {}, 'false': False, 'null': None, 'zero': 0}}
+E         Use -v to get more diff
+
+tests\knowledge\test_native_changelog_entry.py:60: AssertionError</failure></testcase></testsuite></testsuites>

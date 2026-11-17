@@ -94,13 +94,14 @@ flowchart TD
 | `Read` |
 | `Edit` |
 | `Agent` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | — | — |
+| `signoff` | always | — |
 ---
 
 ## Configuration

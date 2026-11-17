@@ -106,7 +106,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Made the banned-word set an importable constant covering inflections, and — the substantive addition — required an audit of the store WRITE paths (mark_ac_done.py, the fast-lane completion path, any agent flipping work_status) rather than only the gate, since the substitution would be implemented in a writer. That search-and-assert obligation across write surfaces is why this stays M. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/46_TICKET-20261023-GE-124g-2.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -135,3 +136,4 @@ notes: |
   WRITE surfaces, not on the gate, and it is the half most likely to be skipped
   because it requires looking outside the file being built. mark_ac_done.py and
   the fast-lane completion path are the two concrete places to check.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

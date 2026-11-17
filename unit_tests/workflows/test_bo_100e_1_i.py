@@ -17,17 +17,15 @@ merely *attempted*, and "no outcome recorded for A at all" must never be read
 as "A succeeded".
 
 FIXTURE SHAPE. Every case below puts A and B in the SAME single batch of a
-single look. This is deliberate, not an oversight: build-feature.js's epic
-loop halts the WHOLE epic the moment ANY ticket in a batch reports a
-non-completed status (`haltedTickets.length > 0`), before any later batch or
-look is ever reached. If A and B were split across two SEQUENTIAL batches or
-looks, A's failure would trivially prevent B from ever being reached for the
-uninteresting reason that the entire epic already stopped — proving nothing
-about a fail-closed ELIGIBILITY check specifically. Putting both tickets in
-ONE batch is the only fixture shape in which B is actually GIVEN A CHANCE to
-be dispatched (via `parallel()`, concurrently with A) before the halt check
-ever runs — so a genuine eligibility gate is the only thing that can still
-stop it.
+single look. This is deliberate, not an oversight: B is only GIVEN A CHANCE to
+be dispatched (via `parallel()`, concurrently with A) when it shares A's batch.
+Split across sequential batches or looks, the ELIGIBILITY gate would still be
+what withholds B, but a fixture that only ever shows B behind a failed A could
+be satisfied by any later mechanism (the planner never offering B, a stop on
+the halt) and would prove nothing about this gate specifically. Since
+BO-100e-4 a halt no longer ends the run (it continues, withholding only the
+work behind the failure), so each fixture also scripts the terminating look
+and the completion re-read that follow A's halt.
 
 TODAY (no such gate exists), A and B are dispatched together regardless of
 A's outcome — B's own phase-agent stub always reports success, so B is built
@@ -114,8 +112,7 @@ class _PairCase(unittest.TestCase):
                     }
                 ],
             },
-            # Whichever return path is taken (halted or final), it re-reads
-            # the epic — one more entry covers either.
+            {"batches": [], "present": [{"path": a_path, "status": "todo"}, {"path": b_path, "status": "todo"}]},
             {"present": [{"path": a_path, "status": "todo"}, {"path": b_path, "status": "todo"}]},
         ]
         tickets = {

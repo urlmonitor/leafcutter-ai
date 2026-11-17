@@ -35,10 +35,17 @@ created: 2026-06-22
 amended_by:
   - reason: "Retrospective finding EPIC-CodeQualityHooks KI-3 — warn-only pre-drive sink check (TICKET-20260527-FeedbackSinkPreDriveCheck) was insufficient; promote to hard block."
   - reason: "it-po technical enrichment: cleared assigned_agent/estimated_complexity on this L0/L1 composite — only L2/L3 leaves carry an implementing agent. Behavioral coverage flows through the split children BO-100d-1a/-1b and BO-100d-2a/-2b."
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "covered_by pointed only at BO-100d-1 and BO-100d-2, both retired (status superseded_by, successors BO-100d-1a/-1b and BO-100d-2a/-2b), so check-done-proof had no live child to derive this composite from (KI-ACS-016 resolution, 'Not done here'). The behaviour is still live and wanted, and its live successors already exist with this AC as their id-derived parent (derive_parent_id('BO-100d-1a') == 'BO-100d'), so covered_by now also lists BO-100d-1a, BO-100d-1b, BO-100d-2a and BO-100d-2b. BO-100d-1 and BO-100d-2 stay listed for the audit trail. In the same change the four successors' probe criteria were re-pointed from the workspace-relative debugging/logs/agent_telemetry.jsonl to the absolute stream the install's telemetry location query prints (KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path). This AC's own criteria name no path and are unchanged. work_status untouched."
 superseded_by: null
 covered_by:
   - BO-100d-1
   - BO-100d-2
+  - BO-100d-1a
+  - BO-100d-1b
+  - BO-100d-2a
+  - BO-100d-2b
 implemented_by: []
 notes: |
   Repeat of TICKET-20260527-FeedbackSinkPreDriveCheck. The original warn-only
@@ -58,5 +65,14 @@ notes: |
   consumed by both surfaces. This is why BO-100d-1 and BO-100d-2 were each split
   across python-coder (build-epic.js + helper) and llm-expert (build-feature.md
   prose parity).
+
+  2026-10-16 (business-analyst): the relative path debugging/logs/agent_telemetry.jsonl
+  in the paragraph above is HISTORICAL. Since INF-500d-4 the telemetry stream lives
+  under one durable operational_log_root declared at build time (ADR-069), and the
+  probe targets the absolute path printed by the install's telemetry location query
+  (sink_resolution.py --print-location telemetry, INF-500d-4-iii). A missing, empty
+  or stale declaration blocks the drive with "rebuild" as the remediation and never
+  falls back to the relative path. See KI-BO-20261009-bo100d-probe-pins-a-relative-
+  telemetry-path.
 change_target: pipeline
 risk_surface: contract_boundary

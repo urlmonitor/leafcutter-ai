@@ -1,0 +1,59 @@
+{
+  "run_id": "run-d6943a449dc44357",
+  "interaction_id": "int-7a1b68aec1444b22",
+  "expected_state_revision": 1,
+  "actor": {
+    "id": "codex:/root/blind_retrieval_host",
+    "kind": "host"
+  },
+  "relayed_by": "isolated-evaluation-controller",
+  "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+  "response": {
+    "schema_version": "1.0",
+    "original_question": "For KM-500c-2, show both its lifecycle status and its implementation work_status, keeping the two separate.",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-2"
+      ],
+      "required_fields": [
+        "status",
+        "work_status"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "single_entity",
+    "hierarchy_scope": "not_applicable",
+    "hierarchy_levels": [],
+    "scope_resolution": "sufficient",
+    "unresolved": [],
+    "rationale": "The question explicitly asks for lifecycle status and implementation progress as separate fields of one named criterion.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  }
+}

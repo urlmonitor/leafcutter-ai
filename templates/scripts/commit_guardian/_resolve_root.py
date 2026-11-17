@@ -119,6 +119,55 @@ def find_project_root() -> Path:
     return _PROJECT_ROOT
 
 
+class _NoRepo:
+    """Type of the NO_REPO sentinel: the working directory is not in a repository."""
+
+    def __repr__(self) -> str:
+        return "NO_REPO"
+
+    def __bool__(self) -> bool:
+        return False
+
+
+NO_REPO = _NoRepo()
+
+
+def find_git_toplevel_strict(cwd: Path | None = None) -> Path | _NoRepo:
+    """Return the git toplevel of *cwd*, or ``NO_REPO``; never guess.
+
+    Unlike ``find_project_root()`` this has NO ``__file__`` ancestor walk and
+    NO module-level cache (BP-1300e-1-iv, KI-CG-20260925): a hook that must
+    judge the working copy being committed from would, through that fallback,
+    land in the shared install tree of a worktree, or accept a non-repository
+    directory that merely holds an empty ``.git``/``CLAUDE.md``.
+
+    Args:
+        cwd: Directory to ask git from; the process working directory if None.
+
+    Returns:
+        The absolute toplevel Path, or ``NO_REPO`` when git says the directory
+        is not inside a work tree.
+
+    Raises:
+        OSError: If git itself cannot be launched (the caller decides policy).
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=str(cwd) if cwd is not None else None,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        logger.warning("cannot launch git to resolve the repository root: %s", exc)
+        raise
+    top = proc.stdout.strip()
+    if proc.returncode != 0 or not top:
+        return NO_REPO
+    return Path(top)
+
+
 def _deploy_root_for(hook_file: Path) -> Path:
     """Derive the deploy root (e.g. ``.leafcutter`` or ``templates``) from *hook_file*.
 
@@ -254,6 +303,72 @@ def resolve_manifest_path(hook_file: Path) -> tuple[Path | None, list[Path]]:
             return candidate, tried
     return None, tried
 
+# BP-1500d-4: the could-not-read verdict shared by both drift readers.
+RECORD_NAME = ".build_manifest.json"
+COULD_NOT_READ_EXIT = 3  # record absent: distinct from 0 (all-clear) and 1 (drift)
+UNREADABLE_RECORD_EXIT = 2  # record present but unreadable (INDETERMINATE)
+
+
+def is_location_keyed(key: str) -> bool:
+    """Return True when a record key is absolute (POSIX or drive-lettered) or
+    steps outside the project with a ``..`` segment (BP-1500d-2, BP-1500d-4).
+
+    Args:
+        key: A record ``output_mappings`` key.
+
+    Returns:
+        True when the key is not project-relative.
+    """
+    norm = str(key).replace("\\", "/")
+    return norm.startswith("/") or norm[1:2] == ":" or ".." in norm.split("/")
+
+
+def location_keyed_keys(output_mappings: dict, project: Path) -> list[str]:
+    """Return record keys that only resolve where the record was written.
+
+    A location-keyed key that still resolves from ``project`` (the record is
+    being read where it was written) is not counted, matching BP-1500d-2.
+
+    Args:
+        output_mappings: The record's ``output_mappings`` section.
+        project: The folder the record is being read in.
+
+    Returns:
+        Location-keyed keys that do not resolve from ``project``; empty when
+        the record can be read here.
+    """
+    return [k for k in output_mappings if is_location_keyed(k) and not (project / k).exists()]
+
+
+def report_could_not_read(gate: str, project: Path, reason: str, present: bool = False) -> int:
+    """Report that the build record could not be read; return the verdict code.
+
+    Names the project and the record file, and says whether the record is
+    absent or present-but-unreadable (``reason``). It deliberately makes no
+    claim about the install's freshness; the exit code is distinct from the
+    all-clear so an automated caller can tell the two apart.
+
+    Args:
+        gate: The reporting check's name.
+        project: The project whose record was looked for.
+        reason: Why it could not be read (absent / malformed / non-portable).
+        present: True when the record file exists but is unreadable.
+
+    Returns:
+        ``UNREADABLE_RECORD_EXIT`` when ``present``, else ``COULD_NOT_READ_EXIT``;
+        neither equals the all-clear status 0.
+    """
+    import sys
+
+    label = "INDETERMINATE - " if present else ""
+    print(
+        f"{gate}: {label}COULD NOT READ the build record {RECORD_NAME} for the project "
+        f"at {project} ({reason}). This check is not protecting this project; "
+        "re-run build.py in it to write the record.",
+        file=sys.stderr,
+    )
+    return UNREADABLE_RECORD_EXIT if present else COULD_NOT_READ_EXIT
+
 
 def resolve_package_root(hook_file: Path) -> tuple[Path | None, list[str]]:
     """Locate the package root via the shared manifest convention.
@@ -312,6 +427,12 @@ def resolve_package_root(hook_file: Path) -> tuple[Path | None, list[str]]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-12 [python-coder/BP-1300e-1-iv]: Added ``find_git_toplevel_strict()``
+#   and the ``NO_REPO`` sentinel -- a git-only variant of ``find_project_root()``
+#   with no ``__file__`` fallback and no cache, so a hook that must judge the
+#   working copy it is committing from (check_lint_gate.py) cannot resolve into
+#   the install tree of a worktree. ``find_project_root()`` itself is unchanged:
+#   its ~30 callers keep their behaviour (KI-CG-20260925 remains open for them).
 # - 2026-09-28 07:45 [python-coder/GE-113c-1-vi, pr-reviewer follow-up H-2]:
 #   Added ``candidate_manifest_roots()`` / ``resolve_manifest_path()`` here,
 #   extracted from check_build_drift.py's / check_output_drift.py's

@@ -1,0 +1,120 @@
+id: UXP-523-1
+title: Fields are readable beneath input and output contract headings
+component: ux-prototyping
+components:
+- ux_prototyping
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: medium
+criteria: 'Given a flow step or branch binds original_question as a required string and context as an
+  optional array with default [],
+
+  When a person opens that node in Atlas,
+
+  Then Inputs and Outputs group the selected fields by their contract,
+
+  And each contract name appears as the group heading rather than a prefix repeated on every field,
+
+  And each row retains the exact field path, permitted type, immediate-container requiredness and any
+  declared default,
+
+  And the root path is identified as the whole JSON value,
+
+  And a wildcard path describes each present item or value without implying that an item must exist.'
+depends_on:
+- UXP-523
+doc_links:
+- path: docs/how-to/product-truth-schema-reference.md
+  relationship: specifies
+  status: exists
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+assigned_agent: frontend-coder
+origin_agent: business-analyst
+created: '2026-10-05'
+amended_by:
+- reason: '2026-10-05 business-analyst: recorded source/test traceability and locally verified completion
+    after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge had not yet run at that local verification.'
+superseded_by: null
+covered_by:
+- leafcutter-web/components/flows/__tests__/flow-drawer.contracts.test.tsx
+- leafcutter-web/components/flows/__tests__/flow-explorer.contracts.test.tsx
+- leafcutter-web/lib/data/__tests__/flows.contracts.test.ts
+implemented_by:
+- leafcutter-web/lib/data/flows.ts
+- leafcutter-web/lib/data/types.ts
+- leafcutter-web/lib/data/flow-contracts.ts
+- leafcutter-web/components/flows/flow-contracts.tsx
+- leafcutter-web/components/flows/flow-drawer.tsx
+notes: 'The test writer verified 20 Atlas contract tests across three suites and the full TypeScript check.
+  Coverage includes actual stored flow files through the production loader, graph selection and drawer,
+  for steps and branches.
+
+
+  The user accepted the displayed feature and authorized completing its AC/test coverage and merging after
+  green checks. Readiness remains reviewed: BA and IT PO reviewed these newly authored criteria; no separate
+  individual-AC user sign-off is claimed. Work status records locally verified implementation. At the local verification recorded on 2026-10-05,
+  hosted CI and merge had not yet run. GitHub PR checks and merge status track release completion. This leaf does not claim production retrieval integration or completion
+  of its broader parent.'
+estimated_complexity: M
+change_target:
+- code
+- ui
+risk_surface: contract_boundary
+it_requirements:
+- Load and carry the authoritative flow and node metadata through the production loader, explorer selection
+  and drawer for both steps and branches; a component supplied only hand-made props does not prove this
+  seam.
+- Keep JSON pointer structure and escaped keys unambiguous. Distinguish an absent default from explicit
+  false, zero, null, empty string, empty array and empty object.
+- Contract group labels must never become an extra property in the example payload or a repeated field-name
+  prefix.
+expects_from:
+  ac_id: UXP-300-1
+  contract: 'Flow JSON at docs/product-truth/flows/**/*.flow.json: contract_definitions is a map from
+    reference label to {schema?: string, model?: string, authority?: runtime|source_reviewed|illustrative_design,
+    note?: string}; each node has io_contracts with consumes/produces arrays of {contract: string, fields:
+    [{path: JSON-pointer string, types: JSON-type string[], required: boolean, default?: JSON value, applies?:
+    string}]}. Optional means absent, not null unless explicitly allowed. Contract labels are not payload
+    wrapper keys.'
+delivers_to: null
+test_spec:
+- name: shows one contract heading, readable field table, and each raw example once
+  target_dir: leafcutter-web/components/flows/__tests__/
+  description: The selected contract has one heading and rows retain exact paths, types, requiredness
+    and explicit defaults.
+  framework: vitest
+  type: component
+  angle: criterion
+- name: preserves root arrays, escaped field keys, authority and observed provenance
+  target_dir: leafcutter-web/components/flows/__tests__/
+  description: Root values, escaped pointer segments and wildcard rows remain intelligible without changing
+    their JSON meaning.
+  framework: vitest
+  type: component
+  angle: boundary
+- name: renders actual %s contracts after selecting a graph node
+  target_dir: leafcutter-web/components/flows/__tests__/
+  description: Load the actual on-disk flow, select step and branch graph nodes through the explorer and
+    assert their structured drawer output.
+  framework: vitest
+  type: component
+  angle: reachability
+test_rationale: Component assertions preserve field semantics; the actual loader-to-selection-to-drawer
+  test also charges seam and real-artifact coverage and fails if production wiring drops the metadata.
+test_required: true
+declares_side_effect: false
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: inspect
+    node_kind: step
+    flow_kind: user
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-05'

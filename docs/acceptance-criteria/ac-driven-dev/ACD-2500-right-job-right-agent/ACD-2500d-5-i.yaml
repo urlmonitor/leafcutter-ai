@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a batch of 3 requirements handed to the code-aware step:
       R1 declares the existing file scripts/a.py and names the existing test directory unit_tests/ac_store/,
@@ -123,7 +123,8 @@ amended_by:
   directed_by: user
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/28_TICKET-20261012-ACD-2500d-5-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -147,3 +148,15 @@ notes: |
   cap is not exceeded. BA to review the criteria at the final gate.
   BLOCKER FOR BUILD (caveat): the AC schema has no 'declared files' field and no to-be-created marker;
   today's declared surface is the doc_links -> files_touched derivation (ADR-010, KI-ACS-002).
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: testDesign
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

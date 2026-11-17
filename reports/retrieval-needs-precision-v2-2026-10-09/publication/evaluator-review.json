@@ -1,0 +1,13 @@
+{
+  "reviewed_at": "2026-10-09T21:50:11.020609+00:00",
+  "approved": true,
+  "change": "Add logging import and exactly one error log containing only exception class; AST otherwise identical to evaluated archived controller.",
+  "same_acceptance_and_no_retry_and_finally_semantics": true,
+  "archive_entries_verified": 5,
+  "closed_files_preserved_by_exact_path_and_hash": 352,
+  "historical_closure_sha256": "b9f3e50c4f7116d569a23aba748352d30f45e8e260371617734135e1f8da61dc",
+  "current_controller_sha256": "db4a23c4252e9c185fdb73c333d771f59ec3fa14f69a76643cda84a18145cff4",
+  "aura_working_fingerprint_unchanged": true,
+  "new_model_calls": 0,
+  "new_graph_calls": 0
+}

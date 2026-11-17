@@ -507,6 +507,11 @@ _MARKER_RULES: list[_MarkerRule] = [
     # fires when the colon rule did not match at all, or matched but was
     # excluded.
     (re.compile(r"\bFIXME\b", re.IGNORECASE), _is_fixme_marker),
+    # AR-300d-4-i: the RETIRED registry-injection tokens. A template still carrying one compiles
+    # to a clean prompt (agent_retired_markers strips it) but the leftover is reported by name.
+    # Kept in step with agent_retired_markers.RETIRED_TOKEN_NAMES (not imported: this module
+    # is also run standalone from the deployed layout); fenced / inline-code mentions are exempt.
+    (re.compile(r"\{\{\s*my_(?:skills_used|spawn_allowlist)\s*\}\}"), _default_validator),
 ]
 
 _SKIP_EXTENSIONS = frozenset({".pyc", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".woff", ".woff2"})

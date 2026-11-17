@@ -306,7 +306,11 @@ def _load_store_records(store_root: Path) -> list[tuple[str, dict[str, Any]]]:
             print(f"declared_files: WARNING: cannot read {path}: {exc}", file=sys.stderr)
             continue
         try:
-            data = yaml.safe_load(content)
+            # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07):
+            # explicitly advisory, never blocks (per the prior audit's own
+            # SAFE classification); no measured benefit established
+            # (criterion 1).
+            data = yaml.load(content, Loader=yaml.SafeLoader)
         except yaml.YAMLError as exc:
             print(f"declared_files: WARNING: cannot parse {path}: {exc}", file=sys.stderr)
             continue

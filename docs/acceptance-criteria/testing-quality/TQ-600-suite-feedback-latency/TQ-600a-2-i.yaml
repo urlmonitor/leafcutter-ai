@@ -1,0 +1,153 @@
+id: TQ-600a-2-i
+components:
+  - testing_quality
+  - build_pipeline
+title: "A private copy handed to one test is removed once that test is over, and a failed one is never left behind"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a test that requests the shared_reference_layout fixture and is routed to a
+    private copy of its own, because it is declared a mutator or declares nothing,
+  When that test finishes, whether it passed or failed, or when producing its private
+    copy fails part-way through the copy, the deploy or the completeness check,
+  Then the temporary directory that held that private copy no longer exists,
+    And a failure to remove it is logged as a warning and never fails the test,
+    And the one shared reference layout used by declared readers is not removed by
+      this cleanup and is still present after the test,
+    And the run's routing log and execution-signal counts are the same as before,
+  And the bug symptom ("Every MUTATOR-declared or UNDECLARED request of the shared_reference_layout fixture leaves a 140-200 MB /tmp/leafcutter-unshared-layout-* directory behind forever. On 2026-10-09 one day of parallel agent test runs leaked 75 such directories (~7 GB) into /tmp, a large part of WSL disk usage jumping 32 GB -> 49 GB in about two hours, and the Windows host drive fell to 10 GB free.") must not occur
+depends_on:
+  - TQ-600a-2
+doc_links:
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE EDIT SURFACE. _produce_private_copy() creates staging_parent with
+      tempfile.mkdtemp(prefix="leafcutter-unshared-layout-") and returns
+      staging_parent/'layout'; the shared_reference_layout fixture `return`s that
+      path, so there is no teardown. The fix makes the fixture a yield fixture that
+      removes the private copy's staging_parent after the test, and removes it on
+      every failure path inside _produce_private_copy before raising.
+  - path: scripts/suite_performance/_shared_layout_producer.py
+    relationship: constrains
+    status: exists
+    relevance: >-
+      Owns the reader route's shared, cross-process-cached layout. This AC forbids
+      the cleanup from touching it; no edit is expected here.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The failure angle: cleanup must also happen when the test body fails and when
+      the private copy's own production fails part-way.
+declared_files:
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    shared_reference_layout becomes a yield fixture. For the mutator and undeclared
+    routes, after the test (pass or fail) remove the private copy's staging_parent
+    with shutil.rmtree.
+  - >-
+    Cleanup is file-system I/O: wrap it in try/except OSError, log at WARNING via the
+    module logger, and do not raise. A cleanup failure must never fail or error the
+    test.
+  - >-
+    Every failure path inside _produce_private_copy (copy, deploy, completeness)
+    removes staging_parent before raising SharedReferenceLayoutError, so a failed
+    production leaves nothing behind.
+  - >-
+    The reader route returns the single shared layout and must NOT be removed by
+    this fixture.
+  - >-
+    emit_execution_signal and the routing-log behaviour and counts are unchanged.
+  - >-
+    Tests must not spawn a real build.py: stub the build subprocess and the copy.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-2
+    contract: >-
+      The unshared (private-copy) route for declared mutators, whose temporary
+      directory this AC requires to be removed once the test is over.
+test_spec:
+  - name: test_tq600a_2_i_an_undeclared_tests_private_copy_is_removed_after_the_test
+    target_dir: unit_tests/suite_performance/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: >-
+      In a child pytest session (pytester or subprocess) with the build subprocess
+      and copy stubbed, an undeclared test records the staging directory and asserts
+      it exists during the test; after the session the directory no longer exists.
+  - name: test_tq600a_2_i_a_mutator_tests_private_copy_is_removed_after_the_test
+    target_dir: unit_tests/suite_performance/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: >-
+      Same as above for a test marked shared_layout_mutator.
+  - name: test_tq600a_2_i_the_private_copy_is_removed_even_when_the_test_body_fails
+    target_dir: unit_tests/suite_performance/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      The child test fails on purpose after recording its staging directory; the
+      directory is still gone afterwards. NAMED MUTATION: run cleanup only on a pass;
+      this test must go RED.
+  - name: test_tq600a_2_i_a_failing_deploy_leaves_no_staging_directory
+    target_dir: unit_tests/suite_performance/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      With the stubbed deploy forced to fail, the fixture raises
+      SharedReferenceLayoutError and no leafcutter-unshared-layout-* directory
+      created by the run remains.
+  - name: test_tq600a_2_i_the_reader_routes_shared_layout_survives_the_test
+    target_dir: unit_tests/suite_performance/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: >-
+      A shared_layout_reader test's layout root still exists after the test.
+      NAMED MUTATION: remove the yielded path for every route; this test must go RED.
+  - name: test_tq600a_2_i_a_cleanup_failure_logs_a_warning_and_does_not_fail_the_test
+    target_dir: unit_tests/suite_performance/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: >-
+      With shutil.rmtree patched to raise OSError, the child test still passes and a
+      WARNING naming the staging directory is logged.
+test_rationale: |
+  The defect is an absence (no teardown), so every descriptor checks real on-disk
+  state after a real pytest session rather than a call record. The failing-body and
+  failing-deploy descriptors cover the two paths a naive "clean up after a
+  successful return" fix would miss. The reader descriptor guards the opposite
+  error: a cleanup that also deletes the one shared layout would break every other
+  reader in the run.
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/suite_performance/test_tq_600a_2_i.py
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Authored by /quick-fix. Root cause: _produce_private_copy() creates staging_parent with tempfile.mkdtemp, copies the repo and runs build.py into it, and returns staging_parent/'layout'; nothing ever removes staging_parent. The fixture is a plain function-scoped fixture that `return`s the path, so there is no teardown; and the copy/deploy/completeness failure paths raise SharedReferenceLayoutError without removing the partially built staging_parent either. Expected fix (this file only): make shared_reference_layout a yield fixture; for the mutator and undeclared routes remove the private copy's staging_parent (shutil.rmtree, log a WARNING via the module logger if removal fails, never fail the test on cleanup) after the test finishes, pass or fail; on every failure path inside _produce_private_copy remove staging_parent before raising. The reader route (the one shared, cross-process-cached layout) must NOT be removed by this fixture. Keep emit_execution_signal / routing-log behaviour and counts unchanged. Tests must be behavioural: run a tiny pytest session (pytester or a subprocess pytest run against a temp test file) that requests the fixture as undeclared and as mutator (stub/monkeypatch the expensive build subprocess and copy so no real build.py runs, per the repo's no-build.py-spawn rule) and assert the staging directory exists during the test and is gone afterwards, including when the test body fails; assert a failing deploy leaves no staging directory; assert the reader route's shared root still exists after the test..
+
+  PLACEMENT: an L3 technical constraint on TQ-600a-2 (the private-copy route). TQ-600a
+  is at its child_limit_override of 13, so a new L2 was not added. The undeclared route
+  (TQ-600a-5) uses the same private-copy path and is covered by the same constraint.

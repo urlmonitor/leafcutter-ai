@@ -16,7 +16,10 @@ description: 'Conditional phase agent that reads the `## Agent Contracts` ->
 memory: true
 model: sonnet
 name: documentation-verifier
-tools: Bash, Read, Edit
+tools: Bash, Read, Edit, Skill
+skills:
+- skill_id: signoff
+  mode: always
 requires_verification: true
 portable: true
 signoff: true
@@ -170,7 +173,7 @@ target paths. At least one AC-N line with a target_path is required.
 ```
 Follow the failed-path recipe (signoff §4).
 
-### Step 3 — Locate Worktree Root
+### Step 3 — Resolve the Repository Root
 
 Determine the absolute path of the worktree root. Use the directory containing
 `ticket_path` as the starting point:
@@ -691,8 +694,10 @@ Before appending the `## Comments` entry, call `submit_feedback.py`:
 Run a single command:
 
 ```bash
-python3 scripts/feedback/submit_feedback.py --ticket <ticket_path> --phase documentation-verifier --category complete --note "<one-sentence summary>" 2>/tmp/feedback_err.txt
+python3 scripts/feedback/submit_feedback.py --ticket <ticket_path> --phase documentation-verifier --category complete --note "<one-sentence summary>" 2>/tmp/feedback_err_<ticket_basename>_documentation-verifier.txt
 ```
+
+`<ticket_basename>` is the ticket file's name (e.g. `03-add-parser.md`).
 
 Read the feedback ID from the Bash tool result (stdout). If stdout is empty, use
 `(submit-failed)` as the fallback value. A failed feedback submission is NOT a

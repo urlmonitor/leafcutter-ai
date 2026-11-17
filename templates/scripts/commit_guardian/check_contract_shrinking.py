@@ -205,7 +205,75 @@ def _split_by_file(diff: str) -> list[tuple[str, str]]:
     return chunks
 
 
-def _find_weakened_files(weakening_diff: str) -> list[str]:
+_REMOVED_WEAKENING_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(re.sub(r"^\^\\\+", "^-", pattern, count=1), re.MULTILINE), label)
+    for pattern, label in _WEAKENING_PATTERNS
+]
+_NEW_FILE_RE = re.compile(r"^(?:new file mode |--- /dev/null)", re.MULTILINE)
+
+
+def _added_paths(diff: str) -> set[str]:
+    """Return paths the staged diff (against HEAD) adds as brand-new files.
+
+    Judged on the FULL staged diff, never the merge-scoped one: that one is
+    taken against the incoming parent, so a test file that exists on this
+    branch but not on main reads as "new file" there although the commit
+    modifies it.
+
+    Args:
+        diff: The full staged diff.
+
+    Returns:
+        Post-image paths of files whose section carries a new-file header.
+    """
+    return {path for path, chunk in _split_by_file(diff) if _NEW_FILE_RE.search(chunk)}
+
+
+def _net_weakening(chunk: str) -> list[tuple[str, str]]:
+    """Return weakening ``(label, line)`` pairs for one file's diff chunk, netted.
+
+    A kind (skip / xfail / ...) is reported only when its added count exceeds
+    its removed count in this file, so a one-for-one replacement of an existing
+    skip is not a weakening (GE-111f-1). New files are excluded by the caller
+    (see ``_added_paths``).
+
+    Args:
+        chunk: The diff text of a single file.
+
+    Returns:
+        The excess added lines per kind (empty when netted out).
+    """
+    found: list[tuple[str, str]] = []
+    for (added_re, label), (removed_re, _l) in zip(
+        _COMPILED_WEAKENING_PATTERNS, _REMOVED_WEAKENING_PATTERNS
+    ):
+        added = [m.group(0).rstrip("\n")[:120] for m in added_re.finditer(chunk)]
+        excess = len(added) - len(removed_re.findall(chunk))
+        if excess > 0:
+            found.extend((label, line) for line in added[-excess:])
+    return found
+
+
+def _weakening_by_file(
+    diff: str, new_paths: set[str]
+) -> list[tuple[str, list[tuple[str, str]]]]:
+    """Return ``(path, netted weakening pairs)`` for each file in *diff*.
+
+    Args:
+        diff: Unified diff text; headerless text is treated as one file.
+        new_paths: Paths the commit adds as new files; a new file cannot
+            weaken an existing test, so it is not judged (GE-111f-1).
+
+    Returns:
+        One entry per file section that holds at least one weakening.
+    """
+    sections = _split_by_file(diff) or [("", diff)]
+    return [
+        (p, w) for p, c in sections if p not in new_paths and (w := _net_weakening(c))
+    ]
+
+
+def _find_weakened_files(weakening_diff: str, new_paths: set[str]) -> list[str]:
     """Return paths of files that actually hold a test-weakening change.
 
     ``_scan_diff`` detects weakening PATTERNS across the whole diff without
@@ -220,6 +288,7 @@ def _find_weakened_files(weakening_diff: str) -> list[str]:
     Args:
         weakening_diff: The same diff text ``_scan_diff`` judges weakening
             against (already merge-scoped when applicable).
+        new_paths: Paths the commit adds as new files (see ``_added_paths``).
 
     Returns:
         Sorted, de-duplicated list of repo-relative paths.
@@ -227,7 +296,7 @@ def _find_weakened_files(weakening_diff: str) -> list[str]:
     deleted_test_names = set(_find_deleted_tests(weakening_diff))
     weakened: set[str] = set()
     for path, chunk in _split_by_file(weakening_diff):
-        if any(pattern.search(chunk) for pattern, _label in _COMPILED_WEAKENING_PATTERNS):
+        if path not in new_paths and _net_weakening(chunk):
             weakened.add(path)
             continue
         removed_here = set(_REMOVED_TEST_DEF_RE.findall(chunk))
@@ -468,11 +537,11 @@ def _scan_diff(diff: str, weakening_diff: str | None = None) -> ScanResult:
             result.production_files.append(filepath)
 
     # --- Test-weakening pattern detection (single-line, additive) ---
-    for pattern, label in _COMPILED_WEAKENING_PATTERNS:
-        for match in pattern.finditer(weakening_diff):
-            # Extract a short context snippet (first 120 chars of the matching line)
-            line = match.group(0).rstrip("\n")[:120]
-            result.violations.append((label, line))
+    # Netted per file: added skips offset removed ones; files the commit adds
+    # (judged on the full diff against HEAD) are ignored.
+    new_paths = _added_paths(diff)
+    for _path, pairs in _weakening_by_file(weakening_diff, new_paths):
+        result.violations.extend(pairs)
 
     # --- Deletion detection (needs both sides of the diff correlated) ---
     for name in _find_deleted_tests(weakening_diff):
@@ -483,7 +552,7 @@ def _scan_diff(diff: str, weakening_diff: str | None = None) -> ScanResult:
     # --- File attribution: which file(s) hold the weakening, not just the
     # production files it was concurrent with (see _find_weakened_files).
     if result.violations:
-        result.weakened_files = _find_weakened_files(weakening_diff)
+        result.weakened_files = _find_weakened_files(weakening_diff, new_paths)
 
     return result
 

@@ -58,6 +58,7 @@ covered_by:
   - BP-1500d
   - BP-1500e
   - BP-1500g
+  - BP-1500h
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

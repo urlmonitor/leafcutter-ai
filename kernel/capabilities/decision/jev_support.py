@@ -33,6 +33,7 @@ from kernel.providers.base import (
     QuestionSpec,
 )
 from kernel.providers.jev_errors import JevBudgetExhausted
+from kernel.providers.jev_wire import question_to_wire
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,20 @@ def choice_question(question_id: str, template_id: str, instructions: str,
 def make_batch(ctx: ExecutionContext, purpose: str, state: dict[str, JsonValue],
                questions: list[QuestionSpec]) -> JevBatch:
     """Build a Jev batch carrying the invocation's correlation ids."""
+    if ctx.clarifications:
+        state = {**state, "clarifications": list(ctx.clarifications)}
+    if ctx.entity_context is not None:
+        from kernel.entity_projection import attach_entity_context
+
+        state = attach_entity_context(
+            state, ctx.entity_context, ctx.config.jev.max_state_chars,
+            ctx.config.data_policy.send_repo_excerpts_to_jev,
+            questions={question.id: question_to_wire(question) for question in questions})
+    elif ctx.context_enrichment is not None:
+        from kernel.enrichment_projection import attach_context
+
+        state = attach_context(state, ctx.context_enrichment, ctx.config.jev.max_state_chars,
+                               ctx.config.data_policy.send_repo_excerpts_to_jev)
     return JevBatch(purpose=purpose, state=state, questions=questions, correlation=ctx.corr)
 
 
@@ -199,4 +214,5 @@ def load_output_payload(ctx: ExecutionContext, outcome: ChildOutcome
 # - 2026-09-30 23:00 [python-coder]: Child payloads are read via ctx.artifacts because
 #   ChildOutcome carries only result_ref; P4 must make result_ref resolvable there.
 #   (#KernelBootstrapV0/P5)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================

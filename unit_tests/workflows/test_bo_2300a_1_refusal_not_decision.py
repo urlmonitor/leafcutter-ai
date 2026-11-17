@@ -42,7 +42,7 @@ writing these assertions:
     {"status": "ok", "message": "Pipeline cancelled at final gate (IT-PO). ...",
      ...} with ZERO "pause-persist" dispatches — the live defect (§1), RED.
   - Feeding "final-gate" a genuine, non-refusal "approve" answer dispatches
-    "apply-approval" — the control proving a correct fix must not reject every
+    "approval-apply" — the control proving a correct fix must not reject every
     live-gate answer (§2), confirmed still correct today.
 
 TICKET: none (ad-hoc RED-baseline authoring task, worktree
@@ -61,6 +61,7 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
+from _plan_feature_harness_defaults import approval_step_replies  # noqa: E402
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -179,7 +180,8 @@ def test_ac1_genuine_approve_answer_still_accepted():
 
     What this control still protects, unchanged: a genuine, non-refusal
     decision arriving on the channel that DOES resolve a gate must still be
-    honoured and must still advance the workflow (apply-approval dispatched)
+    honoured and must still advance the workflow (approval-apply dispatched;
+    ACD-300c-4 replaced the apply-approval agent edit with the approval step)
     rather than being paused. Classified test_drift (Source-of-Truth
     Discipline Rule 1) — production is correct per ACD-2100c-1's own
     signed-off red_baseline; this test asserted the pre-ACD-2100c-1 contract.
@@ -192,15 +194,15 @@ def test_ac1_genuine_approve_answer_still_accepted():
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={"read-pause-record": {"exists": True, "stale": False}},
+        label_responses={"read-pause-record": {"exists": True, "stale": False}, **approval_step_replies()},
         args={"run_id": "test-bo2300a1-genuine-approve", "resume_answer": approve_answer},
     )
     assert result.error == "", f"Harness error: {result.error}"
 
     labels = [c.label for c in result.agent_calls]
-    assert "apply-approval" in labels, (
+    assert "approval-apply" in labels, (
         "A genuine, non-refusal approve answer delivered via args.resume_answer "
-        f"must still advance the workflow to apply-approval. Got labels: {labels}"
+        f"must still advance the workflow to approval-apply. Got labels: {labels}"
     )
 
     # And it must NOT have been diverted into a pause (that would mean the

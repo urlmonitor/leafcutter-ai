@@ -122,7 +122,12 @@ def _patch_covered_by(file_path: Path, children_to_add: list[str]) -> bool:
         else:
             # Fallback: load with PyYAML, modify, dump
             try:
-                data = yaml.safe_load(original)
+                # Reverted to the pure-Python loader (loader-audit,
+                # TQ-600a-11 fix-pass, 2026-10-07): one-off manual repair
+                # tool, one file per invocation -- no speed case for the fast
+                # loader, and its sibling scan_ac_orphans.py (whose _load_ac
+                # this module reuses) was reverted for the same reason.
+                data = yaml.load(original, Loader=yaml.SafeLoader)
             except yaml.YAMLError:
                 print(f"  WARNING: cannot parse {file_path} for patching", file=sys.stderr)
                 return False

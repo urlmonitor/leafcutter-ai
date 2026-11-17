@@ -42,9 +42,7 @@ export const meta = {
   ],
 };
 
-// ---------------------------------------------------------------------------
 // JSON Schemas for agent() responses
-// ---------------------------------------------------------------------------
 
 const RESOLVE_SCHEMA = {
   type: "object",
@@ -78,6 +76,7 @@ const PLANNER_SCHEMA = {
               properties: {
                 path: { type: "string" },
                 status: { type: "string", enum: ["todo", "blocked"] },
+                source_ac: { type: "array", items: { type: "string" } },
               },
             },
           },
@@ -111,16 +110,6 @@ const PLANNER_SCHEMA = {
       type: "array",
       items: { type: "string" },
     },
-  },
-};
-
-const WORKTREE_SCHEMA = {
-  type: "object",
-  required: ["worktree_path", "status"],
-  properties: {
-    worktree_path: { type: "string" },
-    status: { type: "string", enum: ["created", "reused"] },
-    error: { type: "string" },
   },
 };
 
@@ -225,6 +214,8 @@ const RECORD_READBACK_SCHEMA = {
     // predates this field simply never populates it, and every existing
     // caller of readTicketRecordBack already tolerates an absent key.
     depends_on: { type: "array", items: { type: "string" } },
+    // files_touched (BO-100e-4): the frontmatter files_touched: list; optional, an absent key means no overlap is detectable.
+    files_touched: { type: "array", items: { type: "string" } },
     error: { type: "string" },
   },
   required: ["readable"],
@@ -318,17 +309,10 @@ const PHASE_RESULT_SCHEMA = {
     },
     result_status: { type: "string" },
     message: { type: "string" },
-    // handoff_target (BO-3000a). The driver's ONLY source for the identity of
-    // the agent a handoff is addressed to is this field on the handing-off
-    // agent's OWN result — the driver never infers it from the ticket body.
-    // Declared here so an agent returning `status: "handoff"` has a
-    // structural cue to name the field the driver actually routes on, rather
-    // than following a template that tells it WHAT it owes the ticket
-    // (the `### <agent>` task-breakdown convention) without ever telling it
-    // WHO the driver should re-dispatch. See the `if`/`then` below, which
-    // makes this field REQUIRED exactly when `status` is `"handoff"` without
-    // touching the top-level `required: ["status"]` — every reply that is
-    // valid today stays valid.
+    // handoff_target (BO-3000a). The driver's ONLY source for who a handoff is
+    // addressed to is this field on the handing-off agent's OWN result, never
+    // the ticket body. REQUIRED exactly when `status` is "handoff" (see the
+    // `if`/`then` below); every reply valid today stays valid.
     handoff_target: {
       type: "string",
       description:
@@ -386,17 +370,34 @@ const CLASSIFY_SCHEMA = {
   required: ["classification"],
 };
 
-// ---------------------------------------------------------------------------
 // Constants and helper functions (pure — no I/O)
 //
 // TWIN: mirrors build-ticket.js. Keep in sync with that file.
-// ---------------------------------------------------------------------------
 
 /**
  * Maximum retry attempts for a single phase on a mechanical failure.
  * Must be > 0 and <= 3 to prevent runaway loops.
  */
 const MAX_RETRIES = 2;
+const MAX_HANDOFFS_PER_PAIR = 1;
+const MAX_HANDOFFS_PER_TICKET = 3;
+/* BO-3800d: engagements of the restructuring specialist per delivery. Its own constant, never MAX_RETRIES (a restructure that fell short is not transient). */
+const MAX_SPECIALIST_ENGAGEMENTS = 1;
+const describeDemand = (demand) => (Array.isArray(demand) ? demand : []).map((e) => e.function !== undefined ? `${e.function} in ${e.path} has complexity ${e.score} (ceiling ${e.ceiling})` : `${e.path} must lose ${e.lines_to_remove} line(s)`).join("; ");
+
+/**
+ * Put `name` at the head of the pending list, removing any pending copy
+ * (BO-3000a). One helper for both the handoff target and the re-queued
+ * handing phase, so neither can leave a duplicate behind.
+ *
+ * @param {Array<{agent: string, status: string}>} pending - mutated in place
+ * @param {string} name
+ */
+function queuePhaseFirst(pending, name) {
+  const at = pending.findIndex((p) => p.agent === name);
+  if (at >= 0) pending.splice(at, 1);
+  pending.unshift({ agent: name, status: "needed" });
+}
 
 /**
  * Canonical phase ordering for per-ticket dispatch.
@@ -412,16 +413,12 @@ const phaseOrder = [
   "architect-review",            // priority 4
   "test-writer",                 // priority 5
   "python-coder",                // priority 6
-  "sql-coder",                   // priority 7
-  "sql-query",                   // priority 7
+  "sql-coder", "sql-query",      // priority 7
   "frontend-coder",              // priority 8
   "llm-expert",                  // priority 8 — implements agent-template / skill / slash-command prompt work
+  "restructuring-specialist",    // priority 8.5 — restructures code after a refusal; default not_needed
   "test-runner",                 // priority 9
-  "change-scope-reviewer",       // priority 10
-  "documentation-expert",        // priority 10
-  "explanation-author",          // priority 10
-  "how-to-author",               // priority 10
-  "reference-author",            // priority 10
+  "change-scope-reviewer", "documentation-expert", "explanation-author", "how-to-author", "reference-author", // priority 10
   "pr-reviewer",                 // priority 11
   "ac-validator",                // priority 11.5 — AC coverage gate, MUST precede commit
   "user-surface-smoker",         // priority 11.5
@@ -678,18 +675,9 @@ function writtenPhaseEntries(dispatchedPhases, phaseOutcomes) {
   return written;
 }
 
-// ---------------------------------------------------------------------------
 // Record adjudication — pure functions over a ticket record read back off disk
 //
 // TWIN: mirrors build-ticket.js. Keep in sync with that file.
-//
-// BUG-23 (run wf_cc2b46d9-f6f): phase agents returned `status: ok` and left no
-// sign-off in the ticket's record — ticket 01 lost test-runner AND pr-reviewer,
-// ticket 03 lost test-runner, ticket 09 lost pr-reviewer. A gate's word for its
-// own success is therefore never sufficient: the verdict the drive carries
-// forward is derived from the record that was read back, never from the gate's
-// own report of itself (BO-2900f-1-i).
-// ---------------------------------------------------------------------------
 
 /**
  * Sign-off statuses that count as a gate having PASSED.
@@ -715,13 +703,6 @@ function signoffEntriesFor(record, agentName) {
   }
   return record.signoffs.filter((s) => s && s.agent === agentName);
 }
-
-// BO-2900f-1-ii — "the latest entry is the one that counts" is implemented at
-// the two places that need it (adjudicatePhaseAgainstRecord and
-// completionVerdictFromRecord), each of which already holds the entries array
-// to report its length. A latestSignoffFor() helper existed here and was never
-// called by either; it is removed rather than left as a second, untested
-// definition of the same rule.
 
 /**
  * True when a sign-off entry represents a passing outcome.
@@ -881,10 +862,8 @@ function adjudicatePhaseAgainstRecord(record, phaseName) {
     };
   }
   const latest = entries[entries.length - 1];
-  if (!isPassingSignoff(latest)) {
-    if (String(latest.status) === "handoff" && isHandoffResolved(record, phaseName, latest)) {
-      return { verified: true, entries: entries.length, reason: null };
-    }
+  const resolvedHandoff = String(latest.status) === "handoff" && isHandoffResolved(record, phaseName, latest);
+  if (!isPassingSignoff(latest) && !resolvedHandoff) {
     return {
       verified: false,
       entries: entries.length,
@@ -927,6 +906,12 @@ function adjudicatePhaseAgainstRecord(record, phaseName) {
  * BO-1900a-4-ii is a second, independent one — so a guard placed on one route
  * leaves the rest live.
  *
+ * BO-400a-2-v (KI-BO-20261009): a phase the frontmatter marks failed, or that
+ * THIS drive skipped after a cross_agent blocker, is outstanding
+ * regardless of its Comments entries — failureSignalFor() is consulted per
+ * phase BEFORE the entries are read. The guards above still answer first, and
+ * the handoff-resolution path applies only to phases that carry no such signal.
+ *
  * TWIN: mirrors build-ticket.js. Keep in sync with that file.
  *
  * @param {object|null} record — the last record read back during the drive
@@ -939,19 +924,10 @@ function adjudicatePhaseAgainstRecord(record, phaseName) {
 function completionVerdictFromRecord(record, ctx) {
   const required = ctx.requiredPhases || [];
 
-  // BO-400a-2-iii — UNREADABLE ANSWERS FIRST, and the order is the whole guard.
-  // `noPhaseRequired` is a claim about what the ticket's frontmatter SAYS; this
-  // branch is the admission that the frontmatter was never read. When both
-  // conditions hold, letting the empty-set refusal answer first reports
-  // `unreadable: false` about a record nobody could open, discards
-  // `record.error`, and sends the operator to edit the agents: map of a file
-  // that is not there — a statement about the contents of a file the drive could
-  // not open. "No outstanding phases found" and "could not look" must never
-  // produce the same answer, least of all when the second is the true one.
-  //
-  // Nothing is lost by deciding it here: over an empty required set the map
-  // below yields `outstanding: []`, so this branch returns the same not-done
-  // verdict the empty-set refusal would have, and keeps the diagnosis with it.
+  // BO-400a-2-iii — UNREADABLE ANSWERS FIRST, and the order is the whole guard:
+  // "no phase required" is a claim about frontmatter that was never read, and
+  // "could not look" must not share an answer with "found nothing outstanding".
+  // Same not-done verdict as the empty-set refusal, with the diagnosis kept.
   if (!record || record.readable !== true) {
     return {
       completed: false,
@@ -968,16 +944,9 @@ function completionVerdictFromRecord(record, ctx) {
     };
   }
 
-  // BO-400a-2-iv — the ticket names no phase for this drive to verify, so no
-  // evidence was inspected and none could have been. Its own verdict, not a
-  // satisfied one: there is nothing here to be outstanding, which is why the
-  // per-phase loop below cannot detect this state and why the answer has to be
-  // decided before that loop is ever reached.
-  //
-  // Reached only once the record has been READ, which is what makes the claim
-  // it makes true: by here `record.readable === true`, so "this ticket names no
-  // phase" is a fact established from the file rather than assumed about one
-  // that could not be opened.
+  // BO-400a-2-iv — no phase named means no evidence inspected: its own verdict,
+  // not a satisfied one, decided before the per-phase loop (which cannot see
+  // this state). Reached only once the record was READ (readable === true).
   if (required.length === 0) {
     return {
       completed: false,
@@ -996,14 +965,18 @@ function completionVerdictFromRecord(record, ctx) {
     if (entries.length > 1) {
       duplicates.push({ agent: agentName, entries: entries.length });
     }
+    // BO-400a-2-v — a failure signal the drive can see outranks any Comments
+    // entry. Checked BEFORE the entries are read so an older, misplaced or
+    // premature ok cannot overrule it (KI-BO-20261009).
+    const signalReason = failureSignalFor(record, ctx, agentName);
+    if (signalReason) {
+      outstanding.push({ agent: agentName, reason: signalReason });
+      continue;
+    }
     if (entries.length === 0) {
       let reason;
       if (ctx.unverifiedReasons && ctx.unverifiedReasons[agentName]) {
         reason = ctx.unverifiedReasons[agentName];
-      } else if ((ctx.skippedAgents || []).indexOf(agentName) !== -1) {
-        reason =
-          `'${agentName}' was skipped after a cross_agent blocker and left no ` +
-          `sign-off entry in the record`;
       } else if ((ctx.dispatchedAgents || []).indexOf(agentName) === -1) {
         reason =
           `'${agentName}' is still needed and was never dispatched, so the ` +
@@ -1039,6 +1012,47 @@ function completionVerdictFromRecord(record, ctx) {
     outstanding,
     duplicates,
   };
+}
+
+/**
+ * Name the failure signal, if any, that makes `agentName` outstanding no matter
+ * what its `## Comments` entries say. Pure; returns a reason string or null.
+ *
+ * BO-400a-2-v (KI-BO-20261009): the verdict used to take the LAST entry in file
+ * order as the phase's word, so an older, misplaced or premature ok overruled
+ * both the ticket's own frontmatter and this drive's own cross_agent skip, and
+ * the ticket was recorded done. Two signals outrank any entry:
+ *   (a) `record.failed_phases` — the frontmatter marks the phase `failed`;
+ *   (b) `ctx.skippedAgents` — this drive skipped it after a cross_agent blocker.
+ * The reason names the signal and never tells the operator to add a sign-off the
+ * record already carries.
+ *
+ * A frontmatter value of `needed` is deliberately NOT a signal here: the
+ * BO-400e-1 demanded-set contract counts a `needed` phase with a passing entry
+ * as satisfied, and `set_ticket_status.py` already refuses to write done while
+ * any phase reads `needed`, so that case cannot become a phantom done.
+ *
+ * TWIN: mirrors build-ticket.js. Keep in sync with that file.
+ *
+ * @param {object} record — a `record.readable === true` reply
+ * @param {{skippedAgents: Array<string>}} ctx
+ * @param {string} agentName
+ * @returns {(string|null)}
+ */
+function failureSignalFor(record, ctx, agentName) {
+  if ((record.failed_phases || []).indexOf(agentName) !== -1) {
+    return (
+      `the ticket's own frontmatter marks '${agentName}' failed, which a ` +
+      `sign-off entry in the record cannot overrule`
+    );
+  }
+  if ((ctx.skippedAgents || []).indexOf(agentName) !== -1) {
+    return (
+      `'${agentName}' was skipped by this drive after a cross_agent blocker, ` +
+      `so no sign-off entry in the record is trusted for it`
+    );
+  }
+  return null;
 }
 
 /**
@@ -1137,19 +1151,9 @@ function requiredPhasesForCompletion(recordDemandedPhases, deferredPhases) {
   return out;
 }
 
-// ---------------------------------------------------------------------------
 // The plan reply the drive cannot use (BO-1900a-4-ii)
 //
 // TWIN: mirrors build-ticket.js. Keep in sync with that file.
-//
-// The reduction these two functions replace was `ticketPlan || {}` followed by
-// `plan.ordered_phases || []`. Each substitution looks like defensive
-// programming; in sequence they convert a dead planner into a completion claim.
-// A missing reply becomes a blank record, a missing list becomes a blank list,
-// the drive concludes the ticket needs no phase, takes its no-phases exit, and
-// arrives at a completion decision with an empty required set. Nothing throws,
-// because every step did exactly what it was written to do.
-// ---------------------------------------------------------------------------
 
 /**
  * Why the drive cannot use this plan reply — or null when it can.
@@ -1251,11 +1255,8 @@ function buildPlanHoldback(recordPath, reason, resolved) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Record I/O — the drive's only channel to the ticket's own record
-//
 // TWIN: mirrors build-ticket.js. Keep in sync with that file.
-// ---------------------------------------------------------------------------
 
 /**
  * Read the ticket's record back off disk after a gate has run.
@@ -1274,11 +1275,12 @@ async function readTicketRecordBack(recordPath) {
     `Report: "lifecycle_status" (the frontmatter status: value), "needed_phases" (every agent in the frontmatter agents: map whose value is "needed"), ` +
     `"failed_phases" (every agent in the frontmatter agents: map whose value is literally "failed" — report it even when that agent has no ## Comments heading at all), ` +
     `"depends_on" (the frontmatter depends_on: list, as an array of ticket paths verbatim, or [] if the key is absent — do not resolve or interpret the paths), ` +
+    `"files_touched" (the frontmatter files_touched: list, as an array of paths verbatim, or [] if the key is absent), ` +
     `and "signoffs": one entry per sign-off heading in the ## Comments section, in the order they appear, as {"agent": "<name>", "status": "<status>"} ` +
     `(heading form: "### YYYY-MM-DD HH:MM — <agent> (status: <status>)"). List EVERY matching heading, including repeats — do not de-duplicate them. ` +
     `For any entry whose status is "handoff", ALSO report "handoff_target": "<name>" — the agent that entry's OWN comment text names as the one it is handing off to (the signoff skill requires a handoff comment to name its recipient in its own prose; report exactly who that comment names, verbatim). Omit the "handoff_target" key entirely on that entry if the comment does not name a recipient — do not guess one. ` +
     `If the record cannot be opened for any reason, return {"readable": false, "error": "<what went wrong>"} — an unreadable record is a real answer and will be treated as a failure, so never guess its contents. ` +
-    `Otherwise return {"readable": true, "ticket_path": "${recordPath}", "lifecycle_status": "...", "needed_phases": [...], "failed_phases": [...], "depends_on": [...], "signoffs": [{"agent": "...", "status": "...", "handoff_target": "..."}, ...], "signed_off_agents": [...]}. ` +
+    `Otherwise return {"readable": true, "ticket_path": "${recordPath}", "lifecycle_status": "...", "needed_phases": [...], "failed_phases": [...], "depends_on": [...], "files_touched": [...], "signoffs": [{"agent": "...", "status": "...", "handoff_target": "..."}, ...], "signed_off_agents": [...]}. ` +
     `Return ONLY the JSON object, no prose.`,
     {
       agentType: "status-checker",
@@ -1296,9 +1298,8 @@ async function readTicketRecordBack(recordPath) {
  * in the store still read `status: todo`, which blocks finalize-feature's
  * archive check. A report is not a record.
  *
- * Only ever called once per ticket, and only after
- * completionVerdictFromRecord() confirmed every required phase carries a
- * passing sign-off in the record itself.
+ * Only ever called once per ticket, after completionVerdictFromRecord()
+ * confirmed every required phase carries a passing sign-off in the record.
  *
  * @param {string} recordPath
  * @param {Array<string>} confirmedPhases
@@ -1308,7 +1309,7 @@ async function writeTicketCompletion(recordPath, confirmedPhases) {
   return await agent(
     `This is build-feature.js's completion-write step, writeTicketCompletion(), for the ticket at "${recordPath}". Per your Closing protocol this dispatch IS the authorization to close (the driver-dispatched authorization, not the interactive one): do not look for a same-turn user request, and do not apply the auto-close trigger's merge-commit condition — an epic-branch drive is unmerged by construction, so that condition can never hold here and is not what gates this write. ` +
     `Every phase that ticket names as needed now carries a passing sign-off in the record itself, verified by reading it back: ${JSON.stringify(confirmedPhases)}. Do not re-litigate that from scratch. ` +
-    `Write the finished state by invoking the checking mechanism exactly as your protocol prescribes, python3 scripts/set_ticket_status.py --ticket "${recordPath}" --status done, with no additional flags and no override — never by any other route, and do not edit the ticket's record directly by any other means. ` +
+    `Write the finished state by invoking the checking mechanism exactly as your protocol prescribes, python3 scripts/set_ticket_status.py --ticket "${recordPath}" --status done --no-stage, with no additional flags beyond --no-stage and no override — never by any other route, and do not edit the ticket's record directly by any other means. ` +
     `If the script exits non-zero, the ticket is NOT closed: return {"status": "error", "error": "<what the script reported>"} rather than reporting success. ` +
     `Return ONLY the JSON object: {"status": "ok"|"error", "ticket_path": "${recordPath}"}.`,
     {
@@ -1337,8 +1338,7 @@ function buildTicketOutcome(spec) {
     reason: p.reason,
   }));
   const base = {
-    // Provisional. The not-completed branch below overwrites it — see the
-    // comment there for why this field cannot stay "ok" on that path.
+    // Provisional: the not-completed branch below overwrites it (see the comment there).
     status: "ok",
     ticket_path: spec.recordPath,
     title: spec.title,
@@ -1347,16 +1347,11 @@ function buildTicketOutcome(spec) {
     skipped_phases: skippedOut,
   };
 
-  // BO-2900f-1-ii — surface the duplicate, do not swallow it. Set BEFORE the
-  // completed/not-completed branch, because the completed path is precisely
-  // where a duplicate is otherwise invisible: the adjudication resolved it
-  // cleanly from the latest entry, and with no outstanding-phase list for the
-  // operator to inspect, an unreported duplicate leaves the write-side defect
-  // (BO-2900f-2-ii) masked for as long as this read-side rule keeps
-  // compensating for it. Omitted entirely when there are no duplicates — a
-  // report naming every gate is indistinguishable from no report at all.
   if (spec.verdict.duplicates && spec.verdict.duplicates.length > 0) {
     base.duplicate_signoff_entries = spec.verdict.duplicates;
+  }
+  if (spec.noPhasesToRun) {
+    base.no_phases_dispatched = true;
   }
 
   if (spec.verdict.completed && spec.writeApplied) {
@@ -1371,20 +1366,9 @@ function buildTicketOutcome(spec) {
         (skippedOut.length > 0
           ? `, ${skippedOut.length} skipped (cross_agent blockers).`
           : ".");
-    if (spec.noPhasesToRun) {
-      base.no_phases_dispatched = true;
-    }
     return base;
   }
 
-  // BO-400a-2-iii — `status` is the machine-readable signal in these drivers:
-  // every other failure exit (the coder guard, the null-result guard, the
-  // retry cap, design/halt, the epic halt) emits blocked or error, and the epic
-  // loop's halted filter branches on exactly that vocabulary. Leaving "ok" here
-  // while the same payload carries `ticket_completed: false`, `not_completed`
-  // and an outstanding-phase list inverts the signal for every caller that
-  // reads the field first — and the single-ticket branch returns this payload
-  // verbatim, with no compensating re-derivation of its own.
   base.status = "blocked";
   base.ticket_completed = false;
   base.not_completed = true;
@@ -1395,18 +1379,7 @@ function buildTicketOutcome(spec) {
   if (spec.writeError) {
     base.completion_write_error = spec.writeError;
   }
-  if (spec.noPhasesToRun) {
-    base.no_phases_dispatched = true;
-  }
 
-  // BO-400a-2-iv — the refusal taken over an EMPTY required set needs its own
-  // wording, and this is why. The standard message below counts outstanding
-  // phases and the standard advice tells the operator to re-run the phase that
-  // failed or supply the sign-off it owes. With no phase required of the ticket
-  // at all there is no count to state, nothing to re-run and nothing that owes
-  // a sign-off, so that advice names nothing the operator can act on and sends
-  // them looking for a phase failure that never happened. What IS actionable is
-  // the ticket's own list of phases: it is the thing that is wrong.
   if (spec.verdict.noPhaseRequired) {
     base.no_phase_required = true;
     base.message =
@@ -1527,14 +1500,9 @@ async function concludeTicket(spec) {
   });
 }
 
-// ---------------------------------------------------------------------------
 // Phase 0 — Resolve target and worktree
-// ---------------------------------------------------------------------------
-
 phase("Resolve Target");
-
 const target = (args && (args.target || args.userInput || "").trim()) || "";
-
 if (!target) {
   return {
     status: "error",
@@ -1546,8 +1514,17 @@ if (!target) {
   };
 }
 
+// BO-4300c-4-i: a handed-in location (args.worktree_path / args.workspace_path) is confirmed with the maker first.
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
+let handedInWorkspace = null;
+if (!(args && args.workspace !== undefined && args.workspace !== null) && workspaceHandedIn()) {
+  handedInWorkspace = await workspaceConfirmHandedInAt(workspaceHandedIn(), "Resolve Target", "{{config.output_root}}");
+  if (!handedInWorkspace.accepted) return workspaceFailure(handedInWorkspace);
+}
+
 const resolveResult = await agent(
-  `Resolve the /build-feature target and set up the worktree.\n\n` +
+  `Resolve the /build-feature target (the workspace is obtained separately, by the workspace maker).\n\n` +
   `Target: "${target}"\n\n` +
   `1. Determine whether the target is an epic or a single ticket:\n` +
   `   - If it ends in ".md" or is a path to a file: target_type = "ticket"\n` +
@@ -1555,11 +1532,7 @@ const resolveResult = await agent(
   `2. Resolve the absolute path:\n` +
   `   - For ticket: resolve to the absolute path of the ticket .md file\n` +
   `   - For epic: resolve to the absolute path of the epic folder\n\n` +
-  `3. Determine the worktree path:\n` +
-  `   - Run: test -f .git && echo file || echo directory\n` +
-  `   - If .git is a file, we are inside a worktree; report the current directory as worktree_path\n` +
-  `   - If .git is a directory, the caller is in the main clone; report the epic folder path as worktree_path\n\n` +
-  `Return JSON: { "target_type": "epic"|"ticket", "epic_path": "<abs>"|null, "ticket_path": "<abs>"|null, "worktree_path": "<abs>" }`,
+  `Return JSON: { "target_type": "epic"|"ticket", "epic_path": "<abs>"|null, "ticket_path": "<abs>"|null }`,
   {
     agentType: "status-checker",
     schema: RESOLVE_SCHEMA,
@@ -1567,7 +1540,6 @@ const resolveResult = await agent(
     phase: "Resolve Target",
   }
 );
-
 if (!resolveResult) {
   return {
     status: "error",
@@ -1575,9 +1547,7 @@ if (!resolveResult) {
       "resolve-target agent returned null. Cannot determine build target.",
   };
 }
-
 const { target_type, epic_path, ticket_path } = resolveResult;
-
 /**
  * The resolved target this drive emits for its consumers.
  *
@@ -1604,57 +1574,31 @@ const resolvedTarget = {
   worktree_path: null,
 };
 
-// Establish the isolated worktree (reuse or open) before any build work. repoAnchor is the repository reference every worktree_repo_facts.py call below is asked relative to: those subcommands default to the process cwd, which for a phase agent is not a checkout at all, so an unanchored call answers null about a perfectly healthy worktree and aborts the run (BO-4000f). Absoluteness is BO-3900's classifier, never a leading-slash test, or drive-lettered and UNC targets fall back to that same broken default.
-const worktreeTarget = target_type === "epic" ? (epic_path || target) : (ticket_path || target), repoAnchor = classifyPathForm(worktreeTarget) === "absolute" ? worktreeTarget : ".";
+const worktreeTarget = target_type === "epic" ? (epic_path || target) : (ticket_path || target);
 /**
  * Run WORKTREE_REPO_FACTS_SCRIPT and relay its parsed JSON. Never itself
  * decides reuse/open/refuse — every caller below reads structured facts,
  * never the resolver's or an agent's own word (BO-4000).
  */
-async function repoFactsCall(command, label) {
-  const r = await agent(`Run the following command and return ONLY its raw stdout:\n${command}\nReturn JSON: { "output": "<raw stdout>", "exit_code": <number> }`, { agentType: "status-checker", schema: REPO_FACTS_ENVELOPE_SCHEMA, label, phase: "Resolve Target" });
+async function repoFactsCall(command, label, phase = "Resolve Target") {
+  const r = await agent(`Run the following command and return ONLY its raw stdout:\n${command}\nReturn JSON: { "output": "<raw stdout>", "exit_code": <number> }`, { agentType: "status-checker", schema: REPO_FACTS_ENVELOPE_SCHEMA, label, phase });
   if (!r || typeof r.output !== "string" || Number(r.exit_code) !== 0) return null;
   try { const p = JSON.parse(r.output); if (p && typeof p.output === "string" && p.exit_code !== undefined) { try { return JSON.parse(p.output); } catch (_e2) { return null; } } return p; } catch (_e) { return null; }
 }
 /** A worktree-undetermined abort payload (BO-4000's abort shape), extended per refusal kind. */
 function undetermined(extra) { return Object.assign({ status: "error", worktree_undetermined: true, resolved_target: resolvedTarget, action_required: "establish_worktree" }, extra); }
-let realWorktreePath = null, stalenessReport = null;
-// Scenario 1: reuse the resolved worktree IFF facts confirm it; otherwise not used — proceed as if unresolved (scenario 2).
-if (resolveResult.worktree_path) {
-  const rf = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py facts "${resolveResult.worktree_path}" --reference "${repoAnchor}"`, "worktree-facts-resolved");
-  if (rf && rf.exists && rf.is_linked_worktree && !rf.is_main_checkout && rf.same_repository) realWorktreePath = resolveResult.worktree_path;
-}
-if (!realWorktreePath) {
-  const base = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py base "${repoAnchor}"`, "worktree-base");
-  if (!base || !base.worktree_base) return undetermined({ abort_reason: "worktree-base-unavailable", message: "The repository's worktree base could not be established. No phase agent has been spawned." });
-  const identity = normalizePathForm(worktreeTarget).replace(/\/$/, "").split("/").filter(Boolean).pop() || worktreeTarget;
-  const instructedLocation = normalizePathForm(base.worktree_base).replace(/\/$/, "") + "/" + identity;
-  const targetBranch = (target_type === "epic" ? "epic/" : "ticket/") + identity.replace(/^EPIC-/, "").replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
-  const locFacts = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py facts "${instructedLocation}" --reference "${repoAnchor}"`, "worktree-facts-location");
-  if (!locFacts) return undetermined({ abort_reason: "worktree-location-unverifiable", location: instructedLocation, message: `Whether anything occupies "${instructedLocation}" could not be established — the probe itself failed, which is NOT the same answer as "nothing is there". No phase agent has been spawned; nothing there was changed.` });
-  if (locFacts.exists) {
-    if (locFacts.is_linked_worktree && !locFacts.is_main_checkout && locFacts.same_repository && (locFacts.branch === targetBranch || locFacts.branch === identity)) realWorktreePath = instructedLocation; // scenario 2 — reuse a worktree of this repo on the target's OWN branch, named either by the epic/<kebab> convention this driver mints for a NEW worktree or by the target's own identity, which is how existing epic worktrees are actually branched; any other occupant is still refused.
-    else return undetermined({ abort_reason: "worktree-location-occupied", location: instructedLocation, occupant: locFacts, message: `The named worktree location "${instructedLocation}" is occupied by something other than the target's own worktree. No phase agent has been spawned; nothing there was changed.` });
-  } else {
-    const standing = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py branch-standing "${targetBranch}" --repo "${repoAnchor}"`, "branch-standing");
-    let startRef = "origin/main";
-    if (standing && standing.exists) {
-      if (!standing.fetch_ok) return undetermined({ abort_reason: "branch-standing-unverifiable", branch: targetBranch, message: `The standing of branch "${targetBranch}" against origin/main could not be checked (fetch failed). No phase agent has been spawned.` });
-      if (standing.behind > 0 && standing.ahead > 0) return undetermined({ abort_reason: "branch-has-unique-commits", branch: targetBranch, ahead: standing.ahead, behind: standing.behind, message: `Branch "${targetBranch}" is ${standing.ahead} commit(s) ahead and ${standing.behind} behind origin/main. No worktree was opened. Bring the branch up to date, remove it, or aim the run at a different branch.` });
-      if (standing.behind > 0) stalenessReport = { branch: targetBranch, behind: standing.behind, started_from: "origin/main" };
-      else startRef = targetBranch;
-    }
-    const worktreeResult = await agent(`Open a NEW git worktree at the EXACT location "${instructedLocation}" on branch "${targetBranch}", starting from "${startRef}". Do not choose any other location. Bootstrap it (copy/symlink .leafcutter so hooks are present). On any error report status "failed".\nReturn JSON: { "worktree_path": "<absolute path>", "status": "created"|"reused", "error": "<if failed, else omit>" }`, { agentType: "worktree-agent", schema: WORKTREE_SCHEMA, label: "worktree-setup", phase: "Resolve Target" });
-    if (!worktreeResult || worktreeResult.status === "failed" || worktreeResult.error || typeof worktreeResult.worktree_path !== "string") return undetermined({ abort_reason: "worktree-report-unusable", instructed_location: instructedLocation, message: `The worktree-opening agent returned no usable result for "${instructedLocation}". No phase agent has been spawned.` });
-    if (!pathsEquivalent(instructedLocation, worktreeResult.worktree_path)) return undetermined({ abort_reason: "worktree-location-mismatch", instructed_location: instructedLocation, reported_location: worktreeResult.worktree_path, message: `The worktree-opening agent reported "${worktreeResult.worktree_path}", not the instructed location "${instructedLocation}". No phase agent has been spawned, and the run's worktree was not replaced.` });
-    realWorktreePath = instructedLocation;
-  }
-}
-if (!realWorktreePath) return undetermined({ message: "The isolated working copy for this drive is UNDETERMINED. No phase agent has been spawned, and no substitute location is used in its place." });
-// The later step has now established the isolated working copy, so the
-// resolved target carries it and no longer reads as undetermined.
+// BO-4300c-3 / BO-4300a-1-ia: the working copy is the maker's answer (args.workspace, or ONE verbatim dispatch of
+// the maker command), its location that answer's workspace_path ONLY. The maker decides reuse / open / refuse.
+// Anything but an accepted answer ends the run here, quoting what was received, with no phase agent spawned.
+const buildIdentity = normalizePathForm(worktreeTarget).replace(/\/$/, "").split("/").filter(Boolean).pop() || worktreeTarget;
+const buildSlug = buildIdentity.replace(/^EPIC-/, "").replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase()
+  .replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "build";
+const buildWorkspace = await workspaceEnsure("Resolve Target", { kind: target_type === "epic" ? "epic" : "ticket", slug: buildSlug, ticket: target_type === "ticket" ? ticket_path : "", outputRoot: "{{config.output_root}}" }, handedInWorkspace);
+if (!buildWorkspace.accepted) return Object.assign(workspaceFailure(buildWorkspace), { resolved_target: resolvedTarget });
+const realWorktreePath = buildWorkspace.workspace_path;
+// TQ-500g-1-vi: only a workspace the maker just made (workspace_action "created") has no earlier wrong-version run to recover; any other answer is a resume.
+const wvResumed = !(buildWorkspace.answer && buildWorkspace.answer.workspace_action === "created");
 resolvedTarget.worktree_path = realWorktreePath;
-if (stalenessReport) resolvedTarget.worktree_staleness = stalenessReport; // BO-4000b
 
 // BO-3900-PATH-HELPERS-START
 /**
@@ -1735,23 +1679,6 @@ function resolvePathOntoRoot(root, input) {
   return { ok: true, form, path: normalizePathForm(root).replace(/\/$/, "") + "/" + path };
 }
 
-/**
- * A comparison key for an absolute path (BO-4000's equivalence rule, reusing
- * BO-3900b's own case policy): separators and a trailing separator are
- * ignored; letter case is ignored ONLY for drive-lettered ("C:/...") and UNC
- * ("//server/...") forms, and preserved for a POSIX ("/...") form.
- *
- * @param {string} input
- * @returns {string}
- */
-function pathComparableKey(input) {
-  const norm = normalizePathForm(input).replace(/\/$/, "");
-  return /^([A-Za-z]:\/|\/\/)/.test(norm) ? norm.toLowerCase() : norm;
-}
-/** Do `a` and `b` name the same location, per pathComparableKey()? */
-function pathsEquivalent(a, b) {
-  return pathComparableKey(a) === pathComparableKey(b);
-}
 // BO-3900-PATH-HELPERS-END
 
 // Derive worktree-resident paths from resolve output. resolve may return an absolute
@@ -1832,6 +1759,97 @@ async function resolveDependsOnPath(entry, ticketWorktreePath, worktreePath) {
   for (const candidate of candidates) { const record = await readTicketRecordBack(candidate); if (record && record.readable) return { resolved: candidate, reported: candidate, record }; }
   return { resolved: null, reported: candidates[0], record: null }; }
 
+/*
+ * Knowledge routing (ADR-040 §3, INF-700a-1-v). Every ticket's commit dispatch runs as the routing
+ * step's `stage`, then the commit told to stage the stage's manifest BY NAME, then exactly one
+ * `observe`, whose reply is that ticket's knowledge_routing (INF-700a-5). The three run in
+ * `commitLane`, one ticket at a time: the tickets of a chunk run concurrently but share one worktree
+ * and one run record, so they must not interleave (the counterpart of ticket-supervisor's commit
+ * lock, INF-700a-1-iv). The E2 engine has no module loader (ADR-030), so this file carries its own
+ * copy of the classifier, as fast-lane-ship.js, quick-fix.js and build-epic.js do. Fail-open
+ * (ADR-034): only a recognised `case` is trusted, and nothing here changes any outcome.
+ * `completed_with_waiting` (INF-700a-5-ii) is trusted and kept as its own case with the ticket's
+ * waiting count; the totals count those tickets (`waiting_tickets`) but never sum the waiting
+ * counts, because a later ticket's stage re-reads what an earlier ticket left waiting.
+ */
+const knowledgeRoutingByTicket = new Map();
+let commitLane = Promise.resolve();
+function classifyKnowledgeRouting(reply) {
+  const ran = !!reply && ["completed", "completed_with_waiting", "could_not_complete"].includes(reply.case), n = (key) => (ran && Number.isFinite(reply[key]) ? reply[key] : 0);
+  return { case: ran ? reply.case : "did_not_run", read: n("read"), written: n("written"), unwritten: n("unwritten"), already_on_branch: n("already_on_branch"),
+    waiting: ran && reply.waiting && Number.isFinite(reply.waiting.difference) ? reply.waiting.difference : 0, detail: ran && typeof reply.detail === "string" ? reply.detail : null, manifest: ran && Array.isArray(reply.manifest) ? reply.manifest.filter((p) => typeof p === "string") : [] };
+}
+function commitWithKnowledgeRouting(ticketPath, root, dispatchCommit, beforeCommit) {
+  const cli = (args, label) => repoFactsCall(`python {{config.output_root}}/scripts/knowledge/completion_routing_cli.py ${args} --working-dir "${root}"`, label, "Knowledge Routing").catch(() => null);
+  const turn = commitLane.then(async () => {
+    const halted = beforeCommit ? await beforeCommit() : null;
+    if (halted) return { wv_halt: halted };
+    const staged = classifyKnowledgeRouting(await cli("stage", "knowledge-routing-step"));
+    const named = [...new Set(staged.manifest.map((p) => (p.startsWith(`${root}/`) ? p.slice(root.length + 1) : p)))]
+      .filter((p) => classifyPathForm(p) === "relative" && !/[\n",]/.test(p) && !p.split("/").includes("..") && !p.startsWith("debugging/logs/"));
+    const result = await dispatchCommit(named.length ? `\nAlso stage BY NAME, never by a sweep, these learnings the Knowledge Routing step wrote into the worktree: ${named.join(", ")}` : "");
+    const observed = classifyKnowledgeRouting(await cli(`observe --commit-status ${result && result.status === "ok" ? "ok" : "failed"}`, "knowledge-routing-observe"));
+    const { manifest: _carried, ...figures } = observed.case !== "did_not_run" || staged.case === "did_not_run" ? observed : { ...staged, case: "could_not_complete", written: 0,
+      unwritten: staged.written + staged.unwritten, detail: "the commit's contents could not be observed, so no staged write is counted as written" };
+    knowledgeRoutingByTicket.set(ticketPath, { ticket_path: ticketPath, ...figures });
+    return result;
+  });
+  commitLane = turn.catch(() => null);
+  return turn;
+}
+function knowledgeRoutingSummary() {
+  const tickets = [...knowledgeRoutingByTicket.values()], sum = (key) => tickets.reduce((total, t) => total + t[key], 0);
+  return { tickets, written: sum("written"), unwritten: sum("unwritten"), already_on_branch: sum("already_on_branch"), waiting_tickets: tickets.filter((t) => t.case === "completed_with_waiting").length };
+}
+
+// --- Wrong-Version Runs (TQ-500g-1-vi): thin dispatch, fail-closed parses; the rules live in Python. TWIN: copy of the other route's block.
+const WV = "bf";
+const WV_RUNNER_SCHEMA = { type: "object", properties: { command: { type: "string" }, workspace: { type: "string" }, exit_status: { type: "integer" },
+  stdout: { type: "string" }, stderr: { type: "string" }, declined: { type: "boolean" }, step: { type: "string" }, agent: { type: "string" }, reason: { type: "string" } } };
+const wvRoot = () => String(resolvedTarget.worktree_path).replace(/\\/g, "/");
+const wvPy = (script, args) => `python "${wvRoot()}"/{{config.output_root}}/scripts/build_orchestration/${script}.py ${args}`;
+const wvBad = (...vals) => vals.flat().filter((s) => typeof s !== "string" || !/^[A-Za-z0-9._-]+$/.test(s)).concat(/["$`\n\r]/.test(wvRoot()) ? [wvRoot()] : []);
+async function wvStep(label, command, workKey) {
+  try {
+    const reply = await agent(JSON.stringify({ step: label, command, target: { workspace: resolvedTarget.worktree_path, run_id: workKey } }),
+      { agentType: "command-step-runner", schema: WV_RUNNER_SCHEMA, label, phase: "Wrong-Version Runs" });
+    return parseStepJson(reply.stdout);
+  } catch { return null; }
+}
+async function wvRecover(workKey) {
+  const unsafe = wvBad(workKey);
+  if (unsafe.length) return { step: "input-check", detail: unsafe, message: `Wrong-version inputs are not plain values, no command was run: ${JSON.stringify(unsafe)}` };
+  const recovered = await wvStep(`${WV}-wv-recover`, wvPy("wrong_version_runner", "recover"), workKey);
+  return !recovered || recovered.ok !== true ? { step: "recover", detail: recovered, message: `Wrong-version recover step did not pass: ${JSON.stringify(recovered)}` } : null;
+}
+async function wvRuns(workKey, ids) {
+  const flags = `--ac-root "${wvRoot()}/${AC_STORE_REL_PATH}" --test-root "${wvRoot()}" --base-ref HEAD`, idArg = ids.length ? `--ac-ids "${ids.join(",")}" ` : "";
+  const halt = (step, detail) => ({ halt: { step, detail, message: `Wrong-version ${step} step did not pass: ${JSON.stringify(detail)}` }, outcome: null });
+  const unsafe = wvBad(workKey, ids);
+  if (unsafe.length) return halt("input-check", unsafe);
+  let reply = "";
+  if (ids.length) {
+    const listed = await wvStep(`${WV}-wv-list`, wvPy("wrong_version_writer", `list ${idArg}${flags}`), workKey);
+    if (!listed || !Array.isArray(listed.owed) || listed.error !== null) return halt("list", listed);
+    if (listed.owed.length) {
+      try {
+        const raw = await agent(`Prepare the owed wrong versions. Input: ${JSON.stringify({ work_key: workKey, repo_root: resolvedTarget.worktree_path, requirement_ids: ids, wrong_versions: listed.owed })}`,
+          { agentType: "test-breaker", label: `${WV}-wv-test-breaker`, phase: "Wrong-Version Runs" });
+        reply = typeof raw === "string" ? raw : raw ? JSON.stringify(raw) : "";
+      } catch { reply = ""; }
+    }
+  }
+  let delim = "WV_REPLY_EOF";
+  while (reply.includes(delim)) delim += "_X";
+  const fin = await wvStep(`${WV}-wv-finish`, `${wvPy("wrong_version_gate", `finish --work-key "${workKey}" --reply - ${idArg}${flags}`)} <<'${delim}'\n${reply}${reply ? "\n" : ""}${delim}`, workKey);
+  if (!fin || typeof fin.gate_passed !== "boolean" || !fin.gate_passed) return halt("finish", fin);
+  const verdict = fin.verdict || {};
+  return { halt: null, outcome: verdict.outcome === undefined ? null : verdict.outcome };
+}
+const wvParallelTickets = new Set(); // paths of tickets driven inside a chunk of more than one (TQ-500g-1-vi M-2)
+const wvStem = (p) => String(p).replace(/\\/g, "/").split("/").filter(Boolean).pop().replace(/\.md$/i, "");
+const wvHaltFields = (h) => ({ gate: "wrong_version_gate", wrong_version_step: h.step, wrong_version_detail: h.detail });
+
 // ---------------------------------------------------------------------------
 // driveTicketPhases — flattened per-ticket phase driver
 //
@@ -1880,24 +1898,14 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
   const filesTouched = plan.files_touched || [];
   const title = plan.title || worktreeTicketPath;
 
-  // Test-coverage precondition for coder phases (BO-2000e-2). Three satisfaction
-  // routes, any of which proves tests exist before a coder runs:
+  // Test-coverage precondition for coder phases (BO-2000e-2): tests must be proven to
+  // exist before a coder runs, by any of three routes:
   //   1. the ticket ships a populated ## Test Requirements section, OR
-  //   2. the test-writer phase runs earlier in this same drive and returns
-  //      evidence of test files it wrote (see the test-writer branch below), OR
-  //   3. a previous drive already wrote test files that still exist on disk.
-  //
-  // Route 2 exists because test-writer has a mandatory AC-derivation fallback:
-  // when ## Test Requirements is absent it resolves the ticket's source_ac and
-  // derives the tests from the AC store instead. Reading the planner's pre-drive
-  // snapshot as an immutable fact ignored that fallback entirely and deadlocked
-  // every AC-generated ticket (no surface has emitted ## Test Requirements since
-  // v2.0.0), so this must stay a `let` that route 2 can flip.
-  //
-  // Route 3 covers RESUME. Once test-writer is signed_off it drops out of the
-  // needed set, so on a re-run it can never re-supply route 2's evidence — the
-  // ticket would deadlock permanently on the second drive. The planner verifies
-  // these paths exist on disk, so this is evidence, not a status flag.
+  //   2. test-writer runs earlier in this drive and returns evidence of test files it
+  //      wrote (so this stays a `let` route 2 can flip: its AC-derivation fallback
+  //      serves tickets with no ## Test Requirements), OR
+  //   3. a previous drive already wrote test files that still exist on disk (RESUME: a
+  //      signed_off test-writer never re-supplies route 2; planner-verified evidence).
   const existingTestFiles = Array.isArray(plan.existing_test_files)
     ? plan.existing_test_files.filter((p) => typeof p === "string" && p.trim())
     : [];
@@ -1912,19 +1920,22 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
       : [];
   let redBaselineGateOutcome = null; // carried into the final payload below
   let redBaselineGateChecked = false; // TQ-500f-3-ii H-3: runs once, before the FIRST coder dispatch on every path
+  let wrongVersionOutcome = null; const wvKey = wvStem(worktreeTicketPath);
+  // TQ-500g-1-vi M-2: the serial rule trusted the epic planner; a ticket that owes runs must not share a parallel chunk.
+  if (wvParallelTickets.has(worktreeTicketPath) && sourceAcIds.length) return { status: "blocked", message: "This ticket owes wrong-version runs but its batch ran in parallel; no wrong-version step ran.", ticket_path: worktreeTicketPath, classification: "halt", ...wvHaltFields({ step: "batch-serial-check", detail: { source_ac: sourceAcIds } }) };
 
-  // -------------------------------------------------------------------------
-  // Step 2 — Filter and sort the phases to dispatch
-  // -------------------------------------------------------------------------
-  // selectDispatchableByStatus keeps the phases whose status still owes work —
-  // `needed` AND `failed` (KI-BO-20260907-1555: a failed phase used to be
-  // dropped here and no later drive could ever re-run it). See that function
-  // for why re-dispatching a failed phase terminates.
-  //
-  // selectDispatchPhases then applies the "one PR per epic" rule (BO-2700): for
-  // an epic-member ticket it drops the pull-request phase (the single epic PR is
-  // opened by finalize-feature, not per ticket); commit and all other phases are
-  // retained. Standalone tickets (isEpicMember=false) are unaffected.
+  /*
+   * Step 2 — Filter and sort the phases to dispatch
+   * selectDispatchableByStatus keeps the phases whose status still owes work —
+   * `needed` AND `failed` (KI-BO-20260907-1555: a failed phase used to be
+   * dropped here and no later drive could ever re-run it). See that function
+   * for why re-dispatching a failed phase terminates.
+   *
+   * selectDispatchPhases then applies the "one PR per epic" rule (BO-2700): for
+   * an epic-member ticket it drops the pull-request phase (the single epic PR is
+   * opened by finalize-feature, not per ticket); commit and all other phases are
+   * retained. Standalone tickets (isEpicMember=false) are unaffected.
+   */
   const neededPhases = sortByCanonicalPriority(
     selectDispatchPhases(selectDispatchableByStatus(orderedPhases), isEpicMember)
   );
@@ -1938,41 +1949,36 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
   // agent would be spawned, so a future edit that reorders the guard cannot
   // silently start dispatching against an undetermined working copy.
   if (!resolvedTarget.worktree_path) {
-    return {
-      status: "error",
-      worktree_undetermined: true,
-      abort_reason: "worktree-undetermined",
-      resolved_target: resolvedTarget,
-      ticket_path: worktreeTicketPath,
-      message:
-        "Held back before spawning any phase agent: the isolated working copy " +
-        "for this drive is UNDETERMINED. No substitute location is used.",
-      action_required: "establish_worktree",
-    };
+    return undetermined({ abort_reason: "worktree-undetermined", ticket_path: worktreeTicketPath,
+      message: "Held back before spawning any phase agent: the isolated working copy for this drive is UNDETERMINED. No substitute location is used." });
   }
 
-  // deferredPhases: for an epic member the pull-request phase is opened once
-  // per epic by finalize-feature, so a record that still names it as needed
-  // must not hold the ticket open forever. Declared here rather than at the
-  // completion step because the no-phases-to-run exit below needs it too — that
-  // exit is reached precisely BY the deferral (selectDispatchPhases drops
-  // pull-request before the length check).
+  /*
+   * deferredPhases: for an epic member the pull-request phase is opened once
+   * per epic by finalize-feature, so a record that still names it as needed
+   * must not hold the ticket open forever. Declared here rather than at the
+   * completion step because the no-phases-to-run exit below needs it too — that
+   * exit is reached precisely BY the deferral (selectDispatchPhases drops
+   * pull-request before the length check).
+   */
   const deferredPhases = isEpicMember ? ["pull-request"] : [];
 
-  // No phase left to run. NOT a reason to skip the completion decision: the
-  // ticket's record already holds whatever evidence exists, and it is the only
-  // thing that can say whether this ticket is done. Bypassing the read-back
-  // here is what made an already-finished ticket unrecoverably block its epic
-  // (see concludeTicket's header for the full failure).
-  //
-  // BO-400e-1: the required set comes from the fresh read-back's own record
-  // below — NOT from `orderedPhases` (this drive's planner reply) — even
-  // though the drive ran nothing. The record is the sole source regardless of
-  // whether any phase was dispatched this run; an empty required set would
-  // say yes to every ticket, including one whose frontmatter reads signed_off
-  // while its record carries no sign-off entry at all, and that guard belongs
-  // to completionVerdictFromRecord acting on the record itself, not to a
-  // caller-supplied stand-in for it.
+  /*
+   * No phase left to run. NOT a reason to skip the completion decision: the
+   * ticket's record already holds whatever evidence exists, and it is the only
+   * thing that can say whether this ticket is done. Bypassing the read-back
+   * here is what made an already-finished ticket unrecoverably block its epic
+   * (see concludeTicket's header for the full failure).
+   *
+   * BO-400e-1: the required set comes from the fresh read-back's own record
+   * below — NOT from `orderedPhases` (this drive's planner reply) — even
+   * though the drive ran nothing. The record is the sole source regardless of
+   * whether any phase was dispatched this run; an empty required set would
+   * say yes to every ticket, including one whose frontmatter reads signed_off
+   * while its record carries no sign-off entry at all, and that guard belongs
+   * to completionVerdictFromRecord acting on the record itself, not to a
+   * caller-supplied stand-in for it.
+   */
   if (neededPhases.length === 0) {
     const freshRecord = await readTicketRecordBack(worktreeTicketPath);
     return await concludeTicket({
@@ -1990,89 +1996,99 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
     });
   }
 
-  // -------------------------------------------------------------------------
   // Step 3 — Sequential phase loop with failure adjudication
-  // -------------------------------------------------------------------------
   const retryCounts = {};
   const completedPhases = [];
   const skippedPhases = [];
 
-  // Post-dispatch verification state (BO-2900f-1-i/-iii).
-  //   unverifiedPhases   — gates that reported success and could not be
-  //                        confirmed against the record. Their verdict is
-  //                        FAILED.
-  //   lastRecord         — the CURRENT read-back: null the instant the record
-  //                        cannot be read, so completionVerdictFromRecord can
-  //                        tell "unreadable right now" from "readable". The
-  //                        completion decision's readable/unreadable branch is
-  //                        taken from this and nothing else — never from the
-  //                        drive's own tally (BO-400a-2-ii).
-  //   lastReadableRecord — BO-400e-1: the most recent read-back that WAS
-  //                        readable, kept even after a later read fails. Used
-  //                        only to name what the ticket demands
-  //                        (demandedPhasesFromRecord) so a record that goes
-  //                        unreadable at the exact instant of the completion
-  //                        decision still reports what it could not confirm,
-  //                        rather than an empty list. This is still the
-  //                        ticket's own record — a slightly earlier read of
-  //                        the same file — never a caller's claim about it.
+  /*
+   * Post-dispatch verification state (BO-2900f-1-i/-iii).
+   *   unverifiedPhases   — gates that reported success and could not be
+   *                        confirmed against the record. Their verdict is
+   *                        FAILED.
+   *   lastRecord         — the CURRENT read-back: null the instant the record
+   *                        cannot be read, so completionVerdictFromRecord can
+   *                        tell "unreadable right now" from "readable". The
+   *                        completion decision's readable/unreadable branch is
+   *                        taken from this and nothing else — never from the
+   *                        drive's own tally (BO-400a-2-ii).
+   *   lastReadableRecord — BO-400e-1: the most recent read-back that WAS
+   *                        readable, kept even after a later read fails. Used
+   *                        only to name what the ticket demands
+   *                        (demandedPhasesFromRecord) so a record that goes
+   *                        unreadable at the exact instant of the completion
+   *                        decision still reports what it could not confirm,
+   *                        rather than an empty list. This is still the
+   *                        ticket's own record — a slightly earlier read of
+   *                        the same file — never a caller's claim about it.
+   */
   const unverifiedPhases = [];
   const unverifiedReasons = {};
   const dispatchedAgents = [];
   let lastRecord = null;
   let lastReadableRecord = null;
 
-  // BO-3700 — the pending set is a WORK-LIST, not a snapshot.
-  //
-  // This used to be `for (const currentPhase of neededPhases)`, iterating an
-  // array fixed before the first phase ran. A phase promoted to `needed` by a
-  // phase that was itself still running could therefore never be dispatched.
-  // `pendingPhases` is re-derived after every dispatch from the record
-  // read-back the driver already performs — see absorbPromotedPhases().
-  //
-  // `neededPhases` is left intact and still names the OPENING set.
-  // `plannedPhaseNames` starts as that set and grows only as promotions are
-  // genuinely absorbed; it feeds the CODER_PHASES test-writer check below, not
-  // the completion decision (BO-400e-1: that decision reads the record's own
-  // `needed_phases` back off disk, which already reflects any mid-drive
-  // promotion via absorbPromotedPhases' on-disk write).
+  /*
+   * BO-3700 — the pending set is a WORK-LIST, not a snapshot.
+   *
+   * This used to be `for (const currentPhase of neededPhases)`, iterating an
+   * array fixed before the first phase ran. A phase promoted to `needed` by a
+   * phase that was itself still running could therefore never be dispatched.
+   * `pendingPhases` is re-derived after every dispatch from the record
+   * read-back the driver already performs — see absorbPromotedPhases().
+   *
+   * `neededPhases` is left intact and still names the OPENING set.
+   * `plannedPhaseNames` starts as that set and grows only as promotions are
+   * genuinely absorbed; it feeds the CODER_PHASES test-writer check below, not
+   * the completion decision (BO-400e-1: that decision reads the record's own
+   * `needed_phases` back off disk, which already reflects any mid-drive
+   * promotion via absorbPromotedPhases' on-disk write).
+   */
   const pendingPhases = [...neededPhases];
   const plannedPhaseNames = new Set(neededPhases.map((p) => p.agent));
   const attemptedPhases = new Set();
+  const handoffChain = []; // BO-3000a: "from->to" steps, pushed before the cap check
+  const handoffFrom = {}; // target -> {from, message, seen}; kept until the target completes verified
+  const restructureLog = []; // BO-3800d: {target, demand} per accepted specialist engagement; the count is read from here
 
   while (pendingPhases.length > 0) {
     const currentPhase = pendingPhases.shift();
     const phaseName = currentPhase.agent;
     attemptedPhases.add(phaseName);
     retryCounts[phaseName] = retryCounts[phaseName] || 0;
+    const from = handoffFrom[phaseName];
+    let phaseResult;
+    const refuse = (message, classification = "halt", extra = {}) => ({
+      status: "blocked", message, ticket_path: worktreeTicketPath, failing_phase: phaseName,
+      blocker_detail: phaseResult, classification, ...extra,
+    });
 
     // Test Requirements guard (BO-2000e-2): refuse to dispatch a coder phase
     // unless tests are known to exist — either declared in the ticket's
     // ## Test Requirements section, or written by test-writer earlier in this
     // drive. Fail-closed: if neither route produced evidence, block.
     if (CODER_PHASES.has(phaseName) && !hasTestRequirements) {
-      // BO-3700: read from plannedPhaseNames (the live set, grown by
-      // absorbPromotedPhases as phases are promoted mid-drive), not from
-      // neededPhases (the frozen opening snapshot). test-writer's canonical
-      // priority (5) precedes every CODER_PHASES member (6+) and
-      // pendingPhases stays sorted by priority, so by the time a coder's
-      // turn is reached, a test-writer named anywhere in plannedPhaseNames —
-      // whether present at the start or absorbed as a mid-drive promotion —
-      // has already been dispatched. This affects only the wording below
-      // ("ran but reported no evidence" vs "was never scheduled"); the guard
-      // returns `status: "blocked"` either way, so no dispatch outcome
-      // changes — only the diagnosis text does.
+      /*
+       * BO-3700: read from plannedPhaseNames (the live set, grown by
+       * absorbPromotedPhases as phases are promoted mid-drive), not from
+       * neededPhases (the frozen opening snapshot). test-writer's canonical
+       * priority (5) precedes every CODER_PHASES member (6+) and
+       * pendingPhases stays sorted by priority, so by the time a coder's
+       * turn is reached, a test-writer named anywhere in plannedPhaseNames —
+       * whether present at the start or absorbed as a mid-drive promotion —
+       * has already been dispatched. This affects only the wording below
+       * ("ran but reported no evidence" vs "was never scheduled"); the guard
+       * returns `status: "blocked"` either way, so no dispatch outcome
+       * changes — only the diagnosis text does.
+       */
       const testWriterRan = plannedPhaseNames.has("test-writer");
-      return {
-        status: "blocked",
-        message:
+      return refuse(
           `Structured blocker: the coder phase '${phaseName}' cannot be ` +
           `dispatched because no tests exist for this ticket (BO-2000e-2). ` +
           `The ticket's ## Test Requirements section is empty or absent` +
           (testWriterRan
             ? `, and the test-writer phase did not report any test files it wrote.`
-            : `, and no test-writer phase is scheduled for this ticket.`),
-        ticket_path: worktreeTicketPath,
+            : `, and no test-writer phase is scheduled for this ticket.`), "halt", {
         resolved_target: resolvedTarget,
         not_completed: true,
         ticket_completed: false,
@@ -2084,8 +2100,6 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
               `tests exist for this ticket (BO-2000e-2)`,
           },
         ],
-        failing_phase: phaseName,
-        classification: "halt",
         suggested_action: testWriterRan
           ? "test-writer ran but returned no 'tests_written' evidence. Inspect its " +
             "sign-off in the ticket's ## Comments: if it genuinely wrote tests, the " +
@@ -2095,15 +2109,13 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
           : "Populate ## Test Requirements in the ticket with at least one " +
             "'- name: ...' entry, or mark test-writer as needed so it can derive " +
             "tests from the ticket's source_ac, then re-run /build-feature.",
-      };
+      });
     }
 
-    // TQ-500f-3-ii (H-3 resume fix): red-baseline gate runs ONCE, right before the
-    // FIRST coder dispatch on EVERY path -- including a resumed ticket whose
-    // test-writer phase is already signed_off and therefore never re-enters this
-    // loop. Thin dispatch + fail-closed parse only -- decision logic lives in
-    // fast_lane.py's heavy_lane_gate subcommand (wraps verify_red_baseline, no
-    // second reader).
+    // TQ-500f-3-ii (H-3 resume fix): red-baseline gate runs ONCE before the FIRST
+    // coder dispatch on EVERY path, incl. a resumed ticket whose test-writer phase is
+    // already signed_off. Thin dispatch + fail-closed parse; decision logic lives in
+    // fast_lane.py's heavy_lane_gate (wraps verify_red_baseline, no second reader).
     if (CODER_PHASES.has(phaseName) && !redBaselineGateChecked) {
       redBaselineGateChecked = true;
       if (sourceAcIds.length === 0) {
@@ -2112,63 +2124,54 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
         const gateScript = `${resolvedTarget.worktree_path}/{{config.output_root}}/scripts/build_orchestration/fast_lane.py`;
         const gateAcStoreRoot = `${resolvedTarget.worktree_path}/${AC_STORE_REL_PATH}`;
         const gateCommand =
-          `python3 ${gateScript} heavy_lane_gate --source-ac ${sourceAcIds.join(",")} ` +
-          `--test-root ${resolvedTarget.worktree_path} --ac-root ${gateAcStoreRoot}`;
+          `python ${gateScript} heavy_lane_gate --source-ac ${sourceAcIds.join(",")} ` +
+          `--test-root ${resolvedTarget.worktree_path} --ac-root ${gateAcStoreRoot} --ticket ${worktreeTicketPath}`;
         const gateReply = await agent(
           `Run the following command and return ONLY its raw stdout:\n${gateCommand}\n` +
-          `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }`,
+          `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }` + scratchEnvNote,
           { agentType: "status-checker", schema: REPO_FACTS_ENVELOPE_SCHEMA, label: "red-baseline-gate", phase: "Phase Dispatch" }
         );
-        let gateVerdict = null;
-        if (gateReply && typeof gateReply.output === "string" && typeof gateReply.exit_code === "number") {
-          try { gateVerdict = JSON.parse(gateReply.output); } catch (_e) { gateVerdict = null; }
-        }
+        const gateVerdict = gateReply && typeof gateReply.exit_code === "number" ? parseStepJson(gateReply.output) : null;
         // FAIL CLOSED: unparseable/refused reply is never treated as a pass.
         if (!gateVerdict || typeof gateVerdict.gate_passed !== "boolean") {
-          return {
-            status: "blocked",
-            message: `The red-baseline gate reply could not be verified for ticket ${worktreeTicketPath}: not a parseable {output, exit_code} envelope carrying a real heavy_lane_gate verdict (raw reply: ${JSON.stringify(gateReply)}). Fail closed — the coder is never dispatched on an unverified red-baseline gate reply.`,
-            ticket_path: worktreeTicketPath, failing_phase: phaseName, gate: "verify_red_baseline", classification: "halt",
-          };
+          return refuse(`The red-baseline gate reply could not be verified for ticket ${worktreeTicketPath}: not a parseable {output, exit_code} envelope carrying a real heavy_lane_gate verdict (raw reply: ${JSON.stringify(gateReply)}). Fail closed — the coder is never dispatched on an unverified red-baseline gate reply.`,
+            "halt", { gate: "verify_red_baseline" });
         }
         redBaselineGateOutcome = gateVerdict.outcome || (gateVerdict.gate_passed ? "verify_red_baseline gate passed" : `verify_red_baseline gate failed: ${gateVerdict.reason || "unknown"}`);
         if (!gateVerdict.gate_passed) {
-          return {
-            status: "blocked",
-            message: `verify_red_baseline gate failed for ticket ${worktreeTicketPath}: gate_passed=false. Reason: ${gateVerdict.reason || "unknown"}. Refused: ${JSON.stringify(gateVerdict.refused || [])}. The coder is not dispatched — test-writer's own red_baseline_verified claim is never a substitute (TQ-500f-3-ii).`,
-            ticket_path: worktreeTicketPath, failing_phase: phaseName, gate: "verify_red_baseline", gate_verdict: gateVerdict, classification: "halt",
-          };
+          return refuse(`verify_red_baseline gate failed for ticket ${worktreeTicketPath}: gate_passed=false. Reason: ${gateVerdict.reason || "unknown"} (interpreter: ${gateVerdict.interpreter || "unknown"}). Refused: ${JSON.stringify(gateVerdict.refused || [])}. The coder is not dispatched — test-writer's own red_baseline_verified claim is never a substitute (TQ-500f-3-ii). ${gateVerdict.refusal || ""}${gateVerdict.remedy || ""}`,
+            gateVerdict.halt_classification || "halt", { gate: "verify_red_baseline", gate_verdict: gateVerdict });
         }
       }
     }
-
-    let phaseResult;
     let retryLoop = true;
 
     while (retryLoop) {
       retryLoop = false;
 
-      // Dispatch each needed phase as a flat depth-1 agent() call.
-      // agentType: phaseName ensures the phase agent's template is loaded.
-      //
-      // The trailing pointer block is load-bearing, not decoration
-      // (BO-1900d-1). templates/agents/_signoff_block.md — carried by 30 agent
-      // templates, including every phase agent — opens with
-      // "## Sign-off (when ticket_path is provided)" and closes with
-      // "Skip this entire section if no `ticket_path` was provided". A gate
-      // handed the path only as narrative ("for ticket: <path>") has to decide
-      // for itself whether its own conditional is satisfied, which is a very
-      // plausible mechanism for BUG-23 having been INCONSISTENT rather than
-      // uniformly absent: on run wf_cc2b46d9-f6f ticket 09 recorded test-runner
-      // and lost pr-reviewer while ticket 03 did the reverse.
-      //
-      // Prose is the ONLY channel. agent(prompt, opts) accepts exactly
-      // {agentType, schema, label, phase, model, effort, isolation} — an extra
-      // `ticket_path` key placed in opts is dropped before the agent ever sees
-      // it, so putting it there would look like a fix and pass nothing. The
-      // literal `key: value` token below is the in-repo convention for this
-      // channel (build-epic.js:357 hands worktree_path the same way).
-      phaseResult = await agent(
+      /*
+       * Dispatch each needed phase as a flat depth-1 agent() call.
+       * agentType: phaseName ensures the phase agent's template is loaded.
+       *
+       * The trailing pointer block is load-bearing, not decoration
+       * (BO-1900d-1). templates/agents/_signoff_block.md — carried by 30 agent
+       * templates, including every phase agent — opens with
+       * "## Sign-off (when ticket_path is provided)" and closes with
+       * "Skip this entire section if no `ticket_path` was provided". A gate
+       * handed the path only as narrative ("for ticket: <path>") has to decide
+       * for itself whether its own conditional is satisfied, which is a very
+       * plausible mechanism for BUG-23 having been INCONSISTENT rather than
+       * uniformly absent: on run wf_cc2b46d9-f6f ticket 09 recorded test-runner
+       * and lost pr-reviewer while ticket 03 did the reverse.
+       *
+       * Prose is the ONLY channel. agent(prompt, opts) accepts exactly
+       * {agentType, schema, label, phase, model, effort, isolation} — an extra
+       * `ticket_path` key placed in opts is dropped before the agent ever sees
+       * it, so putting it there would look like a fix and pass nothing. The
+       * literal `key: value` token below is the in-repo convention for this
+       * channel (build-epic.js:357 hands worktree_path the same way).
+       */
+      const dispatchPhase = (stageNote = "") => agent(
         `You are the ${phaseName} phase agent for ticket: ${worktreeTicketPath}. ` +
         `Read the ticket before starting. Execute your phase. ` +
         `Files touched: ${JSON.stringify(filesTouched)}. ` +
@@ -2180,30 +2183,50 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
             `self-skipped) — an empty list is the correct, honest answer and will stop the coder ` +
             `phase rather than let it run untested. Do not list a file you did not actually write.`
           : "") +
+        (phaseName === "documentation-expert"
+          ? ` LEAF MODE (BO-2200c-5-vii): this flat depth-1 dispatch CANNOT spawn sub-agents. For ` +
+            `each required doc in the ticket's "## Agent Contracts" -> "### documentation-expert" ` +
+            `block, classify its intent exactly as your template says, pick the specialist ` +
+            `(how-to-author, reference-author, explanation-author, adr-author, architecture-diagram-author ` +
+            `or architecture-author), read its template (.claude/agents/<specialist>.md in the worktree, ` +
+            `else templates/agents/<specialist>.md) and canonical how-to, and author the doc yourself by ` +
+            `its rules. For this dispatch ONLY, this overrides the "never author a doc file yourself" ` +
+            `rule. Never return status "handoff" to a specialist that is not a key of the ticket's ` +
+            `agents map; author that doc yourself instead.`
+          : "") +
+        (from
+          ? ` You are being RE-DISPATCHED because phase '${from.from}' returned 'status: handoff' naming you as the agent that must act before it can proceed. Handoff message: ${JSON.stringify(from.message)}.`
+          : "") +
+        (from && from.brief ? ` Remedy demand: ${JSON.stringify(from.brief.demand)}.` + (from.brief.skills.length ? ` Apply the skill(s): ${from.brief.skills.join(", ")}.` : "") : "") +
         `\n\nYou WERE invoked with the arguments below. Your sign-off protocol is ` +
         `therefore in force: record your outcome in this ticket's own record before ` +
         `you return.\n` +
         `ticket_path: ${worktreeTicketPath}\n` +
-        `worktree_path: ${resolvedTarget.worktree_path}`,
+        `worktree_path: ${resolvedTarget.worktree_path}${stageNote}${scratchEnvNote}`,
         {
           agentType: phaseName,
           schema: PHASE_RESULT_SCHEMA,
           label: phaseName,
           phase: "Phase Dispatch",
+          ...(from && from.brief ? { brief: from.brief } : {}),
         }
       );
+      phaseResult = phaseName === "commit"
+        ? await commitWithKnowledgeRouting(worktreeTicketPath, resolvedTarget.worktree_path, dispatchPhase, async () => { const wv = await wvRuns(wvKey, sourceAcIds); wrongVersionOutcome = wv.outcome; return wv.halt; })
+        : await dispatchPhase();
+      if (phaseResult && phaseResult.wv_halt) return refuse(phaseResult.wv_halt.message, "halt", wvHaltFields(phaseResult.wv_halt));
 
-      // ------------------------------------------------------------------
-      // THE VERIFICATION POINT (BO-2900f-1-i / -iii)
-      //
-      // One generic point, reached exactly once per dispatch, for EVERY gate —
-      // not one added at each gate's call site. The observed defect was not a
-      // broken gate, it was an inconsistently applied check: ticket 09 recorded
-      // test-runner correctly while ticket 01 did not, and ticket 03 recorded
-      // pr-reviewer correctly while ticket 01 did not. Anchoring the check to
-      // the dispatch path is what makes the guarantee a property of the drive
-      // rather than of a lucky work item.
-      // ------------------------------------------------------------------
+      /*
+       * THE VERIFICATION POINT (BO-2900f-1-i / -iii)
+       *
+       * One generic point, reached exactly once per dispatch, for EVERY gate —
+       * not one added at each gate's call site. The observed defect was not a
+       * broken gate, it was an inconsistently applied check: ticket 09 recorded
+       * test-runner correctly while ticket 01 did not, and ticket 03 recorded
+       * pr-reviewer correctly while ticket 01 did not. Anchoring the check to
+       * the dispatch path is what makes the guarantee a property of the drive
+       * rather than of a lucky work item.
+       */
       dispatchedAgents.push(phaseName);
 
       const phaseRecord = await readTicketRecordBack(worktreeTicketPath);
@@ -2242,152 +2265,132 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
       const resultStatus =
         phaseResult && (phaseResult.status || phaseResult.result_status);
 
-      // Null / empty-status guard: agent() returns null when a phase agent dies
-      // on a terminal error or is skipped mid-run. Without this guard a null
-      // result falls through the blocker/failed check below and the phase is
-      // silently recorded as completed — letting the driver proceed to commit /
-      // pull-request on incomplete work. Treat an absent result or unrecognized
-      // status as a halt so the ticket stops rather than shipping half-done.
-      //
-      // Recognition, not truthiness: the comment above promises "or unrecognized
-      // status", but a truthiness test cannot deliver it. A hallucinated status
-      // ("complete", "done") is truthy, so it passed this guard and then matched
-      // neither the blocker/failed nor the handoff branch below — landing back in
-      // the silent-success hole the guard exists to close. Checking membership in
-      // PHASE_STATUS_VALUES closes it, and also catches an explicit
-      // 'undetermined' (the agent saying it could not perform its task).
-      //
-      // TWIN: mirrors build-ticket.js. Keep in sync with that file.
+      /*
+       * Null / empty-status guard: agent() returns null when a phase agent dies
+       * on a terminal error or is skipped mid-run. Without this guard a null
+       * result falls through the blocker/failed check below and the phase is
+       * silently recorded as completed — letting the driver proceed to commit /
+       * pull-request on incomplete work. Treat an absent result or unrecognized
+       * status as a halt so the ticket stops rather than shipping half-done.
+       *
+       * Recognition, not truthiness: the comment above promises "or unrecognized
+       * status", but a truthiness test cannot deliver it. A hallucinated status
+       * ("complete", "done") is truthy, so it passed this guard and then matched
+       * neither the blocker/failed nor the handoff branch below — landing back in
+       * the silent-success hole the guard exists to close. Checking membership in
+       * PHASE_STATUS_VALUES closes it, and also catches an explicit
+       * 'undetermined' (the agent saying it could not perform its task).
+       *
+       * TWIN: mirrors build-ticket.js. Keep in sync with that file.
+       */
       if (!phaseResult || !PHASE_STATUS_VALUES.includes(resultStatus) ||
           resultStatus === "undetermined") {
-        return {
-          status: "blocked",
-          message:
+        return refuse(
             `Phase '${phaseName}' returned no usable result (agent died, was ` +
             `skipped, or returned an empty, unrecognised, or undetermined ` +
             `status: ${JSON.stringify(resultStatus)}). Halting to avoid ` +
             `proceeding on incomplete work — treat the phase as NOT run and ` +
-            `verify the repository, not this payload.`,
-          ticket_path: worktreeTicketPath,
-          failing_phase: phaseName,
-          classification: "halt",
-        };
+            `verify the repository, not this payload.`);
       }
 
-      // ------------------------------------------------------------------
-      // Handoff routing (BO-3000, BO-3000a)
-      // ------------------------------------------------------------------
-      // `handoff` is a valid PHASE_RESULT_SCHEMA status meaning "another
-      // agent must act before I can proceed" — it is NOT a success and must
-      // never fall through to the completed-phase path below. Without this
-      // branch a handoff result was indistinguishable from `status: "ok"`:
-      // the loop advanced to the next phase in phaseOrder and the named
-      // agent was never re-dispatched (see BO-3000 for the live incident).
-      //
-      // BO-3000a: the ONLY place the driver looks for the identity of the
-      // agent a handoff is addressed to is the `handoff_target` field the
-      // handing-off agent's own result carries. An earlier version of this
-      // branch fell back to inferring a target from the `### <agent>`
-      // headings under the ticket's `## Implementation Tasks` section when
-      // that field was missing. That inference is REMOVED, not merely
-      // unused: it read a section that is ambiguous by construction (13
-      // agents carry `requires_ticket_section: true` and routinely appear
-      // together on one ticket), and it converted a DELIBERATE targetless
-      // halt — python-coder's contract-shrinkage guard and test-writer's
-      // test-drift rule both emit `(status: handoff)` naming no agent on
-      // purpose, meaning "blocked, needs user authorization" — into a
-      // spurious re-dispatch of whichever agent happened to have a task
-      // section on the ticket. See BO-3000a's notes for the full record.
+      /*
+       * Handoff routing (BO-3000, BO-3000a)
+       * `handoff` is a valid PHASE_RESULT_SCHEMA status meaning "another
+       * agent must act before I can proceed" — it is NOT a success and must
+       * never fall through to the completed-phase path below. Without this
+       * branch a handoff result was indistinguishable from `status: "ok"`:
+       * the loop advanced to the next phase in phaseOrder and the named
+       * agent was never re-dispatched (see BO-3000 for the live incident).
+       *
+       * BO-3000a: the ONLY place the driver looks for the identity of the
+       * agent a handoff is addressed to is the `handoff_target` field the
+       * handing-off agent's own result carries. An earlier version of this
+       * branch fell back to inferring a target from the `### <agent>`
+       * headings under the ticket's `## Implementation Tasks` section when
+       * that field was missing. That inference is REMOVED, not merely
+       * unused: it read a section that is ambiguous by construction (13
+       * agents carry `requires_ticket_section: true` and routinely appear
+       * together on one ticket), and it converted a DELIBERATE targetless
+       * halt — python-coder's contract-shrinkage guard and test-writer's
+       * test-drift rule both emit `(status: handoff)` naming no agent on
+       * purpose, meaning "blocked, needs user authorization" — into a
+       * spurious re-dispatch of whichever agent happened to have a task
+       * section on the ticket. See BO-3000a's notes for the full record.
+       *
+       * BO-3000a (F1, 2026-10-06): a valid handoff CONTINUES the ticket in the same run. The target is
+       * queued first and runs the normal loop (guard, gate, read-back); the handing phase is re-queued
+       * if still open. Halts: refused target, pair/ticket cap (handoff_loop), or an unconfirmed target.
+       */
       if (resultStatus === "handoff") {
         const handoffTarget = phaseResult.handoff_target;
         const normalizedTarget =
           typeof handoffTarget === "string" ? handoffTarget.trim() : "";
 
-        // Case (a): the result was read and named NO target at all — the key
-        // absent, empty, blank, or not a string. This is also what a
-        // DELIBERATE targetless halt looks like, and it must refuse
-        // identically whether or not the ticket's body names agents
-        // elsewhere: the driver never reads the ticket body to resolve this.
-        if (normalizedTarget === "") {
-          return {
-            status: "blocked",
-            message:
-              `Phase '${phaseName}' returned 'status: handoff' but its result ` +
-              `was read and named no handoff target (handoff_target was ` +
-              `${JSON.stringify(handoffTarget)}). Refusing to guess a ` +
-              `re-dispatch target and refusing to advance to the next phase ` +
-              `in phaseOrder. This may be a deliberate targetless halt (a ` +
-              `contract-shrinkage guard or test-drift stop asking for user ` +
-              `authorization) rather than an omission — inspect '${phaseName}'` +
-              `'s message and the ticket's ## Comments for what it needs ` +
-              `before re-running /build-feature.`,
-            ticket_path: worktreeTicketPath,
-            failing_phase: phaseName,
-            blocker_detail: phaseResult,
-            classification: "halt",
-          };
+        /*
+         * Case (a): the result named NO target (absent, empty, blank, not a string); also what
+         * a deliberate targetless halt looks like. The ticket body is never read.
+         */
+        if (normalizedTarget === "") return refuse(`Phase '${phaseName}' returned 'status: handoff' but its result was read and named no handoff target (handoff_target was ${JSON.stringify(handoffTarget)}). Refusing to guess a re-dispatch target and refusing to advance to the next phase in phaseOrder. This may be a deliberate targetless halt (a contract-shrinkage guard or test-drift stop asking for user authorization) rather than an omission — inspect '${phaseName}'` + `'s message and the ticket's ## Comments for what it needs before re-running /build-feature.`);
+        /* BO-3800b: only an engage-specialist declaration (read via the shared loader, never inferred) brings in a specialist. */
+        const remedy = phaseResult.remedy; let brief = null;
+        /* BO-3800e-1: a remedy that is not an object, or whose disposition is not text, is UNREADABLE (never absent): a named stop, nobody engaged, delivery not retried. Absent/null/blank take the existing route. */
+        if (remedy !== undefined && remedy !== null && (typeof remedy !== "object" || Array.isArray(remedy) || (remedy.disposition !== undefined && remedy.disposition !== null && typeof remedy.disposition !== "string"))) return refuse(`Phase '${phaseName}' refused delivery naming '${normalizedTarget}', but its remedy could not be read as a disposition (remedy was ${JSON.stringify(remedy)}). An unreadable outcome is not an absent one. Stopping; nobody was engaged and delivery was not attempted again.`);
+        if (remedy && remedy.disposition === "engage-specialist") {
+          const decl = await agent(
+            `Read the remedy declaration of hook '${remedy.hook_id}'. Run: python -c "import json,pathlib,sys; sys.path.insert(0,'${resolvedTarget.worktree_path}/{{config.output_root}}/scripts/commit_guardian'); import _remedy_declarations as d; print(json.dumps(d.load('${remedy.hook_id}', pathlib.Path('${resolvedTarget.worktree_path}'))))" and return it with status "ok".`,
+            { agentType: "status-checker", schema: { "type": "object", "properties": { "status": { "type": "string" }, "disposition": { "type": "string" }, "agent": { "type": ["string", "null"] }, "skills": { "type": "array", "items": { "type": "string" } } } }, label: "remedy-declaration", phase: "Phase Dispatch" });
+          if (!decl || decl.status !== "ok" || decl.disposition !== "engage-specialist" || decl.agent !== normalizedTarget) return refuse(`Phase '${phaseName}' refused delivery naming '${normalizedTarget}', but the remedy declaration of '${remedy.hook_id}' could not be read as engage-specialist for that party (${JSON.stringify(decl)}). Stopping; nobody was engaged.`);
+          /* BO-3800c-1-i: a demand with no usable file/quantity stops the run, reproduced as given; never defaulted or re-derived. */
+          const usable = Array.isArray(remedy.demand) && remedy.demand.length > 0 && remedy.demand.every((e) => e && typeof e.path === "string" && e.path.trim() !== "" && (e.function !== undefined ? typeof e.function === "string" && e.function.trim() !== "" && Number.isFinite(e.score) && Number.isFinite(e.ceiling) : Number.isFinite(e.lines_to_remove) && e.lines_to_remove > 0)); if (!usable) return refuse(`Phase '${phaseName}' refused delivery naming '${normalizedTarget}'; the refusal was read and carried no usable demand (demand was ${JSON.stringify(remedy.demand === undefined ? null : remedy.demand)}). Stopping; nobody was engaged and delivery was not attempted again.`);
+          brief = { skills: decl.skills || [], demand: remedy.demand };
         }
+        /* Case (b): a target was named but is not a recognised phase agent; reproduced verbatim. */
+        if (!phaseOrder.includes(normalizedTarget)) return refuse(`Phase '${phaseName}' returned 'status: handoff' naming '${normalizedTarget}' as its handoff_target, which is not an agent this driver recognises as a phase agent. Refusing to guess a re-dispatch target and refusing to advance to the next phase in phaseOrder. Check '${normalizedTarget}' for a misspelling or a name that does not exist, fix the emitter, then re-run /build-feature.`);
+        /*
+         * Cases (c)-(e), BO-3000a: nobody is dispatched for a self handoff, a target that
+         * is not on this ticket (orderedPhases keeps not_needed keys) or a deferred target.
+         */
+        const unfit =
+          normalizedTarget === phaseName
+            ? "is a self handoff: the target is the handing phase itself"
+            : !brief && !orderedPhases.some((p) => p.agent === normalizedTarget)
+              ? `names '${normalizedTarget}', which is not on this ticket (not a key of its agents map)`
+              : deferredPhases.includes(normalizedTarget)
+                ? `names '${normalizedTarget}', which is deferred for this drive (pull-request is opened once per epic)`
+                : "";
+        if (unfit) return refuse(`Phase '${phaseName}' returned 'status: handoff' but it ${unfit}. Nobody was dispatched and the ticket did not advance; fix the emitter or the ticket's agents map, then re-run /build-feature.`);
+        /* BO-3800d: bound reached and the standard still refuses on the same terms: stop and account for it; never deliver, relax or roll back. */
+        const prior = restructureLog.filter((r) => r.target === normalizedTarget);
+        if (brief && prior.length >= MAX_SPECIALIST_ENGAGEMENTS) return refuse(`Restructuring handoff stopped at its bound: '${normalizedTarget}' was engaged ${prior.length} time(s) (bound ${MAX_SPECIALIST_ENGAGEMENTS}) after '${phaseName}' was refused by '${remedy.hook_id}'. Asked: ${describeDemand(prior[0].demand)}. The refusal stands on the same terms; the file now stands at: ${describeDemand(brief.demand)}. Whatever the specialist changed remains in place and has not been undone. The change was not delivered: nothing was delivered, and the standard was not relaxed.`, "restructuring_unmet", { specialist_engagements: prior.length });
+        if (brief) restructureLog.push({ target: normalizedTarget, demand: brief.demand });
+        /* Caps: one chain array, pushed BEFORE the check so the refused step is named too. */
+        const step = `${phaseName}->${normalizedTarget}`;
+        handoffChain.push(step);
+        if (handoffChain.filter((s) => s === step).length > MAX_HANDOFFS_PER_PAIR || handoffChain.length > MAX_HANDOFFS_PER_TICKET) return refuse(`Handoff loop on '${phaseName}': ${handoffChain.join(", ")} exceeds ${MAX_HANDOFFS_PER_PAIR} handoff per pair / ${MAX_HANDOFFS_PER_TICKET} per ticket. Halting; '${normalizedTarget}' was not dispatched.`, "handoff_loop");
 
-        // Case (b): a target was named, but it is not an agent this driver
-        // recognises. Reproduce the value it was given verbatim — never
-        // resolve it to some other agent, so a misspelt agent is
-        // distinguishable from one that does not exist.
-        if (!phaseOrder.includes(normalizedTarget)) {
-          return {
-            status: "blocked",
-            message:
-              `Phase '${phaseName}' returned 'status: handoff' naming ` +
-              `'${normalizedTarget}' as its handoff_target, which is not an ` +
-              `agent this driver recognises as a phase agent. Refusing to ` +
-              `guess a re-dispatch target and refusing to advance to the ` +
-              `next phase in phaseOrder. Check '${normalizedTarget}' for a ` +
-              `misspelling or a name that does not exist, fix the emitter, ` +
-              `then re-run /build-feature.`,
-            ticket_path: worktreeTicketPath,
-            failing_phase: phaseName,
-            blocker_detail: phaseResult,
-            classification: "halt",
-          };
-        }
-
-        log(
-          `Phase '${phaseName}' returned 'status: handoff' naming ` +
-          `'${normalizedTarget}'. Re-dispatching '${normalizedTarget}' ` +
-          `before advancing to any later phase in phaseOrder.`
-        );
-
-        const handoffResult = await agent(
-          `You are the ${normalizedTarget} phase agent for ticket: ` +
-          `${worktreeTicketPath}. You are being RE-DISPATCHED because phase ` +
-          `'${phaseName}' returned 'status: handoff' naming you as the agent ` +
-          `that must act before it can proceed. Handoff message: ` +
-          `${JSON.stringify(phaseResult.message || "")}. Read the ticket ` +
-          `before starting. Execute your phase. Files touched: ` +
-          `${JSON.stringify(filesTouched)}. Fill the reply tool's fields ` +
-          `directly: "status" (ok | blocker | failed | handoff), "message", and "handoff_target" naming the next phase agent when status is handoff. Never return your reply as a JSON string or inside an "input" field.`,
-          {
-            agentType: normalizedTarget,
-            schema: PHASE_RESULT_SCHEMA,
-            label: normalizedTarget,
-            phase: "Phase Dispatch",
-          }
-        );
-
-        return {
-          status: "blocked",
-          message:
-            `Phase '${phaseName}' returned 'status: handoff' naming ` +
-            `'${normalizedTarget}'. '${normalizedTarget}' was re-dispatched ` +
-            `to resolve the handoff; re-run /build-feature to continue this ` +
-            `ticket's remaining phases once the handoff is resolved.`,
-          ticket_path: worktreeTicketPath,
-          failing_phase: phaseName,
-          handoff_target: normalizedTarget,
-          handoff_result: handoffResult,
-          classification: "cross_agent",
+        /*
+         * Accepted: the target runs through the normal loop (guard, gate, read-back,
+         * promotions). `seen` is its entry count now, so only a NEWER entry confirms it.
+         */
+        handoffFrom[normalizedTarget] = {
+          from: phaseName,
+          message: phaseResult.message || "",
+          brief,
+          /* An unreadable read-back proves nothing: Infinity means no old entry can confirm. */
+          seen: phaseRecord && phaseRecord.readable === true
+            ? signoffEntriesFor(phaseRecord, normalizedTarget).length
+            : Infinity,
         };
+        queuePhaseFirst(pendingPhases, normalizedTarget);
+        log(`Phase '${phaseName}' returned 'status: handoff' naming '${normalizedTarget}'. ` +
+          `'${normalizedTarget}' is queued first; the ticket continues once the record confirms it.`);
+        break;
       }
 
+      if ((resultStatus === "blocker" || resultStatus === "failed") && from && from.brief) {
+        /* BO-3800d: the specialist itself failed: a machinery ending, told apart from a file that fell short. */
+        return refuse(`Restructuring specialist '${phaseName}' could not be engaged to a result for the refusal of '${from.from}' (it returned status '${resultStatus}'). This is a failure of the machinery, not evidence about the file, so the file's standing is unknown. The change was not delivered: nothing was delivered.`, "restructuring_unavailable");
+      }
       if (resultStatus === "blocker" || resultStatus === "failed") {
         const classifyResult = await agent(
           `Classify this blocker for ticket ${worktreeTicketPath}, failing phase ${phaseName}. ` +
@@ -2401,7 +2404,6 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
             phase: "Phase Dispatch",
           }
         );
-
         const classification = classifyResult && classifyResult.classification;
 
         if (classification === "mechanical") {
@@ -2410,17 +2412,12 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
             retryLoop = true;
             continue;
           } else {
-            return {
-              status: "blocked",
-              message:
+            return refuse(
                 `Phase '${phaseName}' failed with a mechanical blocker and ` +
                 `exhausted retry cap (MAX_RETRIES=${MAX_RETRIES}). ` +
                 `Manual intervention required.`,
-              ticket_path: worktreeTicketPath,
-              failing_phase: phaseName,
-              blocker_detail: phaseResult,
-              classification: "mechanical",
-            };
+              "mechanical"
+            );
           }
         } else if (classification === "cross_agent") {
           skippedPhases.push({
@@ -2430,40 +2427,34 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
           });
           break;
         } else if (classification === "design" || classification === "halt") {
-          return {
-            status: "blocked",
-            message:
+          return refuse(
               `Phase '${phaseName}' returned a '${classification}' blocker that ` +
               `requires user intervention. The workflow has stopped.`,
-            ticket_path: worktreeTicketPath,
-            failing_phase: phaseName,
-            blocker_detail: phaseResult,
             classification,
-            suggested_action:
-              classification === "design"
-                ? "Review the design question in the ticket's ## Comments section and provide guidance before re-running /build-feature."
-                : "Inspect the ticket's ## Comments section for the blocker details. Manual resolution is required before re-running.",
-          };
+            {
+              suggested_action:
+                classification === "design"
+                  ? "Review the design question in the ticket's ## Comments section and provide guidance before re-running /build-feature."
+                  : "Inspect the ticket's ## Comments section for the blocker details. Manual resolution is required before re-running.",
+            }
+          );
         } else {
-          return {
-            status: "blocked",
-            message:
+          return refuse(
               `Phase '${phaseName}' failed and failure-classifier returned ` +
               `unknown classification '${classification}'. Treating as halt.`,
-            ticket_path: worktreeTicketPath,
-            failing_phase: phaseName,
-            blocker_detail: phaseResult,
-            classification: classification || "unknown",
-          };
+            classification || "unknown"
+          );
         }
       }
 
-      // Satisfaction route 2 for the coder guard (BO-2000e-2): test-writer
-      // succeeded AND named at least one test file it wrote. Evidence must be
-      // explicit — a bare `status: ok` is NOT enough, because test-writer signs
-      // off ok when it self-skips too. Only a non-empty tests_written list opens
-      // the gate for the coder phases that follow (test-writer is priority 5,
-      // every coder is 6+, so this always lands before the guard is consulted).
+      /*
+       * Satisfaction route 2 for the coder guard (BO-2000e-2): test-writer
+       * succeeded AND named at least one test file it wrote. Evidence must be
+       * explicit — a bare `status: ok` is NOT enough, because test-writer signs
+       * off ok when it self-skips too. Only a non-empty tests_written list opens
+       * the gate for the coder phases that follow (test-writer is priority 5,
+       * every coder is 6+, so this always lands before the guard is consulted).
+       */
       if (phaseName === "test-writer") {
         const testsWritten = Array.isArray(phaseResult.tests_written)
           ? phaseResult.tests_written.filter((p) => typeof p === "string" && p.trim())
@@ -2483,12 +2474,24 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
         }
       }
 
-      // The verdict the drive carries forward is the one derived from the
-      // record — never the gate's own report. A gate that reported success and
-      // left no entry (or whose record could not be read) is FAILED here, and
-      // is not carried forward as a completed phase. The drive continues so the
-      // remaining gates still run and are reported, but the ticket can no
-      // longer be recorded complete.
+      /*
+       * The verdict the drive carries forward is the one derived from the
+       * record — never the gate's own report. A gate that reported success and
+       * left no entry (or whose record could not be read) is FAILED here, and
+       * is not carried forward as a completed phase. The drive continues so the
+       * remaining gates still run and are reported, but the ticket can no
+       * longer be recorded complete.
+       */
+      if (from && !(verdict.verified && verdict.entries > from.seen)) {
+        /* Fail closed (BO-3000a): a handed-off target counts only with a NEWER passing entry. */
+        return refuse(
+          `Phase '${from.from}' handed off to '${phaseName}', but the ticket's record does not ` +
+          `confirm a new passing sign-off from '${phaseName}' (${verdict.reason || "no entry newer than the handoff"}). ` +
+          `Stopping the ticket; no later phase runs. Re-run /build-feature once it has signed off.`,
+          "cross_agent",
+          { failing_phase: from.from, handoff_target: phaseName }
+        );
+      }
       if (!verdict.verified) {
         unverifiedPhases.push({ agent: phaseName, reason: verdict.reason });
         unverifiedReasons[phaseName] = verdict.reason;
@@ -2504,28 +2507,40 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
           );
         }
         completedPhases.push({ agent: phaseName, result: phaseResult });
+        /* Walk the chain: a handing phase that is no longer open passes the duty on to its own origin. */
+        const open = [...(phaseRecord.needed_phases || []), ...(phaseRecord.failed_phases || [])];
+        for (let link = from; link; ) {
+          if (open.includes(link.from)) {
+            queuePhaseFirst(pendingPhases, link.from);
+            break;
+          }
+          const up = handoffFrom[link.from];
+          delete handoffFrom[link.from];
+          link = up;
+        }
+        delete handoffFrom[phaseName];
       }
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Step 4 — Completion decision, taken FROM THE RECORD (BO-400a-2-ii/-iii)
-  // -------------------------------------------------------------------------
-  // BUG-22: the observed run's payload named four completed batches while every
-  // ticket in the store still read `status: todo`. The work was real and
-  // committed; the record claimed nothing happened, which blocks the epic
-  // archive check. The missing half is this write — and its boundary: the write
-  // happens only when the ticket's OWN record proves every needed phase passed.
-  // BO-400e-1: no `basePhases` here. The required set is derived below purely
-  // from `lastReadableRecord` — the most recent READABLE read-back of the
-  // ticket's own record — never from `plannedPhaseNames` (this drive's own
-  // dispatch tally). `record: lastRecord` still decides the readable/
-  // unreadable branch itself (see concludeTicket's header). BO-3700's concern
-  // (a phase promoted to needed mid-drive must not pass unexamined) is still
-  // satisfied: absorbPromotedPhases writes a promotion into the ON-DISK
-  // record itself, so the next read-back — and therefore lastReadableRecord —
-  // already reflects it by the time this decision is taken; no separate
-  // "opening set plus promotions" list is needed to account for it.
+  /*
+   * Step 4 — Completion decision, taken FROM THE RECORD (BO-400a-2-ii/-iii)
+   * BUG-22: the observed run's payload named four completed batches while every
+   * ticket in the store still read `status: todo`. The work was real and
+   * committed; the record claimed nothing happened, which blocks the epic
+   * archive check. The missing half is this write — and its boundary: the write
+   * happens only when the ticket's OWN record proves every needed phase passed.
+   * BO-400e-1: no `basePhases` here. The required set is derived below purely
+   * from `lastReadableRecord` — the most recent READABLE read-back of the
+   * ticket's own record — never from `plannedPhaseNames` (this drive's own
+   * dispatch tally). `record: lastRecord` still decides the readable/
+   * unreadable branch itself (see concludeTicket's header). BO-3700's concern
+   * (a phase promoted to needed mid-drive must not pass unexamined) is still
+   * satisfied: absorbPromotedPhases writes a promotion into the ON-DISK
+   * record itself, so the next read-back — and therefore lastReadableRecord —
+   * already reflects it by the time this decision is taken; no separate
+   * "opening set plus promotions" list is needed to account for it.
+   */
   const ticketOutcome = await concludeTicket({
     recordPath: worktreeTicketPath,
     title,
@@ -2540,7 +2555,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
     noPhasesToRun: false,
   });
   // TQ-500f-3-ii: additive; surfaces the gate's recorded outcome, never a completion signal.
-  return { ...ticketOutcome, red_baseline_gate: redBaselineGateOutcome };
+  return { ...ticketOutcome, red_baseline_gate: redBaselineGateOutcome, wrong_version_outcome: wrongVersionOutcome };
 }
 
 // ---------------------------------------------------------------------------
@@ -2884,12 +2899,16 @@ function prerequisiteStateFromOutcome(outcome) {
   return "no_outcome_recorded";
 }
 
-// ---------------------------------------------------------------------------
 // Phase 1 — Build: route to epic or single-ticket flow
-// ---------------------------------------------------------------------------
-
 phase("Build");
-
+// BO-4400f-1: a shell step (ADR-030) creates this run's labelled scratch item, owned by $PPID; process-starting
+// dispatches get scratchEnvNote so temp files land there. Fail-open: no item, no note. TWIN: build-ticket.js.
+const scratchItem = ((await agent('Run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "build-feature-$PPID" build-feature --owner-pid $PPID', { agentType: "status-checker", label: "scratch-item", phase: "Build", schema: { "type": "object", "properties": { "item": { "type": ["string", "null"] } } } })) || {}).item;
+const scratchEnvNote = typeof scratchItem === "string" && scratchItem ? `\n\nSCRATCH (BO-4400f-1): start every process with TMPDIR, TEMP and TMP set to "${scratchItem}"; never write scratch into the project root, debugging/logs/, test-logs/ or the system temp folder.` : "";
+if (wvResumed) {
+  const wvHead = await wvRecover(wvStem(worktreeTarget));
+  if (wvHead) return { status: "blocked", message: `${wvHead.message}. No ticket was dispatched.`, resolved_target: resolvedTarget, classification: "halt", ...wvHaltFields(wvHead) };
+}
 if (target_type === "epic") {
   // -----------------------------------------------------------------------
   // Epic path: planner + parallel batch dispatch (flattened per-phase driver)
@@ -2920,9 +2939,13 @@ if (target_type === "epic") {
   // per ticket).
   // -----------------------------------------------------------------------
   const worktreeEpicPath = toWorktreePath(repoRelativeTicketPath(epic_path || target), realWorktreePath);
-
+  const inWorktree = (paths) => (paths || []).map((p) => toWorktreePath(p, realWorktreePath)).filter(Boolean);
   const BATCH_SIZE = 12;
   const completedBatches = [];
+  // BO-100e-4 — run-level accumulators: a halt no longer ends the run, so
+  // these carry across batches and looks into the one final return.
+  const haltedAll = [], incompleteAll = [], unbuiltAll = [];
+  let firstHaltBatch = null, haltStop = null, leftoverFiles = new Set();
 
   // This run's OWN record of each ticket's verdict, keyed by worktree path.
   // `true` only for an affirmative `ticket_completed` (BO-100e-1-i reuses
@@ -2955,16 +2978,11 @@ if (target_type === "epic") {
   // prerequisite finishes) is still part of what the completion-time re-read
   // below is compared against.
   //
-  // BO-100e-1's own scope boundary against BO-300a-5 (done), restated because
-  // it is easy to blur with the paragraph above: a path is folded in here
-  // ONLY after passing the FIRST-LOOK RUN-SET LOCK below, which is what makes
-  // this an admitted set rather than simply "everything any look ever said".
-  // Look 1's own offer is admitted unconditionally — it defines the set this
-  // run started with. A later look's offer is admitted only when it links
-  // back into what THIS variable already holds (see the lock's own comment).
-  // A path the lock rejects is never folded in here, which is exactly what
-  // keeps it visible to `discovered_after_planning` at the completion-time
-  // re-read below instead of being silently absorbed.
+  // BO-100e-1's scope boundary against BO-300a-5 (done): a path is folded in
+  // here ONLY after passing the FIRST-LOOK RUN-SET LOCK below. Look 1's offer
+  // is admitted unconditionally; a later look's only if look 1 enumerated it
+  // (or, degraded, if its depends_on links into this set). A rejected path
+  // stays visible to `discovered_after_planning` at the completion re-read.
   const plannedTicketPaths = [];
 
   // The epic's full contents as look 1 found them — the run set, frozen.
@@ -2993,7 +3011,7 @@ if (target_type === "epic") {
   let epicTitle = worktreeEpicPath;
   let lookNumber = 0;
 
-  while (true) {
+  epicLoop: while (true) {
     lookNumber += 1;
 
     // What THIS look re-decides against: not what had finished when the run
@@ -3013,6 +3031,7 @@ if (target_type === "epic") {
       `(5) If nothing further is eligible right now, return an empty batches list — that is a valid, expected answer, and it ends this drive's search for more work. ` +
       `(6) Also return already_done: the absolute paths of every sub-ticket you OMITTED at step (4) because its own frontmatter already reads status: done. This is the set you just computed in order to omit it — report it rather than discarding it. Return [] if none. ` +
       `(7) Also return enumerated: the absolute path of EVERY NN_*.md sub-ticket the folder contains right now, whatever its status and whether or not it is eligible yet — including the ones you omitted at step (4) and the ones not yet ready at step (2). This is the folder's full contents, not a selection. ` +
+      `(8) Each ticket item in batches also carries source_ac: the ticket's source_ac frontmatter as an array of strings, and [] when it has none; always return the key. ` +
       `Return a JSON object with: epic_path, title, batches, already_done, enumerated. Return ONLY the JSON object.`,
       {
         agentType: "status-checker",
@@ -3028,30 +3047,14 @@ if (target_type === "epic") {
       epicTitle = plan.title;
     }
 
-    // Work that was already finished before this run began. Kept SEPARATE
-    // from completedTicketOutcomes on purpose: that map is this run's own
-    // first-hand verdict, and folding a frontmatter reading into it would
-    // erase the difference between "this drive watched it succeed" and "the
-    // record says it succeeded". The eligibility gate below needs both to
-    // count as satisfied, and the withheld report needs to be able to say
-    // which kind of evidence it had.
-    for (const donePath of plan.already_done || []) {
-      const normalized = toWorktreePath(donePath, realWorktreePath);
-      if (normalized) {
-        priorCompletedPaths.add(normalized);
-      }
-    }
+    // Already done before this run began; kept apart from completedTicketOutcomes (see priorCompletedPaths).
+    inWorktree(plan.already_done).forEach((p) => priorCompletedPaths.add(p));
 
     // Freeze the run set from the FIRST look only. Later looks re-enumerate a
     // folder that may have grown; taking their word for it would defeat the
     // point of fixing the set at all.
     if (!runSetFrozen) {
-      for (const seenPath of plan.enumerated || []) {
-        const normalized = toWorktreePath(seenPath, realWorktreePath);
-        if (normalized) {
-          runSetPaths.add(normalized);
-        }
-      }
+      inWorktree(plan.enumerated).forEach((p) => runSetPaths.add(p));
       // Freeze only once something was actually enumerated. `enumerated` is
       // not in PLANNER_SCHEMA's `required` list, so a minimally-compliant
       // reply can omit it — and latching on that would drop the REST of the
@@ -3077,60 +3080,24 @@ if (target_type === "epic") {
     // principle one level up: re-check rather than trust the planner got it
     // right.
     //
-    // FIRST-LOOK RUN-SET LOCK (the second condition below) is the fix for the
-    // separate regression this ticket exists to close: a later look's own
-    // enumeration re-reads the epic folder fresh, so it may legitimately
-    // contain a path no EARLIER look ever offered, for either of two reasons
-    // that are NOT distinguishable by path alone:
-    //
-    //   * a genuine next LAYER of the set this run started with — a chain
-    //     member whose own depends_on names something this run has already
-    //     admitted (`plannedTicketPaths`) or that was already done before
-    //     this run began (`priorCompletedPaths`), unlocked now that its
-    //     prerequisite finished. This is the ENTIRE reason the loop keeps
-    //     looking (BO-100e-1's own criterion) and must still be driven.
-    //   * work ADDED to the epic folder after this run began — no such link.
-    //     Absorbing this is BO-300a-5's (done) job to prevent: that work must
-    //     be reported via `discovered_after_planning` at the completion-time
-    //     re-read, never silently driven by a later look.
-    //
-    // `readTicketRecordBack` is the SAME helper the (unchanged) eligibility
-    // gate below already dispatches per driven ticket to read depends_on —
-    // reused here, before this ticket ever reaches that gate, so a path that
-    // fails the link check is dropped BEFORE it is ever driven, not merely
-    // withheld after being dispatched.
+    // FIRST-LOOK RUN-SET LOCK (second condition below): see runSetPaths for why look 1's enumeration decides it.
     //
     // `lookNumber > 1` guards it because look 1's own offer is unconditional:
     // it IS the set this run started with, by definition, with nothing yet
     // in `plannedTicketPaths` to link back into.
     //
-    // Deliberately checked against `plannedTicketPaths`, not against a value
-    // reset or widened by anything THIS look contributes — the lookup below
-    // reads it before this look's own survivors are folded in further down,
-    // so it only ever reflects what EARLIER looks admitted. Constraining
-    // against a set that included this look's own offer would make the check
-    // trivially satisfiable by a ticket linking to a SIBLING in the same
-    // batch, which is not what "admitted by an earlier look" means; reusing
-    // `plannedTicketPaths` any other way (e.g. testing raw membership of the
-    // offered path itself, rather than its depends_on) would reject every
-    // legitimate next layer outright, since a next layer is by definition
-    // something no earlier look named yet — that is the no-op-in-the-other-
-    // direction this comment's sibling warns about.
-    //
     // Filter every batch's own ticket list — using the SAME toWorktreePath
     // normalisation the surrounding code uses — before it is folded into
     // `releasedThisLook`/`plannedTicketPaths` or driven below.
-    let anyRawTicketOffered = false;
-    let anyTicketRemainsAfterDedup = false;
+    // A look whose every offer this filter removes releases nothing, so the
+    // termination check below ends the run rather than spinning on stale offers.
     for (const plannedBatch of batches) {
       const rawTickets = plannedBatch.tickets || [];
-      if (rawTickets.length > 0) {
-        anyRawTicketOffered = true;
-      }
       const dedupedTickets = [];
       for (const t of rawTickets) {
         const normalized = toWorktreePath(t.path, realWorktreePath);
-        if (normalized && completedTicketOutcomes[normalized] === true) {
+        // BO-100e-4 — any recorded verdict (halt or withhold too) means never re-driven.
+        if (normalized && Object.prototype.hasOwnProperty.call(completedTicketOutcomes, normalized)) {
           continue;
         }
         if (lookNumber > 1 && normalized && plannedTicketPaths.indexOf(normalized) === -1) {
@@ -3173,32 +3140,10 @@ if (target_type === "epic") {
       // keeps its existing zero-count record).
       plannedBatch._dedupEmptiedByFilter = rawTickets.length > 0 && dedupedTickets.length === 0;
       plannedBatch.tickets = dedupedTickets;
-      if (dedupedTickets.length > 0) {
-        anyTicketRemainsAfterDedup = true;
-      }
-    }
-    if (anyRawTicketOffered && !anyTicketRemainsAfterDedup) {
-      // Every ticket this look offered was already recorded complete by
-      // this run — nothing new was actually released, even though the
-      // planner did not itself return an empty `batches` list. Treat this
-      // exactly like an empty planner reply so the existing termination
-      // logic below ends the run instead of spinning on stale offers.
-      batches = [];
     }
 
-    const releasedThisLook = [];
-    for (const plannedBatch of batches) {
-      for (const plannedTicket of plannedBatch.tickets || []) {
-        const normalized = toWorktreePath(plannedTicket.path, realWorktreePath);
-        if (!normalized) continue;
-        if (plannedTicketPaths.indexOf(normalized) === -1) {
-          plannedTicketPaths.push(normalized);
-        }
-        if (releasedThisLook.indexOf(normalized) === -1) {
-          releasedThisLook.push(normalized);
-        }
-      }
-    }
+    const releasedThisLook = [...new Set(inWorktree(batches.flatMap((b) => (b.tickets || []).map((t) => t.path))))];
+    releasedThisLook.forEach((p) => plannedTicketPaths.indexOf(p) === -1 && plannedTicketPaths.push(p));
 
     lookRecords.push({
       look_number: lookNumber,
@@ -3206,36 +3151,17 @@ if (target_type === "epic") {
       released_count: releasedThisLook.length,
     });
 
-    // TERMINATE ON WHAT WAS RELEASED, NOT ON THE SHAPE OF THE CONTAINER.
-    //
-    // This was `batches.length === 0`, which asks whether the planner sent any
-    // batch OBJECTS — not whether any of them offered work. A reply of
-    // `batches: [{batch_number: 1, tickets: []}]` is valid under
-    // PLANNER_SCHEMA (`tickets` has no minItems) and is a plausible compliance
-    // slip against step (5), which asks for an empty LIST. It offers nothing,
-    // so `anyRawTicketOffered` stays false and the reset above never fires;
-    // it has length 1, so the old test never fired either. The look released
-    // nothing, changed nothing, and went back to the top to ask an unchanged
-    // question — an unbounded spin with no cap and no operator-visible error.
-    // Harmless before this loop existed, because the planner ran exactly once.
-    //
-    // `releasedThisLook` is the direct answer and is already computed above.
-    // It is empty in every case the old test caught (no batches at all; every
-    // batch emptied by the dedup or run-set filter) and also in the case it
-    // missed, so this subsumes the old condition rather than sitting beside it.
-    // A look that released nothing cannot be made to release something by
-    // asking again with the same inputs — that is the loop's own premise.
+    // TERMINATE ON WHAT WAS RELEASED, NOT ON THE SHAPE OF THE CONTAINER: a
+    // reply of `batches: [{tickets: []}]` is valid under PLANNER_SCHEMA and offers
+    // nothing, yet has length 1 — testing `batches.length === 0` spun unbounded.
+    // `releasedThisLook` is empty in every such case, and a look that released
+    // nothing cannot release something by asking again with the same inputs.
     if (releasedThisLook.length === 0) {
       if (lookNumber === 1) {
         // The EXISTING empty-plan return, unchanged in substance: nothing was
         // ever eligible, or the epic is genuinely empty / already done.
-        // BO-300a-5-iii — the completed set is passed at ALL FOUR call sites, not
-        // only the two that can exhibit the bug today. This return ran no batches,
-        // so its record of completed work is empty BY CONSTRUCTION and it reports no
-        // `completed_batches` at all. Passing the literal empty set (rather than
-        // reaching for a `completedBatches` that is not yet in scope here) states
-        // that emptiness explicitly and keeps the partition's one input the same
-        // shape at every site.
+        // BO-300a-5-iii — no batch ran, so the completed set is empty BY
+        // CONSTRUCTION; the literal [] states that explicitly.
         const emptyRecheck = epicRecheckReport(
           compareEpicTicketSets(
             plannedTicketPaths,
@@ -3265,6 +3191,7 @@ if (target_type === "epic") {
             run_set: plannedTicketPaths.slice(),
             ended_because: "no_further_work_eligible",
             unbuilt: [],
+            knowledge_routing: knowledgeRoutingSummary(),
           },
           emptyRecheck.fields
         );
@@ -3294,8 +3221,9 @@ if (target_type === "epic") {
 
       const batchResults = [];
 
-      for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
-        const chunk = tickets.slice(i, i + BATCH_SIZE);
+      const chunkSize = tickets.every((t) => t && Array.isArray(t.source_ac) && t.source_ac.length === 0) ? BATCH_SIZE : 1;
+      for (let i = 0; i < tickets.length; i += chunkSize) {
+        const chunk = tickets.slice(i, i + chunkSize);
 
         // BO-100e-1-i — FAIL-CLOSED ELIGIBILITY GATE, keyed on EACH TICKET'S
         // OWN DECLARED depends_on — never on its position in the batch. A
@@ -3318,15 +3246,8 @@ if (target_type === "epic") {
         // batch, an earlier batch or look of this drive, or work that was
         // already done before this drive began — before doing any real work.
         //
-        // WHAT THIS GATE COSTS, stated plainly because an earlier draft of
-        // this comment claimed it was free and that was false: every ticket
-        // pays ONE readTicketRecordBack dispatch, independent ones included,
-        // because depends_on cannot be consulted without first reading the
-        // record that names it. Only the WITHHOLDING is conditional, not the
-        // read. That is a real per-ticket cost on the common case and it is
-        // the honest price of not trusting the planner blindly; if it needs
-        // to come down, the fix is to carry depends_on in the enumeration the
-        // run already performs, not to pretend the dispatch is not happening.
+        // COST: every ticket pays ONE readTicketRecordBack dispatch (it also
+        // supplies depends_on and files_touched); only the WITHHOLDING is conditional.
         const chunkOutcomesByPath = {};
         const chunkThunks = chunk.map((ticket) => {
           /*
@@ -3346,13 +3267,10 @@ if (target_type === "epic") {
             chunkOutcomesByPath[ticket.path] = refusedOutcome;
             return () => refusedOutcome;
           }
-
           const worktreeTicketPath = toWorktreePath(ticket.path, realWorktreePath);
-
           const outcomePromise = (async () => {
             const dependencyRecord = await readTicketRecordBack(worktreeTicketPath);
             const dependsOn = (await Promise.all((Array.isArray(dependencyRecord && dependencyRecord.depends_on) ? dependencyRecord.depends_on : []).map((p) => resolveDependsOnPath(p, worktreeTicketPath, realWorktreePath)))).map((r) => r.resolved || r.reported).filter((p) => p && p !== worktreeTicketPath);
-
             const withheldBy = [];
             const prerequisiteStates = {};
             for (const depPath of dependsOn) {
@@ -3403,24 +3321,26 @@ if (target_type === "epic") {
                 withheldBy.push(depPath);
               }
             }
-
-            if (withheldBy.length > 0) {
+            // BO-100e-4 — files an earlier halt left modified in the worktree.
+            const sharedFiles = (Array.isArray(dependencyRecord && dependencyRecord.files_touched) ? dependencyRecord.files_touched : []).filter((f) => leftoverFiles.has(f));
+            if (withheldBy.length > 0 || sharedFiles.length > 0) {
               // WITHHELD. Never reaches driveTicketPhases — no phase agent
               // for this ticket is ever dispatched.
               return {
                 ticket_path: ticket.path,
                 status: "withheld",
                 withheld_by: withheldBy,
+                withheld_by_shared_files: sharedFiles,
                 prerequisite_states: prerequisiteStates,
                 result: null,
               };
             }
-
             // Drive each ticket through its needed phases using the flattened
             // per-phase driver (driveTicketPhases) so each phase runs under its
             // own agent template. No ticket-supervisor is dispatched here.
             // isEpicMember=true → the per-ticket pull-request phase is deferred;
             // finalize-feature opens the single epic-level PR.
+            if (chunk.length > 1) wvParallelTickets.add(worktreeTicketPath);
             const result = await driveTicketPhases(worktreeTicketPath, true);
             return {
               ticket_path: ticket.path,
@@ -3436,25 +3356,11 @@ if (target_type === "epic") {
           chunkOutcomesByPath[worktreeTicketPath] = outcomePromise;
           return () => outcomePromise;
         });
-
         const chunkResults = await parallel(chunkThunks);
-
-        for (let idx = 0; idx < chunkResults.length; idx += 1) {
-          const r = chunkResults[idx];
-          if (r) {
-            batchResults.push(r);
-          } else {
-            // parallel() resolves a thunk that threw to null. Silently dropping it
-            // would remove the ticket from the batch record altogether — the run
-            // would report a smaller batch rather than a failure. Record it as
-            // undetermined so the halt filter below sees it.
-            batchResults.push({
-              ticket_path: chunk[idx] && chunk[idx].path,
-              status: "undetermined",
-              result: null,
-            });
-          }
-        }
+        // parallel() resolves a thunk that threw to null: record it undetermined so the halt
+        // filter below sees a failure, rather than dropping it and reporting a smaller batch.
+        const settledChunk = chunkResults.map((r, idx) => r || { ticket_path: chunk[idx] && chunk[idx].path, status: "undetermined", result: null });
+        batchResults.push(...settledChunk);
 
         // Fold THIS chunk's verdicts in before the next chunk starts.
         //
@@ -3465,27 +3371,10 @@ if (target_type === "epic") {
         // update waited until every chunk had finished — the prerequisite
         // would read `not_in_run_set` and the dependant would be withheld
         // even though it had just succeeded. Recording per chunk closes that
-        // window; the batch-level pass below is what the NEXT look reads.
-        for (const r of chunkResults) {
-          if (!r) continue;
+        // window, and it is also what the NEXT look's prompt reads back.
+        for (const r of settledChunk) {
           const settled = toWorktreePath(r.ticket_path, realWorktreePath);
-          if (settled) {
-            completedTicketOutcomes[settled] = !!(
-              r.result && r.result.ticket_completed === true
-            );
-          }
-        }
-      }
-
-      // Record THIS look's own verdict for every ticket it touched — the
-      // input the NEXT look's prompt above reads back as
-      // `completedBeforeThisLook`.
-      for (const r of batchResults) {
-        const normalized = toWorktreePath(r.ticket_path, realWorktreePath);
-        if (normalized) {
-          completedTicketOutcomes[normalized] = !!(
-            r.result && r.result.ticket_completed === true
-          );
+          if (settled) completedTicketOutcomes[settled] = !!(r.result && r.result.ticket_completed === true);
         }
       }
 
@@ -3494,255 +3383,83 @@ if (target_type === "epic") {
       // withheld ticket never attempted anything of its own.
       const withheldResults = batchResults.filter((r) => r.status === "withheld");
 
-      const haltedTickets = batchResults.filter(
+      // A ticket whose drive returned nothing usable ("undetermined") has NOT completed.
+      const haltedTickets = batchResults.filter((r) => ["failed", "blocked", "halt", "error", "undetermined"].includes(r.status));
+
+      // BO-400e-2 — a ticket that SUCCEEDED in the very same batch as a halted
+      // or withheld sibling is reported completed, on the identical real
+      // `ticket_completed === true` verdict `completedTicketOutcomes` trusts.
+      // Every batch is recorded ONCE here, successes only (BO-100e-4: a halt no
+      // longer returns, so there is no second push to double-count).
+      const succeededInBatch = batchResults.filter(
         (r) =>
-          r.status === "failed" ||
-          r.status === "blocked" ||
-          r.status === "halt" ||
-          r.status === "error" ||
-          // A ticket whose drive returned nothing usable has NOT completed.
-          r.status === "undetermined"
+          haltedTickets.indexOf(r) === -1 &&
+          !!(r.result && r.result.ticket_completed === true)
       );
-
-      if (haltedTickets.length > 0 || withheldResults.length > 0) {
-        // outstanding_phases / unverified_phases are carried through, not just the
-        // prose message. A ticket the drive ran but could not confirm now reports
-        // a failure status (see buildTicketOutcome), so it arrives here rather
-        // than in the incomplete-member branch below — and BO-400a-2-iii's
-        // requirement is that the operator be told WHICH phase to fix, which the
-        // message alone leaves them to parse out of a sentence.
-        const haltSummary = haltedTickets.map((r) => ({
-          ticket_path: r.ticket_path,
-          status: r.status,
-          error: r.error || (r.result && r.result.message) || "unknown error",
-          outstanding_phases: (r.result && r.result.outstanding_phases) || [],
-          unverified_phases: (r.result && r.result.unverified_phases) || [],
-        }));
-
-        // BO-100e-1-i — every withheld piece, named with the prerequisite
-        // that withheld it. This is the `unbuilt` field BO-100e's
-        // config_schema_fragment defines for the whole family.
-        const unbuiltSummary = withheldResults.map((r) => ({
-          ticket_path: r.ticket_path,
-          eligible: false,
-          withheld_by: r.withheld_by || [],
-          prerequisite_states: r.prerequisite_states || {},
-        }));
-
-        // BO-400e-2 — a ticket that SUCCEEDED in the very same batch as a
-        // halted or withheld sibling must be reported completed, not folded
-        // into this halted return's "not built" accounting merely because it
-        // shares a batch with a ticket that did not. Before this batch's
-        // members are compared against `completedBatches` below, push this
-        // batch's own successes into it — the identical, real
-        // `ticket_completed === true` verdict `completedTicketOutcomes`
-        // above already trusts for the SAME purpose. A driver that only
-        // ever records completed work at the bottom of an un-halted batch
-        // (see the `completedBatches.push` after this whole `if`) silently
-        // drops every success that happens to land beside a failure, which
-        // is "a mechanism that has simply stopped writing" for that one
-        // ticket, one batch at a time — the exact failure mode this AC's
-        // control-ticket case exists to catch.
-        const succeededInBatch = batchResults.filter(
-          (r) =>
-            haltedTickets.indexOf(r) === -1 &&
-            withheldResults.indexOf(r) === -1 &&
-            !!(r.result && r.result.ticket_completed === true)
-        );
-        if (succeededInBatch.length > 0) {
-          completedBatches.push({
-            batch_number: batchNumber,
-            tickets_completed: succeededInBatch.length,
-            tickets: succeededInBatch.map((r) => r.ticket_path),
-          });
-        }
-
-        // BO-300a-5-iii — THIS is the return that can actually exhibit both kinds
-        // of removal at once. At the two epic COMPLETION returns the planned and
-        // completed sets are necessarily equal (or both empty), so an uncompleted
-        // removal is unreachable there; here, earlier batches are already in
-        // `completedBatches` while this batch's members are not (except for this
-        // batch's own successes, folded in immediately above). It carries the
-        // same `no_longer_present` field and used to carry the same "were not
-        // built" sentence, so a partition applied only to the completion returns
-        // would leave the defect live at the one site that can show it.
-        // Hoisted out of the epicRecheckReport() call so the unbuilt-count
-        // block below can reuse both halves. Same comparison, same inputs.
-        const cmpForHalt = compareEpicTicketSets(
-          plannedTicketPaths,
-          await recheckEpicTicketSet(worktreeEpicPath),
-          realWorktreePath
-        );
-        const completedForHalt = completedWorkPaths(completedBatches, realWorktreePath);
-        const haltRecheck = epicRecheckReport(cmpForHalt, completedForHalt);
-
-        // BO-300d-1 — KI-BO-025: `plannedTicketPaths` already contains every
-        // ticket from EVERY batch the planner computed, including batches
-        // after the one that just halted. Those later-batch tickets are still
-        // plan members and still present in the epic folder, so `cmpForHalt`
-        // classifies them as neither an addition nor a removal and
-        // `epicRecheckReport` says nothing about them at all — only the
-        // ticket(s) that failed IN THIS BATCH are named, via `haltSummary`.
-        // This names the rest explicitly, by identity, and states the count,
-        // so the operator does not compare the plan against the folder by hand.
-        const haltedPathsThisBatch = haltedTickets
-          .map((r) => toWorktreePath(r.ticket_path, realWorktreePath))
-          .filter(Boolean);
-        const withheldPathsThisBatch = withheldResults
-          .map((r) => toWorktreePath(r.ticket_path, realWorktreePath))
-          .filter(Boolean);
-        const notYetAttemptedPaths = plannedTicketPaths.filter(
-          (p) =>
-            completedForHalt.indexOf(p) === -1 &&
-            haltedPathsThisBatch.indexOf(p) === -1 &&
-            cmpForHalt.removals.indexOf(p) === -1
-        );
-        // COUNT THE NAMED SET, DO NOT SUBTRACT (BO-300d-1) — the stated number
-        // is the cardinality of this set, not total-minus-built, so the count
-        // and the names it is drawn from cannot disagree.
-        //
-        // DE-DUPLICATED ACROSS ALL SOURCES. A piece of work is unbuilt once,
-        // however many ways the run noticed it: a ticket that fails in THIS
-        // batch and is also gone from the folder at the re-read lands in two
-        // of these lists, and concatenating would count and print it twice —
-        // breaking the very invariant the paragraph above claims.
-        //
-        // WITHHELD TICKETS ARE INCLUDED (BO-100e-1-i, added on top of what
-        // BO-300d-1 shipped). A ticket the eligibility gate withheld was never
-        // dispatched, so it is unbuilt in exactly the sense this count is
-        // about. It is already covered by `notYetAttemptedPaths` whenever it
-        // is a plan member, but it is listed explicitly so the set does not
-        // depend on that coincidence holding.
-        const unbuiltNamedPaths = [
-          ...new Set([
-            ...haltedPathsThisBatch,
-            ...withheldPathsThisBatch,
-            ...notYetAttemptedPaths,
-            ...(haltRecheck.fields.discovered_after_planning || []),
-            ...(haltRecheck.fields.no_longer_present_not_completed || []),
-          ]),
-        ];
-        const unbuiltCount = unbuiltNamedPaths.length;
-
-        return Object.assign(
-          {
-            status: "blocked",
-            message:
-              `Epic "${epicTitle}" halted at batch ${batchNumber} — ` +
-              `${haltedTickets.length} ticket(s) failed or blocked` +
-              (withheldResults.length > 0
-                ? `, ${withheldResults.length} withheld pending an unsatisfied prerequisite`
-                : "") +
-              `.` +
-              (haltRecheck.headline ? ` Also: ${haltRecheck.headline}.` : "") +
-              (unbuiltCount > 0
-                ? ` ${unbuiltCount} piece(s) of work in total were not built: ` +
-                  `${unbuiltNamedPaths.join(", ")}.`
-                : "") +
-              haltRecheck.suffix,
-            epic_path: worktreeEpicPath,
-            title: epicTitle,
-            worktree_path: realWorktreePath,
-            resolved_target: resolvedTarget,
-            halted_at_batch: batchNumber,
-            halted_tickets: haltSummary,
-            unbuilt: unbuiltSummary,
-            completed_batches: completedBatches,
-            looks: lookNumber,
-            look_records: lookRecords,
-            run_set: plannedTicketPaths.slice(),
-            ended_because: "halted",
-            suggested_action:
-              "Review the ## Comments section of each halted ticket for the blocker details. " +
-              "Resolve the blocker(s) and re-run /build-feature to resume.",
-          },
-          haltRecheck.fields,
-          { epic_complete: false }
-        );
+      if (succeededInBatch.length > 0) {
+        completedBatches.push({
+          batch_number: batchNumber,
+          tickets_completed: succeededInBatch.length,
+          tickets: succeededInBatch.map((r) => r.ticket_path),
+        });
       }
 
-      // A ticket that ran every phase but could NOT be confirmed complete against
-      // its own record (BO-400a-2-iii) is not completed work, even though its
-      // phase loop did not halt. It must not be counted into completed_batches —
-      // that count is what the operator and the archive check read.
-      //
-      // BACKSTOP, deliberately kept. Every per-ticket exit now reports a failure
-      // status when it could not confirm the ticket, so an unconfirmed member is
-      // normally caught by the halted filter above and this branch is not
-      // reached. It stays because `ticket_completed === true` is the actual
-      // machine-readable verdict, and the failure this guards against is exactly
-      // a future exit that returns `ok` without ever setting it — which is the
-      // defect the no-phases-to-run path shipped with.
+      // BO-400a-2-iii BACKSTOP: a ticket that ran every phase but is not
+      // recorded complete is unconfirmed work, not completed work.
       const incompleteTickets = batchResults.filter(
-        (r) => !(r.result && r.result.ticket_completed === true)
+        (r) => r.result && haltedTickets.indexOf(r) === -1 && r.result.ticket_completed !== true
       );
 
-      if (incompleteTickets.length > 0) {
-        const incompleteSummary = incompleteTickets.map((r) => ({
-          ticket_path: r.ticket_path,
-          outstanding_phases: (r.result && r.result.outstanding_phases) || [],
-          unverified_phases: (r.result && r.result.unverified_phases) || [],
-          detail: (r.result && r.result.message) || "no detail reported",
-        }));
-
-        // BO-300a-5-iii — the fourth consumer of the same report. It is a
-        // backstop that is not normally reached (see the note above), which is
-        // exactly why it must be passed the completed set too: a site that is
-        // inert today is the site a future change makes load-bearing, and this
-        // whole record exists because the last three defects were each an inert
-        // path a remedy activated without extending the guard to it.
-        const incompleteRecheck = epicRecheckReport(
-          compareEpicTicketSets(
-            plannedTicketPaths,
-            await recheckEpicTicketSet(worktreeEpicPath),
-            realWorktreePath
-          ),
-          completedWorkPaths(completedBatches, realWorktreePath)
-        );
-
-        return Object.assign(
-          {
-            status: "blocked",
-            message:
-              `Epic "${epicTitle}" is NOT complete — ${incompleteTickets.length} ` +
-              `ticket(s) in batch ${batchNumber} ran their phases without being ` +
-              `recorded complete in their own records.` +
-              (incompleteRecheck.headline ? ` Also: ${incompleteRecheck.headline}.` : "") +
-              incompleteRecheck.suffix,
-            epic_path: worktreeEpicPath,
-            title: epicTitle,
-            worktree_path: realWorktreePath,
-            resolved_target: resolvedTarget,
-            halted_at_batch: batchNumber,
-            incomplete_tickets: incompleteSummary,
-            unbuilt: [],
-            completed_batches: completedBatches,
-            looks: lookNumber,
-            look_records: lookRecords,
-            run_set: plannedTicketPaths.slice(),
-            ended_because: "halted",
-            suggested_action:
-              "For each ticket above, a needed phase is outstanding in the ticket's " +
-              "own record — most often a gate that ran, returned success and left no " +
-              "sign-off. Re-run that phase (or add the sign-off it owes) and re-run " +
-              "/build-feature; the ticket stays out of the completed set until its " +
-              "record can prove every needed phase passed.",
-          },
-          incompleteRecheck.fields,
-          { epic_complete: false }
-        );
+      if (haltedTickets.length + withheldResults.length + incompleteTickets.length === 0) {
+        continue;
       }
 
-      completedBatches.push({
-        batch_number: batchNumber,
-        tickets_completed: batchResults.length,
-        tickets: batchResults.map((r) => r.ticket_path),
+      // BO-100e-4 — a halt no longer ends the run: halted, incomplete and
+      // withheld tickets accumulate and ONE final return reports them, with
+      // the phases to fix (BO-400a-2-iii).
+      firstHaltBatch = firstHaltBatch === null ? batchNumber : firstHaltBatch;
+      const summarise = (r) => ({
+        ticket_path: r.ticket_path,
+        status: r.status,
+        error: r.error || (r.result && r.result.message) || "unknown error",
+        outstanding_phases: (r.result && r.result.outstanding_phases) || [],
+        unverified_phases: (r.result && r.result.unverified_phases) || [],
       });
+      haltedAll.push(...haltedTickets.map(summarise));
+      incompleteAll.push(...incompleteTickets.map(summarise));
+      // BO-100e-1-i — the `unbuilt` field: each withheld piece and what withheld it.
+      unbuiltAll.push(...withheldResults.map((r) => ({
+        ticket_path: r.ticket_path,
+        eligible: false,
+        withheld_by: r.withheld_by || [],
+        withheld_by_shared_files: r.withheld_by_shared_files || [],
+        prerequisite_states: r.prerequisite_states || {},
+      })));
+      if (haltedTickets.length + incompleteTickets.length === 0) {
+        continue; // withheld alone leaves nothing new behind in the worktree
+      }
+
+      // BO-100e-4, F4 Option A — read the dirty state ONCE per halting batch.
+      // The commit agent commits whatever is staged, so STAGED leftovers stop
+      // the run, and so does an unreadable state (fail closed). Otherwise the
+      // leftover set is REPLACED, not unioned: dirty state is whole-worktree.
+      const dirty = realWorktreePath
+        ? await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py dirty "${realWorktreePath}"`, "worktree-dirty")
+        : null;
+      const dirtyReadable = !!dirty && dirty.readable === true &&
+        ["staged", "unstaged", "untracked"].every((k) => Array.isArray(dirty[k]));
+      if (!dirtyReadable || dirty.staged.length > 0) {
+        haltStop = dirtyReadable
+          ? { note: ` Stopped: batch ${batchNumber} left staged changes the next commit would sweep in: ${dirty.staged.join(", ")}.`, fields: { staged_leftovers: dirty.staged } }
+          : { note: ` Stopped: the worktree state could not be read after batch ${batchNumber}, so leftover changes cannot be ruled out.`, fields: { dirty_state_unreadable: true } };
+        break epicLoop;
+      }
+      leftoverFiles = new Set([...dirty.unstaged, ...dirty.untracked]);
     }
   }
 
-  // Reached only when a look — never the first — released nothing new: the
-  // search for further work has genuinely ended.
+  // Reached when a look — never the first — released nothing new (the search
+  // for further work has genuinely ended), or when a halt stopped the run.
   const totalTickets = completedBatches.reduce(
     (sum, b) => sum + (b.tickets_completed || 0),
     0
@@ -3758,14 +3475,58 @@ if (target_type === "epic") {
   // was not built, all certified with `status: "ok"` and `epic_complete: true`.
   // The completed set below is the same accumulator this return reports under
   // `completed_batches`, so the payload is now judged against its own record.
-  const finalRecheck = epicRecheckReport(
-    compareEpicTicketSets(
-      plannedTicketPaths,
-      await recheckEpicTicketSet(worktreeEpicPath),
-      realWorktreePath
-    ),
-    completedWorkPaths(completedBatches, realWorktreePath)
+  const finalCmp = compareEpicTicketSets(
+    plannedTicketPaths,
+    await recheckEpicTicketSet(worktreeEpicPath),
+    realWorktreePath
   );
+  const completedPaths = completedWorkPaths(completedBatches, realWorktreePath);
+  const finalRecheck = epicRecheckReport(finalCmp, completedPaths);
+
+  // BO-100e-4 — the ONE return for every halted run (a halted, withheld or
+  // unconfirmed ticket, a staged-leftovers stop, an unreadable worktree).
+  let haltFields = {};
+  if (firstHaltBatch !== null) {
+    // BO-300d-1 — COUNT THE NAMED SET, DO NOT SUBTRACT, DE-DUPLICATED across
+    // sources; withheld tickets (BO-100e-1-i) are unbuilt too. BO-300a-5-iii:
+    // the recheck partition applies at this return as well.
+    const pathsOf = (list) => inWorktree(list.map((r) => r.ticket_path));
+    const unbuiltNamedPaths = [
+      ...new Set([
+        ...pathsOf(haltedAll),
+        ...pathsOf(incompleteAll),
+        ...pathsOf(unbuiltAll),
+        ...plannedTicketPaths.filter(
+          (p) => completedPaths.indexOf(p) === -1 && finalCmp.removals.indexOf(p) === -1
+        ),
+        ...(finalRecheck.fields.discovered_after_planning || []),
+        ...(finalRecheck.fields.no_longer_present_not_completed || []),
+      ]),
+    ];
+    haltFields = {
+      status: "blocked",
+      message:
+        `Epic "${epicTitle}" halted at batch ${firstHaltBatch} — ` +
+        `${haltedAll.length + incompleteAll.length} ticket(s) failed, blocked or unconfirmed, ` +
+        `${unbuiltAll.length} withheld pending a prerequisite or a shared leftover file.` +
+        (finalRecheck.headline ? ` Also: ${finalRecheck.headline}.` : "") +
+        (unbuiltNamedPaths.length > 0
+          ? ` ${unbuiltNamedPaths.length} piece(s) of work in total were not built: ` +
+            `${unbuiltNamedPaths.join(", ")}.`
+          : "") +
+        (haltStop ? haltStop.note : "") +
+        finalRecheck.suffix,
+      halted_at_batch: firstHaltBatch,
+      halted_tickets: haltedAll,
+      incomplete_tickets: incompleteAll,
+      ended_because: "halted",
+      suggested_action:
+        "Review the ## Comments section of each halted or incomplete ticket and its " +
+        "outstanding_phases for the blocker details. Resolve the blocker(s) and re-run /build-feature to resume.",
+      epic_complete: false,
+      ...(haltStop ? haltStop.fields : {}),
+    };
+  }
 
   return Object.assign(
     {
@@ -3783,7 +3544,8 @@ if (target_type === "epic") {
       look_records: lookRecords,
       run_set: plannedTicketPaths.slice(),
       ended_because: "no_further_work_eligible",
-      unbuilt: [],
+      unbuilt: unbuiltAll,
+      knowledge_routing: knowledgeRoutingSummary(),
       message:
         (finalRecheck.withhold
           ? `Epic "${epicTitle}" is NOT complete — ${finalRecheck.headline}. ` +
@@ -3792,7 +3554,8 @@ if (target_type === "epic") {
             `${completedBatches.length} batch(es) run, ${totalTickets} ticket(s) completed.`) +
         finalRecheck.suffix,
     },
-    finalRecheck.fields
+    finalRecheck.fields,
+    haltFields
   );
 } else {
   // -----------------------------------------------------------------------
@@ -3810,7 +3573,6 @@ if (target_type === "epic") {
    */
   if (classifyPathForm(singleTicketPath) === "unrecognised") {
     return {
-      status: "blocked",
       resolved_target: resolvedTarget,
       ...pathFormRefusal(singleTicketPath, ""),
     };
@@ -3818,15 +3580,6 @@ if (target_type === "epic") {
 
   const worktreeTicketPath = toWorktreePath(repoRelativeTicketPath(singleTicketPath), realWorktreePath);
 
-  const ticketResult = await driveTicketPhases(worktreeTicketPath);
-
-  if (!ticketResult) {
-    return {
-      status: "error",
-      resolved_target: resolvedTarget,
-      message: `driveTicketPhases returned null for ticket: ${worktreeTicketPath}`,
-    };
-  }
-
-  return ticketResult;
+  // driveTicketPhases returns an object on every path (it throws rather than return nothing).
+  return { ...(await driveTicketPhases(worktreeTicketPath)), knowledge_routing: knowledgeRoutingSummary() };
 }

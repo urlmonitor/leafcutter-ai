@@ -63,6 +63,22 @@ def _load_build_phases():
 # Helpers
 # ---------------------------------------------------------------------------
 
+_WORKSPACE_ANSWER_SOURCE = _TEMPLATES_WORKFLOWS_JS / "_shared" / "workspace-answer.js"
+
+
+def _expected_deployed_text(source: Path) -> str:
+    """The text the build deploys for ``source``: the template with its EMPTY WORKSPACE-ANSWER marker pair
+    filled from the single tracked block (BO-4300c-3). A template without the pair deploys unchanged."""
+    text = source.read_text(encoding="utf-8")
+    start_mark, end_mark = "// WORKSPACE-ANSWER-START", "// WORKSPACE-ANSWER-END"
+    start = text.find(start_mark)
+    if start == -1:
+        return text
+    end = text.find(end_mark, start)
+    block = _WORKSPACE_ANSWER_SOURCE.read_text(encoding="utf-8").strip()
+    return text[: start + len(start_mark)] + "\n" + block + "\n" + text[end:]
+
+
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -128,10 +144,12 @@ class TestBuildWorkflowScriptsIncludesPlanFeature(unittest.TestCase):
                 f"Source file missing: {_SOURCE_PLAN_FEATURE}. "
                 "This is the E2 source-of-truth that build_workflow_scripts deploys.",
             )
+            # The deployed copy is the source with the shared WORKSPACE-ANSWER block filled in (BO-4300c-3);
+            # everything else must be byte-identical.
             self.assertEqual(
-                _sha256(dest),
-                _sha256(_SOURCE_PLAN_FEATURE),
-                "Deployed plan-feature.js SHA-256 does not match the source. "
+                hashlib.sha256(dest.read_bytes()).hexdigest(),
+                hashlib.sha256(_expected_deployed_text(_SOURCE_PLAN_FEATURE).encode("utf-8")).hexdigest(),
+                "Deployed plan-feature.js SHA-256 does not match the source (with its shared block filled). "
                 "Content may have been corrupted or truncated during the copy.",
             )
         finally:
@@ -198,8 +216,8 @@ class TestPlanFeatureDeployedInConsumerConfig(unittest.TestCase):
             )
             self.assertEqual(
                 dest.stat().st_size,
-                _SOURCE_PLAN_FEATURE.stat().st_size,
-                "Deployed plan-feature.js file size differs from source. "
+                len(_expected_deployed_text(_SOURCE_PLAN_FEATURE).encode("utf-8")),
+                "Deployed plan-feature.js file size differs from source (with its shared block filled). "
                 "Content may have been silently truncated.",
             )
         finally:

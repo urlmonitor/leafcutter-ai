@@ -55,6 +55,11 @@ ARCHITECTURE: Two public phase functions, re-exported from build_phases.py so
     (package_root in, a set[str] out; no dependency on build_phases's private
     state), so unlike the two phase functions above they need no deferred
     import to avoid a circular-import at module load time.
+
+    ``WORKFLOW_TOOL_SCRIPTS`` is the single ordered list of workflow-tool
+    scripts. ``_manifest_workflow_tool_scripts`` reads it here, and
+    ``build_workflow_tools`` (build_phases_workflows.py) imports it at call
+    time and copies exactly those files.
 """
 
 from __future__ import annotations
@@ -139,6 +144,23 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     #   ``Path(__file__)``-rooted reference to the JSON file -- see build.py's
     #   own DECISION HISTORY for that half of the fix).
     #   (#TICKETLESS reason=fast-lane-pr-review-fix-INF-400c-5-H1)
+    # - 2026-09-23 [python-coder/INF-700a-2]: Added harvest_status.py (the
+    #   --status / last-run-marker sibling module) to deploy_scripts, per the
+    #   documented repeat defect of a new scripts/knowledge/*.py module being
+    #   silently absent from a deployed install when this list (and its
+    #   _manifest_knowledge_scripts() twin below) are not updated in lockstep.
+    # - 2026-10-08 [python-coder/INF-700a-5]: Added completion_routing.py and
+    #   its three siblings (_state, _git, _cli), the durability step the wired
+    #   completion workflows now call; they were in no deploy list, so nothing
+    #   in an install could reach them. Mirrored in _manifest_knowledge_scripts().
+    # - 2026-10-23 [python-coder/INF-700b-3]: Added capture_health_report.py (the
+    #   capture-health CLI) to deploy_scripts, mirrored in
+    #   _manifest_knowledge_scripts(). (#EPIC-ALearningAnAgentHasTodayActuallyGets/06)
+    # - 2026-10-23 [python-coder/INF-700b-3]: The entry is the sub-path
+    #   health/capture_health_report.py (check-folder-density caps
+    #   scripts/knowledge/ at 15 non-markdown files); the loop joins names onto
+    #   both source and output dirs, so it deploys to scripts/knowledge/health/.
+    #   (#EPIC-ALearningAnAgentHasTodayActuallyGets/06)
     """
     import build_phases as _bp
 
@@ -151,6 +173,13 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
         "sink_resolution.py",
         "capture_write.py",
         "harvest_cli.py",
+        "harvest_status.py",
+        "record_identity.py",
+        "completion_routing.py",
+        "completion_routing_state.py",
+        "completion_routing_git.py",
+        "completion_routing_cli.py",
+        "health/capture_health_report.py",
     ]
     output_dir = target_root / "scripts" / "knowledge"
     written = 0
@@ -211,6 +240,41 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     return written
 
 
+_DECLARATION_NAME = "knowledge_sink.json"
+
+
+def _ensure_declaration_gitignored(config_dir: Path, dry_run: bool) -> None:
+    """Ensure ``<config_dir>/.gitignore`` lists the per-machine declaration once.
+
+    Creates the file when absent, appends ``knowledge_sink.json`` when no line
+    already equals it, and leaves every other line untouched. Writes nothing in
+    dry-run mode. An I/O failure is logged at WARNING and swallowed on purpose:
+    the ignore rule is a safeguard, and losing it must not abort the build.
+
+    Args:
+        config_dir: The ``config`` directory holding the declaration.
+        dry_run: When True, writes nothing.
+
+    # DECISION HISTORY
+    # - 2026-10-22 [python-coder/INF-500d-4-x]: Added so the absolute-path
+    #   declaration never reaches git in repos that track .leafcutter/.
+    #   (#INF-500d-4-x)
+    """
+    if dry_run:
+        return
+    ignore_path = config_dir / ".gitignore"
+    try:
+        existing = ignore_path.read_text(encoding="utf-8") if ignore_path.is_file() else ""
+        if _DECLARATION_NAME in (ln.strip() for ln in existing.splitlines()):
+            return
+        prefix = "" if not existing or existing.endswith("\n") else "\n"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        with ignore_path.open("a", encoding="utf-8") as fh:
+            fh.write(f"{prefix}{_DECLARATION_NAME}\n")
+    except OSError as exc:
+        _log.warning("build_knowledge_sink_declaration: could not update %s: %s", ignore_path, exc)
+
+
 def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
                                       dry_run: bool, force: bool) -> int:
     """Declare this install's absolute knowledge-emission sink path.
@@ -246,6 +310,16 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
     (``harvest_learnings.py``) and the operational-stream emitter
     (``emit_event.py``) share one anchor instead of each computing its own
     directory and silently drifting apart.
+
+    AC INF-500d-4-iii (ADR-069): the SAME declaration also records
+    ``operational_log_root`` (the directory every log sits directly under) and
+    ``feedback_sink`` (``<root>/feedback.jsonl``). The root is an INPUT -- the
+    ``--log-root`` value the worktree bootstrap inherits from the main install's
+    recorded declaration, parked in ``config`` by ``build_log_root`` -- and
+    defaults to ``<project_root>/debugging/logs``, so an ordinary build's two
+    historical values are unchanged. ``--no-log-root`` records NO location at
+    all (an empty declaration) and prints a NOTE saying writers will refuse.
+    The values come from ``build_log_root.declaration_values``.
 
     A NOTE is always printed alongside the write: a build has no reliable way
     to tell whether the directory it was pointed at is an already-installed
@@ -294,32 +368,45 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
     #   function here; re-applied to the post-extraction text rather than
     #   replayed as a remembered diff.
     #   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-iii)
+    # - 2026-10-09 [python-coder/INF-500d-4-iii]: Declaration values now come
+    #   from build_log_root.declaration_values, adding operational_log_root and
+    #   feedback_sink and honouring an inherited --log-root; the NOTE also
+    #   names the operational log root. (#INF-500d-4-iii, ADR-069)
+    # - 2026-10-12 [python-coder/INF-500d-4-i gap fix]: --no-log-root now records
+    #   an empty declaration (no worktree-local stream/sink survives to be trusted)
+    #   and the build NOTE says plainly that no durable root is declared and
+    #   writers refuse, instead of the misleading "SECOND sink" text.
+    # - 2026-10-22 [python-coder/INF-500d-4-x]: The declaration holds per-machine
+    #   absolute paths, but repos that track .leafcutter/ committed it, so other
+    #   checkouts received a stale one. The build now also ensures
+    #   config/.gitignore carries one ``knowledge_sink.json`` line (created or
+    #   appended, never duplicated, other lines untouched, skipped in dry-run),
+    #   independent of whether the declaration itself was rewritten. A failed
+    #   ignore write only logs a WARNING; it does not abort the build.
+    #   Declaration content is unchanged. (#INF-500d-4-x)
     """
     import build_phases as _bp
+    from build_log_root import declaration_values
 
-    project_root = target_root.parent
-    sink_path = project_root / "debugging" / "logs" / "knowledge_emissions.jsonl"
-    # AC INF-400c-4-iii: the operational/telemetry stream is declared in this
-    # SAME artefact, one absolute path fixed at build time, so emit_event.py
-    # (the operational-stream producer) and this knowledge-sink declaration
-    # share one anchor instead of drifting as two independently-computed
-    # values. Distinct filename, same directory as the historical default.
-    operational_stream_path = project_root / "debugging" / "logs" / "agent_telemetry.jsonl"
-    content = (
-        json.dumps(
-            {
-                "knowledge_emission_sink": str(sink_path),
-                "operational_telemetry_stream": str(operational_stream_path),
-            },
-            indent=2,
-        )
-        + "\n"
-    )
+    values = declaration_values(target_root.parent, config)
+    content = json.dumps(values, indent=2) + "\n"
     output_path = target_root / "config" / "knowledge_sink.json"
 
+    _ensure_declaration_gitignored(output_path.parent, dry_run)
     if _bp._write(output_path, content, dry_run, force):
-        print(f"  config/knowledge_sink.json -> {sink_path}")
-        print(f"  config/knowledge_sink.json -> {operational_stream_path} (operational stream)")
+        if not values:
+            print(
+                "  NOTE: config/knowledge_sink.json declares NO durable operational "
+                "log root (--no-log-root), so it records no sink, stream or root. "
+                "emit_event.py, harvest_learnings.py and the --print-location "
+                "queries will REFUSE to write until a rebuild passes --log-root "
+                "<abs-dir> or a plain build declares one -- see ADR-069 and "
+                "AC INF-500d-4-i."
+            )
+            return 1
+        print(f"  config/knowledge_sink.json -> {values['knowledge_emission_sink']}")
+        print(f"  config/knowledge_sink.json -> {values['operational_telemetry_stream']} (operational stream)")
+        print(f"  config/knowledge_sink.json -> operational log root: {values['operational_log_root']}")
         print(
             "  NOTE: this build declares the knowledge-emission SINK for "
             "THIS working directory. A separate, isolated working directory "
@@ -491,8 +578,14 @@ def check_knowledge_routing_wiring_guard(output_root: Path) -> int:
         return 0
 
     try:
-        guardrail_config = yaml.safe_load(
-            guardrail_config_path.read_text(encoding="utf-8")
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): a parse failure here returns 1, aborting
+        # the build -- a guardrail decision point (criterion 4). Single
+        # config file read once per build -- no speed case for the fast
+        # loader here.
+        guardrail_config = yaml.load(
+            guardrail_config_path.read_text(encoding="utf-8"),
+            Loader=yaml.SafeLoader,
         ) or {}
     except (OSError, yaml.YAMLError) as exc:
         print(
@@ -566,6 +659,8 @@ def _manifest_knowledge_scripts(package_root: Path) -> set[str]:
     #   rather than through a build_phases.py re-export, since
     #   scripts/build_phases.py was intentionally left untouched by this
     #   extraction. (#INF-400c-5)
+    # - 2026-10-23 [python-coder/INF-700b-3]: Added capture_health_report.py,
+    #   matching deploy_scripts. (#EPIC-ALearningAnAgentHasTodayActuallyGets/06)
     """
     result: set[str] = set()
     knowledge_src = package_root / "scripts" / "knowledge"
@@ -577,19 +672,51 @@ def _manifest_knowledge_scripts(package_root: Path) -> set[str]:
         "sink_resolution.py",
         "capture_write.py",
         "harvest_cli.py",
+        "harvest_status.py",
+        "record_identity.py",
+        "completion_routing.py",
+        "completion_routing_state.py",
+        "completion_routing_git.py",
+        "completion_routing_cli.py",
+        "health/capture_health_report.py",
     ):
         if (knowledge_src / fname).is_file():
             result.add(f"scripts/knowledge/{fname}")
     return result
 
 
+# The ONE ordered list of workflow-tool scripts: build_workflow_tools()
+# (build_phases_workflows.py) copies exactly these, in this order, and
+# _manifest_workflow_tool_scripts() below reports exactly these, so the deploy
+# and the manifest cannot drift apart. A sibling module that knowledge_query.py
+# loads by file path (_load_sibling_module("X")) MUST be listed here, or every
+# consumer install's knowledge_query.py fails with FileNotFoundError;
+# unit_tests/build_guards/test_workflow_tool_sibling_modules_deployed.py fails
+# when one is missing.
+WORKFLOW_TOOL_SCRIPTS: tuple[str, ...] = (
+    "add_component.py",
+    "knowledge_query.py",
+    "knowledge_frontmatter_reader.py",
+    "frontmatter_path_resolver.py",
+    "knowledge_file_nodes.py",
+    "knowledge_surface_check.py",
+    "knowledge_rendering.py",
+    "knowledge_edges.py",
+    "set_ticket_status.py",
+    "ticket_prioritizer.py",
+    "port_registry.py",
+    "live_surface_startup.py",
+    "generate_doc_index.py",
+)
+
+
 def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
     """Return ``scripts/<name>`` entries for workflow-tool scripts deployed by build_workflow_tools.
 
     Scans the package source for the workflow-tool scripts and returns
-    manifest entries for those that exist.  Must be kept in parity with the
-    ``deploy_scripts`` list inside ``build_workflow_tools()`` in
-    ``build_phases.py`` — a mismatch trips the manifest/deploy parity guard.
+    manifest entries for those that exist. Reads the same
+    ``WORKFLOW_TOOL_SCRIPTS`` tuple that ``build_workflow_tools()``
+    (``build_phases_workflows.py``) deploys from, so the two cannot disagree.
 
     Args:
         package_root: Absolute path to the leafcutter package root.
@@ -643,22 +770,18 @@ def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
     #   corrected that before dispatch, since this function moved here (not
     #   build_phases_workflows.py) by the GE-127b-1 fix above. Placement has
     #   no import-order dependency on any other entry in this tuple.
+    # - 2026-10-06 [python-coder/TICKET-20261006-DeployKnowledgeRendering]:
+    #   The inline tuple became the module-level WORKFLOW_TOOL_SCRIPTS, which
+    #   build_workflow_tools() now also reads instead of keeping its own
+    #   deploy_scripts copy. Added knowledge_rendering.py after
+    #   knowledge_surface_check.py: knowledge_query.py loads it at import
+    #   time via _load_sibling_module() since c2ddb6f12, but neither hand
+    #   list named it, so every consumer's deployed knowledge_query.py
+    #   crashed with FileNotFoundError (KM-KGS-100a-3-xi regressed).
     """
     result: set[str] = set()
     scripts_src = package_root / "scripts"
-    for fname in (
-        "add_component.py",
-        "knowledge_query.py",
-        "knowledge_frontmatter_reader.py",
-        "frontmatter_path_resolver.py",
-        "knowledge_file_nodes.py",
-        "knowledge_surface_check.py",
-        "set_ticket_status.py",
-        "ticket_prioritizer.py",
-        "port_registry.py",
-        "live_surface_startup.py",
-        "generate_doc_index.py",
-    ):
+    for fname in WORKFLOW_TOOL_SCRIPTS:
         if (scripts_src / fname).is_file():
             result.add(f"scripts/{fname}")
     return result
@@ -691,4 +814,15 @@ def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
 #   ``_get_source_deployable_scripts`` and (for the knowledge script names
 #   only, via ``build_knowledge_scripts``'s own deploy_scripts list, unrelated
 #   to this move) ``_get_source_paths_for_guard``. (#INF-400c-5)
+# - 2026-10-06 [python-coder/TICKET-20261006-DeployKnowledgeRendering]: Added
+#   WORKFLOW_TOOL_SCRIPTS, the one list both the workflow-tool manifest and
+#   build_workflow_tools() read, with knowledge_rendering.py added. It was
+#   missing from both hand lists, so deployed knowledge_query.py crashed.
+# - 2026-10-23 [python-coder/INF-700b-3]: Added capture_health_report.py to
+#   both hand-kept lists (deploy_scripts in build_knowledge_scripts and the
+#   tuple in _manifest_knowledge_scripts); it sits beside sink_resolution.py,
+#   which it imports, so a consumer install needs both. The entry is the
+#   sub-path health/capture_health_report.py (folder-density limit on
+#   scripts/knowledge/), deployed to scripts/knowledge/health/.
+#   (#EPIC-ALearningAnAgentHasTodayActuallyGets/06)
 # ===========================================================================

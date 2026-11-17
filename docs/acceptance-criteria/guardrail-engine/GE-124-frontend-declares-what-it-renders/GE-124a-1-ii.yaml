@@ -68,7 +68,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Stated the two-collections-never-unioned rule as a standing constraint on the record (including the persisted declared_by / pinned_by fields), and added a seam test that forbids a merged convenience field — the way this separation is actually lost. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/03_TICKET-20261022-GE-124a-1-ii.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -83,3 +84,4 @@ notes: |
   pipeline, not just the parse: the store-side twin of this rule is GE-124g-1's
   declared_by / pinned_by split. Both are fed from these two collections, so a
   merge here would silently defeat that AC too.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

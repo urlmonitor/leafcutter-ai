@@ -21,9 +21,112 @@ depends_on:
 doc_links: []
 origin_agent: product-owner-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: third-l2-child-adopted-card-made-static
+  by: business-analyst
+  at: '2026-10-09'
+  note: >-
+    ADDITIVE ONLY — covered_by gains INF-600b-3 and nothing else in this record
+    changed. criteria, readiness (reviewed), priority and depends_on are untouched.
+    INF-600b-3 requires the card to be assembled from the agent's own declared facts
+    and from nothing else, so that adding an acceptance criterion to the store moves
+    no card. NOTE THE DIRECTION: this record's own criteria already enumerate the
+    card's inputs as "each agent's template frontmatter, registry entry, knowledge
+    plane mapping, and spawn graph" — a list that never included the
+    acceptance-criteria store. INF-600b-2 widened that list; INF-600b-3 restores it.
+    The two are siblings deliberately, and INF-600b-2 carries a reciprocal amendment
+    stating the boundary. CAP: this L1 now holds 3 of its 5 permitted L2 children, so
+    two slots remain; INF-600b-1-i is an L3 and does not count here.
+- reason: child-inf-600b-2-retired-card-carrier-removed-ticket-carrier-never-existed
+  by: business-analyst
+  at: '2026-10-09'
+  note: >-
+    criteria, readiness (reviewed), req_status, priority and depends_on are UNTOUCHED,
+    and covered_by is UNCHANGED. This L1 is amended so the retirement of one of its
+    three children is visible from above, per the AC-store rule that the parent is
+    staged alongside any child whose place in the tree moves — the hooks validate only
+    what is in that commit's index, so a parent never staged is a parent never checked.
+
+
+    WHAT CHANGED BELOW THIS RECORD. INF-600b-2 moved status active -> deprecated,
+    req_status active -> superseded, work_status done -> todo and readiness approved
+    -> reviewed on 2026-10-09. Those four fields are the house shape for a retired
+    record, measured against all thirteen pre-existing deprecated records in the
+    store: readiness reviewed on 13 of 13, work_status todo on 11 of 11 that carry
+    the field. Its own notes carry the generalised form under "HOW TO RETIRE AN AC",
+    including why each demotion is right on the merits and not merely conventional,
+    and that neither demotion erases history because both facts live in amended_by. It required a per-agent grouping of
+    acceptance criteria, keyed on assigned_agent, in the generated ticket body or the
+    generated agent card. The card carrier is removed by the static-card change
+    (INF-600b-3); the ticket-body carrier, it turns out, was never built —
+    scripts/ac_store/_gtfa_body.py renders one line, `Assigned agent:
+    {assigned_agent}`, from the single criterion a ticket is generated from, with no
+    grouped section and nothing to group. With no true disjunct left the record could
+    not be narrowed, only retired. Its own final amended_by entry carries the grounds.
+
+
+    THIS L1 IS UNHARMED BY THE RETIREMENT, AND THE REASON IS IN ITS OWN CRITERIA. This
+    record promises "a complete agent profile page generated at build time", assembled
+    from "each agent's template frontmatter, registry entry, knowledge plane mapping,
+    and spawn graph" — a list that never included the acceptance-criteria store.
+    INF-600b-2 widened that list beyond what this L1 ever asked for; its retirement
+    returns the card to exactly the inputs this record names, and INF-600b-3 makes
+    that boundary enforceable. So the sequence child-added-then-child-retired is not
+    churn: it is a widening being undone, and this L1 is the thing that was right
+    throughout.
+
+
+    covered_by DELIBERATELY STILL LISTS INF-600b-2. A deprecated record is retained for
+    audit and is excluded from active enforcement by its status, not by being unlinked
+    from its parent. Dropping the entry would orphan the record and make the retirement
+    invisible from here, which is the opposite of what this amendment is for. Same
+    convention applied to TQ-600a-11 under TQ-600a in the same pass.
+
+
+    THE CAP IS UNCHANGED AND NO SLOT IS FREED. This L1 still holds 3 of 5 L2 children —
+    INF-600b-1, INF-600b-2 (deprecated) and INF-600b-3. A retired child is not a
+    removed one: the file exists and still counts. Two slots remain.
+
+
+    ONE FINDING THAT IS THIS L1's BUSINESS AND NOT ONLY THE CHILD'S. INF-600b-2 read
+    work_status: done with covered_by [] and no covering test from 2026-06-29 to
+    2026-10-09, while only one of the two carriers its own When clause offered had ever
+    existed. Nothing could notice, because a disjunction is satisfied by either side
+    and nobody had established which side was live. That is a phantom-done instance on
+    a record about making work legible, and the general form is worth carrying to this
+    L1's other children before any of them is trusted on its work_status field: an
+    "A or B" criterion marked done is evidence that one of A and B works, never
+    evidence of which.
+
+
+    AND A SECOND, INDEPENDENT REASON IT SURVIVED, WHICH GENERALISES FURTHER THAN THIS
+    L1. check-done-proof refused the retirement commit for exactly the condition that
+    had been true since 2026-06-29 — a done record with no `# covers:` tag anywhere.
+    It had never fired, because the AC hooks validate the files in a commit's INDEX
+    rather than reading the store, and nobody had restaged INF-600b-2 in those four
+    months. The gate was never handed the file; its silence was not a pass. CLAUDE.md
+    documents this index-only trap under "AC-store commits — stage the parent alongside
+    the child", but frames it as a STALE PARENT risk. This instance is the same
+    mechanism hiding a false `done` on a LEAF that nobody had reason to touch, which is
+    the harder case to find because there is no second record whose staging would
+    surface it. Worth adding to that CLAUDE.md passage; not done here, as that file is
+    outside this pass's scope.
+
+
+    A THIRD OBSERVATION, FROM RETIRING THE RECORD RATHER THAN FROM THE RECORD ITSELF,
+    AND IT IS THE ONE WITH THE WIDEST REACH. Correcting this record took three
+    separate gate refusals, each arriving only after the previous fix: check-done-proof
+    on work_status, then check-ac-schema's approved-code-AC rule on readiness — which
+    is exempt for work_status: done, so it could not fire until the first was
+    corrected. NO GATE NAMES THE RETIRED-RECORD SHAPE, and each refusal proposes a
+    locally reasonable repair that is globally wrong: write a covering test, author a
+    test contract, reclassify the record as non-code. Every one of those makes a
+    retired record look alive, and the real fix is always the adjacent status field
+    the message does not mention. A retirement done one field at a time will walk that
+    whole sequence. The shape is written up on INF-600b-2's notes so the next one does
+    not have to rediscover it by tripping over it.
 superseded_by: null
-covered_by: [INF-600b-1, INF-600b-2]
+covered_by: [INF-600b-1, INF-600b-2, INF-600b-3]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

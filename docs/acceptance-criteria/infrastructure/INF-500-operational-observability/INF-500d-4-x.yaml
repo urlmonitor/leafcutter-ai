@@ -1,0 +1,68 @@
+id: INF-500d-4-x
+components:
+  - infrastructure
+  - knowledge_system
+title: "The per-machine log-root declaration is kept out of git, so a repository that commits its install never ships one machine's paths to another"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a build writes the log-root declaration (config/knowledge_sink.json under the
+    install's output root), which records absolute paths that are only true on the
+    machine that ran the build,
+  And the consumer repository tracks its install directory in git,
+  When the build finishes,
+  Then the install's config directory carries an ignore rule that keeps the
+    declaration out of git, so `git status` in that repository never lists the
+    declaration as a new file and `git add` of the install directory never stages it,
+  And the rule names only the declaration, so every other file in the config
+    directory stays committable as before,
+  And running the build again leaves exactly one such rule and keeps any other line
+    already present in that ignore file,
+  And the declaration itself is still written with absolute paths, unchanged, because
+    ADR-069 requires one absolute durable root that outlives every workspace,
+  And the bug symptom ("another checkout receives a declaration naming a root that
+    does not exist there, so the knowledge writers refuse it as stale until the next
+    local build") does not occur for a repository that adds its install after this fix.
+depends_on: [INF-500d-4]
+doc_links:
+  - path: scripts/build_phases_knowledge.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
+    relationship: constrains
+    status: exists
+    relevance: "The declaration is machine-local by design: an absolute durable root recorded at build time."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/portability/test_inf_500d_4_x.py
+implemented_by:
+  - scripts/build_phases_knowledge.py
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_build_keeps_the_log_root_declaration_out_of_git
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: unit
+    description: "Call build_knowledge_sink_declaration() into a temp output root inside a temp git repository, then assert git check-ignore reports the declaration as ignored and git status --porcelain --untracked-files=all does not list it, while a sibling file in the same config directory is still listed; run it twice and assert the ignore file holds exactly one rule for the declaration and keeps a pre-existing unrelated line."
+notes: |
+  Reported 2026-10-22: a Copilot review on the ai-commons repository flagged
+  .leafcutter/config/knowledge_sink.json carrying /home/henzeh/projects/ai-commons/...
+  paths. ai-commons commits its whole .leafcutter/ tree. Making the paths relative or
+  letting the resolver accept another machine's root were both rejected: they break
+  ADR-069's absolute durable root and its stale rule. Copies that a repository has
+  already committed stay tracked until that repository runs `git rm --cached` once;
+  this AC covers only what the build does from now on.

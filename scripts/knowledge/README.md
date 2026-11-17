@@ -23,11 +23,15 @@ not actually write (ADR-034; INF-700c-1 / INF-700c-1-i).
 
 ## Critical Context
 
-- The sink path (`debugging/logs/knowledge_emissions.jsonl` by default) has
-  never existed on disk; the real, retained knowledge-emission stream lives
-  at `debugging/logs/agent_telemetry.jsonl` (both under `debugging/logs/`,
-  which is gitignored — see `.gitignore:60`). Callers must pass `--sink`
-  explicitly to point at the real stream.
+- The default sink is the `knowledge_emission_sink` declared at build time in
+  `config/knowledge_sink.json` beside the deployed script: an absolute file
+  directly under the install's one declared `operational_log_root`
+  (INF-400c-4-v, INF-500d-4). `--print-sink` (or
+  `sink_resolution.py --print-location knowledge`) prints it without creating
+  anything. Only an un-built source-tree run with no declaration falls back to
+  `debugging/logs/knowledge_emissions.jsonl` relative to the working
+  directory; `--print-sink` refuses in that case instead of falling back.
+  `--sink` still overrides the default explicitly.
 - `harvest_learnings.py` is a pure **reader** of its sink by design (ADR-011):
   it never repairs, rewrites, or line-deletes the input file, even for a
   malformed line or an ineligible (textless) record. This is what lets a

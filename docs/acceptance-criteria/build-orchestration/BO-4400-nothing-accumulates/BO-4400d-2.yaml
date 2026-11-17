@@ -1,0 +1,120 @@
+id: BO-4400d-2
+title: "Every sweep, previewed or real, reports how many items it cleared and how many bytes it freed"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the seven workspaces, five scratch items and one orphaned outside item of
+    BO-4400d-1, with the size of each item measured beforehand,
+  When the sweep is run as a preview,
+  Then nothing on disk changes,
+  And the preview lists each item it would remove by kind and location with its size
+    in bytes, lists each item it would keep with the reason, and states a count and a
+    total in bytes for the items it would remove,
+  And when the sweep is then run for real with nothing changed in between, it removes
+    exactly the items the preview listed,
+  And the real sweep's report states the count of items removed per kind (workspaces,
+    scratch items, outside items) and the total bytes freed, which equals the sum of
+    the removed items' sizes measured beforehand,
+  And when one more expired scratch item of 4096 bytes is added and the preview is run
+    again, its count is one greater and its total is 4096 bytes greater.
+depends_on: [BO-4400d, BO-4400d-1, BO-4400b-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400d.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      Report: the BO-4400d-1 result object plus counts {workspaces: int, scratch: int, outside:
+      int} and total_bytes: int for removed items (preview: would-remove), printed as JSON with a
+      `--json` flag and as a one-line human summary ("<n> items cleared, <bytes> freed") otherwise.
+      Preview is a `--dry-run` flag on the same entry point. Consumed by BO-4400d-3.
+  - agent: documentation-expert
+    contract: "Preview and real commands, the report's fields and the four kept reasons, for the how-to BO-4400d-4."
+expects_from:
+  ac_id: BO-4400d-1
+  contract: "Per-item sweep outcome with kind, location and bytes."
+package_surface: false
+it_requirements:
+  - >-
+    Preview and real run share ONE selection code path; preview performs no write of any kind
+    (no removal, no log, no marker, no lock file left behind).
+  - >-
+    Byte figures use the single shared size measure delivered by BO-4400b-1 (apparent size, each
+    inode once, symlinks not followed), measured immediately before each removal; preview and real
+    run use the same measure.
+  - >-
+    total_bytes is the sum of the removed items' measured bytes, never an estimate; failed items'
+    bytes are excluded (BO-4400d-2-i).
+  - >-
+    PROOF: deployed sweep as a separate process over the BO-4400d-1 fixture; the test measures each
+    item itself beforehand, snapshots the whole fixture tree (paths and hashes) around the preview,
+    and compares the preview list to the real run's removed list.
+test_required: true
+test_spec:
+  - name: test_preview_changes_nothing_on_disk
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The fixture tree's paths and hashes are identical before and after the preview."
+  - name: test_preview_lists_items_with_sizes_reasons_count_and_total
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The preview lists each would-remove item with kind, location and bytes, each kept item with its reason, a count and a total."
+  - name: test_real_sweep_removes_exactly_what_preview_listed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The real run's removed list equals the preview's would-remove list."
+    must_catch:
+      - "preview and real run use different selection logic"
+  - name: test_real_report_counts_per_kind_and_total_equal_measured_sizes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Per-kind counts match and total_bytes equals the sum of the removed items' sizes measured by the test beforehand."
+  - name: test_one_more_expired_4096_byte_item_moves_count_and_total
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Adding one expired 4096-byte scratch item raises the preview count by one and the total by exactly 4096."
+    must_catch:
+      - "report built from a fixed or estimated figure"
+test_rationale: >-
+  A report figure is only trustworthy if it moves with the world. Measuring independently, then
+  adding exactly one known-size item, is the varying-population check that a fixed or estimated
+  figure cannot pass.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400d-2-i]
+implemented_by: []
+notes: |
+  Gap G4: "with dry-run, count and bytes-freed report". The last clause is the
+  varying-population check -- a report built from a fixed or estimated figure cannot move by
+  exactly one item and exactly 4096 bytes. Bytes are the apparent size of files measured
+  before removal; block-size rounding is the IT PO's call but must be the same measure in the
+  preview and the real run.

@@ -1,0 +1,21 @@
+{
+  "manual_runner": "tests/knowledge_live/retrieval_scenario_checks.py",
+  "runner_sha256": "80d28ee50a7eda2b76f108b3266b3e85eae814b6e64e6740f708c6a1df715aba",
+  "working_directory": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\knowledge-retrieval-v01",
+  "python": "C:/Users/Hendrik/Code/leafcutter/.venv/Scripts/python.exe",
+  "read_only_aura_modes": [
+    "neutral",
+    "kernel-controls",
+    "kernel-valid"
+  ],
+  "invocation": "python -B -m tests.knowledge_live.retrieval_scenario_checks <mode>",
+  "live_command_used": "python -B -m tests.knowledge_live.retrieval_scenario_checks live --case RS-02 --case RS-03",
+  "live_consent_gate": "LEAFCUTTER_RS_LIVE_CONSENT=approved-RS-02-RS-03-24-calls",
+  "live_rerun_policy": "The approved two initial cases have run. Do not rerun/resume under this run authorization. Additional calls require a new bounded authorization.",
+  "credentials": "Existing supported external env-file loader; credentials never copied to reports.",
+  "configuration": "reports/retrieval-scenarios-2026-10-02/live-canary.config.json",
+  "checkpoints": "C:/Users/Hendrik/AppData/Local/Temp/leafcutter-retrieval-scenarios-20261002/live/checkpoints.sqlite",
+  "traces": "Local RecordingTracer calls in each response receipt; no remote export.",
+  "control_policy": "Existing named field-withholding, clipping and outage adapters only; no oracle-derived output.",
+  "rerun_warning": "Modes write named report files. Use a separately dated output location for future independent replay to preserve these receipts."
+}

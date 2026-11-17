@@ -1,0 +1,90 @@
+id: DK-500c-3-i
+title: Splitting a category moves each member to exactly one replacement
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the published cat-d6ce5f78c181ebd1 with the members (dec-ef8ddcb79d668a67, crit.findable_by_filters) and (dec-93c1c730463c1f3c, crit.cheap_candidate_lookup),
+  When human:user splits it into two new categories, one asking whether precedent can be selected by filter and one asking whether criteria can be found by filter and wording, assigns each member to one of them and publishes the change,
+  Then cat-d6ce5f78c181ebd1 is retired with replaced_by naming both new category ids,
+  And each of its two members is a member of exactly one replacement, with none lost and none in both,
+  And a split that leaves a member without a replacement is refused, naming that member.
+depends_on:
+- DK-500c-3
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-500c-3
+  contract: Merge, split and retire through stage and publish.
+change_target: code
+risk_surface: internal
+it_requirements:
+- A split stages the retired original and each new replacement (kernel-minted ids) and publishes them together; the person assigns every member to exactly one replacement.
+- A split that leaves a member unassigned, or assigns one to two replacements, is refused at staging and again at publish, naming the member.
+test_required: true
+test_spec:
+- name: test_split_retires_with_both_replacements
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: cat-d6ce5f78c181ebd1 is retired with replaced_by naming both new category ids.
+- name: test_each_member_in_exactly_one_replacement
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Each of its two members is a member of exactly one replacement; none lost, none in both.
+- name: test_unassigned_member_refused_naming_it
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A split leaving a member without a replacement is refused, naming that member.
+test_rationale: Exercise the review run and the publish command through their public CLI and RunService boundaries on a temporary repository copy and run root; assert staged files, published files, exit codes and byte-level before/after snapshots of docs/decisions/. Model-level unit tests alone would not prove that nothing is written outside the staged area or that publish is all-or-nothing.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+  relationship: constrains
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  The split itself is illustrative (no real category has been split). The two new ids are minted by the kernel (cat-<16 hex>, a mock assumption to confirm).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: curate.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: curate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+    source: mock
+    asof: '2026-10-04'

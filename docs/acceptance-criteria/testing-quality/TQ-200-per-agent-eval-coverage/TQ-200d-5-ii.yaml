@@ -1,0 +1,248 @@
+id: TQ-200d-5-ii
+components:
+  - testing_quality
+title: "A live eval starts the installed claude on Windows when the install provides only a claude.cmd launcher on the path"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a Windows 11 machine where the standard npm install put claude,
+      claude.cmd and claude.ps1 on the path, and no folder holding claude.exe
+      is on the path,
+  When a live eval run starts the agent for a row,
+  Then the agent session starts, found the same way the Windows command
+      shell finds claude (by the path and the executable extensions it lists),
+      and the row is scored,
+    And when the CLI location is set explicitly through the eval's CLI-location
+      setting, that program is started instead of the one found on the path,
+      on every platform,
+    And on Linux, with no explicit setting, the program started is the one
+      named claude on the path, as before this change,
+    And the same lookup is used by all three ways the harness starts an agent.
+depends_on:
+  - TQ-200d-5
+doc_links:
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The defect: bare 'claude' through subprocess.run without a shell cannot start claude.cmd (WinError
+      2). Suggested fix: resolve with shutil.which (honours PATHEXT), run a .cmd/.bat through the command
+      processor or prefer a native claude.exe, allow an override. Moved to resolved by this AC.
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Gains 'How the harness finds claude': the lookup, the LEAFCUTTER_EVAL_CLAUDE_CLI setting and when
+      to use it.
+  - path: docs/how-to/run-a-live-agent-eval.md
+    relationship: modifies
+    status: planned
+    relevance: >-
+      Created by TQ-200d-5. 'Finding claude on Windows' replaces the old 'prefix PATH with the claude.exe
+      folder' workaround with the lookup and the setting.
+  - path: docs/known-issues/testing-quality.md
+    relationship: modifies
+    status: exists
+    relevance: The row moves from Open to Resolved; counts recounted from the directory.
+  - path: docs/known-issues/README.md
+    relationship: describes
+    status: exists
+    relevance: Resolution convention (resolved/ folder, resolved- prefix).
+  - path: docs/reference/skills-config-fields.md
+    relationship: relates-to
+    status: exists
+    relevance: >-
+      Not changed: the CLI location is an environment variable read only by the eval harness, not a skills_config
+      key.
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: TQ-200d-5
+  contract: >-
+    The shared launch builder in scripts/evals/agent_launch/command.py; the program lookup is added there
+    once (scripts/evals/agent_launch/locate.py) and every invoker inherits it.
+test_required: true
+package_surface: false
+declared_files:
+  - path: scripts/evals/agent_launch/locate.py
+    state: to_be_created
+  - path: scripts/evals/agent_launch/command.py
+    state: to_be_created
+  - path: scripts/evals/README.md
+    state: existing
+  - path: docs/how-to/run-a-live-agent-eval.md
+    state: to_be_created
+  - path: docs/known-issues/testing-quality.md
+    state: existing
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
+    state: existing
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
+    state: to_be_created
+it_requirements:
+  - >-
+    Setting decision (IT PO, 2026-10-30): the CLI location is the environment variable LEAFCUTTER_EVAL_CLAUDE_CLI
+    (same prefix as LEAFCUTTER_EVAL_USE_API), holding the path of the program to start. When it is set
+    it wins on every platform; a value that names no startable program is a launch failure with the operating-system
+    reason (TQ-200d-5-i), never a silent fall back to the path.
+  - >-
+    Lookup decision: with no setting on Windows, the program is found the way the command shell finds
+    it, by PATH and PATHEXT (shutil.which semantics). A resolved .cmd or .bat is started through the Windows
+    command processor; a resolved .exe is started directly. On Linux and macOS, with no setting, the program
+    started is 'claude' from PATH exactly as before.
+  - >-
+    A .cmd started through the command processor must not reintroduce the command-line limit TQ-200d-5
+    removed: the instructions stay in the prompt file and the input on stdin, and the prompt-file path
+    is quoted so a temp path with spaces, '&' or '^' survives the command processor.
+  - >-
+    Unit tests never call a live model; they use a fake claude program on PATH (or a patched process start)
+    that records its argv, its stdin and any prompt file it is given. Tests patch the lookup and the process
+    start, and use a temp PATH folder holding only claude, claude.cmd and claude.ps1; they prove the .cmd-only
+    case starts, the setting wins, and Linux behaviour is unchanged.
+  - >-
+    DOCUMENTATION (part of done) - scripts/evals/README.md gains 'How the harness finds claude', which
+    must state the lookup (setting, then PATH/PATHEXT on Windows, PATH elsewhere), that a .cmd launcher
+    is started through the command processor, and the exact name LEAFCUTTER_EVAL_CLAUDE_CLI with one example.
+  - >-
+    DOCUMENTATION (part of done) - docs/how-to/run-a-live-agent-eval.md 'Finding claude on Windows' must
+    state the same lookup and setting and must no longer tell the reader to prefix PATH with the folder
+    of claude.exe.
+  - >-
+    DOC-DRIFT TEST: the setting name written in the README and the how-to is the name the harness reads,
+    taken from the lookup module, and the how-to holds no 'prefix PATH' workaround.
+  - >-
+    KNOWN ISSUE: git mv docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
+    to docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md;
+    Status 'RESOLVED <date> by TQ-200d-5-ii' with the proving test files; move its row in docs/known-issues/testing-quality.md
+    from Open to Resolved and recount the Open/Resolved line from the directory.
+  - >-
+    CHANGELOG: one entry for TQ-200d-5-ii written with scripts/changelog/emit_entry.py (type manual, components
+    [testing_quality]) into changelogs/, naming the claude lookup, the LEAFCUTTER_EVAL_CLAUDE_CLI setting
+    and the resolved KI. The entry is written in the same change as the code.
+  - >-
+    Files stay at or under 400 counted lines; run_agent_eval.py must not grow; tests go in unit_tests/evals/tq200d5/.
+test_spec:
+  - name: test_cmd_only_path_on_windows_starts_the_installed_launcher
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      With the platform treated as Windows and a PATH folder holding only claude, claude.cmd and claude.ps1,
+      the process started is claude.cmd through the command processor, and the row is scored.
+    must_catch:
+      - bare name 'claude' passed to the process start on Windows
+      - resolved .cmd started directly without the command processor
+      - extensionless npm shell script picked instead of claude.cmd
+    in_scope_files:
+      - scripts/evals/agent_launch/locate.py
+      - scripts/evals/agent_launch/command.py
+  - name: test_cli_location_setting_wins_on_every_platform
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      With LEAFCUTTER_EVAL_CLAUDE_CLI set and a different claude on PATH, the program started is the one
+      the setting names, on Windows and on Linux; a setting naming no program is a launch failure, not
+      a fall back to PATH.
+    must_catch:
+      - setting ignored when a claude is on the path
+      - setting honoured only on Windows
+      - missing program in the setting silently replaced by the PATH lookup
+    in_scope_files:
+      - scripts/evals/agent_launch/locate.py
+  - name: test_linux_without_setting_starts_claude_from_path_as_before
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: >-
+      On Linux with no setting, the argv's program is 'claude' resolved from PATH and no shell is used.
+    must_catch:
+      - Linux start routed through a shell
+    in_scope_files:
+      - scripts/evals/agent_launch/locate.py
+      - scripts/evals/agent_launch/command.py
+  - name: test_cmd_launch_keeps_instructions_off_the_command_line
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: >-
+      Through the command-processor route, the joined command line is under 32,767 characters for the
+      real test-writer template and holds no template text, and a prompt-file path containing a space
+      and '&' reaches the program intact.
+    must_catch:
+      - instructions inlined when the launcher is a .cmd
+      - prompt-file path left unquoted for the command processor
+    in_scope_files:
+      - scripts/evals/agent_launch/command.py
+      - scripts/evals/agent_launch/locate.py
+  - name: test_all_three_invokers_use_the_one_lookup
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: >-
+      With the lookup patched to return a sentinel program, label, artifact/produced-tests and recorded-commands
+      invokers all start the sentinel.
+    must_catch:
+      - one invoker still starts the bare name 'claude'
+    in_scope_files:
+      - scripts/evals/run_agent_eval.py
+      - scripts/evals/produced_tests_transcript.py
+      - scripts/evals/agent_launch/command.py
+  - name: test_docs_name_the_setting_the_harness_reads
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The setting name in scripts/evals/README.md and the how-to equals the name the lookup module reads,
+      and the how-to no longer tells the reader to prefix PATH.
+test_rationale: >-
+  The Windows behaviour is simulated with a patched platform and a real temp PATH folder, so the tests
+  run on Linux CI as well. Each wrong version is one way the 2026-10-24 failure (WinError 2) or a regression
+  of TQ-200d-5 (instructions back on the command line through cmd.exe) could return. The doc-drift test
+  holds the one name users must type.
+origin_agent: business-analyst
+created: 2026-10-29
+amended_by:
+  - reason: >-
+      IT-PO technical enrichment after the user approved the business-analyst stage of the TQ-200d before-score
+      fixes. Set assigned_agent, estimated_complexity, declared_files, it_requirements (each doc update
+      named with what it must state), delivers_to/expects_from, doc_links with checked status, test_required,
+      test_spec (each must_catch with in_scope_files, doc-drift entries as real_artifact), test_rationale,
+      change_target, risk_surface and package_surface, and readiness reviewed. Criteria, title and depends_on
+      untouched.
+    by: it-po
+    at: '2026-10-30'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: internal
+notes: |
+  IT-PO (2026-10-30). Decided: environment variable LEAFCUTTER_EVAL_CLAUDE_CLI
+  (not a skills_config key, so skills-config-fields.md is not changed); PATH/PATHEXT
+  lookup on Windows with .cmd/.bat started through the command processor; Linux
+  unchanged.
+
+  USER DECISIONS (2026-10-30, final gate).
+    - OQ-6 accepted: the docs stay with this AC's implementing agent (each AC carries
+      its own docs). A 'specialist versus surface' finding on a declared .md path is
+      settled as 'assignment stands'.
+    - OQ-7 accepted: this record keeps the legacy test_spec (must_catch with
+      in_scope_files) and carries no test_intent, like its TQ-200d siblings.

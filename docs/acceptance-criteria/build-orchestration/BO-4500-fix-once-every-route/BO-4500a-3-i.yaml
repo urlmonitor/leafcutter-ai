@@ -1,0 +1,90 @@
+id: BO-4500a-3-i
+title: "No route can switch the checks off through the shared step"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-3.yaml"
+criteria: |
+  Given the environment the shared commit step is started in asks the check runner to skip
+    the checks named check-doc-frontmatter and check-ac-schema,
+  When the step runs the checks,
+  Then check-doc-frontmatter and check-ac-schema run like every other check,
+  And the answer states that a request to skip checks was present and was not honoured.
+
+  Given a caller looks for a way to ask the step itself to commit without running the checks,
+  When the step's accepted options are listed,
+  Then no option exists that skips all checks or any named check.
+
+  Given the environment asks to skip a check and that check fails,
+  When the step answers,
+  Then the answer is hook_failed naming that check, exactly as it would be with no skip request.
+depends_on: [BO-4500a-3]
+doc_links:
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: "C6 spec: 'never skips hooks'."
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    Every inherited mechanism that can switch checks off for the step's own call is neutralised for
+    that call and named in skip_request_ignored: the check runner's skip list, a no-verify request,
+    an allow-no-config request, and hook-path overrides. The neutralisation applies only to the
+    step's child processes; the caller's environment is not modified.
+  - The step's own accepted options contain no skip, no-verify or exempt option of any form; a skip-shaped argument is refused with policy_unknown_option, never honoured.
+  - An inherited skip request is disregarded and reported, not refused (BA decision); the answer otherwise matches a call without the request.
+  - If the workspace has no check configuration at all, behaviour is BO-1700's (fail closed / declared no-op), not a silent pass invented here.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-3
+  contract: "Check-run sequence."
+test_required: true
+test_spec:
+  - name: test_inherited_skip_request_is_ignored_and_reported
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "With SKIP naming check-doc-frontmatter and check-ac-schema in the environment, both fixture checks record that they ran and skip_request_ignored lists both."
+    must_catch:
+      - "pass the caller's environment to the check runner unchanged"
+  - name: test_step_options_offer_no_way_to_skip_checks
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Every option in the step's usage text is listed and none skips checks; --no-verify and a skip option are refused."
+  - name: test_skipped_and_failing_check_answers_hook_failed_as_without_skip
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A failing check named in the skip request yields the same hook_failed answer (hook_name, failing_files) as with no skip request."
+test_rationale: >-
+  The bypass is an environment variable, so the proof is a real run with the variable set and
+  fixture checks that log their own invocation; reading the step's source would not show the
+  child environment.
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECISION: an inherited skip request is DISREGARDED AND REPORTED, not refused. A refusal would
+  turn a stale variable left in a shell into a failed delivery with nothing wrong in the change;
+  disregarding it keeps the "checks always run" promise and still tells the caller. Hand-run
+  commits outside the step are untouched -- this record constrains the shared step only.

@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-48a9f4dedd9b4f0a",
+  "interaction_id": "int-be166896c61a4576",
+  "sha256": "cd353f693f5c896183d459af61cbfa1331e9207cc069ff946ba0e3bc69b8d3cb",
+  "submission": {
+    "schema_version": "1.0",
+    "run_id": "run-48a9f4dedd9b4f0a",
+    "interaction_id": "int-be166896c61a4576",
+    "expected_state_revision": 1,
+    "actor": {
+      "schema_version": "1.0",
+      "id": "host:blind-precision",
+      "kind": "host"
+    },
+    "relayed_by": null,
+    "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+    "response": {
+      "schema_version": "1.0",
+      "original_question": "Show only the acceptance obligations of KM-500c-2; omit its test plan.",
+      "source_scope": {
+        "read_roots": [
+          "docs"
+        ],
+        "repository_id": "leafcutter",
+        "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+        "source_ids": [
+          "knowledge.graph"
+        ]
+      },
+      "selections": {
+        "entity_types": [
+          "ac"
+        ],
+        "target_ids": [
+          "KM-500c-2"
+        ],
+        "required_fields": [
+          "criteria"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": []
+      },
+      "uncertain": {
+        "entity_types": [],
+        "target_ids": [],
+        "required_fields": [],
+        "document_types": [],
+        "relationships": []
+      },
+      "detail_mode": "fields",
+      "completeness": "single_entity",
+      "hierarchy_scope": "not_applicable",
+      "hierarchy_levels": [],
+      "scope_resolution": "sufficient",
+      "unresolved": [],
+      "rationale": "Only acceptance obligations are requested, and the test plan is explicitly omitted.",
+      "engine": "host_llm",
+      "status": "decided",
+      "model_id": null
+    },
+    "new_evidence": [],
+    "usage": []
+  },
+  "accepted_at": "2026-10-09T21:45:39.114244Z"
+}

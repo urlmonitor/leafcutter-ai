@@ -19,6 +19,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 _THIS_DIR = Path(__file__).resolve().parent
 _PORTABILITY_DIR = _THIS_DIR.parent / "portability"
 
@@ -39,8 +41,29 @@ from _bp1500g2_harness import (  # noqa: E402
 )
 
 
+@pytest.fixture(scope="module")
+def _shared_discoverable_collision_build(tmp_path_factory):
+    """Produce the ONE real build the two read-only tests below share
+    (TQ-600a-9): both plant the identical adopter capability at the
+    discoverable `.claude/skills` container via
+    `plant_capability_at_discoverable_location`, recompute the identical
+    shipped-skill-name set, and run the identical no-flag build -- one
+    asserting set equality between delivered and shipped, the other
+    asserting the cheap-pass differential (items written into the tree but
+    unreachable by name) -- so one real build safely serves both instead
+    of each paying its own `fresh_scratch_adopter` + plant + `run_build`
+    sequence."""
+    root = tmp_path_factory.mktemp("bp1500g2_discoverable_collision")
+    target_root = fresh_scratch_adopter(root)
+    plant_capability_at_discoverable_location(target_root)
+    shipped = recomputed_shipped_skill_names()
+    assert shipped, "Fixture premise broken: no shipped skill names recomputed at all."
+    result = run_build(target_root)
+    return target_root, shipped, result
+
+
 def test_bp_1500g_2_the_delivered_set_equals_the_recomputed_shipped_set_exactly_with_no_omissions(
-    tmp_path: Path,
+    _shared_discoverable_collision_build,
 ) -> None:
     # covers: BP-1500g-2
     # angle: seam
@@ -56,13 +79,11 @@ def test_bp_1500g_2_the_delivered_set_equals_the_recomputed_shipped_set_exactly_
     portability tests exercise -- so the "missing" direction has real
     content to report (today: the ENTIRE shipped set, since none of it
     resolves through the discovery path in this state).
-    """
-    target_root = fresh_scratch_adopter(tmp_path)
-    plant_capability_at_discoverable_location(target_root)
-    shipped = recomputed_shipped_skill_names()
-    assert shipped, "Fixture premise broken: no shipped skill names recomputed at all."
 
-    result = run_build(target_root)
+    Reads the ONE shared discoverable-collision build (TQ-600a-9) -- see
+    `_shared_discoverable_collision_build`'s own docstring.
+    """
+    target_root, shipped, result = _shared_discoverable_collision_build
 
     delivered = {name for name in shipped if is_discoverable(target_root, name)}
 
@@ -77,7 +98,7 @@ def test_bp_1500g_2_the_delivered_set_equals_the_recomputed_shipped_set_exactly_
 
 
 def test_bp_1500g_2_removing_the_discovery_link_is_detected_as_a_failure_of_this_ac(
-    tmp_path: Path,
+    _shared_discoverable_collision_build,
 ) -> None:
     # covers: BP-1500g-2
     # angle: failure
@@ -95,13 +116,11 @@ def test_bp_1500g_2_removing_the_discovery_link_is_detected_as_a_failure_of_this
     run. The first assertion below confirms the fixture premise (package
     items really are still written into the tree); the second is the
     differential itself.
-    """
-    target_root = fresh_scratch_adopter(tmp_path)
-    plant_capability_at_discoverable_location(target_root)
-    shipped = recomputed_shipped_skill_names()
-    assert shipped, "Fixture premise broken: no shipped skill names recomputed at all."
 
-    result = run_build(target_root)
+    Reads the ONE shared discoverable-collision build (TQ-600a-9) -- see
+    `_shared_discoverable_collision_build`'s own docstring.
+    """
+    target_root, shipped, result = _shared_discoverable_collision_build
 
     present = [name for name in sorted(shipped) if is_present_in_output_tree(target_root, name)]
     assert present == sorted(shipped), (

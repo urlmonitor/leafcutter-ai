@@ -313,6 +313,14 @@ def _write_skills_config(target_dir: Path, config: dict) -> Path:
     test_rationale names as "the dominant false-green risk in this
     contract."
 
+    It also seeds an unmodified copy of the precommit-autofix scaffold at the
+    location the config names (absolute, or relative to target_dir). Since
+    BP-1500h-1-i a configured path to a file that does not exist yet is a
+    broken setting the build warns about and skips -- no scaffold is written
+    there -- so the build would never try to record it. The managed file must
+    already exist, pristine, for the build to register it in output_mappings,
+    the record this module's condition makes unproducible.
+
     Args:
         target_dir: The --target-dir a build will be run against.
         config: The skills_config.json content to write (merged over
@@ -324,6 +332,9 @@ def _write_skills_config(target_dir: Path, config: dict) -> Path:
     """
     config_dir = target_dir / ".claude"
     config_dir.mkdir(parents=True, exist_ok=True)
+    managed = target_dir / config.get("precommit_autofix_config_path", ".claude/precommit-autofix.json")
+    managed.parent.mkdir(parents=True, exist_ok=True)
+    managed.write_text((_TEMPLATES_DIR / "scripts" / "precommit-autofix.json").read_text(encoding="utf-8"), encoding="utf-8")
     config_path = config_dir / "skills_config.json"
     config_path.write_text(json.dumps(config), encoding="utf-8")
     return config_path
@@ -358,12 +369,6 @@ def _assert_out_of_package_layout(package_root: Path, target_dir: Path) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# Shared, MODULE-scoped fixtures. See the PERFORMANCE NOTE in the module
-# docstring for the cost accounting these exist to control.
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture(scope="module")
 def _scratch_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """One scratch root shared by the package copy and the shared target,
@@ -371,6 +376,10 @@ def _scratch_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
     target at <scratch>/project/) is a fact about the fixture, not merely
     an accident of two independent tmp_path_factory.mktemp() calls landing
     under a common pytest session directory.
+
+    This and the fixtures below are the shared, MODULE-scoped fixtures; see
+    the PERFORMANCE NOTE in the module docstring for the cost accounting
+    they exist to control.
     """
     return tmp_path_factory.mktemp("bp1500d3_scratch")
 
@@ -393,9 +402,9 @@ def _escaped_config_target(tmp_path_factory: pytest.TempPathFactory) -> Path:
     against -- the escaped precommit_autofix_config_path value that
     triggers BP-1500d-3's condition. Lives in its own scratch tree,
     deliberately never inside _scratch_root or any target_dir, so it is
-    genuinely unreachable from inside the receiving project (a real build
-    will actually write a scaffold file here -- see build_config_scaffolds.py
-    -- so this must be a location this test run owns).
+    genuinely unreachable from inside the receiving project
+    (_write_skills_config seeds a real scaffold file here, so this must be a
+    location this test run owns).
     """
     return tmp_path_factory.mktemp("bp1500d3_escaped") / "escaped-precommit-autofix.json"
 

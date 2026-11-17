@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -84,11 +84,27 @@ origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300c_1_i.py
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300c-1-i.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05_TICKET-20260928-BO-4300-readiness.md
+- templates/scripts/worktree.py
+- templates/scripts/worktree_git.py
+- templates/scripts/worktree_readiness.py
+- templates/scripts/commit_guardian/commit_guardian.json
+- templates/scripts/commit_guardian/precommit_canary.py
+- scripts/build_helpers.py
 notes: |
   F6 and KI-BP-20260907-bootstrap-swallows-build-failure: the build failing inside set-up only
   warned, a fast-lane workspace was missing build_orchestration/, and the run died four steps
   later.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 05_TICKET-20260928-BO-4300-readiness.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

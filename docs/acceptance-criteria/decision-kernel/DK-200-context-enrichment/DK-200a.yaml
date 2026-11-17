@@ -1,0 +1,38 @@
+id: DK-200a
+title: "Carry initial context from request intake into the rest of the run"
+component: decision-kernel
+components: [decision_kernel]
+level: L1
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a new request and any supplied conversation or host observations,
+  When the kernel prepares to determine the requested kind of answer,
+  Then one initial enrichment pass precedes intent classification,
+  And the original request and the origin of each claim remain distinguishable,
+  And the gathered context remains available through continuation of that run.
+depends_on: [DK-200]
+covered_by:
+  - DK-200a-1
+  - DK-200a-2
+  - DK-200a-3
+  - DK-200a-4
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: specified-by
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: specified-by
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: specified-by
+    status: exists
+origin_agent: Codex orchestrator (user-authorized BA and IT PO review)
+created: 2026-10-02
+notes: |
+  Scope is the initial enrichment already requested by the user, including its
+  downstream handoff and evaluation. It excludes recursive research and changing
+  the installed kernel shortcut. Readiness remains draft pending product review.

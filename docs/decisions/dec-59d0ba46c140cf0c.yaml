@@ -1,0 +1,186 @@
+schema_version: '1.0'
+kind: decision
+id: dec-59d0ba46c140cf0c
+repository_id: leafcutter-ai
+title: move ticket 08 out of E1 into E2, after DK-400d-1 and DK-400d-3
+description: 'DK-400 E1 ticket 08 (AC DK-400a-1-ii: a request that is split is not counted as a ...'
+decision_type: selection
+question: 'DK-400 E1 ticket 08 (AC DK-400a-1-ii: a request that is split is not counted as a capability gap, and a real gap
+  still is) cannot be built: its tests need the split gate''s approve and reject outcomes (DK-400d-1, DK-400d-3), which the
+  epic plan puts in E2. How should ticket 08 be handled so E1 can be finished and DK-400a-1-ii is still built correctly?'
+components: []
+change_target: []
+risk_surface: []
+roadmap_phase: []
+file_globs: []
+repository_wide: true
+selected_option_id: opt.move_to_e2
+supersedes: []
+superseded_by: []
+related: []
+task_context:
+  goal: 'DK-400 E1 ticket 08 (AC DK-400a-1-ii: a request that is split is not counted as a capability gap, and a real gap
+    still is) cannot be built: its tests need the split gate''s approve and reject outcomes (DK-400d-1, DK-400d-3), which
+    the epic plan puts in E2. How should ticket 08 be handled so E1 can be finished and DK-400a-1-ii is still built correctly?'
+  component_ids: []
+  technologies: []
+  constraints:
+    - '[must] requirement: Every code change is driven by a ticket (CLAUDE.md ticket mandate).'
+    - '[must] requirement: User decision F4 option A stands: a halted ticket''s staged leftovers stop the run.'
+rationale:
+  text: Option [opt.move_to_e2] move ticket 08 out of E1 into E2, after DK-400d-1 and DK-400d-3 satisfies the required criteria
+    ['crit.single_implementation', 'crit.e1_finishes_now', 'crit.ac_still_built'] according to evidence ['ev-e067105f74b220e0',
+    'ev-dc96c1e371e1d4bc', 'ev-e503647153ac49d5', 'ev-4d4401977563c97b', 'ev-fd7da6ac181fa870'].
+  origin: template
+assumptions: []
+unresolved_risks: []
+assessment:
+  basis: resolved_gate
+  design_reason: null
+  confidence: null
+  selected_rank: null
+  ranking: []
+final_outcome:
+  status: pending
+  observed_at: null
+  note: ''
+options:
+  - id: opt.move_to_e2
+    title: move ticket 08 out of E1 into E2, after DK-400d-1 and DK-400d-3
+    description: Remove ticket 08 from E1 (and from E1's Master_Plan) and take DK-400a-1-ii into E2's AC set, so E2's generator
+      orders it after DK-400d-1 and DK-400d-3 and next to DK-400d-3-i. Its red test leaves E1's index and is kept with the
+      ticket for E2 (not committed on E1). E1 resumes at once with 10, 11, 13, 15, 16, 17. Amends dec-9925ebf1895222f4's E1/E2
+      composition by one AC; a short note records why.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.pull_d_into_e1
+    title: pull DK-400d-1 and DK-400d-3 (with their L3 children) into E1 ahead of ticket 08
+    description: Generate tickets for DK-400d-1, DK-400d-1-i, DK-400d-1-ii, DK-400d-3, DK-400d-3-i..iii into E1 and make ticket
+      08 depend on them. E1 grows by about six tickets and takes most of DK-400d out of E2; the gate outcomes are built before
+      E1's remaining propose-side tickets finish.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.widen_08
+    title: widen ticket 08 to build a minimal approve outcome itself
+    description: Ticket 08's scope grows to include consuming the gate's approve answer and releasing parts, just enough for
+      its tests. DK-400d-1 in E2 then has to reconcile with or replace that partial implementation.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.defer_08_in_e1
+    title: keep ticket 08 in E1 as deferred, commit its red test, and re-ticket DK-400a-1-ii in E2
+    description: Set ticket 08 to deferred with a note naming DK-400d-1/DK-400d-3, commit its red test on E1 (it shows as
+      xfail while the AC is not done), and generate a fresh ticket for DK-400a-1-ii when E2 is planned. E1 resumes at once
+      and archives with 08 deferred.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+criteria:
+  - id: crit.single_implementation
+    question: Is the gate's approve/reject outcome built exactly once, by the DK-400d tickets, with no second implementation?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-e067105f74b220e0
+      - ev-dc96c1e371e1d4bc
+      - ev-e503647153ac49d5
+      - ev-fd7da6ac181fa870
+  - id: crit.e1_finishes_now
+    question: Can E1's other remaining tickets (10, 11, 13, 15, 16, 17) be built straight away?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-4d4401977563c97b
+      - ev-fd7da6ac181fa870
+      - ev-e503647153ac49d5
+  - id: crit.ac_still_built
+    question: Is DK-400a-1-ii still certain to be built, after its prerequisites, without relying on someone remembering it?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-e503647153ac49d5
+  - id: crit.epic_plan_kept
+    question: Does it keep the epic split of dec-9925ebf1895222f4, changing it as little as possible?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-e503647153ac49d5
+      - ev-dc96c1e371e1d4bc
+      - ev-4d4401977563c97b
+  - id: crit.branch_clean
+    question: Does E1's branch stay free of tests that are red under AC_ENFORCE_STRICT=1?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-fd7da6ac181fa870
+      - ev-e067105f74b220e0
+      - ev-4d4401977563c97b
+evidence:
+  - id: ev-e067105f74b220e0
+    locator: 'E1 ticket 08 ## Comments; build-feature run wf_9ff8b5af-9ca journal'
+    category: task_context
+    content_hash: 19a347dbcdffcf736eb2f35fe2a3a3b1ff561c037485409ecdf93ffe05ed7252
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-dc96c1e371e1d4bc
+    locator: docs/acceptance-criteria/decision-kernel/DK-400-split-compound-requests/DK-400a-1-ii.yaml, DK-400d-1.yaml, DK-400d-3.yaml,
+      DK-400d-3-i.yaml
+    category: existing_patterns
+    content_hash: 39e62c2976569934866825a9760eff6fe2bb354b25057138277c37559490aaa0
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-e503647153ac49d5
+    locator: docs/decisions/dec-9925ebf1895222f4.yaml lines 263-270
+    category: prior_decisions
+    content_hash: 73c90a1ea42f1f254c920e4e032dfa071dabba1a2d4c2e656b26d5c00822ea66
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-4d4401977563c97b
+    locator: E1 worktree git status; build-feature result wf_9ff8b5af-9ca
+    category: task_context
+    content_hash: ee348dc4b29e4d183c8da5d62b13c23c56ddcb88fd1af4917e62b7bcc2d9b34d
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-fd7da6ac181fa870
+    locator: scripts/ac_store/pytest_ac_enforcement.py; scripts/set_ticket_status.py _ARCHIVE_OK_STATUSES
+    category: existing_patterns
+    content_hash: 2fb4ed1e4cca66057934cbd1fb71303064c4cbda37a896613f5c6fb8c3025456
+    verification: unverified
+    relevance: null
+    source_version: null
+precedents_considered: []
+approval:
+  approval_status: approved
+  approved_by: human:user
+  approved_at: '2026-10-09T18:24:09Z'
+  note: ''
+provenance:
+  origin: learned
+  created_by_capability: decision
+  created_at: '2026-10-09T18:24:10Z'
+  run_id: run-7524c1dc0bbf405a
+  root_task_id: task-9ddddadc0b7245f4
+  langfuse_trace_id: 14d5ad5c95f375be9f25eca18c3dce96
+  langfuse_trace_url: null
+  repository_revision:
+    commit: null
+    dirty: false
+  policy_version: null
+  template_version: decision.assess@1
+  model_version: jev-latest
+  kernel_version: 0.1.0.dev0
+  decision_versions:
+    options: efa639a2ec79
+    criteria: 82e222cceaad
+    templates: decision.assess@1
+corrections: []

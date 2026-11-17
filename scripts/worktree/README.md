@@ -8,7 +8,7 @@ residual log files survive after an epic's close flow.
 
 Provides `sweep_processes.py`, a cross-platform Python helper invoked by
 the `close-worktree` workflow (Phase 3.5) and the `worktree-agent` remove
-action before every `git worktree remove` call. Prevents the class of
+action before every workspace removal by the workspace maker (`worktree.py remove`; see `docs/how-to/clear-a-workspace.md` and `docs/how-to/get-a-workspace.md`). Prevents the class of
 failure where held-open file handles block OS-level directory deletion.
 
 ## Key Files

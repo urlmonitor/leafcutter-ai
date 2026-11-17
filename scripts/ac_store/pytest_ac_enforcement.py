@@ -21,7 +21,8 @@ ARCHITECTURE: Registered as a pytest plugin via pytest.ini addopts
     Outcome conversion:
       - A failing ``call``-phase test whose ``# covers: <AC-ID>`` tag points at
         an AC with work_status != "done" has its report ``outcome`` set to
-        ``"xfailed"`` with a ``wasxfail`` attribute so pytest shows XFAIL.
+        ``"skipped"`` with a ``wasxfail`` attribute -- pytest's own xfail
+        shape -- so the terminal, JUnit XML and xdist all report XFAIL.
       - All other tests are unaffected.
 
     Safety guarantees (BP-audit stage 5 — anti-silent-masking):
@@ -180,8 +181,8 @@ def pytest_runtest_makereport(
       1. Extracts the ``# covers: <AC-ID>`` tag from the test function source.
       2. Looks up the AC's work_status in the session cache.
       3. If classified as ``"informational"`` (work_status != ``"done"``),
-         rewrites the report ``outcome`` to ``"xfailed"`` so pytest does not
-         count the test as a run failure.
+         rewrites the report to pytest's xfail shape (``outcome = "skipped"``
+         plus ``wasxfail``) so pytest does not count the test as a run failure.
 
     Args:
         item: The pytest test item being reported on.
@@ -241,7 +242,10 @@ def pytest_runtest_makereport(
 
     # Downgrade to xfail so pytest does not count this as a run failure — but
     # record it and announce it loudly so a masked regression can never hide.
-    report.outcome = "xfailed"
+    # pytest's own xfail shape (TQ-100b-1-iv): outcome "skipped" plus wasxfail,
+    # as _pytest/skipping.py writes it. "xfailed" is not a TestReport outcome:
+    # it left passed/failed/skipped all False, so JUnit wrote a passing testcase.
+    report.outcome = "skipped"
     report.wasxfail = (
         f"AC {ac_id} work_status is not done — test is informational"
     )

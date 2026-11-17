@@ -13,7 +13,10 @@ description: 'Conditional phase agent that invokes a user-facing surface end-to-
 memory: true
 model: sonnet
 name: user-surface-smoker
-tools: Bash, Read, Edit, Agent
+tools: Bash, Read, Edit, Agent, Skill
+skills:
+- skill_id: signoff
+  mode: always
 portable: true
 signoff: true
 domain: null
@@ -293,16 +296,17 @@ When calling `submit_feedback.py` during sign-off:
 - Use `--category blocker` when emitting a `(status: blocker)` comment.
 - Use `--category tooling-issue` if the smoke test failed due to harness infrastructure (not surface logic).
 
-**Worktree path note:** `submit_feedback.py` resolves its sink path relative to
-`__file__` (not CWD), walking up to find the `.claude/` directory. In an epic
-worktree, `.claude/` exists in the worktree root — the script will write to the
-worktree's `debugging/logs/feedback.jsonl`. No special `--jsonl` override is needed.
+**Worktree path note:** `submit_feedback.py` writes to the install's declared
+feedback sink (the install's declared log root), which outlives the worktree. Pass no
+destination override; the script prints the sink it used on stderr.
 
 Run a single command (per the shell convention — no chaining):
 
 ```bash
-python3 scripts/feedback/submit_feedback.py --ticket <ticket_path> --phase user-surface-smoker --category complete --note "<one-sentence summary>" 2>/tmp/feedback_err.txt
+python3 scripts/feedback/submit_feedback.py --ticket <ticket_path> --phase user-surface-smoker --category complete --note "<one-sentence summary>" 2>/tmp/feedback_err_<ticket_basename>_user-surface-smoker.txt
 ```
+
+`<ticket_basename>` is the ticket file's name (e.g. `03-add-parser.md`).
 
 Read the feedback ID from the Bash tool result (stdout). If stdout is empty, use
 `(submit-failed)` as the fallback value.

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-09-28'
+last_updated: '2026-10-14'
 components:
   - build_pipeline
 related_docs:
@@ -101,7 +101,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 46** (1 blocker, 22 high, 23 low) · **Resolved: 12**
+**Open: 50** (1 blocker, 21 high, 3 medium, 25 low) · **Resolved: 14** (KI-BP-007 resolved 2026-10-15) (recounted from the directory 2026-10-14; the table below still lacks rows for some entries filed since 2026-09-28)
 
 ## Open
 
@@ -110,8 +110,9 @@ Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and 
 | `blocker` | KI-BP-018 — No build phase can fail the build, the deploy set is hand-listed in ~26 places, and nothing verifies the deployed tree is complete | [open-blocker-ki-bp-018.md](build-pipeline/open-blocker-ki-bp-018.md) |
 | `high` | KI-BP-001 — The documented self-host build command destroys `docs/INDEX.md` on every run | [resolved-high-ki-bp-001.md](build-pipeline/resolved/resolved-high-ki-bp-001.md) |
 | `high` | KI-BP-004 — A worktree's deployed hooks are frozen at build time, so after merging `main` the gates enforce the previous ruleset | [open-high-ki-bp-004.md](build-pipeline/open-high-ki-bp-004.md) |
+| `high` | KI-BP-20261007 — RETRACTED: "`check-product-truth-validate` fails closed on an undeclared `aiosqlite` dependency" — tested and disproved; `aiosqlite` is supplied transitively by `langgraph-checkpoint-sqlite==3.1.1` (`requirements-dev.txt:52`) and the real cause was a stale local `.venv` | [resolved-high-ki-bp-20261007-product-truth-gate-fails-closed-on-an-undeclared-dependency.md](build-pipeline/resolved/resolved-high-ki-bp-20261007-product-truth-gate-fails-closed-on-an-undeclared-dependency.md) |
 | `high` | KI-BP-005 — Deleting a template leaves its deployed copy behind, and the build reports "no stale files found" | [open-high-ki-bp-005.md](build-pipeline/open-high-ki-bp-005.md) |
-| `high` | KI-BP-007 — No gate validates a skill reference written in template prose, so six skills are loaded by name and none of them exist | [open-high-ki-bp-007.md](build-pipeline/open-high-ki-bp-007.md) |
+| `high` | KI-BP-007 — No gate validates a skill reference written in template prose, so six skills are loaded by name and none of them exist | [resolved-high-ki-bp-007.md](build-pipeline/resolved/resolved-high-ki-bp-007.md) |
 | `high` | KI-BP-008 — A version gate can skip the entire workflow-install phase and still report a successful build, leaving every deployed workflow silently stale | [open-high-ki-bp-008.md](build-pipeline/open-high-ki-bp-008.md) |
 | `high` | KI-BP-009 — `.claude/skills/` is symlinked wholesale to the generated tree, so an adopter's own skills have nowhere to live and `--clean` targets them | [open-high-ki-bp-009.md](build-pipeline/open-high-ki-bp-009.md) |
 | `high` | KI-BP-011 — `.build_manifest.json` is written to the package that ran the build, not the target install it describes, so it is not portable to any consumer install | [open-high-ki-bp-011.md](build-pipeline/open-high-ki-bp-011.md) |
@@ -133,6 +134,8 @@ Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and 
 | `high` | KI-BP-20260907-no-gitignore-for-consumers — `build.py` deploys no `.gitignore` to consumers, so a deployed module's compiled bytecode gets tracked and every import re-fails the next commit | [open-high-ki-bp-20260907-no-gitignore-for-consumers.md](build-pipeline/open-high-ki-bp-20260907-no-gitignore-for-consumers.md) |
 | `high` | KI-BP-20260921-1630 — the clean-mode provenance ledger can only ever learn about artifacts the build still produces, so every orphan that predates it is permanently unremovable | [open-high-ki-bp-20260921-1630.md](build-pipeline/open-high-ki-bp-20260921-1630.md) |
 | `high` | KI-BP-20260922-0620 — setup_ticket_worktree.py resolved the repository from its own file location; the resolution half is fixed (PR #866), but in the dev layout the deployed copy still cannot create a worktree and the fast lane stays blocked | [open-high-ki-bp-20260922-0620.md](build-pipeline/open-high-ki-bp-20260922-0620.md) |
+| `medium` | KI-BP-20260923-0730 — BP-1100e-1 is a composite marked done whose seven children are unproven, invisible until the parent is staged | [open-medium-ki-bp-20260923-0730.md](build-pipeline/open-medium-ki-bp-20260923-0730.md) |
+| `medium` | KI-BP-20261001-roadmap-exit-criterion-counts-markers-not-delivery — phase_1's injection exit criterion can only report leftover markers, so it passes while two per-agent injections deliver nothing to any agent | [open-medium-ki-bp-20261001-roadmap-exit-criterion-counts-markers-not-delivery.md](build-pipeline/open-medium-ki-bp-20261001-roadmap-exit-criterion-counts-markers-not-delivery.md) |
 | `low` | KI-BP-002 — Generated agent cards are tracked but never regenerated, so every build dirties six of them | [open-low-ki-bp-002.md](build-pipeline/open-low-ki-bp-002.md) |
 | `low` | KI-BP-010 — Clean-mode's `workflows` entry has a doubled path segment, so it has never run and a real orphan survives every `--clean` | [resolved-low-ki-bp-010.md](build-pipeline/resolved/resolved-low-ki-bp-010.md) |
 | `low` | KI-BP-013 — The mypy gate checks only changed files, so untouched debt is invisible until an unrelated edit drops a wall of it on whoever touched the file | [open-low-ki-bp-013.md](build-pipeline/open-low-ki-bp-013.md) |
@@ -157,6 +160,7 @@ Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and 
 | `low` | KI-BP-20260914-1415 — a test asserts a literal string appears exactly twice in `build.py`'s source text, so relocating either function fails a fixture premise far from the cause | [open-low-ki-bp-20260914-1415.md](build-pipeline/open-low-ki-bp-20260914-1415.md) |
 | `low` | KI-BP-20260927 — the closure walk's second-hop symlink fix has no regression test, so a reintroduced `.resolve()` would only be caught by an unrelated CI failure | [open-low-ki-bp-20260927-closure-walk-symlink-hop-untested.md](build-pipeline/open-low-ki-bp-20260927-closure-walk-symlink-hop-untested.md) |
 | `low` | KI-BP-20260928-closure-guard-reads-comparison-literals-as-file-reads — the intra-package closure guard treats a `dir/file.ext` literal used only for path comparison as a data-file read and fails the build with a false missing-deploy-mapping | [open-low-ki-bp-20260928-closure-guard-reads-comparison-literals-as-file-reads.md](build-pipeline/open-low-ki-bp-20260928-closure-guard-reads-comparison-literals-as-file-reads.md) |
+| `medium` | KI-BP-20261014-halt-guard-widens-to-every-changelog-when-the-pin-is-unreachable — when `git log <pin>..HEAD` fails, `build_halt_guard` silently treats every changelog entry as new, so an already-applied breaking migration halts the build again instead of the guard saying it could not tell | [open-medium-ki-bp-20261014-halt-guard-widens-to-every-changelog-when-the-pin-is-unreachable.md](build-pipeline/open-medium-ki-bp-20261014-halt-guard-widens-to-every-changelog-when-the-pin-is-unreachable.md) |
 
 ## Resolved
 

@@ -41,7 +41,9 @@ every field, its allowed values, and when it is required.
 | `children` | list | Yes | Paths to child diagrams (one zoom level down). `[]` when none. |
 | `root` | bool | No | `true` only on the single L1 system-context doc. Omit or `false` on all others. |
 | `related_adrs` | list | No | Paths to ADRs that govern this diagram. Bidirectional — the ADR must list this file in `affects_diagrams`. |
-| `related_code` | list | No | Source file paths that implement what this diagram describes. |
+| `related_docs` | list | No | Other documents this diagram cross-references. Entry shapes: see **Path Entry Shapes** below. |
+| `related_code` | list | No | Source file paths that implement what this diagram describes. Entry shapes: see **Path Entry Shapes** below. |
+| `architecture_diagrams` | list | No | Paths to other architecture diagrams this diagram relates to. Entry shapes: see **Path Entry Shapes** below. |
 | `related_surfaces` | list | No | Observability surfaces (dashboards, metrics, traces) relevant to this diagram. |
 
 ## Fields for ADR Docs (adr type)
@@ -49,8 +51,68 @@ every field, its allowed values, and when it is required.
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|
 | `affects_diagrams` | list | Yes | Paths to architecture diagrams this ADR governs. `[]` when the ADR does not affect a diagram. Bidirectional — each listed diagram must list this ADR in `related_adrs`. |
-| `related_docs` | list | No | Other ADRs, how-tos, or references that this decision cross-references. |
-| `related_code` | list | No | Source file paths most directly affected by this decision. |
+| `related_docs` | list | No | Other ADRs, how-tos, or references that this decision cross-references. Entry shapes: see **Path Entry Shapes** below. |
+| `related_code` | list | No | Source file paths most directly affected by this decision. Entry shapes: see **Path Entry Shapes** below. |
+| `architecture_diagrams` | list | No | Paths to architecture diagrams that illustrate this decision. Entry shapes: see **Path Entry Shapes** below. |
+
+## Path Entry Shapes
+
+`related_docs`, `related_code` and `architecture_diagrams` are lists of paths, and
+one rule governs all three. Every entry takes exactly one of two shapes, which the
+`check-doc-frontmatter` guard names `bare string` and
+`single-key mapping ({field_name: path_string})`:
+
+- **`bare string`** — the path itself. Use this form in a new document.
+- **`single-key mapping ({field_name: path_string})`** — one label and one path, as
+  in `architecture: docs/architecture/c2-001-containers.md`. It is accepted on
+  equal terms, so a document that already uses it needs no change.
+
+Any other entry is refused. The guard names the offending entry in its message and
+blocks the commit; it never accepts such an entry and never skips over it. Refused
+shapes include a mapping with more than one key, an integer, a nested list and an
+empty string. Every entry that is accepted must also point at a path that exists.
+
+Accepted — a bare string and a single-key mapping, in the same list:
+
+```yaml accepted
+related_docs:
+  - docs/how-to/deploy.md
+  - architecture: docs/architecture/c2-001-containers.md
+related_code:
+  - scripts/deploy.py
+architecture_diagrams:
+  - docs/architecture/c3-002-deploy-pipeline.md
+```
+
+Refused — an integer is neither shape:
+
+```yaml refused
+related_docs:
+  - 7
+```
+
+The guard prints:
+
+```text
+Unsupported entry in 'related_docs': 7 (not an accepted shape); accepted shapes are bare string, single-key mapping ({field_name: path_string})
+```
+
+Refused — a mapping that carries two labels:
+
+```yaml refused
+related_docs:
+  - architecture: docs/architecture/c2-001-containers.md
+    extra: docs/how-to/deploy.md
+```
+
+The guard prints:
+
+```text
+Unsupported entry in 'related_docs': {'architecture': 'docs/architecture/c2-001-containers.md', 'extra': 'docs/how-to/deploy.md'} (an entry in the labelled form carries exactly one label and one path); accepted shapes are bare string, single-key mapping ({field_name: path_string})
+```
+
+To fix a refused entry, rewrite it as one of the two shapes above. To relate a
+document to several paths, add one entry per path.
 
 ## Doc Type Enum
 

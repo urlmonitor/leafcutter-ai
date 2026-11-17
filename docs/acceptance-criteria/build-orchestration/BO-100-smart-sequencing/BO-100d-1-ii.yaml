@@ -1,25 +1,26 @@
 id: BO-100d-1-ii
 components:
   - build_orchestration
-readiness: approved
+readiness: draft
 priority: high
 title: "Only a genuine write failure after remediation hard-blocks the drive"
 component: build-orchestration
 level: L3
-status: active
+status: superseded_by
 req_status: active
 work_status: todo
 criteria: |
   Given /build-feature is invoked for an epic with at least one ready ticket,
+  And the install's telemetry location query has printed an absolute stream path
+    (for example /home/dev/proj/debugging/logs/agent_telemetry.jsonl),
   And the pre-drive feedback-sink reachability probe has already attempted its
-    directory-creation remediation for debugging/logs/,
-  When a retried append to debugging/logs/agent_telemetry.jsonl still returns a
-    non-zero result for a reason other than the directory being absent
-    (for example the path exists but is not writable, or is a directory, or the
-    filesystem is read-only),
+    directory-creation remediation for that path's log directory,
+  When a retried append to the printed path still fails for a reason other than
+    the directory being absent (for example the path exists but is not writable,
+    or is a directory, or the filesystem is read-only),
   Then the drive is hard-blocked at the pre-dispatch stage,
   And no ticket-supervisor is dispatched,
-  And the operator message names the sink path debugging/logs/agent_telemetry.jsonl
+  And the operator message names the absolute path the location query printed
     and describes the genuine write failure that remediation could not resolve.
 depends_on: [BO-100d-1a]
 doc_links:
@@ -31,7 +32,7 @@ estimated_complexity: S
 it_requirements:
   - "After the mkdir-and-reprobe remediation, a still-failing append for any non-directory-absent cause (not-writable / path-is-a-directory / read-only filesystem) must hard-block the drive at the pre-dispatch stage with no dispatch."
   - "The genuine-failure classification distinguishes these causes from directory-absence; only directory-absence is auto-remediated (BO-100d-1-i) — everything else hard-blocks here. This classification lives in the single shared probe helper (BO-100d-1a), not duplicated per surface."
-  - "The operator message must name debugging/logs/agent_telemetry.jsonl and describe the specific genuine failure remediation could not resolve, so the operator can fix it before re-running."
+  - "The operator message must name the absolute stream path printed by the telemetry location query and describe the specific genuine failure remediation could not resolve, so the operator can fix it before re-running."
   - "Handle the probe I/O gracefully per the project error handling policy (CLAUDE.md Rules 1-3): catch the specific OS/IO exceptions, log at WARNING, surface the operator message rather than swallowing — do not let the hard-block path mask the underlying cause."
   - "Dual-surface parity (the KI-3 lesson): the genuine-write-failure hard-block must fire identically whether the drive enters via build-epic.js or via the build-feature.md prose gate."
 delivers_to: null
@@ -42,7 +43,14 @@ origin_agent: business-analyst
 created: 2026-06-22
 amended_by:
   - reason: "it-po enrichment: re-pointed depends_on from the now-superseded BO-100d-1 to the surviving BO-100d-1a (the shared probe helper); added expects_from contract, it_requirements, and doc_links."
-superseded_by: null
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Criteria re-pointed from the workspace-relative debugging/logs/agent_telemetry.jsonl to the absolute stream the install's telemetry location query prints; the operator message now names that absolute path (KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path). The operator-message it_requirement was updated to match. readiness lowered from approved to draft because the approved criteria text changed; it needs IT PO review, then the user's re-approval."
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Retired: status superseded_by, superseded_by [BO-100d-1a-ii]. This record's id-derived parent BO-100d-1 is retired, so done-proof skipped this subtree and its work never counted toward BO-100d. The replacement BO-100d-1a-ii sits under the live L2 BO-100d-1a (this record's depends_on) and carries this record's criteria, it_requirements, contracts and doc_links verbatim. This record stays in BO-100d-1's covered_by for the audit trail. work_status unchanged."
+superseded_by:
+  - BO-100d-1a-ii
 covered_by: []
 implemented_by: []
 change_target: pipeline

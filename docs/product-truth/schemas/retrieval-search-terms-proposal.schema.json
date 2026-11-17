@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PROPOSED five search suggestions",
+  "description": "Design-only output described by retrieval-search-preparation#generate. No runtime operation currently binds this output.",
+  "type": "array",
+  "minItems": 5,
+  "maxItems": 5,
+  "uniqueItems": true,
+  "items": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "\\S"
+  }
+}

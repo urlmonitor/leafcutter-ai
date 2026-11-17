@@ -113,7 +113,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Recorded a verified unbuilt prerequisite: the five mockup .html files in docs/product-truth/mockups/fern-and-fig/ contain ZERO data-ac attributes and the .mockup.json records carry no per-criterion element mapping, so the design side of this comparison does not exist yet and annotating mockups is mockup-author's surface, uncovered by any AC in this family. Required both sides to be read with the same shared reader, made the difference directional, bounded precedence to pages that have a comparison, and required an empty design-side set to read as 'no pins' rather than a total mismatch. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/41_TICKET-20261023-GE-124f-2.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -143,3 +144,4 @@ notes: |
   until mockup markup starts carrying pins — work that belongs to mockup-author
   and is not covered anywhere in GE-124. This is the strongest candidate in the
   family for a follow-up AC, and the reason this AC is sized L.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

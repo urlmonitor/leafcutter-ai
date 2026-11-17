@@ -6,9 +6,9 @@ description: 'Runs exactly one given command, once, in one named workspace, and 
   (BO-2400a-1-i): it holds no allow-list of lane commands or step names, no judgement
   about whether a command is wise, and no role beyond running the given command where
   it is told to run it. Use when: a dispatcher names one command and a target workspace
-  (absolute path, branch, AC id) and asks this agent to run it there. (internal —
-  dispatched by the fast lane''s command-step routing, not user- facing; never a ticket
-  phase)'
+  (absolute path, branch, AC id or run id) and asks this agent to run it there. (internal
+  — dispatched by the fast lane''s command-step routing, not user- facing; never a
+  ticket phase)'
 type: card
 status: active
 created: 2026-09-28
@@ -23,7 +23,7 @@ executor (BO-2400a-1-i): it holds no allow-list of lane commands or step
 names, no judgement about whether a command is wise, and no role beyond
 running the given command where it is told to run it.
 Use when: a dispatcher names one command and a target workspace (absolute
-path, branch, AC id) and asks this agent to run it there.
+path, branch, AC id or run id) and asks this agent to run it there.
 (internal — dispatched by the fast lane's command-step routing, not user-
 facing; never a ticket phase)**
 
@@ -43,6 +43,9 @@ facing; never a ticket phase)**
 
 - `user`
 - `fast-lane-ship.js`
+- `build-feature.js`
+- `build-ticket.js`
+- `build-epic.js`
 ---
 
 ## Knowledge Flow
@@ -64,10 +67,16 @@ flowchart TD
 
     user["user\n(phase tier)"]:::phase
     fast_lane_ship.js["fast-lane-ship.js\n(phase tier)"]:::phase
+    build_feature.js["build-feature.js\n(phase tier)"]:::phase
+    build_ticket.js["build-ticket.js\n(phase tier)"]:::phase
+    build_epic.js["build-epic.js\n(phase tier)"]:::phase
     command_step_runner["command-step-runner\n(utility tier, priority ?)"]:::target
 
     user -->|dispatches| command_step_runner
     fast_lane_ship.js -->|dispatches| command_step_runner
+    build_feature.js -->|dispatches| command_step_runner
+    build_ticket.js -->|dispatches| command_step_runner
+    build_epic.js -->|dispatches| command_step_runner
 ```
 ---
 
@@ -79,7 +88,7 @@ flowchart TD
 |------|------|-------------|
 | `step` | string | The step name being run |
 | `command` | string | The one command to run, exactly as given, with no interpretation or rewriting |
-| `target` | object | The workspace (absolute path), branch and AC id the run opened, per BO-2400f-3-ii |
+| `target` | object | The workspace (absolute path), branch and AC id or run id the run opened (at least one of the two ids), per BO-2400f-3-ii and BO-4500a-5-viii |
 
 ### Outputs
 

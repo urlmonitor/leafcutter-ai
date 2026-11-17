@@ -3,14 +3,14 @@ components:
   - ac_driven_dev
 readiness: approved
 priority: medium
-title: "IT PO v3 queries the knowledge graph during S1 to discover agent capabilities and architecture relationships"
+title: "The technical planner (it-po) queries the knowledge graph during S1 to discover agent capabilities and architecture relationships"
 component: ac-driven-dev
 level: L2
 status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the it-po-v3 agent has reached S1 (Knowledge Acquisition)
+  Given the it-po agent has reached S1 (Knowledge Acquisition)
     and has read the L2/L3 AC files it was given for enrichment,
   When the agent executes its knowledge-acquisition steps,
   Then it invokes knowledge-query with a surface filter of "agents" to list
@@ -54,10 +54,18 @@ it_requirements:
 delivers_to: null
 expects_from:
   ac_id: ACD-300e-1
-  contract: "knowledge-query is listed in skills_used frontmatter of it-po-v3.md so the skill is available at runtime"
+  contract: "knowledge-query is listed in skills frontmatter of it-po.md so the skill is available at runtime"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: 'names only after #1245/#1246: the -v3 agent names are now product-owner, business-analyst and it-po (templates product-owner.md, business-analyst.md, it-po.md). Behaviour unchanged; the delivers_to/expects_from contract texts still say -v3 and are left for the planner.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: rename stale workflow/agent/template names in contracts
+  date: '2026-10-23'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []

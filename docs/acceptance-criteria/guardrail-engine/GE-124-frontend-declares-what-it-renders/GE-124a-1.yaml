@@ -105,7 +105,8 @@ superseded_by: null
 covered_by:
   - GE-124a-1-i
   - GE-124a-1-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/01_TICKET-20261022-GE-124a-1.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -128,3 +129,4 @@ notes: |
   scripts/commit_guardian/ parses frontend comments today. It is named here
   rather than left to the implementer because GE-124c and GE-124e both consume
   it, and the whole tree's coherence depends on there being exactly one of it.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

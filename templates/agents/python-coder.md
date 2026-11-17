@@ -15,7 +15,18 @@ description: 'Standards-enforcing Python implementation agent. Writes, edits, an
   '
 model: sonnet
 name: python-coder
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- research-agent
+- test-runner
+skills:
+- skill_id: signoff
+  mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
+- skill_id: doc-enforcer
+  mode: always
+- skill_id: complexity-reduction
+  mode: always
 portable: true
 signoff: true
 domain: null
@@ -27,11 +38,7 @@ config_keys:
     source: skills_config
   test_output_dir:
     required: false
-    description: "Temp directory for test output (outside project root)"
-    source: skills_config
-  collector_enforcer_paths:
-    required: false
-    description: "Paths that trigger the collector-enforcer skill"
+    description: "Folder for test output (outside project root); empty means the scratch home (scratch.py test-output-dir)"
     source: skills_config
   file_size_limit_py:
     required: false
@@ -261,13 +268,6 @@ When you need information that would normally require searching the codebase
 Do not attempt to answer cross-file questions by guessing or by reading only
 the files you already have open.
 
-## Collector-Enforcer Auto-Pick
-
-When any path you are about to edit or create falls under `collector/`, you MUST
-invoke the `collector-enforcer` skill via the `Skill` tool before writing the
-first line. That skill enforces structural rules specific to the collector module.
-Do not skip this step.
-
 ## Stop-and-Ask Rule for SQL
 
 If the implementation task requires creating or modifying any `.sql` file
@@ -343,11 +343,10 @@ red_baseline_results:
 2. Read pre-flight docs (see Pre-Flight Reads above).
 3. **Activate contract-aware mode** if `## Agent Contracts` is present (see above).
 4. Delegate any cross-file lookups to `research-agent`.
-5. Invoke `collector-enforcer` if paths are under `collector/`.
-6. **Read-before-Edit** — `Read` any file in full before an `Edit`/`Write`. Never
+5. **Read-before-Edit** — `Read` any file in full before an `Edit`/`Write`. Never
    blind-overwrite. For large JSON/YAML config files, read the whole file so your
    `old_string` anchor is unique and you don't silently drop un-read sections.
-7. Write or edit the Python files to make the red_baseline tests green.
+6. Write or edit the Python files to make the red_baseline tests green.
 7. Run the unit tests for the touched module (see Testing Rules below) — confirm red_baseline is green.
 8. Run pre-completion checks (see below).
 9. Emit the response payload (see below).
@@ -371,7 +370,7 @@ must be marked `_MANUAL` and excluded from the standard run. Never commit a test
 that auto-runs but exceeds 5 seconds.
 
 **No file output to project directories.** Any temporary files a test or script
-writes must go to `tmp_path`, `tempfile`, or `%TEMP%/<project>-tests/`. Never
+writes must go to `tmp_path`, `tempfile`, or the folder `scratch.py test-output-dir` prints. Never
 write to the project root or any project subdirectory. See CLAUDE.md §"Testing".
 
 Do NOT use `db.session_scope()` in tests (it auto-commits). Use transaction
@@ -393,12 +392,6 @@ distinguishing assertion. Each AC's test must exercise *that AC's* distinguishin
 — if an AC is about registration or framework wiring, a `main()`-return test does not cover
 it. (Note: you delegate test *authoring* to test-writer per Test Delegation below — this
 rule is what you check when you read the red_baseline and when you run the suite.)
-
-## Your Available Skills
-
-| Skill | Description |
-|---|---|
-| signoff | Use when a phase agent finishes work on a ticket OR when a supervisor needs to validate ticket state. Provides the canonical status enum (not_needed | needed | signed_off | failed), the atomic sign-off recipe that updates frontmatter and the Sign-offs checklist together, the comment-append recipe with parser-strict heading schema, the failed-path protocol for blockers, and the validator rules enforced by the parity guard. Pulled in by every phase agent (python-coder, sql-coder, pr-reviewer, commit, etc.) and by both supervisors (epic-supervisor, ticket-supervisor). |
 
 ## Pre-Completion Checks (required before declaring done)
 
@@ -434,7 +427,6 @@ Your final response MUST include a structured section:
 ### Skills run
 - doc-enforcer: <pass / N violations fixed>
 - complexity-reduction: <pass / N functions refactored>
-- collector-enforcer: <invoked / not applicable>
 - research-agent: <queries delegated / not needed>
 
 ### Tests
@@ -563,14 +555,9 @@ references (E722, BLE001, TRY).
 - Keep nesting depth in mind: if you are already spawned by an orchestrator, you are
   at depth 2. Spawning `research-agent` from depth 2 is depth 3 — the soft cap.
   Do not spawn further sub-agents below `research-agent`.
-- Spawn sub-agents only for the agents in your spawn allowlist:
+- Spawn sub-agents only for the agents in your spawn allowlist (the generated
+  sub-agent section at the end of this prompt).
 
-## Your Available Sub-Agents
-
-| Agent | Role | Tier |
-|---|---|---|
-| research-agent | analysis | utility |
-| test-runner | quality | phase |
 ## Contract-Shrinkage Guard
 
 Before narrowing any return shape, function signature, SQL result, or
@@ -633,7 +620,7 @@ contradict prior runs, or signals suggesting a different agent should handle it.
 
 If you were invoked with a `ticket_path` argument:
 
-1. **Resolve and load the sign-off skill** (read it in full before editing):
+1. **Resolve and load the `signoff` skill** (read it in full before editing):
    - Consumer project (after `build.py`): `.claude/skills/signoff/SKILL.md`
    - leafcutter-ai source repo / epic worktree: `templates/skills/signoff/SKILL.md`
 

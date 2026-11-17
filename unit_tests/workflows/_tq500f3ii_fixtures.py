@@ -50,18 +50,11 @@ import json
 import re
 from typing import Any
 
+
 WORKTREE_ABS_PATH = "/tmp/tq500f3ii-worktree"
 TICKET_ABS_PATH = "/tmp/tq500f3ii-worktree/tickets/01_todo/07_ticket.md"
 
 RED_BASELINE_GATE_LABEL = "red-baseline-gate"
-
-WORKTREE_FACTS_RESOLVED: dict[str, Any] = {
-    "output": (
-        '{"exists": true, "is_git_toplevel": true, "is_linked_worktree": true, '
-        '"is_main_checkout": false, "same_repository": true, "branch": "fixture"}'
-    ),
-    "exit_code": 0,
-}
 
 # A command-line fragment recognisable in EITHER lane's captured prompt text:
 # fast-lane-ship.js's own redBaselineInvocation embeds
@@ -87,8 +80,20 @@ def resolve_target_response(
     }
 
 
+def _workspace_reply(worktree_path: str, branch: str) -> dict[str, Any]:
+    """The shell executor's reply carrying the workspace maker's ok answer (self-contained: this module is
+    imported under more than one package root, so it does not import the engine harness)."""
+    answer = {
+        "schema_version": 1, "status": "ok", "code": "OK", "verb": "ensure",
+        "workspace_path": worktree_path, "worktree_path": worktree_path, "branch": branch,
+        "created": False, "message": "workspace ready (test)",
+    }
+    return {"command": "python3 worktree.py ensure (test)", "exit_status": 0, "stdout": json.dumps(answer), "stderr": ""}
+
+
 def worktree_setup_response(worktree_path: str = WORKTREE_ABS_PATH) -> dict[str, Any]:
-    return {"worktree_path": worktree_path, "status": "reused"}
+    """The workspace maker's ok answer at *worktree_path* (BO-4300c-3: the ONE workspace step)."""
+    return _workspace_reply(worktree_path, "fixture")
 
 
 def signoff_readback_response() -> dict[str, Any]:
@@ -215,8 +220,7 @@ def base_label_responses(
     """
     responses: dict[str, Any] = {
         "resolve-target": resolve_target_response(ticket_path, worktree_path),
-        "worktree-facts-resolved": WORKTREE_FACTS_RESOLVED,
-        "worktree-setup": worktree_setup_response(worktree_path),
+        "workspace-ensure": worktree_setup_response(worktree_path),
         "ticket-planner": ticket_planner_response(
             ticket_path,
             ordered_phases,

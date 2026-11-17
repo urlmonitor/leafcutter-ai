@@ -24,7 +24,7 @@ BUSINESS CONTEXT: Every existing unit test for these checks imports the check
     prerequisites via the source tree fails here rather than passing.
 
 ARCHITECTURE — mechanism chosen and why (per this AC's own it_requirements,
-    "OPEN QUESTION ANSWERED"): a `git worktree add` was considered (it
+    "OPEN QUESTION ANSWERED"): a the linked-checkout add was considered (it
     matches how people actually work) but was NOT used, because a worktree
     checks out the WHOLE repository at the same commit — the second copy
     would then contain its own on-disk `scripts/`, `templates/`, etc., so a

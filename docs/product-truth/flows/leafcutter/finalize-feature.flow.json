@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 1,
+  "version": 2,
   "tags": [
     "build-pipeline",
     "finalize",
@@ -23,88 +23,356 @@
     {
       "id": "baseline",
       "label": "Pre-merge baseline",
-      "human": "Capture the pre-merge test baseline on main so post-merge failures can be triaged against a known-good starting point.",
+      "description": "The test agent captures a test baseline on main before merging, so later failures can be triaged against a known-good starting point.",
       "order": 1,
       "agent": "test-runner",
+      "actor_kind": "llm",
       "implements": [
         "FIN-100a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/message: string (optional)"
+      ]
     },
     {
       "id": "openpr",
       "label": "Open the PR",
-      "human": "Open the pull request if one does not already exist for the branch.",
+      "description": "The pull request agent opens a pull request for the branch if one does not already exist.",
       "order": 2,
       "agent": "pull-request",
+      "actor_kind": "llm",
       "implements": [
         "BO-800"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/message: string (optional)"
+      ]
     },
     {
       "id": "mergemain",
       "label": "Merge origin/main in",
-      "human": "Merge origin/main into the worktree so the branch is up to date — HALT on conflict instead of advancing.",
+      "description": "The finalize pipeline merges the latest main into the feature worktree and halts on a conflict instead of advancing.",
       "order": 3,
       "agent": "finalize-feature",
+      "actor_kind": "deterministic",
       "implements": [
         "FIN-100b"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "not_applicable": "This step consumes Git refs and changes the worktree/index through git merge; conflicts are command output and repository state. It does not define a JSON merge result or silently serialize a new workflow DTO."
+      },
+      "consumes": [],
+      "produces": []
     },
     {
       "id": "postmerge",
       "label": "Post-merge tests + triage",
-      "human": "Run the post-merge test suite and triage any failures against the baseline — HALT on a real regression.",
+      "description": "The test agents run the post-merge suite and triage any failures against the baseline, halting on a real regression.",
       "order": 4,
       "agent": "test-runner / test-failure-triage",
+      "actor_kind": "llm",
       "implements": [
         "FIN-100c",
         "FIN-100d"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "phase-result/status: string (required)",
+        "phase-result/message: string (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/message: string (optional)"
+      ]
     },
     {
       "id": "closeacs",
       "label": "Close tickets + ACs",
-      "human": "Close the tickets and mark the source acceptance criteria done in the store.",
+      "description": "The finalize pipeline closes the tickets and marks their source acceptance criteria done in the store.",
       "order": 5,
       "agent": "finalize-feature",
+      "actor_kind": "deterministic",
       "implements": [
         "ACD-600a",
         "BO-400b"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/implemented_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/covered_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/work_status",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "implemented_by": [
+                "app/service.py"
+              ],
+              "covered_by": [
+                "tests/test_service.py::test_contract"
+              ]
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "work_status": "done"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "ac/id: string (required)",
+        "ac/implemented_by: array (optional; default [])",
+        "ac/covered_by: array (optional; default [])"
+      ],
+      "produces": [
+        "ac/id: string (required)",
+        "ac/work_status: null|string (optional)"
+      ]
     },
     {
       "id": "mergepr",
       "label": "Merge the PR to main",
-      "human": "Merge the PR to main — confirmation-gated because it is destructive to the protected branch.",
+      "description": "After the person confirms, the finalize pipeline merges the pull request into the protected main branch.",
       "order": 6,
       "agent": "finalize-feature",
+      "actor_kind": "deterministic",
       "implements": [
         "FIN-100f"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "not_applicable": "This is a human-gated GitHub merge action on an existing PR and Git branch, with a merge receipt/commit in GitHub/Git. This flow defines no Leafcutter JSON merge DTO and this documentation never grants merge authority."
+      },
+      "consumes": [],
+      "produces": []
     },
     {
       "id": "archive",
       "label": "Archive + remove worktree",
-      "human": "Archive the epic and remove the feature worktree once the PR is merged.",
+      "description": "Once the pull request is merged, AI agents archive the epic and remove the feature worktree.",
       "order": 7,
       "agent": "finalize-feature-archive-check / worktree-agent",
+      "actor_kind": "llm",
       "implements": [
         "BO-400c-2"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "not_applicable": "This step moves Markdown epic/ticket files and removes the already-merged worktree after its checks. Inputs are verified Git/PR state and filesystem paths; output is archive placement, not a serialized JSON payload."
+      },
+      "consumes": [],
+      "produces": []
     }
   ],
   "branches": [],
@@ -134,6 +402,12 @@
       "by": "BrainCandy (product-truth Atlas session)",
       "date": "2026-07-14",
       "note": "Real finalize-feature.js pipeline; the drill-down target of deliver-a-feature's finalize step."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (agent-led I/O contract migration)",
+      "date": "2026-10-03",
+      "note": "Added source-bound field/type/requiredness/default metadata and explicitly illustrative JSON projections. Preserved topology, actor ownership, realization and AC status. Non-JSON artifacts and genuinely undefined proposed interfaces remain explicit."
     }
   ],
   "impl_summary": {
@@ -142,5 +416,15 @@
     "not_started": 6,
     "total": 7,
     "asof": "2026-07-20"
+  },
+  "contract_definitions": {
+    "phase-result": {
+      "schema": "docs/product-truth/schemas/delivery-workflow-phase-result.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity."
+    },
+    "ac": {
+      "schema": "config/ac_store_schema.json"
+    }
   }
 }

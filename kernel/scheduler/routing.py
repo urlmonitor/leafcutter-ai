@@ -30,6 +30,7 @@ from kernel.providers.base import (
     json_strings,
 )
 from kernel.registry.eligibility import EligibilityReport
+from kernel.split.detect import bundle_question, read_bundle
 
 ROUTE_TEMPLATE_ID = "kernel.route"
 ROUTE_TEMPLATE_REV = "1"
@@ -50,6 +51,8 @@ class RouteEntry:
     clarifications: list[str] = field(default_factory=list)
     #: True for a root whose answer kind was classified: one eligible candidate is then enough.
     intent_bound: bool = False
+    #: True when the bundle question rides this entry's routing question (split enabled).
+    check_bundle: bool = False
 
 
 class _Answered(TypedDict):
@@ -73,6 +76,8 @@ class RouteResult:
     model_id: str | None = None
     failure: str | None = None
     usage: list[Usage] = field(default_factory=list)
+    #: The bundle probability answered in the same batch (None: not asked or not answered).
+    bundle_probability: float | None = None
 
 
 def deterministic_result(report: EligibilityReport, intent_bound: bool = False
@@ -126,6 +131,8 @@ def build_batch(entries: list[RouteEntry], goal: str, component_ids: list[str],
             id=f"route.{entry.item_id}", kind="choice", template_id=ROUTE_TEMPLATE_ID,
             template_version=ROUTE_TEMPLATE_REV, instructions=instructions,
             criteria=criteria))
+        if entry.check_bundle:
+            questions.append(bundle_question(entry.item_id, f"requests.{entry.item_id}.goal"))
     return JevBatch(purpose=ROUTE_PURPOSE, state=state, questions=questions, correlation=corr)
 
 
@@ -179,9 +186,25 @@ async def _assess_chunk(jev: JevPort, chunk: list[RouteEntry], batch: JevBatch,
         except (JevInvalidResponse, KeyError):
             routed = _failed("invalid_provider_response")
         routed.model_id = result.model_id
+        if entry.check_bundle:
+            routed.bundle_probability = read_bundle(result, entry.item_id)
         routed.usage = [result.usage] if position == 0 else []  # one usage per Jev call
         out[entry.item_id] = routed
     return out
+
+
+def _chunks(entries: list[RouteEntry], size: int) -> list[list[RouteEntry]]:
+    """Group entries so one batch holds at most `size` questions (a bundle question counts)."""
+    chunks: list[list[RouteEntry]] = []
+    used = 0
+    for entry in entries:
+        cost = 2 if entry.check_bundle else 1
+        if not chunks or used + cost > size:
+            chunks.append([])
+            used = 0
+        chunks[-1].append(entry)
+        used += cost
+    return chunks
 
 
 async def route_semantic(jev: JevPort, entries: list[RouteEntry], *, goal: str,
@@ -202,11 +225,9 @@ async def route_semantic(jev: JevPort, entries: list[RouteEntry], *, goal: str,
         tuple: (results by work item id, Jev calls made). Chunks beyond the budget become
             `unavailable` with reason `budget_exhausted` without calling Jev.
     """
-    size = cfg.jev.max_questions_per_call
     results: dict[str, RouteResult] = {}
     calls = 0
-    for start in range(0, len(entries), size):
-        chunk = entries[start:start + size]
+    for chunk in _chunks(entries, cfg.jev.max_questions_per_call):
         if calls >= calls_available:
             results.update({e.item_id: _failed("budget_exhausted") for e in chunk})
             continue
@@ -232,4 +253,5 @@ async def route_semantic(jev: JevPort, entries: list[RouteEntry], *, goal: str,
 #   shared by its questions. (#KernelBootstrapV0/P4)
 # - 2026-09-30 22:30 [python-coder]: A choice answer without confidence never selects: the
 #   confidence threshold cannot be met by an unknown value. (#KernelBootstrapV0/P4)
+# - 2026-10-06 18:00 [python-coder]: Add the bundle question to the routing batch. (#TICKET-20261006-DK-400a-1)
 # ====================================================================

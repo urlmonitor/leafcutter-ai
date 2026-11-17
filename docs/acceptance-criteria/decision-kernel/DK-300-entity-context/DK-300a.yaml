@@ -1,0 +1,31 @@
+id: DK-300a
+title: "Understand terms, content types, Python symbols and artifact identifiers"
+component: decision-kernel
+components: [decision_kernel]
+level: L1
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a request names project terminology, a content type, a Python declaration or an artifact ID,
+  When its references are resolved against their canonical owners,
+  Then intent receives short definitions, type meanings, symbol signatures or ID titles and references,
+  And implementation bodies and artifact evidence remain for later task-specific retrieval.
+depends_on: [DK-300]
+covered_by: [DK-300a-1, DK-300a-2, DK-300a-3]
+doc_links:
+  - path: docs/analysis/2026-10-03-kernel-entity-context-concept.md
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: specified-by
+    status: exists
+origin_agent: Codex orchestrator (user-authorized entity-context implementation)
+created: 2026-10-03
+notes: |
+  Scope is transcribed from the concept the user authorized for BA, IT PO,
+  test-writer, Python coder and independent evaluation on 2026-10-03.
+  BA owns behavioral decomposition; IT PO owns technical and test contracts.
+  Draft readiness is retained without inventing a separate persona approval.

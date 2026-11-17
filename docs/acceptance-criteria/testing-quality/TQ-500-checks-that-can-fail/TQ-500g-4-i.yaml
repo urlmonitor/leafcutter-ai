@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -31,7 +31,7 @@ criteria: |
 depends_on:
   - TQ-500g-4
 doc_links:
-  - path: docs/known-issues/testing-quality/open-low-ki-tq-20260928-subtest-failures-read-as-passed.md
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20260928-subtest-failures-read-as-passed.md
     relationship: describes
     status: planned
     relevance: "Suggested fix item 2: when pytest exits 1 but no parsed outcome is red, report the run as inconclusive. The exit status is today only checked for being in (0, 1), never compared with the parsed outcomes."

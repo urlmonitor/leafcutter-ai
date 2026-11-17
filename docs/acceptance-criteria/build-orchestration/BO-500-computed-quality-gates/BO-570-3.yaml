@@ -28,7 +28,7 @@ criteria: |
     naming the reason (never collapsed into clean),
   And the verdict carries the file set it was run against so the consuming
     sign-off gate can record auditable evidence of what was checked.
-depends_on: [BO-570]
+depends_on: [BO-570, BP-1300e-1-i, BP-1300e-1-v]
 doc_links:
   - path: templates/agents/python-coder.md
     relationship: describes
@@ -36,14 +36,117 @@ doc_links:
   - path: CLAUDE.md
     relationship: describes
     status: exists
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300e-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Delivers check_lint_gate.py (--mode files --json) and the one lint declaration this runner adapts over."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300e-1-v.yaml
+    relationship: related
+    status: exists
+    relevance: "Linter-version check this runner inherits through files mode."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300e-1-iii.yaml
+    relationship: related
+    status: exists
+    relevance: "could_not_check reason vocabulary mapped to tooling-unavailable."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  - "The runner must invoke ruff with the REPOSITORY's own ruff configuration over the ticket's new/changed Python file set, so it matches what CI enforces — no divergent local ruleset."
+  - "THIN ADAPTER, NO RUFF ARGV OF ITS OWN (amended 2026-10-09, replaces 'invoke ruff with the repository's own ruff configuration'). The runner must not build a ruff command line, hold a tree list, hold a rule list, locate ruff, or read a ruff version itself. It invokes the DEPLOYED commit-guardian lint runner delivered by BP-1300e-1-i -- `python <output_root>/scripts/commit_guardian/check_lint_gate.py --mode files --files <the ticket's new/changed .py files> --json` -- with cwd at the worktree root, and maps its JSON. That runner reads the project's one lint declaration (leafcutter-lint.json, BP-1300e-1-i) and applies every declared step, so a changed file under kernel/ is also judged by CI's second step (E722, BLE001, TRY over kernel/ only) -- which the previous wording ('the repository's own ruff configuration') silently omitted -- and a file the declaration or the ruff configuration's excludes leave out is not judged, exactly as CI."
+  - "LINTER VERSION CHECK IS INHERITED, NOT RE-IMPLEMENTED (amended 2026-10-09). Through files mode the runner applies BP-1300e-1-v's check: a local ruff whose version differs from the exact pin in the file CI installs from (this repository: requirements-dev.txt, ruff==0.15.15) yields outcome could_not_check, reason linter_version_mismatch, with no findings. The adapter maps it to tooling-unavailable carrying that reason, so a verdict from a different linter is never recorded as clean."
+  - "OUTCOME MAPPING, EXACTLY (amended 2026-10-09). ok -> clean; refused -> violations (reason = the findings, one per line as path:line:col: CODE message [step]); could_not_check -> tooling-unavailable (reason = the runner's reason code plus its human-readable reason line; covers every reason in BP-1300e-1-iii's vocabulary, including ruff_not_installed, ruff_config_unreadable, declaration_unreadable, linter_version_mismatch and no_repository); nothing_to_inspect -> clean with files = [] and a reason stating that no changed file was in the declared lint scope; files = the runner's files_inspected. Distinguish outcomes by the JSON 'outcome' field, never by exit code (refused and could_not_check both exit non-zero). An unparseable or absent JSON payload, or a runner that cannot be launched, is tooling-unavailable naming the cause -- never clean."
   - "The verdict must be a deterministic, machine-readable three-state outcome (clean | violations | tooling-unavailable); tooling-unavailable must NEVER be reported as clean."
-  - "The runner must not depend on the worktree pre-commit hooks having fired (worktrees historically lack the .pre-commit-config wiring) — it runs ruff directly, independent of pre-commit."
-  - "The runner must follow the project error-handling policy (CLAUDE.md Rules 1-4): wrap the ruff subprocess I/O in a specific except, log at WARNING or higher, and classify a missing-ruff / unlocatable-config failure as tooling-unavailable rather than swallowing it."
+  - "The runner must not depend on the worktree pre-commit hooks having fired (worktrees historically lack the .pre-commit-config wiring) — it invokes check_lint_gate.py directly as a subprocess, independent of pre-commit."
+  - "The runner must follow the project error-handling policy (CLAUDE.md Rules 1-4): wrap the check_lint_gate.py subprocess I/O and the JSON decode in specific excepts (OSError, subprocess.SubprocessError, json.JSONDecodeError), log at WARNING or higher, and classify the failure as tooling-unavailable rather than swallowing it."
   - "The verdict must include the changed-Python file set checked and a human-readable reason on the non-clean states, so the consuming sign-off gate can record auditable evidence."
+  - "BUILD ORDER (amended 2026-10-09). This runner cannot be built before BP-1300e-1-i delivers check_lint_gate.py's files mode and --json payload, and BP-1300e-1-v its version check; implementing a private ruff invocation as a stopgap is forbidden (it is the fourth hand-kept copy BP-1300e-1-i exists to remove). Verify against the deployed runner in the shared reference layout, not the template source. This ordering is now ALSO encoded in depends_on (BP-1300e-1-i, BP-1300e-1-v; user-approved 2026-10-09); this prose stays because it explains why."
+test_spec:
+  - name: test_bo_570_3_kernel_only_ble001_is_reported_as_violations
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "the runner builds its own ruff argv from the repository ruff configuration only"
+      - "the runner holds its own tree or rule list"
+    description: "Fixture project with this repository's real ruff.toml and leafcutter-lint.json; the ticket's changed set is kernel/y.py carrying only `except Exception:` (BLE001, selected solely by the declaration's kernel step). Run the runner for real: outcome violations, reason names kernel/y.py, the line and BLE001, files == ['kernel/y.py']. Only the shared declaration knows that rule set, so this passes only if check_lint_gate.py was the thing invoked."
+  - name: test_bo_570_3_same_ble001_under_scripts_is_clean
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "the runner applies the kernel rule set to every changed file"
+    description: "Same `except Exception:` in scripts/z.py with no other violation: outcome clean, reason null, files == ['scripts/z.py']."
+  - name: test_bo_570_3_repo_rule_violation_maps_refused_to_violations_with_detail
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Changed unit_tests/x.py introducing E741 at line 12: outcome violations; reason carries one line per finding in the form path:line:col: CODE message [step]; files lists the file checked."
+  - name: test_bo_570_3_clean_changed_files_map_ok_to_clean
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Clean changed files under scripts/ and kernel/: verdict {check: 'repo-ruff', outcome: 'clean', files: <those files>, reason: null}."
+  - name: test_bo_570_3_nothing_in_declared_scope_is_clean_with_empty_files_and_reason
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Changed .py file only under templates/ (excluded by ruff.toml) so check_lint_gate.py reports nothing_to_inspect: outcome clean, files == [], reason is non-null and states that no changed file was in the declared lint scope."
+  - name: test_bo_570_3_every_could_not_check_reason_maps_to_tooling_unavailable
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    must_catch:
+      - "collapses a cannot-run cause into clean"
+      - "maps only ruff_not_installed and lets other reasons fall through"
+    description: "Parametrised over real environments, each producing a different could_not_check reason from the real check_lint_gate.py: ruff not importable and not on PATH (ruff_not_installed); invalid ruff.toml (ruff_config_unreadable); leafcutter-lint.json with an unknown key (declaration_unreadable); a stub ruff module answering --version with 'ruff 0.15.14' against the 0.15.15 pin (linter_version_mismatch); cwd in a non-repository (no_repository). Every case: outcome tooling-unavailable, never clean; reason contains the runner's reason code and its human-readable line."
+  - name: test_bo_570_3_outcome_is_read_from_json_field_not_exit_code
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "infers the outcome from the subprocess exit code"
+    description: "Runner pointed (through its launch seam) at a stand-in lint script that exits non-zero while printing valid JSON with outcome 'refused' and one finding, then at one that exits non-zero with outcome 'could_not_check': the first maps to violations and the second to tooling-unavailable, though both exit codes are identical. A stand-in that exits 0 with outcome 'refused' still maps to violations."
+  - name: test_bo_570_3_unparseable_or_missing_payload_is_tooling_unavailable
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    must_catch:
+      - "treats empty or garbled runner output as clean"
+    description: "Stand-in lint script that (a) prints non-JSON text and exits 0, (b) prints nothing and exits 0, (c) does not exist / cannot be launched: each maps to tooling-unavailable with a reason naming the cause; none maps to clean."
+  - name: test_bo_570_3_runner_invokes_the_deployed_check_lint_gate_in_files_mode
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "BO-570-3 runner -> <shared layout>/.leafcutter/scripts/commit_guardian/check_lint_gate.py --mode files --files <changed .py> --json"
+    description: "Run the runner against the shared deployed layout with no pre-commit configuration in the fixture worktree; a changed file carrying E741 yields violations, showing the deployed runner was reached without pre-commit having fired."
+test_rationale: >-
+  The amendment's load-bearing claim is that this runner holds no ruff argv of
+  its own, so the anchor test uses a violation only the shared declaration can
+  produce: BLE001 under kernel/ is selected solely by leafcutter-lint.json's
+  kernel step, and the paired scripts/ arm proves that rule set is not applied
+  everywhere. A private `ruff check <files>` with the repository configuration
+  fails the first arm; one with a union selection fails the second. Both run
+  the real check_lint_gate.py, not a mock, per CLAUDE.md 'Verify Behaviorally,
+  Not by Grep' -- a test asserting the source mentions check_lint_gate.py passes
+  on a runner that never calls it. The could_not_check arms are produced by
+  manipulating the real environment (PATH, unimportable module, stub ruff,
+  malformed config, non-repository cwd) so every reason the real runner emits
+  is mapped. The JSON-versus-exit-code and malformed-payload arms need payloads
+  the real runner never emits on purpose, so they alone use a stand-in lint
+  script through the runner's launch seam; that is the only seam the tests
+  substitute. Tests that read the deployed layout declare
+  @pytest.mark.shared_layout_reader with
+  @pytest.mark.usefixtures("shared_reference_layout"); none spawns build.py.
+  These tests cannot pass before BP-1300e-1-i and BP-1300e-1-v land, matching
+  the BUILD ORDER it_requirement.
 delivers_to:
   agent: llm-expert
   contract: |
@@ -62,6 +165,8 @@ created: 2026-06-24
 amended_by:
   - reason: "re-parent + rename after Pattern C split of BO-530 -> BO-530 + BO-570, 2026-06-24"
     note: "Was BO-530-5a (split from BO-530-5 by it-po-v3). Moved out of BO-530 (TDD-framed L1) to the new local-verification-gate sibling L1 BO-570. RENAMED BO-530-5a -> BO-570-3 (check_ac_limits attributes children by id-derivation). id, criteria, delivers_to/expects_from preserved verbatim; only id/created_by/depends_on re-pointed to BO-570."
+  - reason: "it_requirements amended by it-po, 2026-10-09: runner becomes a thin adapter over BP-1300e-1-i's check_lint_gate.py --mode files --json, reading the one lint declaration (covers CI's kernel-only step) and inheriting BP-1300e-1-v's linter-version check"
+    note: "Fields changed: it_requirements, doc_links, amended_by; test_spec and test_rationale added the same day (the AC had none, and check-ac-schema requires a test contract on an approved code AC once it is touched). depends_on changed the same day from [BO-570] to [BO-570, BP-1300e-1-i, BP-1300e-1-v] -- reason: this runner cannot be built before the shared runner (check_lint_gate.py --mode files --json, BP-1300e-1-i) and the linter-version check (BP-1300e-1-v) exist; depends_on is an ACS-400 protected field, changed by it-po (an authorized author) with explicit user approval on 2026-10-09. criteria, title, req_status, readiness, work_status, delivers_to and origin_agent untouched. Route: ACS-400 write-lock protects only criteria/title/req_status/depends_on (check_ac_governance.py _PROTECTED_FIELDS), so it_requirements is amendable in place with an amended_by record (docs/how-to/ac-traceability-store.md 'How do I amend an existing AC?'). Prompted by the user's 2026-10-09 decisions on the BP-1300e set. The generated ticket in implemented_by predates this amendment and must be regenerated or updated before build."
 superseded_by: null
 covered_by: []
 implemented_by:

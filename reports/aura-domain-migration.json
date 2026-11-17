@@ -1,0 +1,35 @@
+{
+  "repository_id": "leafcutter",
+  "fingerprint": "5f40b2089672ea825eb5fe6d90f4c9a0af9ba9a6ac1e98f5656b818a76ccdeba",
+  "active": "8bbb2bb3e4dde2948c6558a065aaa737ed0429eccdef57f398705b9ac32ff8fb",
+  "generations": [
+    {
+      "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+      "nodes": 5992,
+      "relationships": 19365
+    },
+    {
+      "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "nodes": 6040,
+      "relationships": 19518
+    },
+    {
+      "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+      "nodes": 6092,
+      "relationships": 19686
+    },
+    {
+      "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+      "nodes": 5992,
+      "relationships": 19365
+    }
+  ],
+  "migration": {
+    "repository_id": "leafcutter",
+    "fingerprint": "5f40b2089672ea825eb5fe6d90f4c9a0af9ba9a6ac1e98f5656b818a76ccdeba",
+    "generations": 4,
+    "nodes": 24116,
+    "relationships": 77934
+  },
+  "backup": "C:\\Users\\Hendrik\\Code\\leafcutter\\_backups\\aura-domain-graph-20261002-resume-7db01aba.json"
+}

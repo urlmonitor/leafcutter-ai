@@ -422,11 +422,6 @@ def test_bp700c_4_registry_preserves_metadata_and_drops_frontend_design():
     assert entry["spawn_allowlist"] == ["research-agent"]
     assert entry["requires_verification"] is True
     assert entry["category"] == "implementation"
-    # skills_used drops frontend-design, keeps webapp-testing.
-    assert "frontend-design" not in entry["skills_used"], (
-        "skills_used must not list frontend-design (design is embedded)."
-    )
-    assert "webapp-testing" in entry["skills_used"]
     # skills_invoked drops frontend-design, keeps webapp-testing + signoff (conditional).
     invoked_ids = {s["skill_id"] for s in entry["skills_invoked"]}
     assert "frontend-design" not in invoked_ids

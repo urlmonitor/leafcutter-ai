@@ -1,0 +1,161 @@
+{
+  "packets": [
+    {
+      "case_id": "IP01",
+      "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP01\\host\\packet.json",
+      "packet_sha256": "5b340eb52a0e1de41662061033f50caffbf37c1b8dc787a1f14414c469a5b4e7",
+      "inputs": [
+        {
+          "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP01\\host\\inputs\\0.json",
+          "sha256": "440b7ba488609ab81f0991f5b4f48cbb31b2c386affdf55a730147b514fdc8c6",
+          "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP01\\runtime\\runs\\run-70e0bfc9c0ea4b28\\artifacts\\input-int-bf6d369e582e4bca.json"
+        }
+      ],
+      "response_destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP01\\host\\response.json"
+    },
+    {
+      "case_id": "IP02",
+      "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP02\\host\\packet.json",
+      "packet_sha256": "bde9e3705f7ce99d43a9ee7f1ae49770276798e46cd327ad5c6e150d1aa7c4b3",
+      "inputs": [
+        {
+          "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP02\\host\\inputs\\0.json",
+          "sha256": "8f0fd8aad78ee3d668942522c9969abb2250739a8afc605f1147eb12b85dce61",
+          "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP02\\runtime\\runs\\run-33059e12e54a45d8\\artifacts\\input-int-1a6acd3de5b24cec.json"
+        }
+      ],
+      "response_destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP02\\host\\response.json"
+    },
+    {
+      "case_id": "IP03",
+      "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP03\\host\\packet.json",
+      "packet_sha256": "472b7b7554775c0beb1ffbeec1d90511e45758deca87a3821e1dcaeaa38a6f6a",
+      "inputs": [
+        {
+          "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP03\\host\\inputs\\0.json",
+          "sha256": "e7b532855dcda41ef4a9af089bcb00daa88529be5059200300c59e519af77b19",
+          "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP03\\runtime\\runs\\run-d71cd2ba0e234880\\artifacts\\input-int-7733b3e640b44071.json"
+        }
+      ],
+      "response_destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP03\\host\\response.json"
+    },
+    {
+      "case_id": "IP04",
+      "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP04\\host\\packet.json",
+      "packet_sha256": "eeafcdbfcb463c942c864b8457c6cd6adcc3d5cd27bf3f2248c0b36cf55956af",
+      "inputs": [
+        {
+          "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP04\\host\\inputs\\0.json",
+          "sha256": "ef8afe16d1534cfa3929130ceeaab51c38503104cf3191cc54c31e0497dc9986",
+          "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP04\\runtime\\runs\\run-efa1fb21ac674df0\\artifacts\\input-int-c1a42a9f97b143d2.json"
+        }
+      ],
+      "response_destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP04\\host\\response.json"
+    },
+    {
+      "case_id": "IP05",
+      "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP05\\host\\packet.json",
+      "packet_sha256": "4c8faa20ce0bb9317fe65495840cb65c48f71c052b5ae1de928716b382cf7222",
+      "inputs": [
+        {
+          "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP05\\host\\inputs\\0.json",
+          "sha256": "b6049e7b861b3809d08fe2fcadd65871671832e1350f969de311bcf8f8626eaf",
+          "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP05\\runtime\\runs\\run-c418f379819e48cb\\artifacts\\input-int-0426c239bb4240a1.json"
+        }
+      ],
+      "response_destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP05\\host\\response.json"
+    },
+    {
+      "case_id": "IP06",
+      "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP06\\host\\packet.json",
+      "packet_sha256": "2692d120caed96adf9e65f4d8444e39b2387960a5e00e4d45b4346a566205e3c",
+      "inputs": [
+        {
+          "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP06\\host\\inputs\\0.json",
+          "sha256": "58ce1091fb51c6ccc211941f4da4e82e64f0eeef1c8d1f9d3630c1c91956e44b",
+          "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP06\\runtime\\runs\\run-eb86023356e945d5\\artifacts\\input-int-6b1838495a41411b.json"
+        }
+      ],
+      "response_destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP06\\host\\response.json"
+    },
+    {
+      "case_id": "IP07",
+      "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP07\\host\\packet.json",
+      "packet_sha256": "5b3899828cb9426f605d95d778714e889557fdd2f9aede061b129b8b04f8b27c",
+      "inputs": [
+        {
+          "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP07\\host\\inputs\\0.json",
+          "sha256": "c4ffbb62253a11ee0f683f056be5917758fe4461be6cdf5da69c3b4da85e34a0",
+          "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP07\\runtime\\runs\\run-0f1dc2dbf99143dd\\artifacts\\input-int-93d0912f74ed49ae.json"
+        }
+      ],
+      "response_destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP07\\host\\response.json"
+    },
+    {
+      "case_id": "IP08",
+      "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP08\\host\\packet.json",
+      "packet_sha256": "65132efb960f9fc89c2e4c823e11004deae496b0923d15f8690d3a4887e72fd9",
+      "inputs": [
+        {
+          "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP08\\host\\inputs\\0.json",
+          "sha256": "e4a174fbf143d4024f1658ecfecd73f160f98840d82b2ce3e6b10117326416bd",
+          "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP08\\runtime\\runs\\run-222c09f6167341a3\\artifacts\\input-int-5341aefd924b47e5.json"
+        }
+      ],
+      "response_destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP08\\host\\response.json"
+    },
+    {
+      "case_id": "IP09",
+      "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP09\\host\\packet.json",
+      "packet_sha256": "266e6db67132b7981324d23bc06dc4c89cc6004ae0720103974fac1915aed8d8",
+      "inputs": [
+        {
+          "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP09\\host\\inputs\\0.json",
+          "sha256": "e3f502e0829943ef49099942a2deaac2f9d6735634a7cb0aa7609f4fa894b8e9",
+          "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP09\\runtime\\runs\\run-0039ae8dae4b46fc\\artifacts\\input-int-7d5d5b8d8a714d2c.json"
+        }
+      ],
+      "response_destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP09\\host\\response.json"
+    },
+    {
+      "case_id": "IP10",
+      "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP10\\host\\packet.json",
+      "packet_sha256": "3f16971e645a8645f7c4b688f5b0137b6677962a8bf17c5e0a015b5577251cf5",
+      "inputs": [
+        {
+          "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP10\\host\\inputs\\0.json",
+          "sha256": "d10b7056e1a6123ff6669f230cb7740c073bb0f297c2878ea91458229ea200fc",
+          "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP10\\runtime\\runs\\run-b7ca3dd6c49e4695\\artifacts\\input-int-c5431850072649be.json"
+        }
+      ],
+      "response_destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP10\\host\\response.json"
+    },
+    {
+      "case_id": "IP11",
+      "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP11\\host\\packet.json",
+      "packet_sha256": "d6c34af3fe60eb1fb3131cfeb2df179d8ae9be762ae3050cb321b1e974045a31",
+      "inputs": [
+        {
+          "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP11\\host\\inputs\\0.json",
+          "sha256": "4f5b60e9b403b835c41bf7c355bdb7a63c3eb304280be2c981364b86871a4d77",
+          "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP11\\runtime\\runs\\run-f93d714397c649ee\\artifacts\\input-int-61a1dee0ede9444c.json"
+        }
+      ],
+      "response_destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP11\\host\\response.json"
+    },
+    {
+      "case_id": "IP12",
+      "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP12\\host\\packet.json",
+      "packet_sha256": "439b31dffff72372c0bc33fbbb1bf2a53d1d5ba98f427b1c85bce471c69a2f60",
+      "inputs": [
+        {
+          "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP12\\host\\inputs\\0.json",
+          "sha256": "a27fcc4a9a9a9cc137300c93b7dc644b17cdac0e8eb36cb50db81d815ae7c465",
+          "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP12\\runtime\\runs\\run-d7b0c96c2d734c20\\artifacts\\input-int-a841a3145bc74b7a.json"
+        }
+      ],
+      "response_destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP12\\host\\response.json"
+    }
+  ],
+  "host_instruction": "Perform only each actual packet operation from its packet and referenced inputs. Write each schema-valid response at its destination. Do not inspect other files, call tools/providers for research, or infer expected outcomes. model_id is null unless actually known."
+}

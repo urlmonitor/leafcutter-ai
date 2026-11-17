@@ -1,0 +1,21 @@
+{
+  "code_sha": "887c66d3896ba7727ce41b743887210a3883c6ce",
+  "graph_lane": "execution.json",
+  "default_source_lane": "default-source/execution.json",
+  "graph_calls": 8,
+  "default_source_calls": 10,
+  "total_real_jev_calls": 18,
+  "maximum_authorized_calls": 24,
+  "live_starts": 4,
+  "distinct_scenarios": 2,
+  "other_full_scenarios_not_run": 27,
+  "final_answers": 0,
+  "full_target_passes": 0,
+  "graph_stop": "waiting_human: answer population clarification",
+  "default_stop": "waiting_host: synthesize_evidence",
+  "graph_source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+  "default_native_source_sha": "887c66d3896ba7727ce41b743887210a3883c6ce",
+  "graph_only_execution_index_preserved": true,
+  "all29_dispositions": "execution.json#/scenarios; RS02/RS03 also started in default lane, still incomplete",
+  "note": "Native host handoff is a supported boundary; no host answer was supplied. Default and graph-only evidence are not interchangeable."
+}

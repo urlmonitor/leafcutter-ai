@@ -1,0 +1,534 @@
+"""MODULE: neo4j_backend
+GOAL: Own one optional Neo4j driver and bounded registered operations.
+BUSINESS CONTEXT: Keep database resources outside callers and kernel state.
+ARCHITECTURE: Adapter delegates projection and vector lifecycle to small helpers.
+
+DECISION HISTORY
+========================================
+- 2026-10-23 12:00 [python-coder]: IPv4-first lookups, abandonable daemon-thread calls and step timing in the transaction worker. (#KM-400d-4)
+- 2026-10-20 14:00 [python-coder]: Forward the declared capacity ceiling into publication, expose its report, and let one statement address the system database. (#KM-400f-3)
+- 2026-10-01 12:00 [python-coder]: Use metadata-only manifests and explicit database selection. (#TICKET-KM-400b-1)
+- 2026-10-09 12:00 [python-coder]: Surface driver error class, code and bounded message in BackendUnavailable. (#KM-400e)
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, TypeVar
+
+TransactionResult = TypeVar("TransactionResult")
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from neo4j import ManagedTransaction
+    from knowledge.adapters.retention.capacity import CapacityCeiling
+    from knowledge.config import RetentionBound
+
+from contextlib import ExitStack
+import hashlib
+import json
+import logging
+from pathlib import Path
+
+from knowledge.adapters.connection.daemon_call import run_in_daemon
+from knowledge.adapters.connection.lookup_policy import (
+    forget_scope_lookups,
+    lookup_scope,
+    read_family_setting,
+)
+from knowledge.contracts import Entity, ProjectionSnapshot, Relation
+from knowledge.errors import BackendUnavailable
+from knowledge.step_timing import StepRecorder, recorder_var, timed
+
+logger = logging.getLogger(__name__)
+_CLOSE_WAIT_SECONDS = 0.4
+
+
+def scope_key(repository_id: str, generation_id: str) -> str:
+    """Return a collision-resistant projector-only compound key."""
+    return hashlib.sha256(json.dumps([repository_id, generation_id]).encode()).hexdigest()
+
+
+_MAX_CAUSE_CHARS = 300
+
+
+def describe_failure(error: BaseException) -> str:
+    """Summarize a driver fault as class, optional Neo4j code and bounded server text.
+
+    Args:
+        error: Infrastructure exception raised by the driver or transport.
+
+    Returns:
+        A secret-free single-line diagnostic; never includes the URI or credentials.
+    """
+    code = getattr(error, "code", None)
+    detail = getattr(error, "message", None) or str(error)
+    label = f"{type(error).__name__} [{code}]" if code else type(error).__name__
+    text = " ".join(str(detail).split())[:_MAX_CAUSE_CHARS]
+    return f"backend unavailable: {label}: {text}"
+
+
+def entity_from_row(row: dict) -> Entity:
+    """Deserialize plain entity data; never leak driver records."""
+    return Entity.model_validate_json(row["payload"])
+
+
+class Neo4jBackend:
+    """Optional Neo4j read/write adapter with one explicitly closed connection pool."""
+
+    # Expected and kept counts of the last publication's build, set by neo4j_projection.publish.
+    publication_counts: dict | None = None
+    # Outcome of removing the last failed publication's own generation, set by neo4j_projection.publish.
+    publication_removal: dict | None = None
+    # Reclamation report of the last publication (explicit zero when none), set by neo4j_projection.publish.
+    publication_reclamation: dict | None = None
+    # Capacity headroom report of the last publication (None before usage was measured), set by neo4j_projection.publish.
+    publication_capacity: dict | None = None
+    # Write report of the last publication (row cap, payload budget, oversized and retried records).
+    publication_writes: dict | None = None
+    # Failure report of the last publication's write (cause, phase, batch, attempts, progress).
+    publication_failure: dict | None = None
+    # Completed-batch progress of the last publication's writes; reset by neo4j_projection.publish.
+    publication_progress: dict | None = None
+    # Write settings in force for the current build, set by neo4j_writes.begin_writes (absent until then).
+    _write_settings: dict
+    # Lookup policy for the adapter's own calls; __init__ reads LEAFCUTTER_NEO4J_ADDRESS_FAMILY.
+    address_family: str = "ipv4"
+    # True once verify_connectivity() succeeded on this backend's driver (set per instance).
+    _connected: bool = False
+
+    def __init__(
+        self,
+        uri: str,
+        username: str,
+        password: str,
+        database: str = "neo4j",
+        query_timeout: float = 3.0,
+    ) -> None:
+        """Load the optional driver only when this backend is explicitly selected.
+
+        Args:
+            uri: Database connection URI with verified TLS for remote hosts.
+            username: Database principal name.
+            password: Database credential retained only in the driver configuration.
+            database: Explicit database name within the Neo4j instance.
+            query_timeout: Maximum database transaction duration in seconds.
+        """
+        from neo4j import GraphDatabase
+
+        self.driver = GraphDatabase.driver(
+            uri, auth=(username, password), max_transaction_retry_time=3.0, connection_timeout=3.0
+        )
+        self.database = database
+        self._connected = False
+        self.query_timeout = min(max(query_timeout, 0.1), 30.0)
+        self.address_family, warning = read_family_setting()
+        self.config_warnings: list[str] = [warning] if warning else []
+
+    async def _run(
+        self,
+        statement: str,
+        parameters: dict | None = None,
+        write: bool = False,
+        database: str | None = None,
+    ) -> list[dict]:
+        """Execute a trusted statement within a bounded managed transaction.
+
+        Args:
+            statement: Fixed parameterized Cypher text owned by this adapter.
+            parameters: Bound values kept separate from Cypher syntax.
+            write: Whether the managed transaction may mutate projection data.
+            database: Database to address instead of the configured one (``system`` for
+                administration commands such as ``SHOW DATABASE``).
+
+        Returns:
+            Database result records converted to plain dictionaries.
+        """
+        extra = {} if database is None else {"database": database}
+        return await self._transaction(
+            lambda tx: self._rows(tx, statement, parameters or {}), write, **extra
+        )
+
+    def _rows(self, tx: ManagedTransaction, statement: str, parameters: dict) -> list[dict]:
+        """Perform the scoped rows operation.
+
+        Args:
+            tx: Driver-owned transaction provided by the managed callback.
+            statement: Fixed parameterized Cypher text owned by this adapter.
+            parameters: Bound values kept separate from Cypher syntax.
+
+        Returns:
+            Transaction result records materialized as plain dictionaries.
+        """
+        return [record.data() for record in tx.run(statement, parameters)]
+
+    def _open_connection(self, recorder: StepRecorder | None) -> None:
+        """Open the driver's connection once, timed as the "connect" step (worker thread).
+
+        ``driver.session()`` is lazy: the TCP/TLS/Bolt handshake would otherwise happen inside the
+        first query and be billed to it. The public ``verify_connectivity()`` forces it up front;
+        it runs once per driver, so later transactions reuse the pooled connection at no cost.
+
+        Args:
+            recorder: Step recorder fed with the connect time, if any.
+        """
+        from neo4j.exceptions import DriverError
+
+        if self._connected:
+            return
+        with timed(recorder, "connect"):
+            try:
+                self.driver.verify_connectivity()
+            except (OSError, TimeoutError, DriverError):
+                forget_scope_lookups()  # a remembered address that does not connect must be asked again
+                raise
+        self._connected = True
+
+    async def _transaction(
+        self,
+        callback: Callable[[ManagedTransaction], TransactionResult],
+        write: bool = False,
+        database: str | None = None,
+    ) -> TransactionResult:
+        """Run idempotent database work in a worker and normalize infrastructure faults.
+
+        Args:
+            callback: Operation executed inside a bounded managed transaction.
+            write: Whether the managed transaction may mutate projection data.
+            database: Database to address instead of the configured one.
+
+        Returns:
+            The callback result after successful managed commit, with bounded retry policy.
+        """
+        from neo4j import unit_of_work
+        from neo4j.exceptions import DriverError, Neo4jError
+        from knowledge.deadlines import remaining_seconds
+
+        timeout = remaining_seconds(self.query_timeout)
+        recorder = recorder_var.get()
+
+        step = ["connect"]  # the step the worker is in; a timeout is the query time limit only in "query"
+
+        def execute() -> TransactionResult:
+            """Own the synchronous session within its worker-thread lifetime."""
+            with lookup_scope(recorder, self.address_family), ExitStack() as stack:
+                self._open_connection(recorder)
+                step[0] = "query"
+                session = stack.enter_context(self.driver.session(database=database or self.database))
+                runner = session.execute_write if write else session.execute_read
+                with timed(recorder, "query"):
+                    return runner(unit_of_work(timeout=timeout)(callback))
+
+        try:
+            return await run_in_daemon(execute)
+        except (OSError, TimeoutError, DriverError, Neo4jError) as error:
+            from knowledge.adapters.neo4j_writes import TIME_LIMIT, classify_failure
+
+            failure = BackendUnavailable(describe_failure(error))
+            # from the driver's code, never the text; a connect-step timeout is the store being
+            # unreachable, not the writer's transaction time limit (it is not retried as one)
+            failure.cause_class = classify_failure(error)
+            if failure.cause_class == TIME_LIMIT and step[0] == "connect":
+                failure.cause_class = "unavailable"
+            if failure.cause_class == TIME_LIMIT:
+                failure.time_limit_seconds = timeout  # the limit actually applied, deadline included
+            raise failure from error
+
+    async def setup(self) -> None:
+        """Apply idempotent, versioned Community-compatible projection constraints."""
+        migration = Path(__file__).parents[1] / "migrations" / "001_projection.cypher"
+        for statement in migration.read_text(encoding="utf-8").split(";"):
+            if statement.strip():
+                await self._run(statement, write=True)
+        from knowledge.native_types.registry import LABELS
+
+        for label in LABELS.values():
+            # Registry values are a finite trusted vocabulary, never input data.
+            if label in {"AC", "ADR", "Component", "SourceFile", "Test", "Decision", "Lesson"}:
+                continue
+            await self._run(
+                f"CREATE CONSTRAINT native_{label.lower()}_identity IF NOT EXISTS FOR (n:{label}) REQUIRE n.key IS UNIQUE",
+                write=True,
+            )
+            await self._run(
+                f"CREATE INDEX native_{label.lower()}_scope IF NOT EXISTS FOR (n:{label}) ON (n.generation_key, n.canonical_id)",
+                write=True,
+            )
+            await self._run(
+                f"CREATE INDEX native_{label.lower()}_name IF NOT EXISTS FOR (n:{label}) ON (n.name)",
+                write=True,
+            )
+
+    async def capabilities(self) -> dict:
+        """Advertise implemented mechanisms; readiness is generation-specific."""
+        return {"graph": True, "semantic": True, "hybrid": True, "model": None, "dimensions": None}
+
+    async def active(self, repository_id: str) -> ProjectionSnapshot | None:
+        """Read the active manifest once without reading entity nodes.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads and writes.
+
+        Returns:
+            Metadata for the active published generation, or None when none exists.
+        """
+        rows = await self._run(
+            'MATCH (r:Repository {repository_id:$repo}) MATCH (g:Snapshot {key:r.active}) WHERE g.status="ready" RETURN g',
+            {"repo": repository_id},
+        )
+        return self._manifest(rows[0]["g"]) if rows else None
+
+    async def get_generation(
+        self, repository_id: str, generation_id: str
+    ) -> ProjectionSnapshot | None:
+        """Read only a retained ready generation's manifest metadata.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads and writes.
+            generation_id: Immutable generation identifier within the repository.
+
+        Returns:
+            Published generation metadata in the requested scope, or None if unavailable.
+        """
+        rows = await self._run(
+            'MATCH (g:Snapshot {key:$key, status:"ready"}) RETURN g',
+            {"key": scope_key(repository_id, generation_id)},
+        )
+        return self._manifest(rows[0]["g"]) if rows else None
+
+    async def get_revision(self, repository_id: str, source_sha: str) -> ProjectionSnapshot | None:
+        """Select a retained ready manifest for an exact repository commit.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads and writes.
+            source_sha: Exact immutable source commit SHA to locate.
+
+        Returns:
+            Published generation metadata for that exact SHA, or None if unavailable.
+        """
+        rows = await self._run(
+            'MATCH (g:Snapshot {repository_id:$repo,source_sha:$sha,status:"ready"}) RETURN g ORDER BY g.ready_at DESC LIMIT 1',
+            {"repo": repository_id, "sha": source_sha},
+        )
+        return self._manifest(rows[0]["g"]) if rows else None
+
+    @staticmethod
+    def _manifest(row: dict) -> ProjectionSnapshot:
+        """Deserialize generation metadata without loading entity or relationship data.
+
+        Args:
+            row: Driver result row containing serialized projection metadata.
+
+        Returns:
+            Validated source generation with immutable provenance.
+        """
+        return ProjectionSnapshot(
+            repository_id=row["repository_id"],
+            source_sha=row["source_sha"],
+            generation_id=row["generation_id"],
+            mapper_version=row["mapper_version"],
+            node_count=row.get("node_count", 0),
+            edge_count=row.get("edge_count", 0),
+            diagnostics=json.loads(row.get("diagnostics", "[]")),
+            semantic_ready=row.get("semantic_ready", False),
+            embedding_model=row.get("embedding_model"),
+            embedding_dimensions=row.get("embedding_dimensions"),
+            supported_kinds=row.get("supported_kinds", []),
+            supported_fields=json.loads(row.get("supported_fields", "{}")),
+            supported_relationships=row.get("supported_relationships", []),
+        )
+
+    async def publish(
+        self,
+        snapshot: ProjectionSnapshot,
+        expected_generation: str | None = None,
+        retention_bound: RetentionBound | None = None,
+        capacity: CapacityCeiling | None = None,
+    ) -> bool:
+        """Build an immutable generation and atomically compare-and-swap its pointer.
+
+        Args:
+            snapshot: Validated immutable generation and its canonical source records.
+            expected_generation: Previously active generation required for compare-and-swap.
+            retention_bound: Declared bound; when given, a successful publication reclaims
+                the generations it permits and reports them in ``publication_reclamation``.
+            capacity: Declared ceiling; measured usage is reported in ``publication_capacity``
+                and a snapshot that does not fit is refused before any write.
+
+        Returns:
+            Whether the guarded operation succeeded.
+        """
+        from knowledge.adapters.neo4j_projection import publish
+
+        return await publish(self, snapshot, expected_generation, retention_bound, capacity)
+
+    async def query(
+        self, repository_id: str, generation_id: str, operation: str, arguments: dict, limit: int
+    ) -> list[Entity]:
+        """Execute only the reviewed catalog over one ready generation.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads and writes.
+            generation_id: Immutable generation identifier within the repository.
+            operation: Registered query operation; never arbitrary caller Cypher.
+            arguments: Bound operation parameters passed separately from query text.
+            limit: Maximum result count after enforcing the adapter bound.
+
+        Returns:
+            Matching canonical entities in the scoped generation, bounded by limit.
+        """
+        from knowledge.adapters.neo4j_queries import query
+
+        return await query(self, repository_id, generation_id, operation, arguments, limit)
+
+    async def neighbors(
+        self,
+        repository_id: str,
+        generation_id: str,
+        entity_ids: list[str],
+        edge_types: list[str],
+        limit: int,
+    ) -> tuple[list[Entity], list[Relation]]:
+        """Return a bounded one-hop expansion within the pinned scope.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads and writes.
+            generation_id: Immutable generation identifier within the repository.
+            entity_ids: Canonical seed IDs within the selected generation.
+            edge_types: Allowlisted relationship labels requested for expansion.
+            limit: Maximum result count after enforcing the adapter bound.
+
+        Returns:
+            Bounded neighboring entities and their original directed relationships.
+        """
+        from knowledge.adapters.neo4j_queries import neighbors
+
+        return await neighbors(self, repository_id, generation_id, entity_ids, edge_types, limit)
+
+    async def put_embeddings(
+        self,
+        repository_id: str,
+        generation_id: str,
+        embeddings: dict,
+        model: str,
+        dimensions: int,
+        content_hashes: dict,
+    ) -> None:
+        """Attach content-validated vectors and publish semantic readiness separately.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads and writes.
+            generation_id: Immutable generation identifier within the repository.
+            embeddings: Canonical entity IDs mapped to their precomputed vectors.
+            model: Embedding model identifier bound to this generation.
+            dimensions: Expected number of finite values in every embedding.
+            content_hashes: Expected source hashes keyed by canonical entity ID.
+        """
+        from knowledge.adapters.neo4j_vectors import put_embeddings
+
+        await put_embeddings(
+            self, repository_id, generation_id, embeddings, model, dimensions, content_hashes
+        )
+
+    async def semantic(
+        self,
+        repository_id: str,
+        generation_id: str,
+        vector: list[float],
+        kinds: list[str],
+        limit: int,
+        model: str,
+    ) -> list[tuple[Entity, float]]:
+        """Query a generation-local ANN index with bounded candidate count.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads and writes.
+            generation_id: Immutable generation identifier within the repository.
+            vector: Finite nonzero query vector with the configured dimensions.
+            kinds: Allowed entity kinds for the scoped semantic search.
+            limit: Maximum result count after enforcing the adapter bound.
+            model: Embedding model identifier bound to this generation.
+
+        Returns:
+            Canonical entities paired with descending similarity scores from scoped indexes.
+        """
+        from knowledge.adapters.neo4j_vectors import semantic
+
+        return await semantic(self, repository_id, generation_id, vector, kinds, limit, model)
+
+    async def rollback(
+        self, repository_id: str, generation_id: str, expected_generation: str | None
+    ) -> bool:
+        """Explicitly select a retained generation using the same atomic pointer guard.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads and writes.
+            generation_id: Immutable generation identifier within the repository.
+            expected_generation: Previously active generation required for compare-and-swap.
+
+        Returns:
+            Whether the guarded operation succeeded.
+        """
+        from knowledge.adapters.neo4j_projection import switch_active
+
+        if await self.get_generation(repository_id, generation_id) is None:
+            return False
+        return await switch_active(self, repository_id, generation_id, expected_generation)
+
+    async def cleanup(
+        self,
+        repository_id: str,
+        generation_id: str,
+        retention_seconds: int | None = None,
+        now: float | None = None,
+    ) -> bool:
+        """Remove only an inactive owned generation after its retention deadline.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads and writes.
+            generation_id: Immutable generation identifier within the repository.
+            retention_seconds: Declared minimum retirement time; there is no built-in
+                value, so omitting it is refused with ValueError.
+            now: Optional clock value for deterministic retention checks.
+
+        Returns:
+            Whether the guarded operation succeeded.
+        """
+        from knowledge.adapters.neo4j_projection import cleanup
+
+        return await cleanup(self, repository_id, generation_id, retention_seconds, now)
+
+    async def retention_facts(self, repository_id: str) -> list[dict]:
+        """Read, without writing, the per-generation facts a retention policy decides on.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads.
+
+        Returns:
+            One row per retained ready generation.
+        """
+        from knowledge.adapters.neo4j_retention import retention_facts
+
+        return await retention_facts(self, repository_id)
+
+    async def entity_node_counts(self, repository_id: str) -> list[dict]:
+        """Read, without writing, how many entity nodes name each generation key.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads.
+
+        Returns:
+            One row per distinct generation key carried by entity nodes.
+        """
+        from knowledge.adapters.neo4j_retention import entity_node_counts
+
+        return await entity_node_counts(self, repository_id)
+
+    async def close(self) -> None:
+        """Close the configured driver's pool, abandoning a close that blocks past a short bound."""
+        try:
+            await run_in_daemon(self.driver.close, timeout=_CLOSE_WAIT_SECONDS)
+        except TimeoutError:
+            logger.warning("Neo4j driver close did not finish in %.1fs; abandoned", _CLOSE_WAIT_SECONDS)
+
+
+# - 2026-10-01 [python-coder]: Preserve question evidence and explicit source support through bounded research. (#KM-500/KM-500e-2)

@@ -1,0 +1,100 @@
+{
+  "active_source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+  "active_nodes": 6092,
+  "active_relationships": 19686,
+  "current_labels": [
+    {
+      "labels": [
+        "AC"
+      ],
+      "count": 4528
+    },
+    {
+      "labels": [
+        "ADR"
+      ],
+      "count": 56
+    },
+    {
+      "labels": [
+        "Component"
+      ],
+      "count": 71
+    },
+    {
+      "labels": [
+        "SourceFile"
+      ],
+      "count": 1006
+    },
+    {
+      "labels": [
+        "Test"
+      ],
+      "count": 431
+    }
+  ],
+  "all_relationship_types": [
+    {
+      "type": "COMPONENT_MEMBERSHIP",
+      "count": 24406
+    },
+    {
+      "type": "COVERED_BY",
+      "count": 20826
+    },
+    {
+      "type": "DEPENDS_ON",
+      "count": 25137
+    },
+    {
+      "type": "IMPLEMENTED_BY",
+      "count": 7421
+    },
+    {
+      "type": "RELATED_DOCS",
+      "count": 144
+    }
+  ],
+  "legacy_nodes": 0,
+  "finalize_declared_members": 65,
+  "finalize_acceptance_criteria": 63,
+  "paired_backup_retrieval": [
+    {
+      "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+      "sample_ids": [
+        "FIN-100",
+        "TQ-500f",
+        "finalize"
+      ],
+      "same_canonical_evidence": true
+    },
+    {
+      "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "sample_ids": [
+        "FIN-100",
+        "TQ-500f",
+        "finalize"
+      ],
+      "same_canonical_evidence": true
+    },
+    {
+      "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+      "sample_ids": [
+        "FIN-100",
+        "TQ-500f",
+        "finalize"
+      ],
+      "same_canonical_evidence": true
+    },
+    {
+      "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+      "sample_ids": [
+        "FIN-100",
+        "TQ-500f",
+        "finalize"
+      ],
+      "same_canonical_evidence": true
+    }
+  ]
+}

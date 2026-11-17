@@ -1,0 +1,34 @@
+id: DK-200b
+title: "Gather and share context within the request's permissions and resource limits"
+component: decision-kernel
+components: [decision_kernel]
+level: L1
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a request with permitted sources and configured resource and data-sharing limits,
+  When the kernel gathers or passes on initial context,
+  Then it respects those boundaries and reports any resulting omissions,
+  And gathering does not change repository files or the user's original request.
+depends_on: [DK-200]
+covered_by:
+  - DK-200b-1
+  - DK-200b-2
+  - DK-200b-3
+  - DK-200b-4
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: specified-by
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: specified-by
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: specified-by
+    status: exists
+origin_agent: Codex orchestrator (user-authorized BA and IT PO review)
+created: 2026-10-02
+notes: "Parent scope records the existing authorized feature; readiness is not an approval claim."

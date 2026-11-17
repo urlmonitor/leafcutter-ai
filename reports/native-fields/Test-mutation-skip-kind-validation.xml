@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="4" time="0.195" timestamp="2026-10-02T09:30:19.346560+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_rejects_other_kinds_without_path_reclassification[SourceFile]" time="0.006"><failure message="Failed: DID NOT RAISE ValueError">tests\knowledge\test_native_test.py:199: in test_test_reference_rejects_other_kinds_without_path_reclassification
+    with pytest.raises(ValueError, match="Test"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_rejects_other_kinds_without_path_reclassification[AcceptanceCriterion]" time="0.003"><failure message="Failed: DID NOT RAISE ValueError">tests\knowledge\test_native_test.py:199: in test_test_reference_rejects_other_kinds_without_path_reclassification
+    with pytest.raises(ValueError, match="Test"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_rejects_other_kinds_without_path_reclassification[Component]" time="0.002"><failure message="Failed: DID NOT RAISE ValueError">tests\knowledge\test_native_test.py:199: in test_test_reference_rejects_other_kinds_without_path_reclassification
+    with pytest.raises(ValueError, match="Test"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_rejects_other_kinds_without_path_reclassification[test]" time="0.002"><failure message="Failed: DID NOT RAISE ValueError">tests\knowledge\test_native_test.py:199: in test_test_reference_rejects_other_kinds_without_path_reclassification
+    with pytest.raises(ValueError, match="Test"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase></testsuite></testsuites>

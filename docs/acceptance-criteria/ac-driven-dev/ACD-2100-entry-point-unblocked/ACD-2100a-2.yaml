@@ -7,9 +7,9 @@ priority: medium
 title: "The setup step finds the repository it operates on even when the script itself lives outside it"
 component: ac-driven-dev
 level: L2
-status: active
+status: superseded_by
 req_status: draft
-work_status: done
+work_status: todo
 roadmap_phase: phase_1
 criteria: |
   Given a copy of the worktree setup step placed in a directory that is not inside
@@ -117,8 +117,23 @@ delivers_to:
 expects_from: null
 origin_agent: business-analyst
 created: 2026-08-25
-amended_by: []
-superseded_by: null
+amended_by:
+- reason: superseded-retired-by-bo-4300
+  by: human:user
+  at: 2026-10-21
+  note: >-
+    Retired under the user's decision "re-prove, else retire" (2026-10-21). The code this record
+    describes -- the setup step templates/scripts/setup_ticket_worktree.py and its
+    _resolve_repository_with_search_fallback() -- was removed by BO-4300f-2, and with it the only
+    proving test (unit_tests/ac_driven_dev/test_acd_2100a_2.py). The one workspace maker
+    (worktree.py via workspace_root.resolve) now finds the single project among the immediate
+    subfolders of the starting folder (BO-4300b-1, BO-4300b-2, proved by test_bo_4300b_1 and
+    test_bo_4300b_2), but two clauses are not re-proven: the workspace lands beside the project,
+    not under it, and the maker does not announce on its error stream that the project was found
+    by a search. The ambiguous case stays proven in ACD-2100a-2-i (test_bo_4300b_3).
+superseded_by:
+- BO-4300b-1
+- BO-4300b-2
 covered_by:
   - ACD-2100a-2-i
   - ACD-2100a-2-ii

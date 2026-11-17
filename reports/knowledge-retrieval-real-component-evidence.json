@@ -1,0 +1,71 @@
+{
+  "contract_version": "1",
+  "request_id": "real-registry-proof",
+  "retrieval_id": "2ea87f46-2297-469b-ba4b-5d9ebc492c28",
+  "status": "ok",
+  "requested_mode": "exact",
+  "executed_mode": "exact",
+  "operation": "get_entities",
+  "operation_version": "1",
+  "source_sha": "3299cc3ccb85f0cc767b968a56286416a08265f5",
+  "generation_id": "d8c5a47d2e489eee7f600f14b84eeefa7634b5f64ac6294307f980e50ba49e10",
+  "evidence": [
+    {
+      "entity": {
+        "canonical_id": "knowledge_management",
+        "kind": "Component",
+        "title": "Knowledge Management",
+        "summary": "Component hub: knowledge_management",
+        "source": {
+          "repository_id": "leafcutter-docs-demo",
+          "source_sha": "3299cc3ccb85f0cc767b968a56286416a08265f5",
+          "path": "docs/components.json",
+          "locator": "/components/knowledge_management",
+          "content_hash": "3749f55c429d157518703859901d9aea95527f503454a122d417581baf014af8"
+        },
+        "properties": {}
+      },
+      "evidence_id": "knowledge-ab542bb7f72023d2cbe02d01aa48e243defbef303a24efe2c7e205eedb7813e4",
+      "content": "{\n      \"id\": \"knowledge_management\",\n      \"name\": \"Knowledge Management\",\n      \"type\": \"analysis\",\n      \"description\": \"Cross-surface knowledge graph: surface ingestion from paths.json, node/edge derivation, AC-to-code traceability, the query layer, and graph visualisation.\",\n      \"detail_ref\": \"docs/architecture/components/knowledge-management.md\",\n      \"status\": \"active\",\n      \"primary_code\": [\n        \"scripts/knowledge_query.py\",\n        \"scripts/visualise_knowledge_graph.py\",\n        \"templates/skills/knowledge-query/\"\n      ]\n    }",
+      "disclosure_level": 3,
+      "signals": {},
+      "seed_id": null,
+      "path": [],
+      "limitations": [],
+      "relationships": [
+        {
+          "source": {
+            "repository_id": "leafcutter-docs-demo",
+            "source_sha": "3299cc3ccb85f0cc767b968a56286416a08265f5",
+            "path": "docs/architecture/components/knowledge-management.md",
+            "locator": "/components",
+            "content_hash": "e88f0deb0271fdcf22a2fbc899eff1a550ce620bb7d953e9a66bee3ca5f9ec17"
+          },
+          "source_id": "knowledge-management",
+          "target_id": "knowledge_management",
+          "edge_type": "component_membership",
+          "locator": ""
+        }
+      ],
+      "related": [
+        {
+          "canonical_id": "knowledge-management",
+          "title": "Knowledge Management � Cross-Surface Knowledge Graph",
+          "kind": "Component"
+        }
+      ]
+    }
+  ],
+  "warnings": [],
+  "errors": [],
+  "continuation": null,
+  "truncated": false,
+  "stats": {
+    "candidates": 1,
+    "estimator_version": "utf8-bytes-div4-v1",
+    "round": 1,
+    "candidate_work": 2,
+    "duration_ms": 125.125,
+    "estimated_tokens": 578
+  }
+}

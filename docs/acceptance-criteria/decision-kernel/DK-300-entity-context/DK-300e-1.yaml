@@ -1,0 +1,80 @@
+id: DK-300e-1
+title: "Trace recognition work separately from intent and later evidence reads"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: reviewed
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a new recognition pass and subsequent intent and research work,
+  When its observations are recorded,
+  Then recognition, resolution and projection are distinguishable within the pre-intent boundary,
+  And the trace records the permitted index fingerprint and coverage, per-family detected and resolved counts, ambiguity and unknown counts, lookup work, elapsed time, serialized sizes, omissions and truncation reasons,
+  And traces expose incomplete scanning separately from card omission,
+  And the initial pass records zero enrichment-owned model calls,
+  And intent model calls and later evidence reads belong to distinct observations rather than being credited as avoided work,
+  And trace values obey the same redaction and scope rules as the context projection.
+depends_on: [DK-300e]
+doc_links:
+  - path: docs/analysis/2026-10-03-kernel-entity-context-concept.md
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+delivers_to: {"agent":"python-coder","contract":"EntityContext (kernel.contracts.entity_context): schema_version='1.0', kind='entity_context'; entities:list[EntityCard] with family:glossary|doc_type|entry_kind|native_kind|symbol|artifact_id, identity:string, native_kind:string|null, meaning:string, signature:string|null, resolution:resolved|ambiguous, matches:list[{channel:string,record_index:int|null,start:int,end:int,surface:string}], provenance:{source_id:string,locator:string,snapshot:string,source_hash:string,projection_hash:string}. Offsets are half-open Unicode code-point positions in original channel text. Original goal and caller claims are separate from meaning projection. Context has original_goal:string (verbatim), caller_context, workspace_id, repository_root, registered_capabilities:string[], status:recognized|no_matches|partial|unavailable|disabled, unresolved:list[{family,reference,state,matches,candidates}], coverage:{scan_complete:bool,index_status,index_fingerprint:string|null,families,counts,by_family}, budgets:{lookups:int,serialized_chars:int,elapsed_ms:number,jev_calls:0}, limitations:string[]. Counts contain detected,resolved,returned,omitted,unknown,ambiguous. No evidence field."}
+expects_from: {"ac_id":"DK-300d-1","contract":"EntityContext (kernel.contracts.entity_context): schema_version='1.0', kind='entity_context'; entities:list[EntityCard] with family:glossary|doc_type|entry_kind|native_kind|symbol|artifact_id, identity:string, native_kind:string|null, meaning:string, signature:string|null, resolution:resolved|ambiguous, matches:list[{channel:string,record_index:int|null,start:int,end:int,surface:string}], provenance:{source_id:string,locator:string,snapshot:string,source_hash:string,projection_hash:string}. Offsets are half-open Unicode code-point positions in original channel text. Original goal and caller claims are separate from meaning projection. Context has original_goal:string (verbatim), caller_context, workspace_id, repository_root, registered_capabilities:string[], status:recognized|no_matches|partial|unavailable|disabled, unresolved:list[{family,reference,state,matches,candidates}], coverage:{scan_complete:bool,index_status,index_fingerprint:string|null,families,counts,by_family}, budgets:{lookups:int,serialized_chars:int,elapsed_ms:number,jev_calls:0}, limitations:string[]. Counts contain detected,resolved,returned,omitted,unknown,ambiguous. No evidence field."}
+origin_agent: business-analyst
+created: 2026-10-03
+amended_by:
+  - reason: "IT PO review on 2026-10-03 adds technical contracts and planned test specifications under existing user authorization; readiness is now reviewed. BA criteria, implementation status and historical evidence are preserved."
+superseded_by: null
+covered_by:
+  - 'tests/kernel/entity_context/test_observability.py::test_trace_stages_report_scoped_recognition_work_before_intent'
+  - 'tests/kernel/entity_context/test_observability.py::test_trace_distinguishes_incomplete_scan_omitted_cards_and_later_work'
+implemented_by:
+  - "kernel/entity_context.py"
+  - "kernel/scheduler/nodes_enrichment.py"
+notes: |
+  New behavioral requirement derived from the user-authorized entity-context concept.
+  BA behavior and IT PO technical contracts are reviewed; implementation is verified by the independent strict entity suite and recognition corpus.
+  Verification evidence: reports/entity-context-verification.md. No human approval is implied.
+  Historical DK-200 direct-gather tests and evaluation reports are preserved.
+  Fresh-run wiring criteria were explicitly reconciled to EntityContext on 2026-10-04.
+estimated_complexity: L
+it_requirements:
+  - "Trace stages entity.recognition, entity.resolution and entity.projection and the context.recognized summary are distinct from intent and later retrieval events."
+  - "Observations expose permitted coverage/counts/lookups/elapsed/serialization/omission/deadline data, not raw goal text or forbidden entity metadata."
+  - "Zero enrichment Jev calls describes the recognition stage only; overall-run model calls and downstream retrieval remain accurately attributed."
+test_required: true
+test_spec:
+  - name: "test_trace_stages_report_scoped_recognition_work_before_intent"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "reachability"
+    description: "tests/kernel/entity_context/test_observability.py::test_trace_stages_report_scoped_recognition_work_before_intent: Capture actual service tracer events and assert named stages/order, permitted fingerprint/families/counts/lookups/timing/serialized sizes and zero recognition model calls."
+  - name: "test_trace_distinguishes_incomplete_scan_omitted_cards_and_later_work"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "seam"
+    description: "tests/kernel/entity_context/test_observability.py::test_trace_distinguishes_incomplete_scan_omitted_cards_and_later_work: Exercise deadline and card-overflow cases plus later retrieval; assert distinct truthful counters/reasons and no whole-run zero-call claim or sensitive text leak."
+test_rationale: "Exercise production public boundaries with real canonical-source fixtures and an injected recording classifier; assert observable outputs and side effects, not source strings. Capture red results before runtime implementation; no live provider is required."
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-03'

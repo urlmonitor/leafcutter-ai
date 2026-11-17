@@ -61,16 +61,472 @@ it_requirements:
   - "Regression-proofing as a testable invariant: no guard in the commit_guardian guard set derives the project root by any mechanism other than the shared helper. State the WHAT (e.g. a meta-test or repo assertion that finds no residual parents[N] / symlink-following / bespoke _resolve_worktree_root root derivation across the guard set) and let python-coder choose the HOW."
   - "The git-unavailable graceful fallback (wrap the subprocess, no bare except, warn, safe deterministic fallback per the project error handling policy and ACS-300g-6) lives ONCE in the shared helper, not duplicated per guard."
   - "Deployed/template parity (ADR-001): the shared helper and every migrated guard are edited under templates/scripts/commit_guardian/ and round-tripped to scripts/ via build.py — never edit only one side."
+  - 'Guard classification (test-design input, 2026-10-21; scope templates/scripts/commit_guardian/*.py and hooks/*.py). MIGRATE, parents[N] or __file__-relative project root: check_components_integrity (module REPO_ROOT = parents[2] plus its own _repo_root(): git toplevel with a parents[2] fallback), check_structural_change (dead REPO_ROOT = parents[2] at L83; project_root already comes from find_project_root), check_workflow_meta (parents[3] in main(): lands outside the project from the installed .leafcutter copy), check_ac_coverage and check_v2_ac_store_alignment (_repo_root(): script_dir.parent.parent.parent with a cwd fallback), hooks/check_ac_limits (_find_project_root(): __file__ ancestor walk with a parent.parent.parent fallback).'
+  - 'Guard classification, MIGRATE, bespoke HOOK_ROOT env override plus cwd-ancestor walk for .git/CLAUDE.md (seven byte-identical copies of _find_project_root): check_ac_schema, check_ac_circular_deps, check_ac_governance, check_ac_parent_covered_by (also its strategy-3 cwd walk for ac_parent_id.py), check_ac_pattern_refs, check_surface_components_e2, check_surface_components_e3; plus check_ac_limits (_find_ac_store_root: HOOK_ROOT plus the same cwd walk).'
+  - 'Guard classification, MIGRATE, bespoke git rev-parse --show-toplevel resolver, each with its own miss behaviour (cwd, skip, raise, empty string, or find_project_root): check_doc_frontmatter (_resolve_worktree_root), check_agent_diagrams, check_architecture_scaffolds (_git_root), check_diagram_naming, check_doc_types_agents, check_glossary_coverage, check_mermaid_drift, check_paths_integrity (_git_root), check_placeholder_defaults (inline toplevel plus _find_repo_root walk), check_roadmap_schema (_find_root), check_package_surface_declaration (_repo_root), hooks/check_agent_spawn_consistency (_get_repo_root plus an inline toplevel in the registry disk fallback), hooks/check_files_touched_reconciliation (_get_repo_root), transform_doc_index (_resolve_repo_root), transform_agent_registry (_resolve_repo_root), regenerate_roadmap_mirror (_find_repo_root).'
+  - 'Guard classification, ALREADY COMPLIANT (root only through _resolve_root): check_secrets, check_build_drift, check_output_drift, check_agent_registry, check_lint_gate (find_git_toplevel_strict) and every guard that imports find_project_root. OWNED ELSEWHERE: check_mermaid_parent_link (GE-113c-4) and check_adr_cross_reference (GE-113c-5).'
+  - 'Guard classification, DOCUMENTED EXCEPTIONS (package-relative or not a project-root question; they stay and are the only allowed matches of the regression scan): check_secrets _DEPLOYED_SIBLING_SCANNER_DIR (parent.parent.parent to its sibling skills/security-scanner/scripts), hooks/check_ac_done_on_merge (parent.parent.parent to its sibling ac_store/mark_ac_done.py), transform_doc_index parents[1] (its sibling generate_doc_index.py), diagram_type_validators, doc_type_validators and check_exception_handling (__file__ ancestor walk for the package''s own config JSON), _ac_store_locator (__file__ ancestor walk to locate the done_proof.py code module), hooks/check_agent_spawn_consistency sys.path.insert of parent.parent (imports its sibling modules one directory up), _frontmatter_path_resolver_locator (_HERE for a sibling module), check_build_drift and check_output_drift (_HOOK_FILE handed to the shared resolve_manifest_path), ensure_precommit_config (_PACKAGE_ROOT = parents[1] as the main-tree fallback: resolves the git commondir, not the project root, and is standalone by ADR-031), run_hook.py (compares toplevels to detect a secondary worktree and walks cwd ancestors for a Poetry pyproject.toml; the runner, not a guard), install_pre_commit_shims.py (installer CLI, not a guard). _work_items_scanner derives its root from a caller-supplied config path, not from its own location, and is not a guard.'
+  - 'Migrated guards may use either entry point of the one shared module: find_project_root() (never fails, safe fallback) or find_git_toplevel_strict() (NO_REPO on a miss). What a miss MEANS (skip, warn, block) stays each guard''s own policy, as _resolve_root.py already states for the manifest lookup; only the resolution is shared.'
+  - The HOOK_ROOT test/CI override that the cwd-walk guards honour today when they resolve the project root keeps its meaning after migration and is honoured for root resolution in one place, the shared module, so their existing tests keep passing without per-guard copies. HOOK_ROOT used only as a git -C target (check_ac_governance, check_ac_pattern_refs, _ac_governance_baseline) is not root resolution and is out of scope.
+  - 'Guard classification, NOT IN THIS RECORD (flagged for a decision): guards that take the project root as the bare process cwd, with or without a HOOK_ROOT override, and no resolver of their own: check_hook_parity, check_hook_trigger_reachability, check_identifier_uniqueness, transform_component_vocab, doc_validators, verify_precommit_active, _hook_trigger_census, _remedy_declarations, and check_ac_schema main() (HOOK_ROOT or cwd, besides its declared _find_project_root). They do not duplicate the shared resolver, but they read the wrong root when run from a subdirectory.'
+test_required: true
+test_intent:
+- clause: each guard obtains the project root exclusively through that one shared helper
+  needs_test: true
+  reason: Routing every guard through the shared helper is the consolidation itself, and a guard left
+    on its own resolver reads the wrong root from the installed copy.
+- clause: no guard re-derives the project root via Path(__file__).resolve().parents[N], via following
+    the .leafcutter symlink to the workspace parent, or via its own bespoke resolver duplicated from the
+    shared one
+  needs_test: true
+  reason: A residual parents[N] or bespoke resolver is exactly the wrong-root defect, and only a check
+    over the guard sources finds one before a commit hits it.
+- clause: a new guard added later that needs the project root reuses the same shared helper rather than
+    introducing its own resolution mechanism, so this wrong-root bug class cannot recur
+  needs_test: true
+  reason: Only a standing check over the guard set, with a closed list of allowed exceptions, stops a
+    future guard from bringing its own resolver back.
+declared_files:
+- path: templates/scripts/commit_guardian/check_components_integrity.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_structural_change.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_workflow_meta.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_ac_coverage.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_v2_ac_store_alignment.py
+  state: existing
+- path: templates/scripts/commit_guardian/hooks/check_ac_limits.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_ac_schema.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_ac_circular_deps.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_ac_governance.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_ac_pattern_refs.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_surface_components_e2.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_surface_components_e3.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_ac_limits.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_doc_frontmatter.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_agent_diagrams.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_architecture_scaffolds.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_diagram_naming.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_doc_types_agents.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_glossary_coverage.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_mermaid_drift.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_paths_integrity.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_placeholder_defaults.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_roadmap_schema.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_package_surface_declaration.py
+  state: existing
+- path: templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py
+  state: existing
+- path: templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py
+  state: existing
+- path: templates/scripts/commit_guardian/transform_doc_index.py
+  state: existing
+- path: templates/scripts/commit_guardian/transform_agent_registry.py
+  state: existing
+- path: templates/scripts/commit_guardian/regenerate_roadmap_mirror.py
+  state: existing
 delivers_to:
   agent: python-coder
   contract: "The consolidation guarantee: check_components_integrity.py, check_doc_frontmatter.py, check_secrets.py, and any future commit_guardian guard obtain the project root exclusively through the single shared _resolve_root helper (git rev-parse --show-toplevel + safe fallback), with no per-guard parents[N] literal, .leafcutter-symlink-following, or bespoke _resolve_worktree_root resolution remaining in the guard set."
 expects_from:
   ac_id: GE-113c-1
   contract: "The single shared project-root resolver produced by GE-113c-1 (scripts/commit_guardian/_resolve_root.py); this AC generalizes its adoption across all guards and forbids alternative per-guard mechanisms."
+test_spec:
+- name: test_ge_113c_1_iv_every_migrated_guard_resolves_the_project_root_through_the_shared_module
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Parametrized over the 30 declared guard files: each source, parsed with ast, imports from _resolve_root
+    (from _resolve_root import ... or import _resolve_root) and calls find_project_root or find_git_toplevel_strict,
+    and defines none of the old per-guard resolvers (_find_project_root, _repo_root, _git_root, _find_root, _find_repo_root,
+    _get_repo_root, _resolve_repo_root, _resolve_worktree_root), and check_components_integrity and check_structural_change
+    keep no module-level REPO_ROOT derived from __file__.'
+  proves_clause: each guard obtains the project root exclusively through that one shared helper
+  code_file: templates/scripts/commit_guardian/check_components_integrity.py
+- name: test_ge_113c_1_iv_installed_workflow_meta_checks_the_project_it_is_committed_from
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: A temporary git repository holds templates/workflows-js/bad.js whose export const meta block has
+    a string concatenation; python .leafcutter/scripts/commit_guardian/check_workflow_meta.py, run as a subprocess
+    with cwd at the repository root, exits 1 and prints a FAIL line naming templates/workflows-js/bad.js, both with
+    nothing staged (standalone scan) and with bad.js staged. Today parents[3] of the installed copy is the temporary
+    directory's parent, so the run reads nothing and exits 0. The installed layout is made by copying the hook and
+    _resolve_root.py into .leafcutter/scripts/commit_guardian/ of a temporary git repository, as _ge_113c_1_vi_fixtures.deploy_hook
+    does; no build.py is spawned and no POSIX flock is needed, so it runs locally as well as on CI.
+  proves_clause: each guard obtains the project root exclusively through that one shared helper
+  code_file: templates/scripts/commit_guardian/check_workflow_meta.py
+- name: test_ge_113c_1_iv_installed_cwd_walk_guard_finds_the_project_root_past_a_nested_claude_md
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: A temporary git repository with docs/CLAUDE.md (a nested per-folder CLAUDE.md, common in real projects)
+    and two staged records docs/acceptance-criteria/GE-901-a.yaml and GE-901-b.yaml whose depends_on name each other;
+    the installed check_ac_circular_deps.py, run as a subprocess with cwd at docs/, exits 1 and its stderr names
+    both ids in the BLOCKED cycle report. A second case sets HOOK_ROOT to the repository and HOOK_TEST_FILES to
+    the two absolute record paths with cwd outside any repository, and also exits 1, so the override is honoured
+    through the shared module. The installed layout is made by copying the hook and _resolve_root.py into .leafcutter/scripts/commit_guardian/
+    of a temporary git repository, as _ge_113c_1_vi_fixtures.deploy_hook does; no build.py is spawned and no POSIX
+    flock is needed, so it runs locally as well as on CI.
+  proves_clause: each guard obtains the project root exclusively through that one shared helper
+  code_file: templates/scripts/commit_guardian/check_ac_circular_deps.py
+  must_catch:
+  - the per-guard cwd-ancestor walk kept, so the run from docs/ stops at docs/CLAUDE.md, finds no docs/docs/acceptance-criteria
+    and exits 0
+  - the guard migrated to find_project_root but the shared module ignores HOOK_ROOT, so the HOOK_ROOT case resolves
+    the wrong root and exits 0
+- name: test_ge_113c_1_iv_guard_sources_derive_no_project_root_outside_the_shared_module
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Scans the code of every .py under templates/scripts/commit_guardian/ and its hooks/ folder (tokenize,
+    so comments and docstrings are ignored; _resolve_root.py and __pycache__ are skipped) for project-root derivation:
+    .parents[<int>], chained .parent.parent, [x, *x.parents] ancestor walks, Path.cwd().parents walks, os.getcwd()
+    root fallbacks and a ''--show-toplevel'' subprocess argument. Every match must be an allowed exception and every
+    other match fails the test, naming file, line and pattern. The allowed exceptions are exactly the DOCUMENTED
+    EXCEPTIONS entry of it_requirements, each keyed by file, pattern kind and the matched code line, each with a
+    one-line reason: check_secrets _DEPLOYED_SIBLING_SCANNER_DIR, hooks/check_ac_done_on_merge mark_ac_done.py path,
+    hooks/check_agent_spawn_consistency sys.path.insert of parent.parent, transform_doc_index parents[1] generator
+    candidate, the __file__ ancestor walks of diagram_type_validators, doc_type_validators, check_exception_handling,
+    _ac_store_locator and _frontmatter_path_resolver_locator, ensure_precommit_config _PACKAGE_ROOT = parents[1],
+    run_hook.py''s toplevel comparison and Poetry pyproject walk, install_pre_commit_shims.py''s CLI toplevel, and
+    _work_items_scanner''s config-path parent.parent; check_mermaid_parent_link and check_adr_cross_reference are
+    listed as owned by GE-113c-4 and GE-113c-5 until those land, and the entry is removed when they do.'
+  proves_clause: no guard re-derives the project root via Path(__file__).resolve().parents[N], via following the
+    .leafcutter symlink to the workspace parent, or via its own bespoke resolver duplicated from the shared one
+  code_file: templates/scripts/commit_guardian/check_structural_change.py
+  must_catch:
+  - the dead REPO_ROOT = Path(__file__).resolve().parents[2] left in check_structural_change
+  - check_components_integrity keeping its own _repo_root() with a parents[2] fallback
+  - check_doc_frontmatter keeping _resolve_worktree_root with its private git rev-parse call
+  - one of the seven HOOK_ROOT plus cwd-walk _find_project_root copies left in place
+  - an allowlist keyed by file name only, so a second, new parents[N] root added to an exempt file such as check_secrets
+    passes
+- name: test_ge_113c_1_iv_scan_refuses_a_new_guard_that_brings_its_own_root_resolution
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'The scan of the previous test is run over a temporary copy of the guard folder plus one synthetic
+    new guard check_fixture_new_guard.py: one variant sets REPO_ROOT = Path(__file__).resolve().parents[2], one
+    calls subprocess.run([''git'', ''rev-parse'', ''--show-toplevel'']) in its own helper, one walks [Path.cwd(),
+    *Path.cwd().parents]; each is refused and the report names check_fixture_new_guard.py. A fourth variant that
+    does from _resolve_root import find_project_root passes.'
+  proves_clause: a new guard added later that needs the project root reuses the same shared helper rather than introducing
+    its own resolution mechanism, so this wrong-root bug class cannot recur
+  code_file: templates/scripts/commit_guardian/_resolve_root.py
+  must_catch:
+  - a scan limited to a fixed list of today's guard file names, so a new file is never scanned
+  - a scan that only looks for parents[N] and lets a new private git rev-parse helper through
+- name: test_ge_113c_1_iv_exception_list_is_exact_and_carries_a_reason
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Every allowed exception still matches a code line in the current guard sources (a stale entry fails,
+    so the list cannot grow quietly into a blanket pass) and each has a non-empty reason naming the sibling file
+    or the non-root question it answers.
+  proves_clause: a new guard added later that needs the project root reuses the same shared helper rather than introducing
+    its own resolution mechanism, so this wrong-root bug class cannot recur
+  code_file: templates/scripts/commit_guardian/_resolve_root.py
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-21'
+test_design_opened_files:
+- templates/scripts/commit_guardian/check_components_integrity.py
+- templates/scripts/commit_guardian/check_structural_change.py
+- templates/scripts/commit_guardian/check_workflow_meta.py
+- templates/scripts/commit_guardian/check_ac_coverage.py
+- templates/scripts/commit_guardian/check_v2_ac_store_alignment.py
+- templates/scripts/commit_guardian/hooks/check_ac_limits.py
+- templates/scripts/commit_guardian/check_ac_schema.py
+- templates/scripts/commit_guardian/check_ac_circular_deps.py
+- templates/scripts/commit_guardian/check_ac_governance.py
+- templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+- templates/scripts/commit_guardian/check_ac_pattern_refs.py
+- templates/scripts/commit_guardian/check_surface_components_e2.py
+- templates/scripts/commit_guardian/check_surface_components_e3.py
+- templates/scripts/commit_guardian/check_ac_limits.py
+- templates/scripts/commit_guardian/check_doc_frontmatter.py
+- templates/scripts/commit_guardian/check_agent_diagrams.py
+- templates/scripts/commit_guardian/check_architecture_scaffolds.py
+- templates/scripts/commit_guardian/check_diagram_naming.py
+- templates/scripts/commit_guardian/check_doc_types_agents.py
+- templates/scripts/commit_guardian/check_glossary_coverage.py
+- templates/scripts/commit_guardian/check_mermaid_drift.py
+- templates/scripts/commit_guardian/check_paths_integrity.py
+- templates/scripts/commit_guardian/check_placeholder_defaults.py
+- templates/scripts/commit_guardian/check_roadmap_schema.py
+- templates/scripts/commit_guardian/check_package_surface_declaration.py
+- templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py
+- templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py
+- templates/scripts/commit_guardian/transform_doc_index.py
+- templates/scripts/commit_guardian/transform_agent_registry.py
+- templates/scripts/commit_guardian/regenerate_roadmap_mirror.py
+- templates/scripts/commit_guardian/_resolve_root.py
+- templates/scripts/commit_guardian/check_secrets.py
+- templates/scripts/commit_guardian/check_build_drift.py
+- templates/scripts/commit_guardian/diagram_type_validators.py
+- templates/scripts/commit_guardian/doc_type_validators.py
+- templates/scripts/commit_guardian/ensure_precommit_config.py
+- templates/scripts/commit_guardian/check_exception_handling.py
+- templates/scripts/commit_guardian/_ac_store_locator.py
+- templates/scripts/commit_guardian/run_hook.py
+- templates/scripts/commit_guardian/transform_component_vocab.py
+- templates/scripts/commit_guardian/_ac_governance_baseline.py
+- unit_tests/commit_guardian/_ge_113c_1_vi_fixtures.py
+- unit_tests/commit_guardian/test_resolve_root_git_preferred.py
+- docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-4.yaml
+- docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-5.yaml
+file_findings:
+- file: templates/scripts/commit_guardian/check_components_integrity.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: 'It derives the project root itself: a module REPO_ROOT from parents[2] and its own _repo_root() with
+    git toplevel and a parents[2] fallback.'
+  decision: null
+- file: templates/scripts/commit_guardian/check_structural_change.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It keeps a dead REPO_ROOT = Path(__file__).resolve().parents[2] beside the shared find_project_root()
+    it already uses.
+  decision: null
+- file: templates/scripts/commit_guardian/check_workflow_meta.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its main() takes the project root as Path(__file__).resolve().parents[3], which lands outside the project
+    from the installed copy.
+  decision: null
+- file: templates/scripts/commit_guardian/check_ac_coverage.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its _repo_root() climbs three parents from its own file and falls back to os.getcwd().
+  decision: null
+- file: templates/scripts/commit_guardian/check_v2_ac_store_alignment.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its _repo_root() climbs three parents from its own file and falls back to os.getcwd().
+  decision: null
+- file: templates/scripts/commit_guardian/hooks/check_ac_limits.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its _find_project_root() walks ancestors of its own file and falls back to parent.parent.parent.
+  decision: null
+- file: templates/scripts/commit_guardian/check_ac_schema.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: 'It holds its own _find_project_root(): the HOOK_ROOT override plus a cwd-ancestor walk for .git or CLAUDE.md.'
+  decision: null
+- file: templates/scripts/commit_guardian/check_ac_circular_deps.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: 'It holds its own _find_project_root(): the HOOK_ROOT override plus a cwd-ancestor walk for .git or CLAUDE.md.'
+  decision: null
+- file: templates/scripts/commit_guardian/check_ac_governance.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: 'It holds its own _find_project_root(): the HOOK_ROOT override plus a cwd-ancestor walk for .git or CLAUDE.md.'
+  decision: null
+- file: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds its own HOOK_ROOT plus cwd-ancestor _find_project_root() and a second cwd walk for ac_parent_id.py.
+  decision: null
+- file: templates/scripts/commit_guardian/check_ac_pattern_refs.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: 'It holds its own _find_project_root(): the HOOK_ROOT override plus a cwd-ancestor walk for .git or CLAUDE.md.'
+  decision: null
+- file: templates/scripts/commit_guardian/check_surface_components_e2.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: 'It holds its own _find_project_root(): the HOOK_ROOT override plus a cwd-ancestor walk for .git or CLAUDE.md.'
+  decision: null
+- file: templates/scripts/commit_guardian/check_surface_components_e3.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: 'It holds its own _find_project_root(): the HOOK_ROOT override plus a cwd-ancestor walk for .git or CLAUDE.md.'
+  decision: null
+- file: templates/scripts/commit_guardian/check_ac_limits.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its _find_ac_store_root() honours HOOK_ROOT and otherwise walks cwd ancestors to the .git or CLAUDE.md
+    root.
+  decision: null
+- file: templates/scripts/commit_guardian/check_doc_frontmatter.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds _resolve_worktree_root(), a private git rev-parse resolver with find_project_root() as fallback.
+  decision: null
+- file: templates/scripts/commit_guardian/check_agent_diagrams.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It resolves the project root with its own inline git rev-parse --show-toplevel call and its own miss behaviour.
+  decision: null
+- file: templates/scripts/commit_guardian/check_architecture_scaffolds.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It resolves the project root with its own inline git rev-parse --show-toplevel call and its own miss behaviour.
+  decision: null
+- file: templates/scripts/commit_guardian/check_diagram_naming.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It resolves the project root with its own inline git rev-parse --show-toplevel call and its own miss behaviour.
+  decision: null
+- file: templates/scripts/commit_guardian/check_doc_types_agents.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It resolves the project root with its own inline git rev-parse --show-toplevel call and its own miss behaviour.
+  decision: null
+- file: templates/scripts/commit_guardian/check_glossary_coverage.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It resolves the project root with its own inline git rev-parse --show-toplevel call and its own miss behaviour.
+  decision: null
+- file: templates/scripts/commit_guardian/check_mermaid_drift.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It resolves the project root with its own inline git rev-parse --show-toplevel call and its own miss behaviour.
+  decision: null
+- file: templates/scripts/commit_guardian/check_paths_integrity.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It resolves the project root with its own inline git rev-parse --show-toplevel call and its own miss behaviour.
+  decision: null
+- file: templates/scripts/commit_guardian/check_placeholder_defaults.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It runs its own git rev-parse --show-toplevel and walks up from the checked module with _find_repo_root().
+  decision: null
+- file: templates/scripts/commit_guardian/check_roadmap_schema.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It resolves the project root with its own inline git rev-parse --show-toplevel call and its own miss behaviour.
+  decision: null
+- file: templates/scripts/commit_guardian/check_package_surface_declaration.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its _repo_root() runs its own git rev-parse with a cwd fallback.
+  decision: null
+- file: templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds _get_repo_root() and a second inline git rev-parse in the registry disk fallback.
+  decision: null
+- file: templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its _get_repo_root() runs its own git rev-parse and returns an empty string on a miss.
+  decision: null
+- file: templates/scripts/commit_guardian/transform_doc_index.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its _resolve_repo_root() runs its own git rev-parse with a cwd fallback.
+  decision: null
+- file: templates/scripts/commit_guardian/transform_agent_registry.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its _resolve_repo_root() runs its own git rev-parse with a cwd fallback.
+  decision: null
+- file: templates/scripts/commit_guardian/regenerate_roadmap_mirror.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its _find_repo_root() runs its own git rev-parse and returns None on a miss.
+  decision: null
+file_findings_opened_files:
+- templates/scripts/commit_guardian/check_components_integrity.py
+- templates/scripts/commit_guardian/check_structural_change.py
+- templates/scripts/commit_guardian/check_workflow_meta.py
+- templates/scripts/commit_guardian/check_ac_coverage.py
+- templates/scripts/commit_guardian/check_v2_ac_store_alignment.py
+- templates/scripts/commit_guardian/hooks/check_ac_limits.py
+- templates/scripts/commit_guardian/check_ac_schema.py
+- templates/scripts/commit_guardian/check_ac_circular_deps.py
+- templates/scripts/commit_guardian/check_ac_governance.py
+- templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+- templates/scripts/commit_guardian/check_ac_pattern_refs.py
+- templates/scripts/commit_guardian/check_surface_components_e2.py
+- templates/scripts/commit_guardian/check_surface_components_e3.py
+- templates/scripts/commit_guardian/check_ac_limits.py
+- templates/scripts/commit_guardian/check_doc_frontmatter.py
+- templates/scripts/commit_guardian/check_agent_diagrams.py
+- templates/scripts/commit_guardian/check_architecture_scaffolds.py
+- templates/scripts/commit_guardian/check_diagram_naming.py
+- templates/scripts/commit_guardian/check_doc_types_agents.py
+- templates/scripts/commit_guardian/check_glossary_coverage.py
+- templates/scripts/commit_guardian/check_mermaid_drift.py
+- templates/scripts/commit_guardian/check_paths_integrity.py
+- templates/scripts/commit_guardian/check_placeholder_defaults.py
+- templates/scripts/commit_guardian/check_roadmap_schema.py
+- templates/scripts/commit_guardian/check_package_surface_declaration.py
+- templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py
+- templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py
+- templates/scripts/commit_guardian/transform_doc_index.py
+- templates/scripts/commit_guardian/transform_agent_registry.py
+- templates/scripts/commit_guardian/regenerate_roadmap_mirror.py
 origin_agent: it-po-v3
 created: 2026-07-08
 amended_by:
   - reason: "Rebased onto origin/main after the stale-local-main PR (#244) was abandoned: added check_doc_frontmatter's GE-115/#235 _resolve_worktree_root() as the THIRD divergent resolver to consolidate (it landed on origin/main as an independent per-guard fix), and widened the migration set + invariant accordingly. Criteria tightened to forbid bespoke per-guard resolvers as well as parents[N]/symlink derivation."
+  - date: '2026-10-21'
+    by: it-po
+    reason: 'legacy approved record enriched for the follow-up epic: test_intent, declared_files, test_required (check-ac-schema test contract)'
 superseded_by: null
 covered_by: []
 implemented_by: []

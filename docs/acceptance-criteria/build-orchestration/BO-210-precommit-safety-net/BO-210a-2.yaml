@@ -14,8 +14,8 @@ criteria: |
   Given the reconciled routing config,
   When a reader inspects it for the list of gating hooks,
   Then the config contains exactly one blocking_hook_ids array,
-  And that array lists the gating hook ids: check-complexity, check-docstrings,
-    check-exception-handling, check-file-size, check-ac-schema, check-ac-limits,
+  And that array lists the gating hook ids: check-complexity,
+    check-exception-handling, check-file-size, check-ac-schema,
     and check-contract-shrinking,
   And no other field in the config independently determines whether a hook gates a commit,
   And a hook id absent from blocking_hook_ids is treated as non-gating by any reader,
@@ -42,22 +42,23 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+package_surface: false
 it_requirements:
   - "blocking_hook_ids must be the sole gating list — no parallel gating signal"
   - "The candidate gating hook ids must all be present in the array"
   - "Edit the deployed config and its packaged template source together; the build.py round-trip must leave both in parity"
 test_spec:
-  - name: test_bo_210a_2_the_resolved_gating_set_moves_with_the_one_array_and_is_the_seven_ids
+  - name: test_bo_210a_2_the_resolved_gating_set_moves_with_the_one_array_and_is_the_five_ids
     target_dir: unit_tests/commit_guardian/
     framework: unittest
     type: behavioral
     angle: criterion
     description: >-
       Resolve the gating set by EXECUTING the reader over the config, never by loading the
-      JSON and matching a literal. On the real config the resolved set is exactly the seven
-      ids. Single authority is asserted by VARIATION, not by a fixed comparison: add an id to
+      JSON and matching a literal. On the real config the resolved set is exactly the five
+      ids (seven before the 2026-10-09 amendment). Single authority is asserted by VARIATION, not by a fixed comparison: add an id to
       blocking_hook_ids and the resolved set gains it; drop one and the resolved set loses it.
-      A reader that returns a hard-coded seven-element set passes a fixed-literal assertion
+      A reader that returns a hard-coded five-element set passes a fixed-literal assertion
       and must fail this one.
   - name: test_bo_210a_2_no_second_field_can_make_a_hook_gate_or_stop_it_gating
     target_dir: unit_tests/commit_guardian/
@@ -245,6 +246,30 @@ amended_by:
     verification runs through the registered surface, never by grepping the config or the
     generated .pre-commit-config.yaml for a hook id, which would stay green on exactly the
     dead-gate state this clause exists to forbid.
+- reason: stale-ids-removed-by-product-decision
+  by: it-po
+  at: 2026-10-09
+  note: >-
+    BrainCandy approved this on 2026-10-09, during the GE-132 / BO-3800 enrichment (IT PO
+    ambiguity 2). check-docstrings and check-ac-limits are removed from the enumerated
+    array, which drops from seven ids to five. They contradicted this record's own closing
+    arm. Neither names a registered hook at origin/main bd4ecb9a: no hooks_manifest member
+    has either id, and both are among the routing rules GE-132a-1 measures as naming
+    unregistered hooks. So the arm "an id on the array that no commit-time invocation reaches
+    ... is named as approved-but-unreached and the discrepancy fails" condemned two ids that
+    the enumeration arm required. The routing rule check-ac-limits is renamed to
+    check-ticket-ac-limits under GE-132a-1, and that id is NOT added here, because it was
+    never reached under the old id either. Gating behaviour does not change.
+    readiness stays approved: BrainCandy approved the change directly, as with the
+    2026-09-01 restoration above.
+
+
+    BUILD NOTE, SAME COMMIT (owned by GE-132a-1). blocking_hook_ids in
+    templates/scripts/precommit-autofix.json, _EXPECTED_BLOCKING_HOOKS in
+    unit_tests/commit_guardian/test_precommit_safety_net.py and
+    templates/skills/precommit-autofix/SKILL.md Step 4 ("the seven gating hooks") change in
+    the same commit as GE-132a-1's rules change. Only the stale-ids clause of criteria was
+    edited. title, depends_on and req_status are untouched.
 superseded_by: null
 covered_by: []
 implemented_by: []

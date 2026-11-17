@@ -116,7 +116,7 @@ def build_architecture_namespace_scaffolds(
                 f"{template_path}: {exc}"
             )
             continue
-        dest.write_text(content, encoding="utf-8")
+        dest.write_text(content, encoding="utf-8", newline="\n")
         print(f"  docs/architecture/{namespace}/{filename}")
         written += 1
 

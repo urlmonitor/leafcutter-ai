@@ -1,0 +1,108 @@
+id: BO-4500a-4-v
+title: "When the step itself cannot finish, the answer says so -- it never looks like a commit or like nothing to do"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-4.yaml"
+criteria: |
+  Given the workspace's index is held by another version-control process that has not
+    released it,
+  When the shared commit step tries to stage the named file a.py,
+  Then no commit is recorded,
+  And the answer is one JSON object with status refused, sha null, and a reason that quotes
+    the version-control system's own error text,
+  And a.py's working-tree content is unchanged.
+
+  Given the version-control system reports an error while the commit is being recorded,
+    after every check has passed,
+  When the step answers,
+  Then the answer's status is refused with the error quoted in the reason, never committed and
+    never nothing_to_commit,
+  And no partial commit exists on the branch.
+depends_on: [BO-4500a-4]
+doc_links:
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: "Failure shape 2: 'could not check' reads as a pass. C2: fallbacks invert failure (unreadable read as ok)."
+  - path: docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600b.yaml
+    relationship: related
+    status: exists
+    relevance: "An interrupted commit leaves no poisoned index or stranded lock -- owned there, not restated."
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    STEP FAILURES ARE refused WITH A step_ CODE, NEVER A POLICY CODE. An index held by another
+    version-control process is refused + step_index_locked; any other version-control error while
+    staging or recording (after the request passed every policy check) is refused + step_vcs_error.
+    In both, reason quotes the version-control system's own error text verbatim. A caller can
+    therefore tell "you asked for something not allowed" (policy_*, stop) from "the step could not
+    finish" (step_*, may retry) by the code alone, without reading reason.
+  - >-
+    The step never retries a step failure itself and never waits indefinitely on an index lock; it
+    does not remove a lock file it did not create (stale-lock recovery is BO-1600b's).
+  - >-
+    An error while recording the commit must never leave a partial commit or a moved branch ref;
+    the answer is never committed or nothing_to_commit when recording failed, even if a commit
+    object was written but the ref was not updated.
+  - The named files' working-tree content is unchanged on every step failure.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-4
+  contract: "One-answer contract and the step_ reason_code family."
+test_required: true
+test_spec:
+  - name: test_held_index_lock_is_refused_with_step_index_locked
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "With the scratch repo's index lock file held, the answer is one JSON object, status refused, reason_code step_index_locked, sha null, reason quoting git's error, and a.py unchanged."
+  - name: test_error_while_recording_is_a_step_failure_not_success
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "A fixture that makes recording fail after the checks pass yields refused with step_vcs_error, the branch ref unmoved, and no partial commit reachable from the branch."
+    must_catch:
+      - "report nothing_to_commit when the commit command fails"
+      - "code a runtime failure with a policy_ code"
+  - name: test_step_and_policy_refusals_are_distinguishable_by_code_alone
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Across the suite's refused fixtures, every runtime failure carries a step_ code and every disallowed request a policy_ code, checked against the step's published enumeration."
+test_rationale: >-
+  The record exists so a caller can make the stop-or-retry decision mechanically; the seam test
+  checks the whole refused population against the published partition rather than one example.
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  QUESTION Q4 FOR THE GATE: the C6 spec has four statuses and none means "the step broke". This
+  record maps it to refused-with-reason, because the alternative inside the spec (nothing_to_commit)
+  is success-shaped. A fifth status "error" would match C2's runCommand vocabulary
+  (ok | refused | error) and is the cleaner contract; if the user chooses it, only the status value
+  in both Thens changes.
+
+  IT PO 2026-10-14 -- Q4 ANSWERED WITHOUT A FIFTH STATUS (BrainCandy instruction 1). The status
+  stays refused as the approved criteria say; the runtime case is distinguished by a required
+  reason_code in the step_ family (step_index_locked, step_vcs_error), disjoint from the policy_
+  family used for disallowed requests. Callers decide stop vs retry from the code, never from the
+  reason text. A fifth status is not needed.

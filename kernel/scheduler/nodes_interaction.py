@@ -67,7 +67,9 @@ def _packet_for(state: KernelState, ctx: KernelRuntime, item: Any, revision: int
     packet = build_host_request(state, item, revision, now,
                                 max_input_chars=ctx.config.host.max_input_chars,
                                 mask=redactor.mask_text)
-    packet = write_input_artifact(ctx.artifacts, redactor, state["run_id"], state, packet)
+    packet = write_input_artifact(
+        ctx.artifacts, redactor, state["run_id"], state, packet,
+        send_repo_excerpts=ctx.config.data_policy.send_repo_excerpts_to_jev)
     return redact_packet(packet, redactor)
 
 
@@ -226,4 +228,5 @@ def _exhausted(state: KernelState, ctx: KernelRuntime, packet: HostWorkRequest, 
 # - 2026-09-30 23:59 [python-coder]: Every packet is redacted before it is stored in state, so
 #   what the checkpoint holds, what `interrupt()` delivers and what the run store keeps are the
 #   same masked text. (#KernelBootstrapV0/P6)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================

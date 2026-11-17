@@ -1,0 +1,674 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="19" skipped="0" tests="19" time="0.435" timestamp="2026-10-02T09:08:18.148315+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_preserves_every_field_body_and_authored_types" time="0.011"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_preserves_every0')
+
+    def test_changelog_preserves_every_field_body_and_authored_types(tmp_path):
+        # covers: KM-400a-3-i
+        # angle: criterion
+        metadata = {
+            "title": "Complete entry", "date": date(2026, 8, 1), "time": 735,
+            "type": "ticket_completion", "components": ["finalize", "finalize"],
+            "summary": "Business summary", "description": "Technical description",
+            "epic": "Epic one", "ticket": "Single ticket", "pr": None,
+            "adrs": [], "diagrams": ["docs/diagram.md"], "tickets": ["Other ticket"],
+            "commits": [123456, "123456", "abcdef"], "breaking": False,
+            "migration_steps": [{"Before status": "done"}, "Then verify"],
+            "scope": "source scope", "merge_commit": "fedcba", "acs": ["FIN-100"],
+            "created": "2026-08-01", "last_updated": "2026-08-02", "status": "active",
+            "extension": {"empty": {}, "null": None, "false": False, "zero": 0},
+            "current": "authored-current", "payload": {"keep": True},
+        }
+        raw = yaml.safe_dump(metadata, sort_keys=False)
+        body = "\n## Entry\n\nAn authored table.\n\n| A | B |\n|---|---|\n| 1 | 2 |\n"
+        _write(tmp_path, "changelogs/entry.md", raw, body)
+&gt;       (record,) = _extract(tmp_path)
+                    ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_changelog_entry.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_legacy_identity_absence_and_presentation_fallbacks" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_legacy_identity0')
+
+    def test_changelog_legacy_identity_absence_and_presentation_fallbacks(tmp_path):
+        # covers: KM-400a-3-i
+        # angle: boundary
+        raw = "type: fix\nsummary: Historical summary\npr: null\ncommits: []\n"
+        _write(tmp_path, "changelogs/same.md", raw)
+        _write(tmp_path, "docs/changelog/same.md", "type: ac_authoring\n")
+&gt;       records = {r.native_id: r for r in _extract(tmp_path)}
+                                           ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_changelog_entry.py:63: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_configured_store_and_guidance_exclusions[]" time="0.007"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_configured_stor0')
+config_prefix = ''
+
+    @pytest.mark.parametrize("config_prefix", ["", "leafcutter/"])
+    def test_changelog_configured_store_and_guidance_exclusions(tmp_path, config_prefix):
+        # covers: KM-400a-3-i
+        # angle: seam
+        config = tmp_path / (config_prefix + "templates/scripts/commit_guardian/commit_guardian.json")
+        config.parent.mkdir(parents=True)
+        config.write_text(json.dumps({"changelogs_dir": "history"}), encoding="utf-8")
+        for name in ["history/README.md", "history/index.md", "history/nested/generated.md", "changelogs/stale.md", "CHANGELOG.md"]:
+            _write(tmp_path, name, "title: Excluded\n")
+        _write(tmp_path, "history/old-filename.md", "title: Included\n")
+        _write(tmp_path, "docs/changelog/legacy.md", "title: Legacy\n")
+&gt;       assert [r.source_path for r in _extract(tmp_path)] == ["docs/changelog/legacy.md", "history/old-filename.md"]
+                                       ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_changelog_entry.py:83: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_configured_store_and_guidance_exclusions[leafcutter/]" time="0.007"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_configured_stor1')
+config_prefix = 'leafcutter/'
+
+    @pytest.mark.parametrize("config_prefix", ["", "leafcutter/"])
+    def test_changelog_configured_store_and_guidance_exclusions(tmp_path, config_prefix):
+        # covers: KM-400a-3-i
+        # angle: seam
+        config = tmp_path / (config_prefix + "templates/scripts/commit_guardian/commit_guardian.json")
+        config.parent.mkdir(parents=True)
+        config.write_text(json.dumps({"changelogs_dir": "history"}), encoding="utf-8")
+        for name in ["history/README.md", "history/index.md", "history/nested/generated.md", "changelogs/stale.md", "CHANGELOG.md"]:
+            _write(tmp_path, name, "title: Excluded\n")
+        _write(tmp_path, "history/old-filename.md", "title: Included\n")
+        _write(tmp_path, "docs/changelog/legacy.md", "title: Legacy\n")
+&gt;       assert [r.source_path for r in _extract(tmp_path)] == ["docs/changelog/legacy.md", "history/old-filename.md"]
+                                       ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_changelog_entry.py:83: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_absent_stores_and_overlapping_configuration" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_absent_stores_a0')
+
+    def test_changelog_absent_stores_and_overlapping_configuration(tmp_path):
+        # covers: KM-400a-3-i
+        # angle: boundary
+&gt;       assert _extract(tmp_path) == []
+               ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_changelog_entry.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_unsafe_or_invalid_store[../outside]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_rejects_unsafe_0')
+setting = '../outside'
+
+    @pytest.mark.parametrize("setting", ["../outside", None, 12, ""])
+    def test_changelog_rejects_unsafe_or_invalid_store(tmp_path, setting):
+        # covers: KM-400a-3-i
+        # angle: failure
+        config = tmp_path / "templates/scripts/commit_guardian/commit_guardian.json"
+        config.parent.mkdir(parents=True)
+        config.write_text(json.dumps({"changelogs_dir": setting}), encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_changelog_entry.py:105: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_unsafe_or_invalid_store[None]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_rejects_unsafe_1')
+setting = None
+
+    @pytest.mark.parametrize("setting", ["../outside", None, 12, ""])
+    def test_changelog_rejects_unsafe_or_invalid_store(tmp_path, setting):
+        # covers: KM-400a-3-i
+        # angle: failure
+        config = tmp_path / "templates/scripts/commit_guardian/commit_guardian.json"
+        config.parent.mkdir(parents=True)
+        config.write_text(json.dumps({"changelogs_dir": setting}), encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_changelog_entry.py:105: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_unsafe_or_invalid_store[12]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_rejects_unsafe_2')
+setting = 12
+
+    @pytest.mark.parametrize("setting", ["../outside", None, 12, ""])
+    def test_changelog_rejects_unsafe_or_invalid_store(tmp_path, setting):
+        # covers: KM-400a-3-i
+        # angle: failure
+        config = tmp_path / "templates/scripts/commit_guardian/commit_guardian.json"
+        config.parent.mkdir(parents=True)
+        config.write_text(json.dumps({"changelogs_dir": setting}), encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_changelog_entry.py:105: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_unsafe_or_invalid_store[]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_rejects_unsafe_3')
+setting = ''
+
+    @pytest.mark.parametrize("setting", ["../outside", None, 12, ""])
+    def test_changelog_rejects_unsafe_or_invalid_store(tmp_path, setting):
+        # covers: KM-400a-3-i
+        # angle: failure
+        config = tmp_path / "templates/scripts/commit_guardian/commit_guardian.json"
+        config.parent.mkdir(parents=True)
+        config.write_text(json.dumps({"changelogs_dir": setting}), encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_changelog_entry.py:105: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_recovers_only_failing_literal_description" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_recovers_only_f0')
+
+    def test_changelog_recovers_only_failing_literal_description(tmp_path):
+        # covers: KM-400a-3-i
+        # angle: boundary
+        description = r'Regex \.yaml and C:\new\test, with "quotes" and \\tail'
+        fragment = 'description: "' + description.replace('"', '\\"') + '"\n'
+        raw = "title: Recovered\ntime: 12:15\npr: null\n" + fragment + "commits: [123456, abcdef]\n"
+        _write(tmp_path, "changelogs/escaped.md", raw)
+&gt;       (record,) = _extract(tmp_path)
+                    ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_changelog_entry.py:115: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_recovers_failing_literal_list_but_retains_valid_maps" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_recovers_failin0')
+
+    def test_changelog_recovers_failing_literal_list_but_retains_valid_maps(tmp_path):
+        # covers: KM-400a-3-i
+        # angle: boundary
+        items = ["Run the build.", "Set `output_root: .leafcutter` and `shim_strategy: symlink`.", "Then verify."]
+        fragment = "migration_steps: \n" + "".join("  - " + item + "\n" for item in items)
+        _write(tmp_path, "changelogs/broken-list.md", "title: Recovered\nbreaking: false\n" + fragment + "pr: null\n")
+        _write(tmp_path, "changelogs/valid-map.md", "title: Map\nmigration_steps:\n  - Before status: done\n")
+&gt;       records = {r.title: r for r in _extract(tmp_path)}
+                                       ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_changelog_entry.py:133: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_ambiguous_or_unrelated_malformations[title: &quot;bad\\.escape&quot;\n]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_rejects_ambiguo0')
+raw = 'title: "bad\\.escape"\n'
+
+    @pytest.mark.parametrize("raw", [
+        'title: "bad\\.escape"\n',
+        'description: "unclosed\\.escape\n',
+        'description: "first\\.bad"\ndescription: "second\\.bad"\n',
+        'migration_steps:\n  - Set x: one and y: two\n    continuation\n',
+        'migration_steps:\n  - Set x: one and y: two\n  - |\n',
+        'description: "recoverable\\.escape"\nother: [broken\n',
+        '- not a mapping\n',
+    ])
+    def test_changelog_rejects_ambiguous_or_unrelated_malformations(tmp_path, raw):
+        # covers: KM-400a-3-i
+        # angle: failure
+        _write(tmp_path, "changelogs/ambiguous.md", raw)
+        with pytest.raises(ValueError, match="ambiguous.md"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_changelog_entry.py:158: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_ambiguous_or_unrelated_malformations[description: &quot;unclosed\\.escape\n]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_rejects_ambiguo1')
+raw = 'description: "unclosed\\.escape\n'
+
+    @pytest.mark.parametrize("raw", [
+        'title: "bad\\.escape"\n',
+        'description: "unclosed\\.escape\n',
+        'description: "first\\.bad"\ndescription: "second\\.bad"\n',
+        'migration_steps:\n  - Set x: one and y: two\n    continuation\n',
+        'migration_steps:\n  - Set x: one and y: two\n  - |\n',
+        'description: "recoverable\\.escape"\nother: [broken\n',
+        '- not a mapping\n',
+    ])
+    def test_changelog_rejects_ambiguous_or_unrelated_malformations(tmp_path, raw):
+        # covers: KM-400a-3-i
+        # angle: failure
+        _write(tmp_path, "changelogs/ambiguous.md", raw)
+        with pytest.raises(ValueError, match="ambiguous.md"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_changelog_entry.py:158: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_ambiguous_or_unrelated_malformations[description: &quot;first\\.bad&quot;\ndescription: &quot;second\\.bad&quot;\n]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_rejects_ambiguo2')
+raw = 'description: "first\\.bad"\ndescription: "second\\.bad"\n'
+
+    @pytest.mark.parametrize("raw", [
+        'title: "bad\\.escape"\n',
+        'description: "unclosed\\.escape\n',
+        'description: "first\\.bad"\ndescription: "second\\.bad"\n',
+        'migration_steps:\n  - Set x: one and y: two\n    continuation\n',
+        'migration_steps:\n  - Set x: one and y: two\n  - |\n',
+        'description: "recoverable\\.escape"\nother: [broken\n',
+        '- not a mapping\n',
+    ])
+    def test_changelog_rejects_ambiguous_or_unrelated_malformations(tmp_path, raw):
+        # covers: KM-400a-3-i
+        # angle: failure
+        _write(tmp_path, "changelogs/ambiguous.md", raw)
+        with pytest.raises(ValueError, match="ambiguous.md"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_changelog_entry.py:158: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_ambiguous_or_unrelated_malformations[migration_steps:\n  - Set x: one and y: two\n    continuation\n]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_rejects_ambiguo3')
+raw = 'migration_steps:\n  - Set x: one and y: two\n    continuation\n'
+
+    @pytest.mark.parametrize("raw", [
+        'title: "bad\\.escape"\n',
+        'description: "unclosed\\.escape\n',
+        'description: "first\\.bad"\ndescription: "second\\.bad"\n',
+        'migration_steps:\n  - Set x: one and y: two\n    continuation\n',
+        'migration_steps:\n  - Set x: one and y: two\n  - |\n',
+        'description: "recoverable\\.escape"\nother: [broken\n',
+        '- not a mapping\n',
+    ])
+    def test_changelog_rejects_ambiguous_or_unrelated_malformations(tmp_path, raw):
+        # covers: KM-400a-3-i
+        # angle: failure
+        _write(tmp_path, "changelogs/ambiguous.md", raw)
+        with pytest.raises(ValueError, match="ambiguous.md"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_changelog_entry.py:158: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_ambiguous_or_unrelated_malformations[migration_steps:\n  - Set x: one and y: two\n  - |\n]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_rejects_ambiguo4')
+raw = 'migration_steps:\n  - Set x: one and y: two\n  - |\n'
+
+    @pytest.mark.parametrize("raw", [
+        'title: "bad\\.escape"\n',
+        'description: "unclosed\\.escape\n',
+        'description: "first\\.bad"\ndescription: "second\\.bad"\n',
+        'migration_steps:\n  - Set x: one and y: two\n    continuation\n',
+        'migration_steps:\n  - Set x: one and y: two\n  - |\n',
+        'description: "recoverable\\.escape"\nother: [broken\n',
+        '- not a mapping\n',
+    ])
+    def test_changelog_rejects_ambiguous_or_unrelated_malformations(tmp_path, raw):
+        # covers: KM-400a-3-i
+        # angle: failure
+        _write(tmp_path, "changelogs/ambiguous.md", raw)
+        with pytest.raises(ValueError, match="ambiguous.md"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_changelog_entry.py:158: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_ambiguous_or_unrelated_malformations[description: &quot;recoverable\\.escape&quot;\nother: [broken\n]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_rejects_ambiguo5')
+raw = 'description: "recoverable\\.escape"\nother: [broken\n'
+
+    @pytest.mark.parametrize("raw", [
+        'title: "bad\\.escape"\n',
+        'description: "unclosed\\.escape\n',
+        'description: "first\\.bad"\ndescription: "second\\.bad"\n',
+        'migration_steps:\n  - Set x: one and y: two\n    continuation\n',
+        'migration_steps:\n  - Set x: one and y: two\n  - |\n',
+        'description: "recoverable\\.escape"\nother: [broken\n',
+        '- not a mapping\n',
+    ])
+    def test_changelog_rejects_ambiguous_or_unrelated_malformations(tmp_path, raw):
+        # covers: KM-400a-3-i
+        # angle: failure
+        _write(tmp_path, "changelogs/ambiguous.md", raw)
+        with pytest.raises(ValueError, match="ambiguous.md"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_changelog_entry.py:158: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_ambiguous_or_unrelated_malformations[- not a mapping\n]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3043/test_changelog_rejects_ambiguo6')
+raw = '- not a mapping\n'
+
+    @pytest.mark.parametrize("raw", [
+        'title: "bad\\.escape"\n',
+        'description: "unclosed\\.escape\n',
+        'description: "first\\.bad"\ndescription: "second\\.bad"\n',
+        'migration_steps:\n  - Set x: one and y: two\n    continuation\n',
+        'migration_steps:\n  - Set x: one and y: two\n  - |\n',
+        'description: "recoverable\\.escape"\nother: [broken\n',
+        '- not a mapping\n',
+    ])
+    def test_changelog_rejects_ambiguous_or_unrelated_malformations(tmp_path, raw):
+        # covers: KM-400a-3-i
+        # angle: failure
+        _write(tmp_path, "changelogs/ambiguous.md", raw)
+        with pytest.raises(ValueError, match="ambiguous.md"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_changelog_entry.py:158: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries" time="0.001"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'">def test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries():
+        # covers: KM-400a-3-i
+        # angle: real_artifact
+        root = Path(__file__).resolve().parents[2]
+&gt;       records = _extract(root)
+                  ^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_changelog_entry.py:165: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_changelog_entry.py:13: in _extract
+    return import_module("knowledge.native_types.changelog_entry").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.changelog_entry'
+import_ = &lt;function _gcd_import at 0x000001F57D1DBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.changelog_entry'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase></testsuite></testsuites>

@@ -1,16 +1,24 @@
-import { getFlows, mockById, getScreenTitles } from "@/lib/data/flows";
 import { PageHeader, EmptyState } from "@/components/ui/kit";
-import { FlowsView } from "@/components/flows/flows-view";
-import type { MockData } from "@/lib/data/types";
+import { FlowsShell } from "@/components/flows/finder/flows-shell";
+import { parseFinderQuery } from "@/lib/flow-finder/address";
+import { FLOWS_TITLE } from "@/lib/flow-finder/titles";
 import { Workflow } from "lucide-react";
+import { loadFlowsViewData } from "./flows-data";
 
-// The Flows view — living maps of the product-truth flows, each step coloured by
-// the LIVE work_status of the acceptance criteria it implements. Server
-// component: reads the repo via getFlows(), resolves every flow's mock data, and
-// hands a serializable slice to the client <FlowsView> (which owns the flow
-// selector + graph). buildFlowGraph runs client-side (pure) from these flows.
-export default function FlowsPage() {
-  const flows = getFlows();
+export const metadata = { title: { absolute: FLOWS_TITLE } };
+
+// The Flows view opens on the FINDER (UXP-617-1): one search box and counted
+// filters over every flow, results grouped by flow. Bare /flows draws no flow;
+// a flow opens at /flows/<product>/<flow>[?step=<id>]. Server component: it reads
+// the finder state from the address and renders the first paint (summary and
+// results included). The client <FlowsShell> recomputes on every edit and opens a
+// result in place with native history (UXP-617-2, UXP-617-2-i).
+export default async function FlowsPage({
+  searchParams = {},
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
+  const { flows, mocks, screenTitles } = loadFlowsViewData();
 
   if (flows.length === 0) {
     return (
@@ -29,12 +37,5 @@ export default function FlowsPage() {
     );
   }
 
-  const mocks: Record<string, MockData | null> = {};
-  for (const f of flows) {
-    mocks[f.id] = f.mockDataRef ? mockById(f.mockDataRef) ?? null : null;
-  }
-
-  const screenTitles = getScreenTitles();
-
-  return <FlowsView flows={flows} mocks={mocks} screenTitles={screenTitles} />;
+  return <FlowsShell flows={flows} mocks={mocks} screenTitles={screenTitles} initial={parseFinderQuery(searchParams)} />;
 }

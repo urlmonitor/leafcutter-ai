@@ -1,0 +1,131 @@
+id: DK-600b-4
+title: "How-to: answer the approval and ranked-choice questions"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a person running a decision through Claude Code,
+  When they read the how-to for the two questions a decision asks them,
+  Then it shows how to approve all proposals, approve a subset, reword a criterion and add an
+    option at the approval question,
+  And it shows how to choose an option, add an option, or answer in their own words at the
+    ranked-choice question, and that adding an option leads to a new ranking,
+  And it states that the ranking is advice, that the decision waits for their choice, and that
+    leaving or cancelling the run keeps no record,
+  And every answer it shows is accepted by the kernel when given exactly as written.
+depends_on:
+  - DK-600b
+  - DK-600b-1
+  - DK-600b-2
+  - DK-600b-3
+doc_links:
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Existing how-to that already documents the ranked question's answer forms; the natural
+      home or neighbour for this how-to.
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      Steps approve-proposals and choose, branches revise-proposals, rerank and no-answer.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService, CLI exit codes, the /leafcutter skill.
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: describes
+    status: exists
+    relevance: 'Which mechanism answers each check: code, Jev, an LLM host or a human.'
+assigned_agent: how-to-author
+estimated_complexity: M
+it_requirements:
+  - Documentation states only behaviour that a test proves on main; where the code and an existing
+    doc disagree, the doc is corrected, never the other way round.
+  - 'Every answer example is a literal leafcutter.human_answer.v1 payload the kernel accepts as written
+    (schema plus the decision''s semantic checks), checked rather than written from memory. There is
+    no executable test (test_required false): the author checks every example against
+    kernel/schemas/leafcutter.human_answer.v1.schema.json and the semantic checks in
+    kernel/interaction/submissions.py with a scratch script outside the repository, and names the
+    command and its result in its sign-off comment. documentation-verifier confirms only that the
+    how-to changed on the branch and holds no placeholders; it does not re-run the check, so the
+    sign-off record is the evidence.'
+  - 'A words answer at the ranked question is re-assessed with the words as constraints and ranked
+    again. DK-600b-2-ii is work_status done and its covered_by test
+    tests/kernel/capabilities/test_design_ending.py::TestHumanChoiceResolves::test_a_words_answer_at_the_ranked_question_is_reassessed_and_ranked_again
+    proves it: state it once that test passes on this branch, and correct the ''recorded only''
+    sentence in run-the-decision-kernel.md at the same time.'
+  - State that edited_criteria replaces the whole proposed criteria set (unlisted pending criteria
+    are declined) and that approved_criterion_ids is ignored when edited_criteria is present.
+  - How-to genre (Diataxis); link to run-the-decision-kernel.md for reference detail rather than copying
+    it.
+  - 'Target file (fixed 2026-10-10 by business-analyst for tickets/00_inbox/TICKET-20261010-DecisionLifecycleDocs.md): docs/how-to/answer-the-decision-kernel-questions.md (new how-to beside run-the-decision-kernel.md), plus the ''recorded only'' correction in docs/how-to/run-the-decision-kernel.md.'
+test_required: false
+test_rationale: "Documentation only, no executable behaviour; checked by documentation-verifier against the ticket's Agent Contracts list."
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: docs_partly_exist
+    implementation_pointers: []
+    test_pointers: []
+    gaps:
+      - docs/how-to/run-the-decision-kernel.md covers the approve-or-edit fields and the ranked question
+        in reference style (Steps 2 and 5) but has no task-oriented how-to for the two questions,
+        says 'recorded only' for words, and does not explain that edited_criteria replaces the whole
+        set.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: a new how-to (or how-to section) plus verified answer examples
+  - reason: documentation-build-path-and-leaf-author
+    by: business-analyst
+    directed_by: user
+    date: '2026-10-10'
+    ticket: tickets/00_inbox/TICKET-20261010-DecisionLifecycleDocs.md
+    note: 'Build path per kernel decision dec-ea83c3989d1b7199 (user''s choice 2026-10-10): this documentation AC is built in the one hand-authored docs ticket by its leaf author and checked by documentation-verifier. test_required set false with a test_rationale (user-approved 2026-10-10) so the done-proof waiver (is_covers_tag_waived) applies. assigned_agent documentation-expert -> how-to-author per ADR-036 (an AC names the leaf author, never documentation-expert). test_spec removed (test_every_answer_example_in_the_howto_is_accepted_as_written): it contradicts test_required false (check-ac-schema); the it_requirements check it carried is done by the author during the docs ticket, not by a committed test. Target file fixed in it_requirements: docs/how-to/answer-the-decision-kernel-questions.md. criteria, title, depends_on and req_status unchanged.'
+  - reason: it-po-docs-ticket-review
+    by: it-po
+    date: '2026-10-10'
+    ticket: tickets/00_inbox/TICKET-20261010-DecisionLifecycleDocs.md
+    note: 'IT-PO review of the 2026-10-10 build-path amendment. Agreed: test_required false with test_rationale, assigned_agent how-to-author (ADR-036), test_spec removal, target-file line. Changed two it_requirements: (1) the answer-example line said verified by a test; with test_required false it now says the author checks each example against the human_answer schema and the semantic checks in kernel/interaction/submissions.py with a scratch script outside the repository and records the command and result in its sign-off, and that documentation-verifier only confirms the file changed with no placeholders (it does not re-run the check). (2) the words-answer line said not yet by a repository test; DK-600b-2-ii is now work_status done with a covered_by test, so the line names that test. criteria, title, depends_on, req_status, assigned_agent and estimated_complexity unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by:
+  - docs/how-to/answer-the-decision-kernel-questions.md
+change_target: docs
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS: none. This is a documentation AC; it implements no flow step
+  and belongs in no flow node's implements list, so a step's built status never
+  waits on documentation.
+
+  Produced because DK-600b declares documentation_triggers: [how-to, state-diagram].
+  This is the how-to half. The how-to must not promise a re-rank for a words answer
+  until DK-600b-2-ii is built; the criteria name only the added-option re-rank for
+  that reason.
+
+  IT-PO BUILD STATUS (2026-10-02): partly exists inside run-the-decision-kernel.md; the
+  how-to itself is not written. One test_spec entry makes 'every answer it shows is
+  accepted' checkable.
+
+  TRUE STATUS (2026-10-02): work_status in_progress; the it-po verified build status is
+    docs_partly_exist.
+    - docs/how-to/run-the-decision-kernel.md covers the approve-or-edit fields and the
+      ranked question in reference style (Steps 2 and 5) but has no task-oriented how-to for
+      the two questions, says 'recorded only' for words, and does not explain that
+      edited_criteria replaces the whole set.

@@ -103,7 +103,7 @@ If you cannot infer any values: return `{}`.
 | Section | Owned keys |
 |---|---|
 | testing | `testing_context.*`, `test_command_*` |
-| packages | `top_level_packages`, `settings_module`, `collector_enforcer_paths` |
+| packages | `top_level_packages`, `settings_module` |
 | tickets | `tickets_*_path`, `ticket_lifecycle_path` |
 | commands | `common_commands`, `default_branch`, `worktree_base_path` |
 | project | `project_description`, `architecture_overview`, `changelog_folder`, `changelog_categories_path` |

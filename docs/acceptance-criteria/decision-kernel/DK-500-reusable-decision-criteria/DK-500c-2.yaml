@@ -1,0 +1,140 @@
+id: DK-500c-2
+title: Publishing a staged category checks it and enters it into the library without touching any decision record
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the staged record of cat-6c3eb4f2af148922 from run-8e11d78d6e2a6c2e, with the member (dec-93c1c730463c1f3c, crit.filters_from_declared_vocabularies) and the broader category cat-d6ce5f78c181ebd1,
+  When a person runs the publish for that run,
+  Then the record is checked: every member names a published decision whose criteria carry that criterion, that criterion's question is one of the category's wordings, no wording is a label of another staged or published category, no member pair belongs to another staged or published category, and the broader category is published,
+  And the record is written into the published category library with lifecycle_stage published, where it is reviewed and merged like any other change,
+  And the generated usage index is rebuilt to include it,
+  And no decision record changes.
+depends_on:
+- DK-500c
+- DK-500c-1
+covered_by:
+- DK-500c-2-i
+- DK-500c-2-ii
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: 'Published category record docs/criteria/<id>.yaml (lifecycle_stage published) plus the regenerated docs/criteria/index.json: {schema_version, categories: [{id, path, sha256, lifecycle_stage: published|retired, pref_label, alt_labels, decision_types, components, broader, replaced_by, usage_count}]}, freshness-checked by python -m kernel criteria validate. Consumed by reuse (DK-500d-1), usage counts (DK-500f-1) and the knowledge graph import (DK-500g-1).'
+expects_from:
+  ac_id: DK-500c-1
+  contract: Staged category record in the approving run's staged area.
+change_target:
+- code
+- schema
+risk_surface: contract_boundary
+package_surface: false
+it_requirements:
+- 'Q2, IT PO default (confirm with the user): the published library is docs/criteria/<id>.yaml with a generated docs/criteria/index.json. It is a folder of its own, separate from docs/decisions/, so every existing reader of docs/decisions/ (decisions validate and index, the file precedent backend, the ADR-062 Decision reader with its filename rule) stays untouched (dec-93c1c730463c1f3c, crit.existing_consumers_unchanged). The folder is configured beside memory.decisions_dir and never hard-coded at call sites.'
+- 'Q2, IT PO default: there is no second publish command. The existing person-run python -m kernel decisions publish --run-id R publishes everything the run staged: its decision records first, then its criterion category records and membership additions, validated together before any write and written all-or-nothing. kernel/memory/publish.py stays the only writer of reviewed records. New python -m kernel criteria validate and criteria index mirror decisions validate and decisions index.'
+- 'Each publish check refuses with exit code 3, lists the problems and writes nothing: schema and plain YAML; filename identity; unique ids; every member names a decision that is published (or is published by the same publish) and whose criteria carry that criterion; that criterion''s question equals a label of the category; no label is a label of another staged or published category; no member pair belongs to another staged or published category; broader names a published category and forms no loop; replaced_by names published categories; approved_by is human. Wording equality (''exact match'', ''identical'', ''repeat'', label uniqueness) is one shared rule for every caller (offline grouping, in-run grouping, publish label checks, drafted-repeat removal, edit detection): Unicode NFC, trimmed, internal whitespace collapsed to one space, case-folded; punctuation and word order stay significant. No caller may apply a looser or stricter rule of its own.'
+- Publish never overwrites a published category that changed after it was staged (base_sha256 mismatch); it refuses and names the category. Membership additions from reuse are applied to the current published record instead (DK-500d-3).
+- After writing, publish regenerates the usage index and triggers the learning-store rebuild outside the publish path (DK-500f-2). A failed rebuild never fails the publish.
+- 'Publish never edits a decision record (proven by byte comparison in tests) and is idempotent: re-running it reports already_present.'
+- 'No new knowledge surface in the paths registry and no new pre-commit hook: docs/criteria/*.yaml are read through the existing docs surface like docs/decisions/*.yaml, and index freshness is checked by criteria validate in the test suite and CI, as for decisions. package_surface is therefore false (dec-93c1c730463c1f3c, crit.no_new_package_surface). Any later hook or surface needs its own AC with package_surface true.'
+test_required: true
+test_spec:
+- name: test_publish_checks_members_labels_pairs_and_broader
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Publishing cat-6c3eb4f2af148922 runs every listed check against the published store and passes for a valid record.
+- name: test_record_written_published_for_review
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The record is written to docs/criteria/cat-6c3eb4f2af148922.yaml with lifecycle_stage published and appears as an ordinary working-tree change.
+- name: test_usage_index_rebuilt_on_publish
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: docs/criteria/index.json is regenerated and includes the new category.
+- name: test_no_decision_record_changes
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Every file in docs/decisions/ is byte-identical before and after the publish.
+- name: test_publish_is_all_or_nothing_and_idempotent
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: A publish with one failing check writes nothing; a repeated successful publish reports already_present.
+- name: test_publish_cli_exit_codes
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: python -m kernel decisions publish --run-id R exits 0 on success and 3 with the problems listed on a refusal.
+test_rationale: Exercise the review run and the publish command through their public CLI and RunService boundaries on a temporary repository copy and run root; assert staged files, published files, exit codes and byte-level before/after snapshots of docs/decisions/. Model-level unit tests alone would not prove that nothing is written outside the staged area or that publish is all-or-nothing.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+  relationship: constrains
+  status: exists
+- path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+  relationship: related
+  status: exists
+  relevance: The stage-then-publish path decision records follow; category records follow it by analogy.
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/colony-memory.md
+  relationship: describes
+  status: exists
+  relevance: ColonyMemory port, decision staging and publish path, and the planned Neo4j statistics backend.
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+declares_side_effect: true
+notes: |
+  Flow node: criteria-library publish. Publish follows the decision records' publish by analogy (validate the whole store and the staged record, write it, regenerate the index; the person commits and the change is reviewed).
+  OPEN, asked of the user: (1) the published folder: the mock assumes docs/criteria/<id>.yaml, the name the decision's question used, but dec-93c1c730463c1f3c did not fix it; (2) the publish command's name (a new command, or the decision publish extended to category records); (3) whether a new config/paths.json surface or pre-commit hook is needed. The decision's criterion crit.no_new_package_surface prefers none; if one is added, the IT PO must set package_surface: true on the AC that adds it.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: publish.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+  IT PO (2026-10-05), settling the BA's three open items as IT PO defaults to confirm: (1) the folder is docs/criteria/<id>.yaml with docs/criteria/index.json; (2) the publish command is the existing python -m kernel decisions publish --run-id R, extended to publish the run's staged category records after its decisions, with criteria validate and criteria index added beside decisions validate and index; (3) no new config/paths.json surface and no new pre-commit hook, so package_surface is false.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: publish
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'

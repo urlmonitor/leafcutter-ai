@@ -23,8 +23,11 @@ from kernel.contracts import (
     CapabilityInvocation,
     CapabilityResult,
     Decision,
+    Decomposition,
     ErrorInfo,
     Evidence,
+    EnrichedContext,
+    EntityContext,
     Finding,
     HostWorkRequest,
     HumanQuestion,
@@ -214,6 +217,8 @@ class KernelState(TypedDict, total=False):
     root_task_id: str
     task_input: TaskInput
     task: Task
+    context_enrichment: EnrichedContext
+    entity_context: EntityContext | None
     registry: RegistrySnapshot
     permissions: list[str]
     requests: Annotated[dict[str, Request], merge_map]
@@ -229,6 +234,7 @@ class KernelState(TypedDict, total=False):
     interactions: Annotated[dict[str, HostWorkRequest | HumanQuestion], merge_map]
     interaction_queue: list[str]
     gaps: Annotated[dict[str, CapabilityGap], merge_map]
+    splits: Annotated[dict[str, Decomposition], merge_map]
     budgets: Budgets
     fingerprints: Annotated[dict[str, int], sum_counts]
     events: Annotated[list[RunEvent], append_events]
@@ -278,4 +284,6 @@ def new_event(run_id: str, at: datetime, kind: str, detail: str = "", **refs: st
 #   `events_flushed` to the design's key list: route must tell its conditional edge what to
 #   dispatch, schedule must tell finalize why it stopped, and the run permissions are not in
 #   Task. (#KernelBootstrapV0/P4)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
+# - 2026-10-06 18:00 [python-coder]: Add the splits key to checkpointed state. (#TICKET-20261006-DK-400a-1)
 # ====================================================================

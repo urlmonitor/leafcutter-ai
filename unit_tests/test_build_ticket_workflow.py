@@ -279,48 +279,48 @@ def test_retry_cap_is_bounded():
 
 
 def test_worktree_guard_returns_error_on_main_clone():
-    """Worktree guard must return status 'error' with worktree_required when on main."""
+    """No run continues in the main copy: a workspace step that gives no accepted answer ends the run with
+    the shared structured error (status error, quoting what was received), never a fallback location.
+
+    BO-4300c-3: the old ambient ``git_type === "directory"`` main-clone check and its worktree_required /
+    action_required reply are retired together with the detection; the guard is the accepted-answer check.
+    """
     if not _WORKFLOW_PATH.exists():
         pytest.fail(f"build-ticket.js not found at {_WORKFLOW_PATH}.")
 
     content = _WORKFLOW_PATH.read_text(encoding="utf-8")
 
-    assert "worktree_required" in content, (
-        "build-ticket.js must return a 'worktree_required' field in the error "
-        "response when the worktree guard detects the main clone."
+    assert "if (!ticketWorkspace.accepted)" in content, (
+        "build-ticket.js must stop when the workspace maker's answer is not an accepted ok answer."
     )
-
-    assert "action_required" in content, (
-        "build-ticket.js must return an 'action_required' field instructing "
-        "the caller how to create a worktree."
+    assert "workspaceFailure(ticketWorkspace)" in content, (
+        "build-ticket.js must return the shared structured failure (it quotes what the maker said)."
     )
-
-    assert re.search(r'git_type\s*===\s*["\']directory["\']', content), (
-        "build-ticket.js must check if git_type === 'directory' to detect "
-        "the main clone (where .git is a directory, not a file)."
+    assert "git_type ===" not in content and "worktree_required" not in content, (
+        "build-ticket.js must not keep the retired ambient main-clone detection."
     )
 
 
 # ---------------------------------------------------------------------------
-# Test 8 — worktree guard allows continuation when in a worktree
+# Test 8 — the workspace guard runs before anything is planned
 # ---------------------------------------------------------------------------
 
 
 def test_worktree_guard_allows_worktree():
-    """Worktree guard must proceed past the check when .git is a file (worktree)."""
+    """The workspace guard proceeds past the check on an accepted answer, and runs before the planner."""
     if not _WORKFLOW_PATH.exists():
         pytest.fail(f"build-ticket.js not found at {_WORKFLOW_PATH}.")
 
     content = _WORKFLOW_PATH.read_text(encoding="utf-8")
 
-    assert "worktreeCheck" in content or "worktree_check" in content or "worktree" in content.lower(), (
-        "build-ticket.js must have a worktree detection variable or agent call."
-    )
-
-    guard_pos = content.find("worktree_required")
+    guard_pos = content.find("if (!ticketWorkspace.accepted)")
     planner_pos = content.find("plannerResult")
 
-    assert guard_pos < planner_pos, (
-        "The worktree guard must run BEFORE the planner agent dispatch. "
-        f"Found worktree_required at position {guard_pos} but plannerResult at {planner_pos}."
+    assert guard_pos != -1 and planner_pos != -1, (
+        f"both the workspace guard ({guard_pos}) and the planner dispatch ({planner_pos}) must exist"
     )
+    assert guard_pos < planner_pos, (
+        "The workspace guard must run BEFORE the planner agent dispatch. "
+        f"Found the guard at position {guard_pos} but plannerResult at {planner_pos}."
+    )
+

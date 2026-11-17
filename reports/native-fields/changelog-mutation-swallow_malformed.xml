@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="7" skipped="0" tests="7" time="0.262" timestamp="2026-10-02T09:14:43.397713+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_ambiguous_or_unrelated_malformations[title: &quot;bad\\.escape&quot;\n]" time="0.011"><failure message="Failed: DID NOT RAISE ValueError">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3070/test_changelog_rejects_ambiguo0')
+raw = 'title: "bad\\.escape"\n'
+
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            'title: "bad\\.escape"\n',
+            'description: "unclosed\\.escape\n',
+            'description: "first\\.bad"\ndescription: "second\\.bad"\n',
+            "migration_steps:\n  - Set x: one and y: two\n    continuation\n",
+            "migration_steps:\n  - Set x: one and y: two\n  - |\n",
+            'description: "recoverable\\.escape"\nother: [broken\n',
+            "- not a mapping\n",
+        ],
+    )
+    def test_changelog_rejects_ambiguous_or_unrelated_malformations(tmp_path, raw):
+        # covers: KM-400a-3-i
+        # angle: failure
+        _write(tmp_path, "changelogs/ambiguous.md", raw)
+&gt;       with pytest.raises(ValueError, match="ambiguous.md"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\knowledge\test_native_changelog_entry.py:220: Failed</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_ambiguous_or_unrelated_malformations[description: &quot;unclosed\\.escape\n]" time="0.008"><failure message="Failed: DID NOT RAISE ValueError">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3070/test_changelog_rejects_ambiguo1')
+raw = 'description: "unclosed\\.escape\n'
+
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            'title: "bad\\.escape"\n',
+            'description: "unclosed\\.escape\n',
+            'description: "first\\.bad"\ndescription: "second\\.bad"\n',
+            "migration_steps:\n  - Set x: one and y: two\n    continuation\n",
+            "migration_steps:\n  - Set x: one and y: two\n  - |\n",
+            'description: "recoverable\\.escape"\nother: [broken\n',
+            "- not a mapping\n",
+        ],
+    )
+    def test_changelog_rejects_ambiguous_or_unrelated_malformations(tmp_path, raw):
+        # covers: KM-400a-3-i
+        # angle: failure
+        _write(tmp_path, "changelogs/ambiguous.md", raw)
+&gt;       with pytest.raises(ValueError, match="ambiguous.md"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\knowledge\test_native_changelog_entry.py:220: Failed</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_ambiguous_or_unrelated_malformations[description: &quot;first\\.bad&quot;\ndescription: &quot;second\\.bad&quot;\n]" time="0.008"><failure message="Failed: DID NOT RAISE ValueError">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3070/test_changelog_rejects_ambiguo2')
+raw = 'description: "first\\.bad"\ndescription: "second\\.bad"\n'
+
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            'title: "bad\\.escape"\n',
+            'description: "unclosed\\.escape\n',
+            'description: "first\\.bad"\ndescription: "second\\.bad"\n',
+            "migration_steps:\n  - Set x: one and y: two\n    continuation\n",
+            "migration_steps:\n  - Set x: one and y: two\n  - |\n",
+            'description: "recoverable\\.escape"\nother: [broken\n',
+            "- not a mapping\n",
+        ],
+    )
+    def test_changelog_rejects_ambiguous_or_unrelated_malformations(tmp_path, raw):
+        # covers: KM-400a-3-i
+        # angle: failure
+        _write(tmp_path, "changelogs/ambiguous.md", raw)
+&gt;       with pytest.raises(ValueError, match="ambiguous.md"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\knowledge\test_native_changelog_entry.py:220: Failed</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_ambiguous_or_unrelated_malformations[migration_steps:\n  - Set x: one and y: two\n    continuation\n]" time="0.007"><failure message="Failed: DID NOT RAISE ValueError">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3070/test_changelog_rejects_ambiguo3')
+raw = 'migration_steps:\n  - Set x: one and y: two\n    continuation\n'
+
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            'title: "bad\\.escape"\n',
+            'description: "unclosed\\.escape\n',
+            'description: "first\\.bad"\ndescription: "second\\.bad"\n',
+            "migration_steps:\n  - Set x: one and y: two\n    continuation\n",
+            "migration_steps:\n  - Set x: one and y: two\n  - |\n",
+            'description: "recoverable\\.escape"\nother: [broken\n',
+            "- not a mapping\n",
+        ],
+    )
+    def test_changelog_rejects_ambiguous_or_unrelated_malformations(tmp_path, raw):
+        # covers: KM-400a-3-i
+        # angle: failure
+        _write(tmp_path, "changelogs/ambiguous.md", raw)
+&gt;       with pytest.raises(ValueError, match="ambiguous.md"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\knowledge\test_native_changelog_entry.py:220: Failed</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_ambiguous_or_unrelated_malformations[migration_steps:\n  - Set x: one and y: two\n  - |\n]" time="0.007"><failure message="Failed: DID NOT RAISE ValueError">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3070/test_changelog_rejects_ambiguo4')
+raw = 'migration_steps:\n  - Set x: one and y: two\n  - |\n'
+
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            'title: "bad\\.escape"\n',
+            'description: "unclosed\\.escape\n',
+            'description: "first\\.bad"\ndescription: "second\\.bad"\n',
+            "migration_steps:\n  - Set x: one and y: two\n    continuation\n",
+            "migration_steps:\n  - Set x: one and y: two\n  - |\n",
+            'description: "recoverable\\.escape"\nother: [broken\n',
+            "- not a mapping\n",
+        ],
+    )
+    def test_changelog_rejects_ambiguous_or_unrelated_malformations(tmp_path, raw):
+        # covers: KM-400a-3-i
+        # angle: failure
+        _write(tmp_path, "changelogs/ambiguous.md", raw)
+&gt;       with pytest.raises(ValueError, match="ambiguous.md"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\knowledge\test_native_changelog_entry.py:220: Failed</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_ambiguous_or_unrelated_malformations[description: &quot;recoverable\\.escape&quot;\nother: [broken\n]" time="0.006"><failure message="Failed: DID NOT RAISE ValueError">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3070/test_changelog_rejects_ambiguo5')
+raw = 'description: "recoverable\\.escape"\nother: [broken\n'
+
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            'title: "bad\\.escape"\n',
+            'description: "unclosed\\.escape\n',
+            'description: "first\\.bad"\ndescription: "second\\.bad"\n',
+            "migration_steps:\n  - Set x: one and y: two\n    continuation\n",
+            "migration_steps:\n  - Set x: one and y: two\n  - |\n",
+            'description: "recoverable\\.escape"\nother: [broken\n',
+            "- not a mapping\n",
+        ],
+    )
+    def test_changelog_rejects_ambiguous_or_unrelated_malformations(tmp_path, raw):
+        # covers: KM-400a-3-i
+        # angle: failure
+        _write(tmp_path, "changelogs/ambiguous.md", raw)
+&gt;       with pytest.raises(ValueError, match="ambiguous.md"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\knowledge\test_native_changelog_entry.py:220: Failed</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_ambiguous_or_unrelated_malformations[- not a mapping\n]" time="0.007"><failure message="Failed: DID NOT RAISE ValueError">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3070/test_changelog_rejects_ambiguo6')
+raw = '- not a mapping\n'
+
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            'title: "bad\\.escape"\n',
+            'description: "unclosed\\.escape\n',
+            'description: "first\\.bad"\ndescription: "second\\.bad"\n',
+            "migration_steps:\n  - Set x: one and y: two\n    continuation\n",
+            "migration_steps:\n  - Set x: one and y: two\n  - |\n",
+            'description: "recoverable\\.escape"\nother: [broken\n',
+            "- not a mapping\n",
+        ],
+    )
+    def test_changelog_rejects_ambiguous_or_unrelated_malformations(tmp_path, raw):
+        # covers: KM-400a-3-i
+        # angle: failure
+        _write(tmp_path, "changelogs/ambiguous.md", raw)
+&gt;       with pytest.raises(ValueError, match="ambiguous.md"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\knowledge\test_native_changelog_entry.py:220: Failed</failure></testcase></testsuite></testsuites>

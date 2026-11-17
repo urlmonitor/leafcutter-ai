@@ -1,0 +1,150 @@
+{
+  "kind": "Ticket",
+  "review_status": "complete",
+  "reviewed_on": "2026-10-02",
+  "sources": [
+    "templates/rules/tickets.md",
+    "templates/scripts/commit_guardian/commit_guardian.json#/ticket_frontmatter",
+    "templates/scripts/commit_guardian/config.py#TICKET_FM_REQUIRED_FIELDS",
+    "templates/scripts/commit_guardian/frontmatter_validators.py#validate_ticket_file",
+    "templates/hooks/ticket_frontmatter_guard.py#validate",
+    "scripts/ac_store/generate_ticket_from_ac.py",
+    "scripts/ac_store/_gtfa_frontmatter.py#_build_frontmatter",
+    "config/ticket_lifecycle.json",
+    "tickets/**/*.md"
+  ],
+  "observed": {
+    "markdown_candidates": 1533,
+    "all_frontmatter_blocks_parsed": true,
+    "excluded_readme_documents": 1,
+    "ticket_candidates_after_readme_exclusion": 1532,
+    "distinct_observed_frontmatter_keys": 44,
+    "exact_master_plan_filenames": 91,
+    "exact_master_plans_with_explicit_epic_type": 58,
+    "explicit_epic_type_records_including_other_filenames": 59,
+    "statuses": {"todo": 684, "done": 738, "in_progress": 106, "open": 1, "deferred": 1, "blocked": 1, "invalid": 1},
+    "note": "Counts are structural observations, not a ticket-validator pass. Some historical tickets and master plans lack currently required fields or use legacy values."
+  },
+  "identity_and_admission": {
+    "canonical_id": "Repository-relative POSIX source path, qualified by Ticket kind in the shared storage identity. Basename/stem is not a unique identifier: Master_Plan.md repeats 91 times and numbered ticket names also collide across epic folders and done subfolders.",
+    "source_path": "The complete tickets/.../*.md path. Preserve source revision and content hash through the shared provenance contract.",
+    "admit": "Actual ticket or epic records under tickets with parsed frontmatter and ticket evidence: ticket-like filename, ticket lifecycle fields, source_ac/source_acs/ac_traceability, or explicit type=epic. Preserve historical incomplete records when their source role is explicit; do not require all current schema fields to admit historical data.",
+    "exclude": "Any README.md (case-insensitive), and generic notes/reports/plans lacking ticket evidence. tickets/README.md has type=reference and status=active; it is a lifecycle document, not a Ticket.",
+    "epic_subtype": "type=epic explicitly declares the subtype. Master_Plan.md under an EPIC-* folder is the documented epic root convention even when old frontmatter lacks type; mark subtype=epic and subtype_source=path_convention outside raw metadata. Do not classify every child file under an epic directory as epic. A differently named file with explicit type=epic remains an epic.",
+    "other_type_values": "Preserve raw type=bugfix and type=design_decision_ticket as authored. They occur once each and are not values accepted by the current optional type validator. They remain Ticket records, not new graph kinds.",
+    "body": "Keep the Markdown body losslessly in a separate derived/body field. Context, acceptance criteria, implementation checklists, test requirements, risk/safety and sign-offs are body content, not YAML metadata and not proof that work happened.",
+    "title": "Use authored title when present; a display fallback from epic_name, heading or path must be separately identified as derived and must not manufacture a metadata.title."
+  },
+  "metadata_contract": {
+    "native_record_metadata": "The entire parsed frontmatter mapping, including unknown keys. Do not use an allowlist that silently drops new fields. Convert YAML date objects losslessly to ISO date text for JSON storage, preserving date semantics and never inserting a current date.",
+    "absence_null_empty": "Preserve absent keys, explicit null, false, empty lists and empty maps distinctly in metadata. Neo4j null removes a property, so the lossless envelope and shared presence/null markers must retain that distinction.",
+    "prohibited_reinterpretations": [
+      "Do not map ticket status to AC work_status, req_status, readiness, completed or proof status.",
+      "Do not derive status from inbox/todo/done/rejected folders or treat any agents signed_off value as external verification.",
+      "Do not run generator defaults while ingesting: no priority=medium, roadmap_phase=phase_1, requires_* false, complexity inference, or depends_on=[] unless present in source.",
+      "Do not merge documentation_required, requires_documentation, and requires_documentation_verification: these have different authored meanings.",
+      "Do not convert ratio-shaped ac_coverage into numeric success claims or treat its historical AC-id list variant as a ratio."
+    ]
+  },
+  "required_by_base_commit_validator": {
+    "title": {"type": "string", "role": "Authored human-readable title; validator checks present/non-null."},
+    "status": {"type": "string", "enum": ["todo", "in_progress", "blocked", "done", "deferred"], "role": "Authored ticket lifecycle state. Preserve observed open/invalid as source values with validation information; never silently repair."},
+    "components": {"type": "array<string>", "role": "Explicit component IDs, directly queryable and eligible for component membership edges."},
+    "created": {"type": "ISO date string or YAML date", "role": "Authored creation date; observed quoted and unquoted dates."},
+    "depends_on": {"type": "array<string>", "role": "Ticket filenames/paths, not AC IDs. Empty list is valid; same-epic resolver semantics below."}
+  },
+  "additional_fields_required_by_current_edit_hook": {
+    "change_target": {"type": "string or nonempty array<string>", "enum": ["code", "schema", "ui", "infrastructure", "pipeline", "prompt", "model", "config", "docs", "dependency"], "role": "Authored change classification; scalar/list shape must survive."},
+    "risk_surface": {"type": "string or nonempty array<string>", "enum": ["internal", "contract_boundary", "auth", "privacy", "safety", "cost"], "role": "Authored risk classification; retain scalar/list shape even though current observations are scalar."},
+    "requires_diagram": {"type": "boolean|null", "role": "Required tri-state: true=needed, false=considered/not-needed, null=not-applicable. Absence is distinct."},
+    "requires_adr": {"type": "boolean|null", "role": "Same required tri-state; four explicit null values currently observed."}
+  },
+  "optional_frontmatter_fields": {
+    "type": "string; current validator accepts epic, historical bugfix/design_decision_ticket also observed; absence is common and is not filled in raw metadata",
+    "priority": "string; generator emits critical|high|medium|low",
+    "roadmap_phase": "string; explicit roadmap identifier, not a status",
+    "advances_current_outcome": "boolean; preserve false",
+    "files_touched": "array<string> of planned relative path hints; may refer to files that do not yet exist",
+    "agents": "object mapping agent keys to scalar status or nested status record; see nested contract",
+    "ac_coverage": "string ratio N/M per configuration, or historical array<string> AC IDs; preserve both native shapes",
+    "ac_traceability": "object {id,path} or historical array<object>; see nested contract",
+    "complexity": "string; generator emits low|medium|high, distinct from estimated_complexity",
+    "documentation_required": "boolean; generator emits when documentation-verifier phase is needed",
+    "source_ac": "string; explicit AC ID",
+    "source_acs": "array<string>; explicit AC IDs",
+    "epic_name": "string; authored epic name, often found on Master_Plan.md",
+    "out_of_scope": "array<string>; authored excluded paths or scope hints, not a changes edge",
+    "last_updated": "ISO date string or YAML date; absent on most tickets",
+    "test_required": "boolean; declaration, not execution result",
+    "declares_side_effect": "boolean; retain false and absence distinctly even when a consumer treats absence as false",
+    "phase": "string; authored phase text, not interchangeable with roadmap_phase",
+    "requires_documentation": "array<string> of document genres; hook checks entries against doc_types when available",
+    "user_facing_surface": "string|null; 48 explicit nulls observed",
+    "actuation_contract": "string; authored behavior description",
+    "blocks_finalization": "boolean; false observed",
+    "tags": "array<string>",
+    "origin_agent": "string; authored provenance text, may not be a registered Agent ID",
+    "requires_documentation_verification": "boolean; distinct from documentation_required",
+    "source_epic": "string; may contain prose, not necessarily a resolvable epic ID",
+    "affected_tests": "array<string>; paths and test anchors, sometimes explanatory suffixes; declaration only",
+    "date": "YAML date; one legacy authored field, preserve separately from created",
+    "test_requirements": "object with tests array; see nested contract; declarations only",
+    "epic": "string; explicit historical epic reference",
+    "estimated_complexity": "string; hook accepts S|M|L, existing historical record has simple; retain original without normalizing",
+    "target_epic": "string; authored target epic reference",
+    "ac_path": "string; often directory scope, not necessarily one AC record",
+    "test_constraints": "string or array<string>; generator can emit an array, existing records use string unit_only",
+    "merged_pr": "integer; one observed value 95; authored reference, not a verification receipt"
+  },
+  "nested_contracts": {
+    "agents": {
+      "key": "Agent/phase name string",
+      "scalar_value": "not_needed|needed|signed_off|failed",
+      "object_value": {"status": "same status enum", "grandfathered": "boolean when present", "other_fields": "preserve without inventing values"},
+      "exposure": "Shared flattening must expose per-agent status and nested grandfathered flag without losing the full mapping. Do not collapse all agents into one ticket status. No nested agent objects were observed in this snapshot, but the hook explicitly supports them."
+    },
+    "ac_traceability": {
+      "generator_shape": {"id": "AC ID string", "path": "repository-relative POSIX AC YAML path"},
+      "historical_shape": "array of the same records",
+      "exposure": "Retain original object versus array, expose id/path under their actual structured paths, preserve order and any additional fields."
+    },
+    "test_requirements": {
+      "observed_shape": {"tests": [{"name": "test name string", "path": "test file path string", "coverage": "multiline coverage description string"}]},
+      "exposure": "Queryable nested indexed properties or shared owned-field representation, plus lossless mapping. Do not claim passed/failed or proven coverage."
+    }
+  },
+  "relations": [
+    {"field": "components", "role": "COMPONENT_MEMBERSHIP", "rule": "One relationship per explicit resolvable component value; no membership inherited from epic/folder/source AC."},
+    {"field": "depends_on", "role": "DEPENDS_ON", "rule": "Resolve same-epic sibling filenames against source parent, parent/done, and parent.parent when the source itself is in done. Repo-prefixed paths may resolve by basename only when the epic-folder component matches the source epic, per the canonical validators. Never global basename matching; retain unresolved text and report it instead of fabricating target nodes."},
+    {"field": "source_ac / source_acs / ac_traceability.id", "role": "Explicit AC reference", "rule": "Can link to existing ACs under an appropriately named relation. This is traceability, not evidence of implementation or fulfillment. Keep source fields intact."},
+    {"field": "files_touched", "role": "Declared scope reference", "rule": "Paths are planned scope, may not exist. Do not label IMPLEMENTED_BY or pretend a file changed."},
+    {"field": "agents", "role": "Declared phase assignment/status", "rule": "Optional assignment edges need raw status provenance; membership/status is not execution proof."},
+    {"field": "epic / source_epic / target_epic / path containment", "role": "Epic association", "rule": "Keep explicit source references separate from derived directory containment; do not create a second Epic kind or infer parent from arbitrary prose."}
+  ],
+  "exposure_acceptance": [
+    "NativeRecord metadata equals the full source frontmatter mapping after supported date serialization; body/subtype/display fallbacks are separate derived fields.",
+    "Neo4j exposes all source scalar/boolean/numeric/date and homogeneous primitive-list fields as queryable properties, not only within payload JSON.",
+    "Nested agents/ac_traceability/test_requirements are queryable via the shared collision-safe flattening/field representation, preserving object/list shape, indexes, empty values, false and null through the lossless representation.",
+    "No missing required field or historical nonconforming value is silently replaced with a default or normalized to a different native type.",
+    "Two Master_Plan.md files and two same-named child tickets from different epic directories remain distinct entities.",
+    "README.md is excluded; explicit epic and legacy conventional master plans are admitted with correct subtype provenance; ordinary epic child tickets remain Ticket subtype.",
+    "Status open/invalid stays verbatim if those historical records are included; none maps to AC work_status or evidence status."
+  ],
+  "representative_records": [
+    "tickets/00_inbox/epics/EPIC-ACStoreFoundation/01_schema_validation.md",
+    "tickets/00_inbox/epics/EPIC-ACStoreFoundation/Master_Plan.md",
+    "tickets/00_inbox/epics/EPIC-DispatchPreflightGate/Master_Plan.md",
+    "tickets/00_inbox/TICKET-20260608-ACD-1200a-9.md",
+    "tickets/00_inbox/TICKET-20260622-StaleTestEpicFolderConflict.md",
+    "tickets/99_done/EPIC-AcPipelineDeployGaps/done/02_deploy_plan_feature_to_consumers.md",
+    "tickets/99_done/EPIC-AcPipelineDeployGaps/done/03_reconcile_ac_scanner_portability.md",
+    "tickets/99_done/EPIC-FlattenSupervisorChain/done/Master_Plan-convert-to-workflows.md",
+    "tickets/README.md"
+  ],
+  "authority_caveats": [
+    "Base commit validator requires five keys, while the edit hook additionally requires two classifications and two nullable decisions. Current hook template and historical records do not uniformly satisfy its newer rules; graph ingestion is not permission to rewrite ticket authoring semantics.",
+    "templates/rules/tickets.md mentions 02_done while config/ticket_lifecycle.json uses 99_done. Preserve actual source path and authored status; do not repair by folder mapping.",
+    "config/ticket_lifecycle.json describes virtual in_review while ticket status enum omits it. Do not invent a canonical normalization across these authorities.",
+    "No schema disallows unknown frontmatter keys across the Ticket store; future fields must survive ingestion."
+  ]
+}

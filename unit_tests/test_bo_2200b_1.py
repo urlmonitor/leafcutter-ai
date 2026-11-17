@@ -66,7 +66,7 @@ class TestDocumentationVerifierAtPriority(unittest.TestCase):
         # covers: BO-2200b-1
         """config/agent_registry.json must contain a documentation-verifier entry
         with priority 11.9, conditional:true, is_ticket_phase:true, and
-        'signoff' in skills_used.
+        'signoff' among the skills_invoked ids.
 
         Implementation required: python-coder must add a 'documentation-verifier'
         entry to config/agent_registry.json satisfying all four properties above.
@@ -98,13 +98,13 @@ class TestDocumentationVerifierAtPriority(unittest.TestCase):
             f"got {entry.get('is_ticket_phase')!r}",
         )
 
-        # --- signoff capability: 'signoff' in skills_used ---
-        skills_used = entry.get("skills_used", [])
+        # --- signoff capability: 'signoff' among the skills_invoked ids ---
+        invoked_ids = [s["skill_id"] for s in entry.get("skills_invoked", [])]
         self.assertIn(
             "signoff",
-            skills_used,
-            f"Expected 'signoff' in documentation-verifier skills_used, "
-            f"got skills_used={skills_used!r}",
+            invoked_ids,
+            f"Expected 'signoff' in documentation-verifier skills_invoked, "
+            f"got skill ids={invoked_ids!r}",
         )
 
     def test_documentation_verifier_sorts_after_doc_expert_before_commit(self):

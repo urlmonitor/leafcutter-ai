@@ -1,0 +1,18 @@
+{
+  "case_id": "A02",
+  "step": "started",
+  "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A02\\started\\host\\packet.json",
+  "input_artifact_refs": [
+    "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A02\\runtime\\runs\\run-9ea25d19efd1419b\\artifacts\\input-int-f8f6dac1bf794c9d.json"
+  ],
+  "archived_inputs": [
+    {
+      "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A02\\runtime\\runs\\run-9ea25d19efd1419b\\artifacts\\input-int-f8f6dac1bf794c9d.json",
+      "archived_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A02\\started\\host\\inputs\\0.json",
+      "sha256": "58ca21b9a87593b77b0dc6473876479c30b8dbe641674790a3eea350b2c57021"
+    }
+  ],
+  "response_destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A02\\started\\host\\response.json",
+  "dispatch_provenance_destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A02\\started\\host\\dispatch.json",
+  "model_id": null
+}

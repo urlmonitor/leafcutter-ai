@@ -1,0 +1,229 @@
+{
+  "records_scanned": 4540,
+  "pattern_candidates": [
+    {
+      "id": "BP-1401",
+      "title": "next_diagram_seq.py scans docs/architecture/ recursively so it sees diagrams in the diagrams/ subdirectory",
+      "path": "docs/acceptance-criteria/build_pipeline/BP-1401.yaml"
+    },
+    {
+      "id": "TKT-004",
+      "title": "create-ticket-v2 writes AC YAML files when ac_creations is non-empty",
+      "path": "docs/acceptance-criteria/ticket-creation/TKT-004.yaml"
+    },
+    {
+      "id": "TKT-005",
+      "title": "AC YAML files pass schema validation after v2 pipeline creates them",
+      "path": "docs/acceptance-criteria/ticket-creation/TKT-005.yaml"
+    },
+    {
+      "id": "TKT-100f-2",
+      "title": "Each L2 AC has exactly one assigned_agent and a depends_on referencing its parent L1",
+      "path": "docs/acceptance-criteria/ticket-creation/TKT-100-deep-analysis/TKT-100f-2.yaml"
+    },
+    {
+      "id": "TQ-100b-4",
+      "title": "Only captures shaped like an acceptance-criterion id count as coverage tags",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-4.yaml"
+    },
+    {
+      "id": "TQ-400e-2",
+      "title": "Evidence the check cannot trust produces an abstention, never a demotion",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-2.yaml"
+    },
+    {
+      "id": "INF-1100d-4-i",
+      "title": "The address check flags real-looking addresses, allows obvious placeholders, and leaves unshipped history alone",
+      "path": "docs/acceptance-criteria/infrastructure/INF-1100-agents-work-in-the-right-place/INF-1100d-4-i.yaml"
+    },
+    {
+      "id": "INF-400c-5-ii",
+      "title": "Every entry_kind already in flight has a declared mapping into the canonical vocabulary",
+      "path": "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-5-ii.yaml"
+    },
+    {
+      "id": "INF-700c",
+      "title": "Nothing enters the knowledge record that is not real knowledge",
+      "path": "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700c.yaml"
+    },
+    {
+      "id": "INF-600g-3-i",
+      "title": "Project-local skill referenced in skills_invoked resolves via .claude/skills/ fallback",
+      "path": "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600g-3-i.yaml"
+    },
+    {
+      "id": "GE-124b-1-i",
+      "title": "A CSS class is never read as a pin",
+      "path": "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b-1-i.yaml"
+    },
+    {
+      "id": "BP-100c-4",
+      "title": "Template compiler threads config to project paths table generation",
+      "path": "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100c-4.yaml"
+    },
+    {
+      "id": "BP-300e-1-ii",
+      "title": "Brace and hash characters inside string values do not fool the extractor",
+      "path": "docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300e-1-ii.yaml"
+    },
+    {
+      "id": "BP-900a-1",
+      "title": "build.py deploys all ac_store scripts to the consumer project",
+      "path": "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900a-1.yaml"
+    },
+    {
+      "id": "BP-900a-2",
+      "title": "build.py deploys standalone scripts goal_to_epic.py and build_ac_mode_detection.py",
+      "path": "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900a-2.yaml"
+    },
+    {
+      "id": "BP-900a-3",
+      "title": "Deployed ac_store scripts are importable via the paths agent templates use",
+      "path": "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900a-3.yaml"
+    },
+    {
+      "id": "BP-900b-2",
+      "title": "Guard cross-checks extracted references against the deployable script manifest",
+      "path": "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900b-2.yaml"
+    },
+    {
+      "id": "BP-900g-6",
+      "title": "Workflow sources are scanned for script references, and the fast lane resolves its scripts in a consumer install",
+      "path": "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-6.yaml"
+    },
+    {
+      "id": "BO-1100a-2",
+      "title": "Matched routing group produces its pattern-specific commit subject line",
+      "path": "docs/acceptance-criteria/build-orchestration/BO-1100-smart-commit-routing/BO-1100a-2.yaml"
+    },
+    {
+      "id": "BO-1100c-2",
+      "title": "Adding a new routing pattern requires only a single entry addition",
+      "path": "docs/acceptance-criteria/build-orchestration/BO-1100-smart-commit-routing/BO-1100c-2.yaml"
+    },
+    {
+      "id": "BO-1100c-4",
+      "title": "Pattern config reflects the current file contents on every classification invocation",
+      "path": "docs/acceptance-criteria/build-orchestration/BO-1100-smart-commit-routing/BO-1100c-4.yaml"
+    },
+    {
+      "id": "BO-1100d-3",
+      "title": "Proposed routing rule requires user confirmation before being written to config",
+      "path": "docs/acceptance-criteria/build-orchestration/BO-1100-smart-commit-routing/BO-1100d-3.yaml"
+    },
+    {
+      "id": "BO-2100c-3-i",
+      "title": "Orphan scan never kills unrelated processes and guards against PID reuse",
+      "path": "docs/acceptance-criteria/build-orchestration/BO-2100-live-app-proof/BO-2100c-3-i.yaml"
+    },
+    {
+      "id": "BO-2200b-3-i",
+      "title": "A short but genuine doc passes while a heading-only or token-filled stub fails",
+      "path": "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200b-3-i.yaml"
+    },
+    {
+      "id": "ACS-100b-1",
+      "title": "Feature folder naming follows PREFIX-NNN-kebab-slug convention",
+      "path": "docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100b-1.yaml"
+    },
+    {
+      "id": "ACS-100b-2",
+      "title": "L0 file uses the folder's base ID as its own ID",
+      "path": "docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100b-2.yaml"
+    },
+    {
+      "id": "ACS-100b-3",
+      "title": "L1 IDs extend the L0 ID with a lowercase letter suffix",
+      "path": "docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100b-3.yaml"
+    },
+    {
+      "id": "ACS-100b-4",
+      "title": "L2 IDs extend the L1 ID with a hyphen-number suffix",
+      "path": "docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100b-4.yaml"
+    },
+    {
+      "id": "ACS-300k-1-i",
+      "title": "build.py fails gracefully when components.json is missing",
+      "path": "docs/acceptance-criteria/ac-store/ACS-300-component-governance/ACS-300k-1-i.yaml"
+    },
+    {
+      "id": "ACS-300k-1-ii",
+      "title": "build.py fails gracefully when components.json is malformed JSON",
+      "path": "docs/acceptance-criteria/ac-store/ACS-300-component-governance/ACS-300k-1-ii.yaml"
+    },
+    {
+      "id": "ACS-300k-1",
+      "title": "build.py injects components data into agent templates via a placeholder",
+      "path": "docs/acceptance-criteria/ac-store/ACS-300-component-governance/ACS-300k-1.yaml"
+    },
+    {
+      "id": "ACS-300k-2",
+      "title": "Agent templates referencing index.yaml for component metadata are migrated to components.json",
+      "path": "docs/acceptance-criteria/ac-store/ACS-300-component-governance/ACS-300k-2.yaml"
+    },
+    {
+      "id": "ACS-300k-4",
+      "title": "Compiled agents reflect current component data after rebuild",
+      "path": "docs/acceptance-criteria/ac-store/ACS-300-component-governance/ACS-300k-4.yaml"
+    },
+    {
+      "id": "ACS-300k",
+      "title": "Agents use components.json as the single source of component knowledge",
+      "path": "docs/acceptance-criteria/ac-store/ACS-300-component-governance/ACS-300k.yaml"
+    },
+    {
+      "id": "ACS-500a-1",
+      "title": "A pattern AC defines shared behavior with parameterized slots",
+      "path": "docs/acceptance-criteria/ac-store/ACS-500-shared-pattern-specs/ACS-500a-1.yaml"
+    },
+    {
+      "id": "ACS-500a-3-i",
+      "title": "pattern_bindings with missing keys are rejected at commit time",
+      "path": "docs/acceptance-criteria/ac-store/ACS-500-shared-pattern-specs/ACS-500a-3-i.yaml"
+    },
+    {
+      "id": "ACS-500f-2",
+      "title": "Pattern-first inventory recognizes a pattern AC by the same definition the hook uses",
+      "path": "docs/acceptance-criteria/ac-store/ACS-500-shared-pattern-specs/ACS-500f-2.yaml"
+    },
+    {
+      "id": "ACS-500f-3",
+      "title": "AC store schema accepts the real hierarchical id format and the pattern_slots field",
+      "path": "docs/acceptance-criteria/ac-store/ACS-500-shared-pattern-specs/ACS-500f-3.yaml"
+    },
+    {
+      "id": "ACS-600e",
+      "title": "Stale diagrams and ADRs get flagged automatically",
+      "path": "docs/acceptance-criteria/ac-store/ACS-600-doc-traceability/ACS-600e.yaml"
+    },
+    {
+      "id": "ACD-1600b-1",
+      "title": "A phase agent resolves its authoritative spec by following source_ac to the store",
+      "path": "docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600b-1.yaml"
+    }
+  ],
+  "standing_requirements": [
+    {
+      "id": "ACS-1100",
+      "title": "Trust an answer about your requirements, because it tells you how much it covered",
+      "path": "docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml"
+    },
+    {
+      "id": "ACS-200d",
+      "title": "New tickets must reference their source AC",
+      "path": "docs/acceptance-criteria/ac-store/ACS-200-automated-verification/ACS-200d.yaml"
+    },
+    {
+      "id": "ACS-200e",
+      "title": "The standalone AC validator enforces the same schema as the commit-time gate",
+      "path": "docs/acceptance-criteria/ac-store/ACS-200-automated-verification/ACS-200e.yaml"
+    }
+  ],
+  "parse_errors": [],
+  "reused_contracts": [
+    "ACS-1100",
+    "TQ-400",
+    "KM-400a-3-i"
+  ],
+  "interpretation": "No native-metadata parametrized reusable pattern was identified. Existing shared native-field behavior remains in KM-400a-3-i; these leaves specify type-specific fidelity. Counts/method and retained validation evidence inherit standing requirements."
+}

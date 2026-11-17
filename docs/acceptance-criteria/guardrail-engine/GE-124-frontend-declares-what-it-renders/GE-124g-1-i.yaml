@@ -96,7 +96,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Raised complexity S->M: this is a cross-cutting change across four config loaders, each of which must reject unknown substitution-shaped keys by name (a permissive loader cannot implement it) and must enumerate every input including environment and per-repository overrides. Added the over-correction guard shared with GE-124d-1-i — refusing a key must not abort the check — and made the GE-124d boundary a behavioural assertion across all four outcomes. Flagged that this AC is only fully verifiable once all four surfaces exist. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/45_TICKET-20261023-GE-124g-1-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -121,3 +122,4 @@ notes: |
   cannot be finished before its four siblings, because it asserts a property of
   their configuration surfaces. Build it last within GE-124g, or accept a
   partially red test contract in the interim and record which parts.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

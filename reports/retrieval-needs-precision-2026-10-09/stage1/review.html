@@ -1,0 +1,267 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Retrieval interpretation repair: 10 of 12 contrasts</title><style>body{font:17px system-ui;line-height:1.5;max-width:1080px;margin:40px auto;padding:0 24px;color:#19283e;background:#f6f8fb}section{background:white;padding:24px;border:1px solid #dae2ed;border-radius:12px;margin:24px 0}table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:12px 8px;text-align:left;border-bottom:1px solid #dae2ed;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f1f4f9;padding:16px;font:14px monospace}a{color:#205bb4}.fail{color:#a42323}.pass{color:#176242}.meta{font-size:14px;color:#51617a;overflow-wrap:anywhere}</style></head><body><h1>Interpretation repair: 10 of 12 contrasts pass</h1><p>The revised instructions now select both acceptance criteria and authored test requirements for all three verification questions. Narrower questions stay narrow. Two declaration-related controls still fail the frozen rubric.</p><p><strong>12 responses accepted; 0 Jev calls; 0 database calls.</strong> This step tests interpretation. It does not prove retrieval or a complete answer.</p><p><a href="../plan.json">Frozen plan</a> · <a href="../cases.json">Frozen expectations</a> · <a href="summary.json">Original finite score</a> · <a href="review.json">Independent review</a> · <a href="supervision.json">Fresh-host provenance</a></p><section><h2>All twelve cases</h2><table><thead><tr><th>Case</th><th>Question</th><th>Fields / relationship</th><th>Outcome</th></tr></thead><tbody><tr><td><a href="#IP01">IP01</a></td><td>For KM-500c-2, what must tests demonstrate?</td><td>criteria, test_spec<br><small>relationship: none</small></td><td class="pass">Pass</td></tr><tr><td><a href="#IP02">IP02</a></td><td>For KM-500c-1, what must tests demonstrate?</td><td>criteria, test_spec<br><small>relationship: none</small></td><td class="pass">Pass</td></tr><tr><td><a href="#IP03">IP03</a></td><td>I am writing verification for KM-500a-2. Which required behaviors and prescribed checks must the tests prove?</td><td>criteria, test_spec<br><small>relationship: none</small></td><td class="pass">Pass</td></tr><tr><td><a href="#IP04">IP04</a></td><td>What behavior does KM-500c-2 require?</td><td>criteria<br><small>relationship: none</small></td><td class="pass">Pass</td></tr><tr><td><a href="#IP05">IP05</a></td><td>Show only the acceptance obligations of KM-500c-2; omit its test plan.</td><td>criteria<br><small>relationship: none</small></td><td class="pass">Pass</td></tr><tr><td><a href="#IP06">IP06</a></td><td>Show only the authored test specification for KM-500c-2.</td><td>test_spec<br><small>relationship: none</small></td><td class="pass">Pass</td></tr><tr><td><a href="#IP07">IP07</a></td><td>List only the declared test references on KM-500c-2; do not inspect their implementations or infer outcomes.</td><td>covered_by<br><small>relationship: covered_by</small></td><td class="fail">Fail</td></tr><tr><td><a href="#IP08">IP08</a></td><td>Show the source of one test declared to cover KM-500c-2.</td><td>content<br><small>relationship: covered_by</small></td><td class="pass">Pass</td></tr><tr><td><a href="#IP09">IP09</a></td><td>What are the implementation work status and lifecycle status of KM-500c-2?</td><td>work_status, status<br><small>relationship: none</small></td><td class="pass">Pass</td></tr><tr><td><a href="#IP10">IP10</a></td><td>Return the complete canonical YAML document for KM-500c-2, including all authored fields.</td><td>content<br><small>relationship: none</small></td><td class="pass">Pass</td></tr><tr><td><a href="#IP11">IP11</a></td><td>Did KM-500c-2&#x27;s tests pass on the latest CI run? Cite the run and tested commit.</td><td>covered_by<br><small>relationship: covered_by</small></td><td class="fail">Fail</td></tr><tr><td><a href="#IP12">IP12</a></td><td>What is the implementation work status of KM-500c-2?</td><td>work_status<br><small>relationship: none</small></td><td class="pass">Pass</td></tr></tbody></table></section><section><h2>What remains wrong</h2><p><strong>IP07 — declaration versus traversal:</strong> the host asks for the declaration field and adds a traversal while keeping AC output. A direct declaration list needs no traversal; the alternative linked-test plan needs Test output and complete reference coverage.</p><p><strong>IP11 — unnecessary investigation:</strong> the host correctly says CI execution evidence is unavailable and refuses to treat declarations as proof. It nevertheless adds <code>covered_by</code> as a required field and relationship, outside the frozen minimal plan. The explanation passes manual review; the case still fails minimality. No false passing-test claim was made.</p></section><section id="IP01"><h2>IP01 — Pass</h2><p>For KM-500c-2, what must tests demonstrate?</p><pre>{
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;KM-500c-2&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;criteria&quot;,
+      &quot;test_spec&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: []
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;single_entity&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: []
+}</pre><p>What tests must demonstrate requires both the acceptance behavior and the separately authored verification scenarios, assertions and failure checks for the named criterion.</p><p><a href="IP01/host/response.json">Unchanged blind response</a> · <a href="IP01/result.json">Actual accepted kernel result</a></p></section><section id="IP02"><h2>IP02 — Pass</h2><p>For KM-500c-1, what must tests demonstrate?</p><pre>{
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;KM-500c-1&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;criteria&quot;,
+      &quot;test_spec&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: []
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;single_entity&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: []
+}</pre><p>The question asks what verification must establish for one criterion, requiring its acceptance clauses and authored test specification. Retrieval must establish whether those fields are present.</p><p><a href="IP02/host/response.json">Unchanged blind response</a> · <a href="IP02/result.json">Actual accepted kernel result</a></p></section><section id="IP03"><h2>IP03 — Pass</h2><p>I am writing verification for KM-500a-2. Which required behaviors and prescribed checks must the tests prove?</p><pre>{
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;KM-500a-2&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;criteria&quot;,
+      &quot;test_spec&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: []
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;single_entity&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: []
+}</pre><p>Required behaviors map to criteria; prescribed checks map to test_spec. Both complementary obligations are explicitly requested for the named criterion.</p><p><a href="IP03/host/response.json">Unchanged blind response</a> · <a href="IP03/result.json">Actual accepted kernel result</a></p></section><section id="IP04"><h2>IP04 — Pass</h2><p>What behavior does KM-500c-2 require?</p><pre>{
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;KM-500c-2&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;criteria&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: []
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;single_entity&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: []
+}</pre><p>The request concerns only the required behavior of one criterion, which is expressed by its acceptance clauses.</p><p><a href="IP04/host/response.json">Unchanged blind response</a> · <a href="IP04/result.json">Actual accepted kernel result</a></p></section><section id="IP05"><h2>IP05 — Pass</h2><p>Show only the acceptance obligations of KM-500c-2; omit its test plan.</p><pre>{
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;KM-500c-2&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;criteria&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: []
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;single_entity&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: []
+}</pre><p>Only acceptance obligations are requested, and the authored test plan is explicitly excluded.</p><p><a href="IP05/host/response.json">Unchanged blind response</a> · <a href="IP05/result.json">Actual accepted kernel result</a></p></section><section id="IP06"><h2>IP06 — Pass</h2><p>Show only the authored test specification for KM-500c-2.</p><pre>{
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;KM-500c-2&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;test_spec&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: []
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;single_entity&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: []
+}</pre><p>The request is restricted to the authored verification specification on the named criterion.</p><p><a href="IP06/host/response.json">Unchanged blind response</a> · <a href="IP06/result.json">Actual accepted kernel result</a></p></section><section id="IP07"><h2>IP07 — Fail</h2><p>List only the declared test references on KM-500c-2; do not inspect their implementations or infer outcomes.</p><pre>{
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;KM-500c-2&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;covered_by&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: [
+      &quot;covered_by&quot;
+    ]
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;single_entity&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: []
+}</pre><p>The requested facts are the complete declared test references on one criterion. The coverage relationship is requested, but test source and execution outcomes are excluded.</p><p><a href="IP07/host/response.json">Unchanged blind response</a> · <a href="IP07/result.json">Actual accepted kernel result</a></p></section><section id="IP08"><h2>IP08 — Pass</h2><p>Show the source of one test declared to cover KM-500c-2.</p><pre>{
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;test&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;KM-500c-2&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;content&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;code&quot;
+    ],
+    &quot;relationships&quot;: [
+      &quot;covered_by&quot;
+    ]
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;examples&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: []
+}</pre><p>The question asks for the source text of one example test reached through the named criterion&#x27;s declared coverage relationship. It does not request a whole source file or every covering test. The supplied source scope remains unchanged.</p><p><a href="IP08/host/response.json">Unchanged blind response</a> · <a href="IP08/result.json">Actual accepted kernel result</a></p></section><section id="IP09"><h2>IP09 — Pass</h2><p>What are the implementation work status and lifecycle status of KM-500c-2?</p><pre>{
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;KM-500c-2&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;work_status&quot;,
+      &quot;status&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: []
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;single_entity&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: []
+}</pre><p>Implementation progress and lifecycle status are explicitly requested as separate facts for the named criterion.</p><p><a href="IP09/host/response.json">Unchanged blind response</a> · <a href="IP09/result.json">Actual accepted kernel result</a></p></section><section id="IP10"><h2>IP10 — Pass</h2><p>Return the complete canonical YAML document for KM-500c-2, including all authored fields.</p><pre>{
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;KM-500c-2&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;content&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: []
+  },
+  &quot;detail_mode&quot;: &quot;full_document&quot;,
+  &quot;completeness&quot;: &quot;single_entity&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: []
+}</pre><p>The complete canonical YAML document, including all authored fields, is requested. Full-document mode preserves that requirement; a bounded content excerpt alone would not satisfy it.</p><p><a href="IP10/host/response.json">Unchanged blind response</a> · <a href="IP10/result.json">Actual accepted kernel result</a></p></section><section id="IP11"><h2>IP11 — Fail</h2><p>Did KM-500c-2&#x27;s tests pass on the latest CI run? Cite the run and tested commit.</p><pre>{
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;KM-500c-2&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;covered_by&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: [
+      &quot;covered_by&quot;
+    ]
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;single_entity&quot;,
+  &quot;status&quot;: &quot;needs_resolution&quot;,
+  &quot;scope_resolution&quot;: &quot;unknown&quot;,
+  &quot;unresolved&quot;: [
+    &quot;needs_outside_catalog&quot;,
+    &quot;The catalog cannot represent latest CI execution results, the CI run identity or the commit actually tested. Declared test references can identify relevant tests but cannot establish whether they passed. The supplied scope provides no confirmed CI execution source.&quot;,
+    &quot;scope_resolution&quot;
+  ]
+}</pre><p>The named criterion and its declared tests can be identified using offered meanings, but the requested outcome and run provenance require information outside the catalog. Source revision, work status, lifecycle status and authored test plans cannot substitute for execution evidence.</p><p><a href="IP11/host/response.json">Unchanged blind response</a> · <a href="IP11/result.json">Actual accepted kernel result</a></p></section><section id="IP12"><h2>IP12 — Pass</h2><p>What is the implementation work status of KM-500c-2?</p><pre>{
+  &quot;selections&quot;: {
+    &quot;entity_types&quot;: [
+      &quot;ac&quot;
+    ],
+    &quot;target_ids&quot;: [
+      &quot;KM-500c-2&quot;
+    ],
+    &quot;required_fields&quot;: [
+      &quot;work_status&quot;
+    ],
+    &quot;document_types&quot;: [
+      &quot;ac_yaml&quot;
+    ],
+    &quot;relationships&quot;: []
+  },
+  &quot;detail_mode&quot;: &quot;fields&quot;,
+  &quot;completeness&quot;: &quot;single_entity&quot;,
+  &quot;status&quot;: &quot;decided&quot;,
+  &quot;scope_resolution&quot;: &quot;sufficient&quot;,
+  &quot;unresolved&quot;: []
+}</pre><p>Only implementation work status is requested. The earlier discussion of tests does not expand the current question to acceptance or verification obligations.</p><p><a href="IP12/host/response.json">Unchanged blind response</a> · <a href="IP12/result.json">Actual accepted kernel result</a></p></section><section><h2>Evidence limits</h2><p>The fresh host saw actual packets and inputs only, with no gold, old outcomes or expected field lists. Model identity and host token usage are unknown. All responses were submitted once; rejected attempts would have remained failures. No classifier policy or gold was changed.</p><p>Full-document and exhaustive linked-reference meanings are not evidence that their current execution paths work. The unchanged four-case Aura retest remains a separate stage after review.</p><p class="meta">Runtime base: 2a8ebc87ce937a0a2fec65ab26220f79a72e4859<br>Actual working runtime/harness fingerprint: 3e88bc975c00e1d9e0591cece8f85834b43f4bc4ab8edcf95120e703cae4eb4e</p></section></body></html>

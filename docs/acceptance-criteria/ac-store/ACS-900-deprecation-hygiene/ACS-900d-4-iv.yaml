@@ -1,0 +1,130 @@
+id: ACS-900d-4-iv
+components:
+  - ac_store
+  - commit_guardian
+readiness: approved
+priority: high
+title: "A retired child neither blocks nor proves its parent's done claim"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: done
+criteria: |
+  Given a commit stages a parent L1 record P with work_status "done" and
+    covered_by: [P-1, P-2, P-3],
+    And P-1 and P-2 are active, work_status "done", each with a passing test
+    tagged as covering it,
+    And P-3 is retired (status "superseded_by", superseded_by: [AR-400c-1],
+    AR-400c-1 exists) with work_status "todo",
+  When the done-proof gate runs on that commit,
+  Then the gate does not refuse P on account of P-3 being unfinished,
+  And P is judged proven from P-1 and P-2 alone;
+  Given instead P-1 and P-2 are both retired and P-3 is the only active child,
+    with P-3 at work_status "todo",
+  When the done-proof gate runs on that commit,
+  Then the gate refuses P as unproven, naming P-3 as the unfinished child;
+  Given instead every child of P is retired and P is active at
+    work_status "done" with no test tagged as covering P,
+  When the done-proof gate runs on that commit,
+  Then the gate refuses P for its missing covering test, because retired
+    children supply no proof for a live parent.
+depends_on: [ACS-900d-4]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Both composite rollup paths must use the shared retired predicate from ACS-900d-4 and must reach the same verdict on the same tree. These are the pre-commit path, _done_proof_composite._unproven_composite_children (it currently calls is_superseded_ac), and the CI path, done_proof._resolve_all_child_ids (it currently calls is_superseded_ac on a _build_ac_status_map entry)."
+  - "A retired child adds nothing to the verdict in either direction. Its work_status is never read, so a todo retired child does not block the parent. Its covers tag and done status are never counted as proof, so a done retired child does not prove the parent."
+  - "When every AC-id child of a live composite is retired (zero live children), the composite falls back to the leaf rule. It needs its own '# covers: <parent-id>' tag or a valid covers-tag waiver (is_covers_tag_waived: test_required false plus a non-empty test_rationale) (user decision 2). It is never proven vacuously. The current code returns the parent id as unproven unconditionally when live_children == 0. That must change to the leaf rule, so a parent WITH its own covering test passes and one without it is refused for the missing covers tag."
+  - "A child whose supersession is structurally invalid (missing successor, empty list, self-reference, per -ii and -iii) is NOT retired and counts as a live child. This keeps the KI-ACS-016 exemption from becoming a phantom-done route."
+  - "The refusal for an unproven composite must name each unfinished LIVE child by id and must never name a retired child. The reason strings already used by check_done_proof for unproven composites stay unchanged."
+  - "The cycle guard (_seen) and the fail-closed behaviour for unresolvable children (ac_root None, or child file missing, reported as unproven) must be kept."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900d-4
+  contract: "The shared pure predicate, applied to each resolved child record (pre-commit) or _build_ac_status_map entry (CI) while a composite's covered_by children are walked"
+test_spec:
+  - name: test_retired_todo_child_does_not_block_parent_on_both_paths
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "With P-1 and P-2 live, done and covered, and P-3 retired at todo, the done parent P is not refused by check_staged_done_proofs or by the CI path."
+    covers: [ACS-900d-4-iv]
+  - name: test_parent_proven_from_live_children_only
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "_unproven_composite_children and _resolve_all_child_ids both leave P-3 out, and both judge P proven from P-1 and P-2."
+    covers: [ACS-900d-4-iv]
+  - name: test_only_live_child_unfinished_refused_and_named
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "With P-1 and P-2 retired and P-3 live at todo, P is refused as unproven, the refusal names P-3, and it does not name P-1 or P-2."
+    covers: [ACS-900d-4-iv]
+  - name: test_all_children_retired_parent_without_own_cover_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "With every child retired (some at done, each with covers tags) and the live done parent P having no covers tag of its own, P is refused for the missing covering test."
+    must_catch:
+      - "a composite with zero live children is treated as vacuously proven"
+      - "the done and covered status of a retired child is counted as proof for the parent"
+    covers: [ACS-900d-4-iv]
+  - name: test_all_children_retired_parent_with_own_cover_passes
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "With every child retired and a '# covers: P' test present, P passes on both paths. This is user decision 2: the parent needs its own covering test, and with one it is proven."
+    must_catch:
+      - "a composite with zero live children is refused unconditionally, which is the current behaviour"
+    covers: [ACS-900d-4-iv]
+  - name: test_structurally_invalid_retired_child_counts_as_live
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "A child with status superseded_by and a missing successor id counts as a live child, so its todo status refuses the parent."
+    must_catch:
+      - "the composite walk keeps the old 'any non-empty superseded_by' test"
+    covers: [ACS-900d-4-iv]
+test_rationale: "Test file: unit_tests/commit_guardian/test_acs_900d_4_iv_retired_child_composite.py. There are two composite paths, pre-commit and CI, and they have diverged before (KI-ACS-016), so every scenario asserts both. The zero-live-children pair (refused without its own tag, passes with it) pins user decision 2 against both wrong versions: vacuous proof, and the current unconditional refusal."
+origin_agent: BrainCandy
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The non-obvious interaction. Exempting a retired record only from its OWN
+  done-proof leaves its live parent stuck: a composite marked done would be
+  refused for a child whose behaviour was deliberately removed. The reverse
+  hazard is just as real — a retired child left at "done" must not be counted
+  as proof that a live parent is done. Both directions are pinned here.
+
+  BA assumption for the user to confirm: a live parent whose ONLY children are
+  retired falls back to needing its own covering test (third scenario), rather
+  than being vacuously proven by zero live children.
+
+  IT-PO enrichment (2026-10-15): the user CONFIRMED the BA assumption
+  (decision 2). A live parent with only retired children needs its own
+  covering test. A partial exemption already exists (KI-ACS-016,
+  is_superseded_ac, on both paths), but today a composite with zero live
+  children is refused unconditionally, even when it has its own covers tag.
+  This AC changes that to the leaf rule. Call sites:
+  _done_proof_composite._unproven_composite_children (pre-commit) and
+  done_proof._resolve_all_child_ids (CI).
+change_target: code
+risk_surface: contract_boundary

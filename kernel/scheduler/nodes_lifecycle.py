@@ -128,7 +128,7 @@ async def intake(state: KernelState, runtime: Runtime[KernelRuntime]) -> dict[st
     return {"task": task, "root_task_id": root_task_id, "permissions": list(task_input.permissions),
             "requests": {request.id: request}, "work_items": {root.id: root},
             "evidence": evidence, "budgets": Budgets(work_items_created=1), "state_revision": 0,
-            "status": RunStatus.RUNNING, "agenda": [], "interaction_queue": [],
+            "status": RunStatus.RUNNING, "agenda": [], "interaction_queue": [], "splits": {},
             "halt_reason": None, "events_flushed": 0, "events": events,
             "trace": state.get("trace") or TraceState(trace_id=deterministic_trace_id(run_id))}
 
@@ -307,4 +307,5 @@ __all__ = ["IntakeError", "decide_outcome", "finalize", "intake", "render_report
 # - 2026-09-30 22:30 [python-coder]: A root that completed but fails the completion contract
 #   is reported `partial` (with the problems as limitations) rather than `completed`; the work
 #   is useful but the contract is not met. (#KernelBootstrapV0/P4)
+# - 2026-10-06 18:00 [python-coder]: Handle the split parent state at run lifecycle points. (#TICKET-20261006-DK-400a-1)
 # ====================================================================

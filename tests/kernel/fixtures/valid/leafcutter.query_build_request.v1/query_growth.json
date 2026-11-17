@@ -1,0 +1,11 @@
+{
+  "question": "Find component tests",
+  "repository_id": "repo",
+  "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "generation_id": "g1",
+  "component_ids": [
+    "component"
+  ],
+  "need_id": "need.tests",
+  "attempt_id": "one"
+}

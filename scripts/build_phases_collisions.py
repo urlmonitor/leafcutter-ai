@@ -28,6 +28,7 @@ ARCHITECTURE: One public function, ``detect_deploy_collisions`` — a pure
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -220,6 +221,55 @@ def _compute_phase_mappings(
     ))
 
     return mappings
+
+
+def _check_deploy_collision_guard(output_root: Path, config: dict) -> int:
+    """Preflight guard: abort the build when deploy-path collisions are detected (BP-100m).
+
+    Enumerates (source_template, resolved_target) pairs for all file-based
+    artifact phases via ``_compute_phase_mappings``, then calls
+    ``detect_deploy_collisions`` to find any target path claimed by two or
+    more distinct source templates.  Runs in both real and dry-run modes
+    because the collision is a build-graph error, not a write-time concern.
+
+    Detection is path-keyed and content-agnostic (BP-100m-1-i): byte-identical
+    source templates still collide.  Cross-platform fan-out (same source →
+    different target paths) is never flagged (BP-100m-2-i).  All colliding
+    sources and the shared target are named in the error output (BP-100m-2).
+
+    Moved here verbatim from build.py (AR-300b: build.py is over the
+    file-size ratchet and may not grow). The two helpers are imported from
+    ``build_phases`` at call time -- its ``_compute_phase_mappings`` is the
+    wrapper that binds its own ``TEMPLATES_DIR`` -- exactly as build.py did.
+
+    Args:
+        output_root: Absolute path to the consolidated output directory
+            (e.g. ``<target>/.leafcutter``).
+        config: Build configuration dict used to resolve active platforms.
+
+    Returns:
+        0 if no collisions detected (build may proceed).
+        1 if one or more collisions found (build must abort).
+    """
+    from build_phases import _compute_phase_mappings as phase_mappings_for
+    from build_phases import detect_deploy_collisions as detect
+
+    collisions = detect(phase_mappings_for(output_root, config))
+    if not collisions:
+        return 0
+
+    print(
+        "[COLLISION GUARD] Build aborted: deploy-path collision(s) detected.",
+        file=sys.stderr,
+    )
+    for c in collisions:
+        sources_str = "\n  ".join(str(s) for s in c["sources"])
+        print(
+            f"[COLLISION GUARD]  target:  {c['target']}\n"
+            f"[COLLISION GUARD]  sources:\n  {sources_str}",
+            file=sys.stderr,
+        )
+    return 1
 
 
 # ===========================================================================

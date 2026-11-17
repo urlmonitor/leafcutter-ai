@@ -1,10 +1,16 @@
 ---
-title: "How to Verify Pre-commit Protection is Active in a Worktree"
-description: "Step-by-step guide to running the verify_precommit_active.py probe and interpreting its four checks to confirm that pre-commit hooks will fire in a git worktree."
+title: How to Verify Pre-commit Protection is Active in a Worktree
+description: Step-by-step guide to running the verify_precommit_active.py probe and
+  interpreting its four checks to confirm that pre-commit hooks will fire in a git
+  worktree.
 intent: do
+components:
+- worktree_manager
 last_updated: 2026-07-06
+created: '2026-10-14'
+type: tutorial
+status: active
 ---
-
 # How to Verify Pre-commit Protection is Active in a Worktree
 
 ## When to use this guide
@@ -21,7 +27,7 @@ The probe does not merely check whether the hook binary is installed or whether 
 
 ### The silent-skip failure mode
 
-A fresh worktree created from `origin/main` has neither a `.leafcutter` symlink nor a direct `.pre-commit-config.yaml` file. The `.leafcutter` symlink that provides the config is only created by `install_shims` in the main working tree; a fresh worktree has no equivalent.
+A fresh worktree that does not come from the workspace maker (see [get-a-workspace](get-a-workspace.md)) (which installs its own tools) has neither a `.leafcutter` symlink nor a direct `.pre-commit-config.yaml` file. The `.leafcutter` symlink that provides the config is only created by `install_shims` in the main working tree; a fresh worktree has no equivalent.
 
 When `git commit` runs in this state, the pre-commit framework checks for a config file before running any hooks. Finding none, it exits early — this is the `PRE_COMMIT_ALLOW_NO_CONFIG=1` behavior. Zero hooks fire. Code is committed unchecked. The commit appears to succeed normally.
 

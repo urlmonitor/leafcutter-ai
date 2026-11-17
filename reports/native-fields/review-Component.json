@@ -1,0 +1,96 @@
+{
+  "review_version": 1,
+  "kind": "Component",
+  "reviewed_on": "2026-10-02",
+  "status": "reviewed_ready_for_coder",
+  "scope": "Authoritative component registry entries; component architecture documents are separately authored documents rather than extra component owner identities.",
+  "authorities": [
+    {"path": "docs/components.json#/components", "role": "Canonical registry object; its keys are the graph-membership identity vocabulary."},
+    {"path": "templates/scripts/commit_guardian/check_components_integrity.py", "symbols": ["validate_component_minimum_schema", "validate_agent_affinity", "validate_exposed_interfaces", "validate_depends_on", "validate_new_component", "main"], "role": "Authoritative programmatic field validators. Commit-time enforcement only checks newly added component keys; legacy omissions are accepted."},
+    {"path": "scripts/check_component_vocab.py", "role": "Graph components list values must be exact registry keys."},
+    {"path": "docs/how-to/declare-component-membership.md", "role": "Explains graph components list versus AC scalar component namespace. Some examples and registry counts are historical; use the current validator and registry for exact values."},
+    {"path": "scripts/add_component.py", "role": "Authoring CLI; duplicates the minimum validator but omits full agent/interface enforcement. It is not stronger schema authority than the integrity guard."},
+    {"path": "knowledge/projection/canonical_loader.py#_entity", "role": "Existing mapper sets registry provenance when a graph component ID matches a registry key, but currently discards all registry entry fields."},
+    {"path": "templates/scripts/commit_guardian/commit_guardian.json#/doc_frontmatter", "role": "Separate architecture-document frontmatter requirements."}
+  ],
+  "record_identity": {
+    "source_path": "docs/components.json",
+    "selection": "Iterate every object entry under /components once, including registered components with no incoming membership edges.",
+    "native_id": "Exact components object key, with no snake_case/kebab-case rewriting.",
+    "locator": "/components/<registry-key escaped as RFC 6901 token>",
+    "metadata": "The complete original entry object without field filtering, defaults, field renames or injecting derived values.",
+    "title": "Authored name if it is a string, otherwise an empty presentation title; never replace metadata.name.",
+    "description": "Authored description if it is a string, otherwise an empty presentation description; never invent metadata.description.",
+    "derived": "Any classification/provenance facts belong outside metadata. Registry identity and source locator do not need to be copied into authored metadata.",
+    "aliases": [],
+    "identity_rules": [
+      "The id field is required by the schema and must equal the registry key, but the key selects identity; a mismatch is a source validation error, not a reason to overwrite authored id.",
+      "A detail_ref document stem is not an alias declaration. Do not infer aliases by converting underscore to hyphen.",
+      "The AC scalar component namespace/prefix uses a different registry. Do not turn those namespace values into aliases of Component identities.",
+      "An architecture document may describe several components; a document path is its own identity and must not be guessed into a single component owner."
+    ]
+  },
+  "fields": [
+    {"name": "id", "type": "string", "required": true, "constraints": "Non-empty, ^[a-z][a-z0-9_]*$, equals registry key.", "observed_present": 46},
+    {"name": "name", "type": "string", "required": true, "constraints": "Non-empty human-readable component name.", "observed_present": 46},
+    {"name": "type", "type": "string", "required": true, "enum": ["infrastructure", "utility", "orchestration", "coding", "review", "documentation", "analysis"], "observed_present": 46},
+    {"name": "description", "type": "string", "required": true, "constraints": "At least 10 characters.", "observed_present": 46},
+    {"name": "status", "type": "string", "required": true, "enum": ["active", "reviewed", "planned"], "observed_present": 46},
+    {"name": "primary_code", "type": "array<string>", "required": true, "constraints": "Non-empty list of non-empty path strings. Preserve source order and values; no existence inference.", "observed_present": 46, "observed_empty": 1, "legacy_note": "infrastructure currently has []; report source debt separately, do not repair it during extraction."},
+    {"name": "detail_ref", "type": "string|null", "required": false, "conditional_required": "New-component commit admission additionally requires a non-empty path to an existing document carrying flight_level.", "constraints": "Minimum validator allows absent or null; a non-null value must be a non-empty existing path.", "observed_present": 46, "observed_null": 18, "observed_string": 28},
+    {"name": "agent_affinity", "type": "array", "required": true, "constraints": "Integrity validator requires an array, allows [], does not validate element shape or references. Do not assume list<string> from its name.", "observed_present": 10, "observed_absent": 36, "observed_nonempty": 0},
+    {"name": "exposed_interfaces", "type": "array<object>", "required": true, "constraints": "Array may be empty. Each object requires truthy name/type/path/shape; validator explicitly checks only type enum beyond field presence/truthiness.", "observed_present": 11, "observed_absent": 35, "observed_nonempty": 3, "element_fields": [{"name": "name", "required": true, "observed_type": "string"}, {"name": "type", "required": true, "type": "string", "enum": ["file_contract", "json_schema", "function_signature", "cli_command", "hook_protocol", "event", "data_shape"]}, {"name": "path", "required": true, "observed_type": "string"}, {"name": "shape", "required": true, "observed_type": "string"}], "additional_fields": "No additionalProperties restriction is enforced; preserve future nested/scalar fields."},
+    {"name": "depends_on", "type": "array<string>", "required": false, "constraints": "Intended list of existing registry IDs; rejects self-reference and unknown IDs. Current validator returns no error for absent, falsey or non-list values; preserve actual authored values and report validation separately.", "observed_present": 2, "observed_absent": 44}
+  ],
+  "unknown_fields": "Preserve all authored future/legacy fields, including nested objects, arrays, booleans and numbers. Current registry has exactly the 10 field names above; the validator is not an allowlist.",
+  "null_empty_absent_semantics": [
+    "Absent means not authored. Do not fill missing agent_affinity/exposed_interfaces with [] just because newer records require them.",
+    "Explicit null detail_ref is distinct from an absent detail_ref and from an empty string; Neo4j cannot store null as an ordinary property, so preserve it in the lossless payload plus typed shape metadata.",
+    "[] means an explicitly empty array. Preserve array shape even when Neo4j cannot establish a list element type.",
+    "{} means an explicitly empty object. Preserve its shape and pointer even if it has no scalar leaves.",
+    "Keep boolean, integer, floating-point, string and collection types; do not string-cast to bypass Neo4j limitations.",
+    "Do not sort, deduplicate, infer or rewrite lists. Object-array indexes are needed to retain which interface name/type/path/shape belong together."
+  ],
+  "native_property_exposure": {
+    "root_fields": "Expose every authored scalar and Neo4j-compatible homogeneous scalar array using its authored field name, subject to the coordinator's explicit collision policy with storage metadata.",
+    "nested_fields": "Expose leaves under escaped JSON Pointer property names, not parallel collapsed arrays. For example /exposed_interfaces/0/name, /exposed_interfaces/0/type, /exposed_interfaces/0/path and /exposed_interfaces/0/shape retain correlation.",
+    "pointer_escaping": "Escape ~ as ~0 and / as ~1 in each object token; array positions remain decimal indexes.",
+    "shape_metadata": "Record container type, array length, explicit nulls and empty containers at pointers, using a reserved projection namespace separate from authored properties.",
+    "round_trip": "Preserve complete source entry in payload and verify flattened properties plus shape metadata round-trip without losing authored data.",
+    "relationships": "Additional DEPENDS_ON/detail_ref/primary_code/agent_affinity relationships are optional projection features; they never replace or erase the original fields. Do not infer target record type from a path or undocumented affinity value."
+  },
+  "component_document_boundary": {
+    "recommendation": "Emit registry entries as Component. Admit docs/architecture/components/**/*.md as independently path-identified Document records in coordination with the Document coder; preserve their whole frontmatter and body with explicit component membership and registry detail_ref references. If routing retains them under a Component-specialization temporarily, mark their non-registry origin and keep separate identities; never overlay document fields on registry metadata.",
+    "reason": "Registry type describes component responsibility (such as orchestration); document type describes document category (such as reference). name versus title and status also belong to separate records and cannot overwrite one another.",
+    "document_required_fields": ["title", "type", "status", "created", "last_updated", "components", "flight_level"],
+    "document_observed_fields": ["title", "description", "flight_level", "status", "type", "created", "last_updated", "components", "related_docs", "diagram_type", "parent", "related_diagrams", "children", "root", "source_ticket", "related_code", "tags", "related_adrs"],
+    "document_types": "Most frontmatter values are strings or string arrays; created/last_updated parse as authored YAML dates in 33 documents and quoted strings in one. root is boolean in two files; source_ticket is explicit null in one and string in one. Preserve these distinctions.",
+    "counts": {"registry_entries": 46, "architecture_documents": 34, "non_null_detail_refs": 28, "missing_detail_ref_targets": 0, "document_paths_not_referenced_by_registry": 8, "detail_ref_stems_different_from_registry_id": 23},
+    "unreferenced_document_paths": ["docs/architecture/components/build-epic-workflow-dispatch.md", "docs/architecture/components/build-ticket-workflow-dispatch.md", "docs/architecture/components/code-review.md", "docs/architecture/components/interactive-pause-resume-substrate.md", "docs/architecture/components/knowledge-retrieval.md", "docs/architecture/components/phantom-done-prevention.md", "docs/architecture/components/supervisor-spawn-topology.md", "docs/architecture/components/worktree-quality-gate-guard.md"],
+    "raw_extraction": "Use safe frontmatter parsing and preserve body independently. Resolve detail_ref paths inside the supplied immutable snapshot; reject path traversal. Source file and locator provenance must identify the registry entry versus document frontmatter separately."
+  },
+  "coder_contract": {
+    "module": "knowledge/native_types/component.py",
+    "signature": "extract(root: pathlib.Path) -> list[NativeRecord]",
+    "shared_type": "knowledge.native_types.common.NativeRecord(kind, native_id, source_path, metadata, locator, title, description, derived)",
+    "algorithm": [
+      "Read docs/components.json via common.read_json. An absent optional source file may yield []; malformed JSON or a malformed components envelope must fail explicitly rather than silently dropping records.",
+      "Require the components value to be a mapping and each entry to be a mapping. Iterate deterministically while leaving entry property and array values intact.",
+      "Create one NativeRecord(kind='Component', native_id=key, source_path='docs/components.json', locator='/components/'+escaped_key, metadata=entry) per entry.",
+      "Set title and description only from authored string name/description; do not add fallback fields to metadata.",
+      "Do not invoke admission validators to rewrite or default legacy records. Expose source debt as diagnostics if the integration requires it.",
+      "Coordinate component-document routing separately so every original frontmatter field is exposed exactly once and no fake component hub owner is manufactured."
+    ],
+    "acceptance_checks": [
+      "46 records in the inspected checkout, including the 18 with explicit null detail_ref and entries with no incoming membership.",
+      "Each record metadata equals its exact registry entry; metadata key presence and primitive/container types are unchanged.",
+      "finalize exposes id, name, type, description, status, primary_code, detail_ref, agent_affinity=[] and exposed_interfaces=[].",
+      "ac_store retains explicit detail_ref=null while missing affinity/interface fields stay absent.",
+      "decision_kernel retains each exposed_interfaces object with its four correlated fields and original ordering.",
+      "Unknown future fields, empty objects, mixed/nested lists and pointer-escaping keys survive raw extraction and downstream native-property round-trip.",
+      "agent_registry remains the Component native_id even though detail_ref stem is agent-registry.",
+      "No document frontmatter type=reference overwrites registry type=orchestration for finalize.",
+      "Malformed registry shapes and traversal refs receive explicit errors, not skipped records or reads outside root."
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 id: GE-117a-1-i
-readiness: draft
+readiness: approved
 priority: medium
 title: "A module docstring naming an unregistered component fails as an invalid declaration"
 component: guardrail-engine
@@ -28,20 +28,57 @@ doc_links:
   - path: "docs/components.json"
     relationship: related
     status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
 it_requirements:
-  - "Return verdict: 'invalid' (distinct from 'missing') when the declared component name does not resolve to a registered id in docs/components.json; set declared_value to the unresolved name and resolved: false so GE-117e can suggest the closest registered id on invalid."
-  - "Validity check reuses the same components.json loader as GE-117a-1 / check_components_integrity.py; no separate resolution path."
+  - "Return verdict: 'invalid' (distinct from 'missing') when the declared component name does not resolve to a registered id in docs/components.json; set declared_value to the unresolved name exactly as written and resolved: false so GE-117e can suggest the closest registered id on invalid."
+  - "Validity check reuses the same components.json parsing as GE-117a-1; no separate resolution path."
   - "Same in-process ast parse over the staged blob as GE-117a-1; no MCP."
-  - "Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+  - "Edit only templates/scripts/commit_guardian/ (ADR-001); verify via the deployed hook after a build.py round-trip."
 delivers_to: null
 expects_from:
   ac_id: GE-117a-1
   contract: "The per-file module-component verdict object whose invalid branch this edge case exercises"
+test_spec:
+  - name: test_ge_117a_1_i_unregistered_component_name_is_an_invalid_declaration
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a temp git repo whose docs/components.json does not contain 'no_such_component', stage a .py whose module docstring names it: the module-component verdict is 'invalid', resolved false."
+  - name: test_ge_117a_1_i_invalid_verdict_records_the_declared_name_verbatim
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The invalid verdict's declared_value equals the unresolved name exactly as written in the docstring (same case, no normalisation), so the block report and autofix can quote it."
+  - name: test_ge_117a_1_i_wrong_name_and_no_name_produce_different_verdicts
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Stage two files in one commit, one naming an unregistered component and one naming none: the first is 'invalid', the second 'missing', and the two verdicts are not equal."
+    must_catch:
+      - "collapses an unresolved component name into the missing-declaration verdict"
+      - "drops declared_value (sets it to null) on the invalid branch"
+test_rationale: |
+  The criteria's load-bearing clause is that a wrong name is not the same as no name: GE-117e
+  acts differently on each, offering the closest registered id for one and prompting for any
+  id for the other. A test that only checks 'not satisfied' passes on the most likely wrong
+  version, which collapses both into 'missing'. So the discrimination test stages both cases
+  in the same commit and asserts that their verdicts differ. The verbatim declared_value test
+  exists because the block report must quote what the developer actually wrote.
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Added change_target, declared_files, test_spec and test_rationale; corrected the source path to templates/scripts/commit_guardian/ (ADR-001). criteria untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []

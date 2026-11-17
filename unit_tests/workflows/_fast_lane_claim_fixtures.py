@@ -87,3 +87,14 @@ def claim_declined(reason: str, step: str = "claim-connected") -> dict[str, Any]
         "agent": "command-step-runner",
         "reason": reason,
     }
+
+
+def wrong_version_passing() -> dict:
+    """Passing replies for the fast lane's wrong-version steps (TQ-500g-1-v).
+
+    Re-exported here so over-limit test modules that already import this module
+    can stub the steps without a new import line.
+    """
+    from workflows._tq500g1v_fixtures import wrong_version_passing as _passing  # noqa: PLC0415
+
+    return _passing()

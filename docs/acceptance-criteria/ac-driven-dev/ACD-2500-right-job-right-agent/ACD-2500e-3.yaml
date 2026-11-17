@@ -10,7 +10,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a batch of 3 business-analyst requirements (one code, one prompt-only, one
     documentation) and one of them declares a pattern reference with bindings,
@@ -44,6 +44,7 @@ expects_from:
   ac_id: ACD-2500e-2
   contract: Reduced it-po.md instructions.
 test_required: false
+test_rationale: "Behaviour of a live LLM run, which no unit test can reproduce; proved operationally instead (ticket 44): the real it-po prompt was run on a scratch BA-shaped store and a deterministic verifier plus the requirement rule check confirmed the outcome, with the output recorded in the ticket."
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by:
@@ -52,9 +53,33 @@ amended_by:
   by: it-po
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/44_TICKET-20261012-ACD-2500e-3.md
 change_target: prompt
 risk_surface: internal
 notes: |
   Output-level proof for ACD-2500e-2, which alone is a prose-presence claim. Keeps
   TKT-300a-1, TKT-300a-4 and ACS-500c-2 visibly true after the shrink.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: author
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Request
+    source: real
+    asof: '2026-10-23'
+  - flow: leafcutter/how-acs-are-built
+    node: itpo
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Ticket
+    source: real
+    asof: '2026-10-23'

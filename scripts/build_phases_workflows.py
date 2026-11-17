@@ -86,6 +86,62 @@ def _emit_workflow_variant(raw: bytes, engine: str) -> bytes:
     return raw
 
 
+def _inline_shared_blocks(text: str, name: str, src_dir: Path) -> str:
+    """Fill every empty shared-block marker pair of a template from ``_shared/``.
+
+    BO-4500b-1 (generalising BO-4300c-3): each block's single tracked source is
+    copied between its markers at build time (E2 bodies have no ``require``,
+    ADR-030). The block and consumer sets are derived, never listed. The logic
+    is in build_shared_blocks.py; this wrapper supplies the package root. Runs
+    before config injection.
+    """
+    import build_phases as _bp
+    from build_shared_blocks import inline_shared_blocks
+
+    return inline_shared_blocks(text, name, src_dir, _bp.PACKAGE_ROOT)
+
+
+# Kept under its BO-4300c-3 name for existing callers.
+_inline_workspace_answer = _inline_shared_blocks
+
+
+def _workflow_source_bytes(js_file: Path, src_dir: Path) -> bytes:
+    """Return a workflow template's bytes with its shared-block pairs filled.
+
+    The one place the build and the output-mappings manifest agree on the
+    pre-variant, pre-injection content of a workflow, so the recorded
+    ``expected_output_hash`` predicts exactly what ``build_workflow_scripts``
+    writes (BO-4300c-3). A template without markers is returned unchanged.
+    """
+    import build_phases as _bp
+    from build_shared_blocks import fill_template_bytes
+
+    return fill_template_bytes(js_file.read_bytes(), js_file.name, src_dir, _bp.PACKAGE_ROOT)
+
+
+def _inline_all_workflow_sources(src_dir: Path, config: dict[str, Any]) -> dict[str, bytes]:
+    """Return ``{filename: bytes}`` for every top-level workflow template.
+
+    One validation pass first checks every route template and every ``_shared``
+    block source (unknown, empty, unused or stale-declared blocks, hand-filled,
+    nested, overlapping or unpaired markers, unresolvable ``{{config.*}}``
+    placeholders in block text) and collects all problems. If any exist it raises
+    ``SharedBlockError`` (a ``ValueError``) whose text lists each problem with
+    route path, 1-based line and block name, and nothing is filled or written.
+    Otherwise each entry has all of its shared-block marker pairs filled.
+    """
+    import build_phases as _bp
+    from build_shared_validation import validate_or_fail
+
+    # BO-4500b-1-i..v: validate every template and source, collecting all failures,
+    # before any route is filled or written.
+    validate_or_fail(src_dir, _bp.PACKAGE_ROOT, config)
+    return {
+        js_file.name: _workflow_source_bytes(js_file, src_dir)
+        for js_file in sorted(src_dir.glob("*.js"))
+    }
+
+
 def build_workflow_scripts(target_root: Path, config: dict[str, Any],
                            dry_run: bool, force: bool) -> int:
     """Copy Claude Code Workflow JS scripts to ``<output_root>/workflows/``.
@@ -202,6 +258,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
     #   accidentally substituted. (#BP-900g-6)
     """
     import os
+    import re
     import subprocess
 
     import build_phases as _bp
@@ -216,16 +273,13 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
     enabled = workflows_config.get("enabled", False) if isinstance(workflows_config, dict) else False
     _raw_engine = workflows_config.get("engine", "auto") if isinstance(workflows_config, dict) else "auto"
     # Resolve "auto" → "e2" (the deterministic E2 top-level-body engine).
-    # Engine selection is purely config-driven; the version check below is a
-    # floor gate only and must NOT influence which engine is selected (ADR-030).
+    # Engine selection is config-driven; the version floor gate below must NOT influence it (ADR-030).
     engine = "e2" if _raw_engine == "auto" else _raw_engine
     if not enabled:
         print("Workflow scripts: skipped (not enabled in skills_config.json)")
         return 0
 
-    # ------------------------------------------------------------------
-    # Gate 2 — version detection
-    # ------------------------------------------------------------------
+    # --- Gate 2 — version detection ---
     version_str: str | None = os.environ.get("CLAUDE_CODE_VERSION")
     if not version_str:
         try:
@@ -235,9 +289,9 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
                 text=True,
                 timeout=2,
             )
-            # `claude --version` typically outputs e.g. "2.1.154" or "2.1.154\n"
-            if result.returncode == 0:
-                version_str = result.stdout.strip().split()[-1]
+            # `claude --version` prints e.g. "2.1.294 (Claude Code)"; take the first x.y.z.
+            m = re.search(r"\d+\.\d+\.\d+", result.stdout) if result.returncode == 0 else None
+            version_str = m.group(0) if m else None
         except Exception as exc:  # noqa: BLE001
             _bp._log.warning("claude --version probe failed: %s", exc)
             version_str = None
@@ -276,9 +330,13 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
     written = 0
     unchanged = 0
 
+    # BO-4300c-3: fill every WORKSPACE-ANSWER marker pair BEFORE anything is
+    # written, so a hand-filled pair or a missing source deploys nothing.
+    inlined = _inline_all_workflow_sources(workflows_js_src, config)
+
     for js_file in sorted(workflows_js_src.glob("*.js")):
         dest = output_dir / js_file.name
-        content = js_file.read_bytes()
+        content = inlined[js_file.name]
 
         try:
             emitted = _emit_workflow_variant(content, engine)
@@ -438,11 +496,22 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
       sibling module (KM-KGS-100c-1/-i/-ii), the surface-set completeness
       check; loaded on demand by knowledge_query.check_surface_set() and
       must also ship alongside it.
+    - ``scripts/knowledge_rendering.py`` — knowledge_query.py's fourth
+      sibling module, the text/JSON renderers; loaded at import time, so
+      knowledge_query.py fails to import in consumers without it.
+    - ``scripts/knowledge_edges.py`` — knowledge_query.py's fifth sibling
+      module, edge extraction and routing (GE-127 size-ratchet extraction);
+      loaded at import time, so knowledge_query.py fails to import in
+      consumers without it.
     - ``scripts/set_ticket_status.py`` — used by ticket-lifecycle agents and skills.
     - ``scripts/ticket_prioritizer.py`` — used by the ticket-prioritizer skill.
     - ``scripts/port_registry.py`` — used by the live-surface-tester agent.
     - ``scripts/live_surface_startup.py`` — used by the live-surface-tester agent.
     - ``scripts/generate_doc_index.py`` — used by the transform-doc-index pre-commit hook.
+
+    The list itself is ``WORKFLOW_TOOL_SCRIPTS`` in build_phases_knowledge.py,
+    the same tuple ``_manifest_workflow_tool_scripts`` reports, imported at
+    call time like ``build_phases`` above. Add a new script there, not here.
 
     Files are copied verbatim (no template compilation). The compare-before-write
     guard prevents mtime churn on unchanged files.
@@ -493,29 +562,25 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     #   the first, and this ticket's Implementation Notes for the
     #   architect-review correction of which file that second location
     #   actually lives in).
+    # - 2026-10-06 [python-coder/TICKET-20261006-DeployKnowledgeRendering]:
+    #   Dropped the local deploy_scripts list; this phase now iterates
+    #   build_phases_knowledge.WORKFLOW_TOOL_SCRIPTS, the one list the
+    #   manifest also reads, so a script can no longer be added to only one
+    #   of them. knowledge_rendering.py joined that list: knowledge_query.py
+    #   loads it at import time since c2ddb6f12, and neither hand list named
+    #   it, so every consumer's deployed knowledge_query.py crashed.
+    #   Missing-source handling (record_deploy_failure) is unchanged.
     """
     import shutil
 
     import build_phases as _bp
+    from build_phases_knowledge import WORKFLOW_TOOL_SCRIPTS
 
     scripts_src = _bp.PACKAGE_ROOT / "scripts"
-    deploy_scripts = [
-        "add_component.py",
-        "knowledge_query.py",
-        "knowledge_frontmatter_reader.py",
-        "frontmatter_path_resolver.py",
-        "knowledge_file_nodes.py",
-        "knowledge_surface_check.py",
-        "set_ticket_status.py",
-        "ticket_prioritizer.py",
-        "port_registry.py",
-        "live_surface_startup.py",
-        "generate_doc_index.py",
-    ]
     output_dir = target_root / "scripts"
     written = 0
 
-    for script_name in deploy_scripts:
+    for script_name in WORKFLOW_TOOL_SCRIPTS:
         src_file = scripts_src / script_name
         if not src_file.is_file():
             # BP-900g-9 (n_location_rule: all) — same warn-and-continue shape as
@@ -606,4 +671,17 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
 #   Version(version_str) as str | None where str is required. version_known
 #   still holds the same value and is still consulted below; behaviour is
 #   unchanged. (#KI-BP-20260831-0620)
+# - 2026-10-06 [python-coder/TICKET-20261006-DeployKnowledgeRendering]:
+#   build_workflow_tools() reads build_phases_knowledge.WORKFLOW_TOOL_SCRIPTS
+#   instead of its own copy of the list, and that list now ships
+#   knowledge_rendering.py, whose absence crashed deployed knowledge_query.py.
+# - 2026-10-12 [python-coder/BP-300d-3-ii]: version probe takes the first x.y.z
+#   in `claude --version` ("2.1.294 (Claude Code)"), not the last token.
+# - 2026-10-22 [python-coder/BO-4500b-1]: Generalised the WORKSPACE-ANSWER-only fill
+#   to any shared block (_inline_shared_blocks, _workflow_source_bytes); the set of
+#   blocks and consumers is derived from _shared/ and the markers, not listed.
+# - 2026-10-23 [python-coder/BO-4500b-1]: _inline_all_workflow_sources now takes the
+#   build config and runs build_shared_validation.validate_or_fail first, so every
+#   route/source problem (including unresolvable block placeholders) is reported
+#   together and nothing is written on failure.
 # ===========================================================================

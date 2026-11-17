@@ -1,5 +1,5 @@
 id: GE-117b-2
-readiness: draft
+readiness: approved
 priority: medium
 title: "A well-formatted AC reference that points to no existing AC fails as invalid"
 component: guardrail-engine
@@ -41,19 +41,65 @@ doc_links:
   - path: "docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md"
     relationship: describes
     status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c-2-i.yaml"
+    relationship: related
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
 it_requirements:
-  - "The invalid branch is triggered when the AC-id string is well-formed (parses as an AC-id token per the ADR-008 id format) but _load_ac_by_id returns None (no such AC in the store); verdict: 'invalid', declared_refs records the unresolved id, resolved: false — distinct from 'missing' (no ref at all)."
-  - "Resolution uses the SAME extracted _load_ac_by_id shared module as GE-117b-1; the AC store is the authority for existence (ADR-010). Do not treat a well-formed-but-dangling ref as satisfied."
-  - "Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+  - "The invalid branch is triggered when the AC-id string is well-formed (parses as an AC-id token per the ADR-008 id format, including multi-level and Roman-numeral suffixed ids such as GE-117b-1-ii) but the shared GE-124c-2-i resolver answers not-found; verdict: 'invalid', declared_refs records the unresolved id, resolved: false — distinct from 'missing' (no ref at all)."
+  - "The AC store is the authority for existence (ADR-010), read through the shared GE-124c-2-i resolver only. Do not treat a well-formed-but-dangling ref as satisfied, and do not treat a store-unreachable answer as not-found."
+  - "Edit only templates/scripts/commit_guardian/ (ADR-001); verify via the deployed hook after a build.py round-trip."
 delivers_to: null
 expects_from:
   ac_id: GE-117b-1
   contract: "The per-symbol verdict object whose invalid (unresolvable-id) branch this AC specifies"
+test_spec:
+  - name: test_ge_117b_2_well_formed_dangling_id_is_invalid_and_recorded
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Stage a public function citing GE-900z-9, well formed but absent from the temp AC store: verdict 'invalid', resolved false, declared_refs contains 'GE-900z-9'."
+  - name: test_ge_117b_2_dangling_id_and_no_id_produce_different_verdicts
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Stage two public functions in one commit, one citing a dangling well-formed id and one citing nothing: the first is 'invalid', the second 'missing'."
+    must_catch:
+      - "treats a well-formatted id as satisfied without checking the store"
+      - "reports a dangling id as missing instead of invalid"
+  - name: test_ge_117b_2_existing_id_is_satisfied
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Stage a public function citing an id present in the temp AC store: verdict 'satisfied'."
+  - name: test_ge_117b_2_real_store_ids_resolve_including_roman_suffixes
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Against this repository's real docs/acceptance-criteria store, a symbol citing GE-117b-1-ii resolves to 'satisfied' and one citing GE-117z-99 is 'invalid'. Uses real ids, not synthetic ones, so the id-token parser meets the real id grammar."
+    must_catch:
+      - "an AC-id token pattern that truncates or rejects Roman-numeral suffixed ids such as GE-117b-1-ii"
+test_rationale: |
+  The criteria separate 'well formed' from 'exists', so the contract proves both halves: a
+  dangling well-formed id is invalid, a resolvable one is satisfied. The discrimination test
+  stages both invalid and missing cases in one commit so the two verdicts are compared
+  directly. The real-artifact test runs the id parser against the real store. Synthetic ids
+  like GE-900a-1 never exercise the deeper Roman-suffix forms (GE-117b-1-ii) common in this
+  store. A regex that stops at the first suffix would make a valid citation resolve to the
+  wrong record or be reported as dangling.
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Re-pointed resolution to the shared GE-124c-2-i resolver; added change_target, declared_files, test_spec and test_rationale; corrected the source path to templates/scripts/commit_guardian/ (ADR-001). criteria untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -1,17 +1,18 @@
 ---
-title: "build-ticket.js Workflow Dispatch — Agent Flow"
+title: build-ticket.js Workflow Dispatch — Agent Flow
 diagram_type: agent_flow
 flight_level: L3-Component
-status: accepted
+status: active
 components:
-  - build_pipeline
+- build_pipeline
 created: 2026-06-01
-last_updated: 2026-06-01
+last_updated: 2026-10-15
 parent: docs/architecture/components/supervisor-spawn-topology.md
 related_diagrams:
-  - docs/architecture/components/supervisor-spawn-topology.md
+- docs/architecture/components/supervisor-spawn-topology.md
+type: tutorial
+description: Overview of build-ticket.js Workflow Dispatch — Agent Flow.
 ---
-
 # build-ticket.js Workflow Dispatch
 
 ## Overview
@@ -108,6 +109,7 @@ and applies trait-driven guardrail rules before the agent is spawned:
 | `test_artifact` | NO | Circular — wrapping a test producer in test-writer/test-runner makes no sense |
 | `review_verdict` | NO | Reviewers produce verdicts, not executable artifacts |
 | `analysis` | NO | Analysis agents produce reports/recommendations |
+| `requirement_records` | NO | Requirement-record planners produce records, not executable logic |
 | `orchestration` | NO | Orchestrators drive other agents |
 | `null` | WARN + NO | Ambiguous trait — warn but do not block; treat as documentation |
 

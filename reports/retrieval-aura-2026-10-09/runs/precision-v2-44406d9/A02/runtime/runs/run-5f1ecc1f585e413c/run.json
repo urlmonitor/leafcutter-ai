@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-5f1ecc1f585e413c",
+  "root_task_id": "task-ba5d07935fee4ffe",
+  "status": "partial",
+  "state_revision": 7,
+  "trace": {
+    "schema_version": "1.0",
+    "trace_id": "513fd68a38d38808eaee4105918c4738",
+    "root_observation_id": null,
+    "trace_url": null
+  },
+  "cancel": null,
+  "registry_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+  "created_at": "2026-10-10T06:17:34.138867Z",
+  "updated_at": "2026-10-10T06:21:27.398929Z"
+}

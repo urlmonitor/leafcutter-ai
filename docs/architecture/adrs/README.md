@@ -3,7 +3,7 @@ title: "Architecture Decision Records"
 description: "Index of all Architecture Decision Records (ADRs) for the leafcutter-ai package, listing each decision's number, status, title, and date."
 type: "reference"
 created: '2026-08-13'
-last_updated: '2026-10-01'
+last_updated: '2026-10-21'
 status: active
 components:
 - documentation_system
@@ -36,7 +36,7 @@ python scripts/adr_refs.py --index --write
 | [ADR-007](ADR-007-contract-driven-acs.md) | Accepted | Contract-Driven Acceptance Criteria | 2026-06-04 |
 | [ADR-008](ADR-008-ac-store-schema-id-format-enforcement.md) | Accepted | AC Store — YAML Schema, ID Format, and Bidirectional Enforcement Model | 2026-06-04 |
 | [ADR-009](ADR-009-itpo-no-source-code-access.md) | Accepted | IT Product Owner v3 — Source Code Access Restriction | 2026-06-05 |
-| [ADR-010](ADR-010-ac-store-as-authoritative-backlog.md) | Accepted | AC Store as Authoritative Backlog — Source-of-Truth Inversion | 2026-06-05 |
+| [ADR-010](ADR-010-ac-store-as-authoritative-backlog.md) | Active | AC Store as Authoritative Backlog — Source-of-Truth Inversion | 2026-06-05 |
 | [ADR-011](ADR-011-learning-emission-sink.md) | Active | Learning Emission Sink — Separate knowledge_emissions.jsonl vs Reuse | 2026-06-05 |
 | [ADR-012](ADR-012-retire-create-ticket-js.md) | Accepted | Retire create-ticket.js — /plan-feature + /build-ac as Canonical Ticket-Creation Path | 2026-06-16 |
 | [ADR-013](ADR-013-portable-skill-script-deployment-boundary.md) | Accepted | Portable Skill Script Deployment Boundary — Consumer-Facing vs Package-Internal | 2026-06-17 |
@@ -81,6 +81,18 @@ python scripts/adr_refs.py --index --write
 | [ADR-054](ADR-054-process-representation-and-maturity-model.md) | Active | Process Representation and the Process-Maturity Model — Workflow vs Policy/Checklist vs LLM-Guided | 2026-09-30 |
 | [ADR-055](ADR-055-capability-registry-starts-empty.md) | Active | The Kernel's Capability Registry Starts Empty — Legacy Agents and Skills Enter Only by Recorded Decision | 2026-09-30 |
 | [ADR-056](ADR-056-colony-memory-evidence-reinforcement.md) | Active | Colony Memory — Evidence Reinforcement from Observed Outcomes | 2026-09-30 |
+| [ADR-057](ADR-057-colony-memory-store-optional-postgres.md) | Active | Colony Memory Store — Optional PostgreSQL Behind a ColonyMemory Port | 2026-09-30 |
+| [ADR-058](ADR-058-langfuse-colony-history-scores-datasets.md) | Active | Langfuse Is the Colony History — Every Node Traced, Decisions Scored, Datasets as Regression Memory | 2026-09-30 |
 | [ADR-059](ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md) | Active | Decision Store — Reviewable YAML Records Now, a Graph Later | 2026-10-01 |
 | [ADR-060](ADR-060-source-of-truth-and-approval-authority.md) | Active | Source of Truth and Approval Authority — Git Is Canonical, a Human Approves, Precedent Is Evidence | 2026-10-01 |
 | [ADR-061](ADR-061-identity-of-declared-and-learned-records.md) | Active | Identity — Existing Ids Stay, Decisions Get a Kernel-Minted Id, Records Are Keyed by Repository, Kind and Id | 2026-10-01 |
+| [ADR-062](ADR-062-standalone-knowledge-retrieval.md) | Active | Standalone Knowledge Retrieval over Immutable Git Projections | 2026-10-01 |
+| [ADR-064](ADR-064-persona-discovery-before-feature-planning.md) | Active | Persona Discovery Before Feature Planning | 2026-10-01 |
+| [ADR-065](ADR-065-colony-learned-statistics-neo4j-aggregates.md) | Active | Colony Learned Statistics Live in Neo4j as Derived Aggregates — Supersedes ADR-057 in Part | 2026-10-02 |
+| [ADR-066](ADR-066-kernel-resolves-named-terms-and-finds-its-own-root.md) | Active | The Kernel Resolves Named Terms by Research and Finds Its Own Repository Root | 2026-10-02 |
+| [ADR-067](ADR-067-kernel-splits-bundled-requests-into-approved-parts.md) | Active | The Kernel Splits a Bundled Request into Parts a Person Approves | 2026-10-05 |
+| [ADR-068](ADR-068-drift-exempt-gets-its-own-result-column.md) | Active | A Drift-Exempt Recorded Output Gets Its Own RESULT Column | 2026-10-09 |
+| [ADR-069](ADR-069-durable-log-root-for-workspaces.md) | Active | One Durable Log Root for Every Workspace, Declared as a Build Input | 2026-10-09 |
+| [ADR-071](ADR-071-test-intent-is-not-a-test-contract.md) | Active | Test Intent Is Not a Test Contract | 2026-10-14 |
+| [ADR-072](ADR-072-code-aware-test-designer-may-read-source.md) | Active | The Code-Aware Test Designer May Read Source | 2026-10-14 |
+| [ADR-075](ADR-075-requirement-rule-check.md) | Active | Mechanical Requirement Rules Are Checked by One Fail-Closed Rule Check | 2026-10-21 |

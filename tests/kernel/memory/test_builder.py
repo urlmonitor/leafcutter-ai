@@ -50,6 +50,8 @@ class TestBuildsFromAHumanApprovedDecision(unittest.TestCase):
     """What a record keeps of the decision."""
 
     def test_the_record_is_valid_by_the_schema_and_carries_the_approval(self) -> None:
+        # covers: DK-600c-2-i
+        # covers: DK-600c-2
         record = build()
         self.assertEqual(schema_problems(record_to_dict(record), schema()), [])
         self.assertEqual(record.approval.approved_by, "human:tester")
@@ -57,6 +59,7 @@ class TestBuildsFromAHumanApprovedDecision(unittest.TestCase):
         self.assertEqual(record.approval.approval_status, "approved")
 
     def test_original_assumptions_and_evidence_references_are_kept(self) -> None:
+        # covers: DK-600c-2
         record = build()
         self.assertEqual(record.assumptions, ["opt.a assumption"])
         self.assertEqual([o.assumptions for o in record.options],
@@ -67,6 +70,7 @@ class TestBuildsFromAHumanApprovedDecision(unittest.TestCase):
         self.assertEqual(len(ref.content_hash), 64)
 
     def test_the_ranking_the_human_saw_and_the_chosen_rank_are_recorded(self) -> None:
+        # covers: DK-600c-2
         record = build(ranking=ranking())
         self.assertEqual(record.assessment.selected_rank, 1)
         self.assertEqual(record.assessment.confidence, 0.9)
@@ -78,6 +82,7 @@ class TestBuildsFromAHumanApprovedDecision(unittest.TestCase):
         self.assertFalse(scoped.repository_wide)
 
     def test_precedent_notes_and_links_are_kept(self) -> None:
+        # covers: DK-600c-2
         note = PrecedentNote(id="dec-ef8ddcb79d668a67", applicability=0.9, action="reused")
         record = build(precedents=[note], related=["dec-ef8ddcb79d668a67"])
         self.assertEqual(record.precedents_considered, [note])
@@ -107,24 +112,51 @@ class TestRefusesWhatAHumanDidNotApprove(unittest.TestCase):
             build(human_decision(approval=ApprovalStatus.NOT_REQUIRED))
 
     def test_a_missing_approver_is_refused(self) -> None:
+        # covers: DK-600c-1-i
         with self.assertRaises(NotApproved):
             build(human_decision(approved_by=None))
 
     def test_a_host_or_model_approver_is_refused(self) -> None:
+        # covers: DK-600c-1-i
+        # covers: DK-600c-2-i
         for actor in ("host:fake", "jev", "kernel", "model:gpt", "service:x"):
             with self.assertRaises(NotApproved, msg=actor):
                 build(human_decision(approved_by=actor))
 
     def test_a_missing_approval_time_is_refused(self) -> None:
+        # covers: DK-600c-2-i
         decision = human_decision().model_copy(update={"approved_at": None})
         with self.assertRaises(NotApproved):
             build(decision)
+
+
+    def test_the_refusal_names_the_failed_condition(self) -> None:
+        # covers: DK-600c-2-i
+        for actor in ("jev", "host"):
+            with self.assertRaises(NotApproved, msg=actor) as machine:
+                build(human_decision(approved_by=actor))
+            self.assertIn("no human approver", machine.exception.reason)
+            self.assertNotIn("approved_at", machine.exception.reason)
+        with self.assertRaises(NotApproved) as untimed:
+            build(human_decision().model_copy(update={"approved_at": None}))
+        self.assertIn("approved_at", untimed.exception.reason)
+        self.assertNotIn("human approver", untimed.exception.reason)
+        self.assertEqual(str(untimed.exception), untimed.exception.reason)
+
+    def test_a_named_human_and_the_bare_human_actor_are_both_built(self) -> None:
+        # covers: DK-600c-2-i
+        for approver in ("human:user", "human"):
+            record = build(human_decision(approved_by=approver))
+            self.assertEqual(record.approval.approved_by, approver)
+            self.assertTrue(record.approval.approved_at)
+            self.assertEqual(schema_problems(record_to_dict(record), schema()), [])
 
 
 class TestHelpers(unittest.TestCase):
     """Small pure helpers."""
 
     def test_a_bare_actor_id_becomes_a_human_actor(self) -> None:
+        # covers: DK-600c-2-i
         self.assertEqual(human_actor("user"), "human:user")
         self.assertEqual(human_actor("human:user"), "human:user")
         self.assertEqual(human_actor("human"), "human")
@@ -137,6 +169,7 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(one_line(text, 12), "alpha beta ...")
 
     def test_approved_at_is_formatted_in_utc(self) -> None:
+        # covers: DK-600b-3
         when = datetime(2026, 10, 1, 12, 30, 5, tzinfo=UTC)
         decision = human_decision().model_copy(update={"approved_at": when})
         self.assertEqual(build(decision).approval.approved_at, "2026-10-01T12:30:05Z")

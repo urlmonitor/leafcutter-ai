@@ -1,0 +1,20 @@
+{
+  "reviewed_at": "2026-10-09T21:56:20.778955+00:00",
+  "rule": "ENTROPY_HIGH",
+  "exact_rule_path_line_only": true,
+  "credential_rules_unchanged": true,
+  "locations": [
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-2a8ebc87/readiness.json",
+      "line": 120,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "unresolved_related_document_path"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-2a8ebc87/readiness.json",
+      "line": 471,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "unresolved_related_document_path"
+    }
+  ]
+}

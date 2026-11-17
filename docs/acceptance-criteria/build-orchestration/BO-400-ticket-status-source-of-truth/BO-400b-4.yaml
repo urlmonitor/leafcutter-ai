@@ -1,0 +1,68 @@
+id: BO-400b-4
+components:
+  - build_orchestration
+title: "Setting a ticket's status changes only its status line and keeps the file's line endings as they were"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket record whose lines end in LF, in CRLF, or in a mix of both,
+  When scripts/set_ticket_status.py sets its status, on any platform,
+  Then every line of the file except the status line keeps its exact bytes,
+    line ending included,
+  And the status line ends with the same line ending it had before
+    (or, when the status field was absent and is inserted, the same ending
+    as the title line it follows),
+  And the bug symptom ("an LF ticket is rewritten with CRLF on Windows, and a
+    CRLF ticket loses its CRLF endings elsewhere") must not occur.
+depends_on: [BO-400b, BO-400b-1]
+doc_links:
+  - path: scripts/set_ticket_status.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Read and write the ticket without newline translation, so no line ending is changed on the way in or out"
+  - "The replaced status value must not swallow a trailing carriage return"
+  - "The opening '---' line of a CRLF record is split off whole (including its CR LF), so the frontmatter split still reassembles byte for byte"
+delivers_to: null
+expects_from:
+  ac_id: BO-400b-1
+  contract: "The base script (argument parsing, frontmatter read/write) whose read and write this AC makes line-ending-preserving"
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_set_ticket_status_line_endings.py
+implemented_by:
+  - scripts/set_ticket_status.py
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_lf_ticket_keeps_lf_endings
+    target_dir: unit_tests/commit_guardian
+    framework: pytest
+    type: unit
+    description: "An all-LF ticket set to a new status contains no CRLF afterwards and differs from the original only on the status line"
+  - name: test_crlf_ticket_keeps_crlf_endings
+    target_dir: unit_tests/commit_guardian
+    framework: pytest
+    type: unit
+    description: "An all-CRLF ticket set to a new status keeps CRLF on every line, the status line included"
+  - name: test_mixed_endings_preserved_byte_for_byte
+    target_dir: unit_tests/commit_guardian
+    framework: pytest
+    type: unit
+    description: "A ticket mixing LF and CRLF lines keeps every non-status line's bytes unchanged, on any platform"
+  - name: test_inserted_status_uses_title_line_ending
+    target_dir: unit_tests/commit_guardian
+    framework: pytest
+    type: unit
+    description: "A CRLF ticket with no status field gets an inserted status line that ends in CRLF, like the title line it follows"

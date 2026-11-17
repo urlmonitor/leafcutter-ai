@@ -1,0 +1,194 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-2ac128d978244f4e",
+  "root_task_id": "task-cb60f86b29414e6a",
+  "state_revision": 7,
+  "status": "partial",
+  "output": {
+    "schema_version": "1.0",
+    "schema_id": "leafcutter.evidence_bundle.v1",
+    "payload": {
+      "schema_version": "1.0",
+      "request_id": null,
+      "evidence_ids": [],
+      "finding_ids": [],
+      "coverage": {
+        "need.question": "unavailable"
+      },
+      "assessments": {
+        "need.question": {
+          "kind": "retrieval_answer",
+          "status": "unresolved",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "required_fields": [
+            "criteria"
+          ],
+          "scope": {
+            "population": "returned_entities",
+            "entity_ids": [
+              "KM-500c-2"
+            ],
+            "root_id": null,
+            "levels": null,
+            "inclusion": null
+          },
+          "missing_fields": [],
+          "completeness": {
+            "complete": false,
+            "known_count": 0,
+            "exact_total": null,
+            "limitations": [
+              "execution is stale",
+              "requested source revision is not established",
+              "requested identities are missing from returned evidence",
+              "no evidence for the requested facts"
+            ]
+          },
+          "work_status_counts": null,
+          "known_work_status_counts": {},
+          "limitations": [
+            "execution is stale",
+            "requested source revision is not established",
+            "requested identities are missing from returned evidence",
+            "no evidence for the requested facts"
+          ]
+        }
+      },
+      "attempted_sources": [
+        "knowledge.graph"
+      ],
+      "unavailable_sources": [
+        {
+          "schema_version": "1.0",
+          "source_id": "knowledge.retrieval",
+          "reason": "stale"
+        }
+      ],
+      "contradictions": [],
+      "limitations": [
+        "requested revision is not published",
+        "knowledge status: stale",
+        "retrieval choice: Jev selected a supported registered operation and authorized target",
+        "execution is stale",
+        "requested source revision is not established",
+        "requested identities are missing from returned evidence",
+        "no evidence for the requested facts",
+        "Original answer requirements remain unresolved",
+        "need need.question: conditional assessment remains unresolved",
+        "required need need.question is unavailable"
+      ],
+      "truncated": false,
+      "evidence": [],
+      "findings": [],
+      "unknowns": [],
+      "need_evidence": {},
+      "need_limitations": {}
+    }
+  },
+  "report_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A04\\runtime\\runs\\run-2ac128d978244f4e\\artifacts\\report.md",
+  "decision_ids": [],
+  "evidence_ids": [],
+  "open_questions": [],
+  "pending_interaction": null,
+  "limitations": [
+    "requested revision is not published",
+    "knowledge status: stale",
+    "retrieval choice: Jev selected a supported registered operation and authorized target",
+    "execution is stale",
+    "requested source revision is not established",
+    "requested identities are missing from returned evidence",
+    "no evidence for the requested facts",
+    "Original answer requirements remain unresolved",
+    "need need.question: conditional assessment remains unresolved",
+    "required need need.question is unavailable"
+  ],
+  "gaps": [
+    {
+      "schema_version": "1.0",
+      "id": "gap-3410055d405be72d",
+      "created_at": "2026-10-09T21:04:17.305752Z",
+      "updated_at": "2026-10-09T21:04:17.305752Z",
+      "created_seq": 0,
+      "gap_key": "9f613547d053800070adff8c7551cf24300dccb85e76746c33d8871f5b9b2855",
+      "gap_type": "host_only",
+      "goal": "For KM-500c-2, what must tests demonstrate?",
+      "normalized_need": "2 500c demonstrate km must tests what",
+      "request_kind": "capability",
+      "input_schema": "leafcutter.retrieval_needs_request.v1",
+      "output_schema": "leafcutter.retrieval_needs_output.v1",
+      "scope_component_ids": [],
+      "registry_snapshot_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+      "candidates_considered": [
+        "host.retrieval_needs",
+        "decision",
+        "host.formulate_question",
+        "host.generate_options",
+        "host.query_build"
+      ],
+      "candidate_exclusions": {
+        "decision": "kind_mismatch",
+        "host.formulate_question": "kind_mismatch",
+        "host.generate_options": "kind_mismatch",
+        "host.query_build": "kind_mismatch"
+      },
+      "need_title": "For KM-500c-2, what must tests demonstrate?",
+      "why_insufficient": "host-backed only; no native implementation exists",
+      "occurrence_count": 1,
+      "example_run_ids": [
+        "run-2ac128d978244f4e"
+      ],
+      "example_trace_urls": [],
+      "fallback_outcome": "host_completed",
+      "missing_native_capability": "native implementation of host.retrieval_needs",
+      "proposal": {
+        "schema_version": "1.0",
+        "author": "template",
+        "title": "Capability for: For KM-500c-2, what must tests demonstrate?",
+        "purpose": "host_only need",
+        "draft_ref": "drafts/9f613547d053800070adff8c7551cf24300dccb85e76746c33d8871f5b9b2855.md"
+      },
+      "first_seen": "2026-10-09T21:04:17.305752Z",
+      "last_seen": "2026-10-09T21:04:17.305752Z"
+    }
+  ],
+  "usage_summary": {
+    "schema_version": "1.0",
+    "jev_calls": 1,
+    "host_operations": 1,
+    "input_tokens": 1671,
+    "output_tokens": 62,
+    "cost_usd_known": 7.0182e-05,
+    "cost_unknown_calls": 1,
+    "usage": [
+      {
+        "schema_version": "1.0",
+        "provider": "host",
+        "model_id": null,
+        "input_tokens": null,
+        "output_tokens": null,
+        "duration_ms": 219298,
+        "cost_usd": null,
+        "cost_provenance": "unavailable",
+        "calls": 1
+      },
+      {
+        "schema_version": "1.0",
+        "provider": "jev",
+        "model_id": "jev-1.13.0",
+        "input_tokens": 1671,
+        "output_tokens": 62,
+        "duration_ms": 361,
+        "cost_usd": 7.0182e-05,
+        "cost_provenance": "estimated",
+        "calls": 1
+      }
+    ]
+  },
+  "trace_refs": {
+    "schema_version": "1.0",
+    "trace_id": "c281a988b35c3811c00b30d4a51dcbd6",
+    "trace_url": null,
+    "observability": "ok"
+  },
+  "errors": []
+}

@@ -1,0 +1,160 @@
+id: UXP-300-3
+title: Every existing node declares checked handoffs or an honest, visible limitation
+component: ux-prototyping
+components:
+- ux_prototyping
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: medium
+criteria: 'Given the Product Truth store includes existing and newly authored flow steps and branches,
+
+  When the record is checked,
+
+  Then every node supplies checked input and output bindings with examples, a specific genuine non-JSON
+  explanation, or an explicit proposed missing binding,
+
+  And removing that metadata from an existing flow identity fails just as it does for a new identity,
+
+  And known bindings remain checked when a separate proposed interface is missing,
+
+  And each missing binding has a nonblank name and reason, a direction and an existing permitted source,
+
+  And each source-reviewed or illustrative-design definition carries its authority and nonblank explanatory
+  note,
+
+  And the report counts checked fields and examples separately from missing bindings and lists each gap''s
+  flow, node, direction, reason and source,
+
+  And an empty installed consumer store is reported without acquiring this repository''s retrieval-needs
+  runtime requirement.'
+depends_on:
+- UXP-300
+doc_links:
+- path: docs/how-to/product-truth-schema-reference.md
+  relationship: specifies
+  status: exists
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-05'
+amended_by:
+- reason: '2026-10-05 business-analyst: recorded source/test traceability and locally verified completion
+    after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge had not yet run at that local verification.'
+superseded_by: null
+covered_by:
+- unit_tests/product_truth/test_flow_io_contracts.py
+- unit_tests/product_truth/test_flow_io_contract_migration.py
+- unit_tests/product_truth/test_flow_io_contract_gate.py
+implemented_by:
+- docs/product-truth/schemas/flow.schema.json
+- docs/product-truth/scripts/product_truth_contracts.py
+- docs/product-truth/scripts/product_truth_contract_sources.py
+- docs/product-truth/scripts/validate_product_truth.py
+- docs/product-truth/scripts/product_truth_contract_policy.py
+- docs/product-truth/scripts/product_truth_contract_render.py
+notes: 'The test writer verified the Python contract suites: 49 tests plus 16 subtests passed. Coverage
+  strips metadata from all 26 existing flow identities, separates explicit gaps from checked fields/examples,
+  and exercises both CLI reports.
+
+
+  The user accepted the displayed feature and authorized completing its AC/test coverage and merging after
+  green checks. Readiness remains reviewed: BA and IT PO reviewed these newly authored criteria; no separate
+  individual-AC user sign-off is claimed. Work status records locally verified implementation. At the local verification recorded on 2026-10-05,
+  hosted CI and merge had not yet run. GitHub PR checks and merge status track release completion. This leaf does not claim production retrieval integration or completion
+  of its broader parent.'
+estimated_complexity: M
+change_target:
+- code
+- schema
+risk_surface: contract_boundary
+it_requirements:
+- Apply the metadata rule to existing and new node identities without a hard-coded legacy bypass. Preserve
+  valid empty consumer stores.
+- Missing bindings document genuinely undefined proposals; they cannot replace existing implemented wire
+  contracts or disable checking of known bindings.
+- A source-reviewed schema is a reviewed transcription, not automatic source parity. Illustrative design
+  authority must not be upgraded by a schema-valid result.
+expects_from:
+  ac_id: UXP-300-1
+  contract: 'Flow JSON at docs/product-truth/flows/**/*.flow.json: contract_definitions is a map from
+    reference label to {schema?: string, model?: string, authority?: runtime|source_reviewed|illustrative_design,
+    note?: string}; each node has io_contracts with consumes/produces arrays of {contract: string, fields:
+    [{path: JSON-pointer string, types: JSON-type string[], required: boolean, default?: JSON value, applies?:
+    string}]}. Optional means absent, not null unless explicitly allowed. Contract labels are not payload
+    wrapper keys.'
+delivers_to:
+  agent: frontend-coder
+  contract: 'The same flow JSON carries io_contracts.examples: [{contract: string, mode: full|projection,
+    origin: observed|illustrative|reconstructed, label: string, value: JSON value, source?: {path: repository-relative
+    string, pointer: JSON-pointer string}}]. Observed requires source. Definition authority/note and node
+    missing_bindings [{name: string, direction: consumes|produces|both, reason: string, source: repository-relative
+    string}] or a genuine not_applicable string remain distinguishable from checked runtime fields.'
+test_spec:
+- name: test_existing_flow_id_cannot_bypass_contracts_after_migration
+  target_dir: unit_tests/product_truth/
+  description: Removing metadata from every existing flow identity fails the canonical rule.
+  framework: unittest
+  type: integration
+  angle: failure
+- name: test_undefined_binding_is_counted_and_named_not_claimed_as_checked_wire
+  target_dir: unit_tests/product_truth/
+  description: Reports enumerate proposed gaps separately from checked fields and examples.
+  framework: unittest
+  type: integration
+  angle: criterion
+- name: test_gap_requires_reason_and_existing_bounded_source
+  target_dir: unit_tests/product_truth/
+  description: Blank reasons and missing or unbounded evidence sources fail.
+  framework: unittest
+  type: integration
+  angle: boundary
+- name: test_gap_does_not_disable_known_field_or_example_checks
+  target_dir: unit_tests/product_truth/
+  description: A proposed gap cannot suppress checks on known fields and examples.
+  framework: unittest
+  type: integration
+  angle: failure
+- name: test_source_reviewed_schema_requires_visible_authority_explanation
+  target_dir: unit_tests/product_truth/
+  description: Source-reviewed authority includes its nonblank visible limitation note.
+  framework: unittest
+  type: integration
+  angle: criterion
+- name: test_real_retrieval_needs_wire_cannot_be_replaced_with_a_gap
+  target_dir: unit_tests/product_truth/
+  description: Known runtime wire contracts cannot be downgraded into design gaps.
+  framework: unittest
+  type: integration
+  angle: failure
+- name: test_empty_consumer_store_is_not_reported_as_checked_contracts
+  target_dir: unit_tests/product_truth/
+  description: An empty installed consumer store remains valid and makes no checked-contract claim.
+  framework: unittest
+  type: integration
+  angle: boundary
+- name: test_proposed_binding_gap_is_visible_through_both_real_clis
+  target_dir: unit_tests/product_truth/
+  description: Both canonical CLI report surfaces expose gap counts and details.
+  framework: unittest
+  type: integration
+  angle: reachability
+test_rationale: The all-identity mutation proves migration cannot be undone silently. Explicit gap and
+  empty-consumer tests keep honest limitations distinct from a bypass or a claim that production retrieval
+  is complete.
+test_required: true
+declares_side_effect: false
+product_truth:
+  - flow: leafcutter/generate-product-truth
+    node: validate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-05'

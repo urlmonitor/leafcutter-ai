@@ -115,7 +115,13 @@ class TestDeployedCopyQuotesLengthReproducibleFromDeployedPublishedRule(unittest
         deployed_script = self.root / "scripts" / "commit_guardian" / "check_file_size.py"
         self.assertTrue(deployed_script.exists(), msg=f"{deployed_script} was not deployed by build.py.")
 
-        real_content = _REAL_OVERSIZED_SOURCE.read_text(encoding="utf-8")
+        # GE-127d-3's comment-blind rule measures the real file alone at 381
+        # (under the 400 limit), so the old-rule expectation that it be refused
+        # no longer holds. The real bytes are repeated end to end so the content
+        # is still a real artifact -- never a typed literal -- and now stands
+        # over its limit under the rule the deployed gate really applies.
+        single = _REAL_OVERSIZED_SOURCE.read_text(encoding="utf-8")
+        real_content = single + "\n" + single
         fx.write_and_stage(self.root, "real_oversized_file.py", real_content)
 
         result = fx.run([fx.PYTHON, str(deployed_script)], self.root)
@@ -130,15 +136,19 @@ class TestDeployedCopyQuotesLengthReproducibleFromDeployedPublishedRule(unittest
         self.assertIsNotNone(parsed, msg=f"the deployed gate must quote Lines/Limit. Got: {combined!r}")
         quoted_length, _permitted = parsed
 
-        categories = fx.parse_discard_categories(fx.extract_measures_line(combined))
-        rederived = fx.independent_count_content_lines(real_content, categories)
+        measures = fx.extract_measures_line(combined)
+        self.assertIsNotNone(measures, msg=f"the deployed gate must publish its Measures statement. Got: {combined!r}")
+        lowered = measures.lower()
+        self.assertIn("comments", lowered, msg=f"the published rule must say comments are not counted: {measures!r}")
+        self.assertIn("standalone strings", lowered, msg=f"the published rule must name standalone strings: {measures!r}")
+        rederived = fx.independent_python_measure(real_content)
         self.assertEqual(
             quoted_length,
             rederived,
             msg=(
                 "applying the DEPLOYED published rule independently must arrive at exactly "
-                f"the deployed gate's quoted length. quoted={quoted_length} rederived={rederived} "
-                f"categories={categories!r}. Got: {combined!r}"
+                f"the deployed gate's quoted length. quoted={quoted_length} rederived={rederived}. "
+                f"Got: {combined!r}"
             ),
         )
 

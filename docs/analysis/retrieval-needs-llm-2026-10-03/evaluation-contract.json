@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "authored_before_llm_outputs": true,
+  "baseline": "docs/analysis/retrieval-needs-probe-2026-10-03/eval-cases.json",
+  "baseline_sha256": "b067c5721cc49f3510d2c2b99feaa82272db9acf0ad686ad541b2fa182fcf5d7",
+  "fair_input_rule": "Use the original twelve questions, finite catalog and synthetic context. No expected labels, human_gold, previous Jev output or repository enrichment is supplied to the host.",
+  "semantic_adapter": {
+    "shared": "Reuse baseline required and forbidden selections, allowed detail/completeness/hierarchy/status choices, original-question preservation, and conditional required-fields checks.",
+    "unsupported_need": "The host path has no probabilities. N10's needs_outside_catalog predicate means explicit needs_outside_catalog in unresolved and status needs_resolution. Do not fabricate a confidence value.",
+    "transport": "Grade transport separately: kernel waits with an actual host packet and input artifact, accepts one matching schema-bound host submission, completes that run with one host operation and zero Jev calls. This does not establish one underlying model request or token usage.",
+    "score_reporting": "Keep original Jev 7/12 frozen-gold result unchanged. Compare shared semantic predicates separately, and label new minimality checks as a prospective overlay, not a changed baseline."
+  },
+  "overlay": [
+    {"id": "M01", "cases": ["N01", "N09", "N11"], "forbid_required_fields": ["covered_by", "work_status", "status", "level", "parent", "mapping", "compatibility"], "reason": "An exact criteria question does not require test-link declarations, lifecycle/progress or hierarchy/code facts; supporting discussion must not create required retrieval obligations."},
+    {"id": "M02", "cases": ["N07"], "forbid_required_fields": ["criteria", "test_spec", "level", "parent", "covered_by", "content", "mapping", "compatibility"], "reason": "A question explicitly requesting two status fields requires those statuses and attribution, not full criteria or test specifications."},
+    {"id": "M03", "cases": ["N04", "N08"], "forbid_completeness": ["single_entity", "selected_entities"], "reason": "These unbound discovery questions must not demand a named target before source discovery."},
+    {"id": "M04", "cases": ["N12"], "if_entity_type": "schema", "require_document_type": "schema", "reason": "When the answer requires a schema/contract entity, the source plan must not silently omit its contract document type."}
+  ],
+  "not_measured": ["retrieval quality", "source completeness", "final-answer correctness", "underlying host model call count", "host token usage unless actually known", "method execution or production integration"]
+}

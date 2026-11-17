@@ -1,0 +1,14 @@
+AC-ENFORCEMENT [STRICT]: tests/knowledge/test_native_test.py::test_test_reference_exposes_complete_contract_and_future_fields covers not-done AC KM-400a-3-i — NOT masked (AC_ENFORCE_STRICT=1); reported as a real failure.
+F                                                                        [100%]
+================================== FAILURES ===================================
+_______ test_test_reference_exposes_complete_contract_and_future_fields _______
+tests\knowledge\test_native_test.py:60: in test_test_reference_exposes_complete_contract_and_future_fields
+    assert record.native_id == "test-reference:stable-id" != entity.source.path
+E   AssertionError: assert 'tests/feature/test_case.py' == 'test-reference:stable-id'
+E     
+E     - test-reference:stable-id
+E     + tests/feature/test_case.py
+shared-layout-routing: declared_mutators=0 undeclared=0
+=========================== short test summary info ===========================
+FAILED tests/knowledge/test_native_test.py::test_test_reference_exposes_complete_contract_and_future_fields
+1 failed in 18.25s

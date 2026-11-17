@@ -8,7 +8,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given a git worktree is created from a deployed project that has .leafcutter/,
   When submit_feedback.py runs from the worktree's .leafcutter/scripts/feedback/,
@@ -35,8 +35,10 @@ created: 2026-06-08
 amended_by:
   - it-po-v3
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/feedback/test_inf_100c_1_i_symlinked_script.py::TestSymlinkedScriptStaysInLeafcutter
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-INF-100c-1-i.md
+- templates/scripts/feedback/submit_feedback.py
 change_target: code
 risk_surface: internal

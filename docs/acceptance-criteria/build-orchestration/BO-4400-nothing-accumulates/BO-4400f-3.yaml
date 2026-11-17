@@ -1,0 +1,103 @@
+id: BO-4400f-3
+title: "Every route deletes its own scratch when it ends, at the same moment it clears its workspace"
+component: build-orchestration
+components:
+  - build_orchestration
+  - testing_quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given the six routes named in BO-4400a-1 are each run on a test project, each
+    creating scratch items in the one designated scratch location,
+  And a second, unrelated run is active and owns its own scratch items there,
+  When each route reaches its end state -- its pull request opened, or nothing to
+    deliver -- and returns,
+  Then none of the scratch items owned by that route remain,
+  And every scratch item owned by the unrelated run exists afterwards and is
+    byte-identical to its state before,
+  And the route's final result states the count and bytes of scratch it removed,
+  And for a route that halts instead, its scratch is kept and the final result names
+    its location, so it remains until the scratch age and ownership rule expires it.
+depends_on: [BO-4400f, BO-4400f-1, BO-4400a-1, BO-4400a-1-i, BO-4400a-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400a-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: Same trigger -- the route's end state.
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400f-1
+  contract: "Scratch items labelled with their owning run."
+package_surface: false
+it_requirements:
+  - >-
+    Scratch removal is part of the same shared route-end step BO-4400a-1 delivers, issued at the
+    same moment as the clearing request, on the same six routes (backlog build: templates/workflows/build-backlog.md
+    -- llm-expert companion, same split recommendation as BO-4400a-1).
+  - >-
+    Only items whose label names THIS run as owner are removed (by exact run id, never by
+    pattern); the scratch root itself and other runs' items are never touched.
+  - >-
+    The route's final result gains scratch_removed {count: int, bytes: int} (shared size measure
+    from BO-4400b-1); on a halt the step removes nothing and reports scratch_kept {locations:
+    [absolute path]} instead, leaving expiry to the BO-4400f-1 rule.
+  - >-
+    E2 constraint (ADR-030): the removal is executed by the shell-agent dispatch, one exact command
+    of the deployed scratch module, stdout returned verbatim.
+  - >-
+    PROOF: each route under unit_tests/_workflow_engine_harness.py on the deployed workflow; a real
+    second process owns its own labelled items in the same scratch root; hashes before and after.
+test_required: true
+test_spec:
+  - name: test_route_end_removes_only_its_own_scratch
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "After each route reaches its end state, none of its scratch items remain."
+  - name: test_unrelated_runs_scratch_untouched
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Every item owned by the unrelated active run is byte-identical afterwards."
+    must_catch:
+      - "removing the whole scratch location at route end"
+  - name: test_route_result_states_scratch_count_and_bytes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Each route's final result states the count and bytes of scratch it removed, matching the test's own measurement."
+  - name: test_halted_route_keeps_scratch_and_names_it
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A halting route removes no scratch and its result names the kept scratch locations."
+test_rationale: >-
+  The removal is a route-end side effect next to another run's live scratch, so only real routes
+  run beside a real second owner can show it is both complete and exact.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400f-3-i]
+implemented_by: []
+notes: |
+  Gap G7: "each route deletes its own scratch when it ends (same trigger as G1)". A halted
+  run's scratch may hold the evidence of why it halted, so it is kept and left to expiry
+  rather than deleted at once. Named wrong version: removing the whole scratch location at
+  route end -- the unrelated run's items vanish.

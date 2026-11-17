@@ -54,39 +54,10 @@ export const meta = {
   ],
 };
 
-// ---------------------------------------------------------------------------
-// JSON Schemas for agent() responses (E2: engine enforces; no JSON.parse needed)
-// ---------------------------------------------------------------------------
-
-const GATE_SCHEMA = {
-  type: 'object',
-  properties: {
-    status: { type: 'string', enum: ['ok', 'blocked'] },
-    message: { type: 'string' },
-  },
-  required: ['status'],
-}
-
-// ---------------------------------------------------------------------------
-// Narration helper — AC BO-1000a-1, AC BO-1000a-1-i
-//
-// Emits a start-of-step progress line on the workflow's narration channel
-// (via log()) at the entry of each numbered step, BEFORE any agent() dispatch
-// in that step.
-//
-// AC BO-1000a-1-i (error-path ordering guarantee): narrate() is always called
-// BEFORE the step's first agent() dispatch, so even when a sub-agent returns
-// an error or a malformed result the start-of-step line is already present in
-// the progress stream. The in-flight step at the moment of failure is therefore
-// identifiable from the progress output alone — the error branch need not (and
-// must not) emit its own separate 'Step X of N' diagnostic line.
-//
-// The 'progressText' argument carries the "Step X of N" label (AC BO-1000a-2):
-// N MUST equal STEP_COUNT. Use double-quoted strings so N appears as a
-// detectable integer literal (required by BO-1000a-1 static text tests) while
-// avoiding the single-quoted bare-literal form that BO-1000a-2 prohibits.
-// When STEP_COUNT changes, update every narrate() call alongside it.
-// ---------------------------------------------------------------------------
+// Narration helper — AC BO-1000a-1, AC BO-1000a-1-i. narrate() runs BEFORE a step's first
+// agent() dispatch so the in-flight step is identifiable from the progress stream even when
+// a sub-agent errors; error branches must not emit their own 'Step X of N' line.
+// The "Step X of N" label is double-quoted (BO-1000a-2) and N must equal STEP_COUNT.
 
 /**
  * Emit a start-of-step progress line on the workflow's narration channel.
@@ -114,24 +85,10 @@ function narrate(progressText, description) {
   log(line);
 }
 
-// ---------------------------------------------------------------------------
-// Outcome helper — AC BO-1000b-1
-//
-// Emits a post-step outcome line on the workflow's narration channel
-// (via log()) after each numbered step's work completes on the success path,
-// AFTER the step's agent() dispatches (distinct from narrate() which fires
-// BEFORE the first dispatch). Also records the outcome to stepOutcomes[] in
-// insertion order so BO-1000b-2 can compose an end-of-run summary.
-//
-// The 'progressText' argument carries the literal 'Step X of N' label so the
-// text is statically visible to tooling and tests that parse the source file.
-//
-// BO-1000c-1a / BP-1100b-45 NOTE: in-flight visibility of a running finalize workflow is
-// provided by the E2 engine's own per-agent run journal
-// (<transcriptDir>/journal.jsonl), not by anything this script writes. See
-// the removal note where the old on-disk journal helper used to live,
-// further down this file, for the full rationale.
-// ---------------------------------------------------------------------------
+// Outcome helper — AC BO-1000b-1. Fires AFTER a step's agent() dispatches and records to
+// stepOutcomes[] for the end-of-run summary (BO-1000b-2). The literal 'Step X of N' label
+// stays statically visible to tooling. In-flight visibility comes from the E2 engine's own
+// per-agent journal (<transcriptDir>/journal.jsonl); see the removal note further down.
 
 const stepOutcomes = [];
 
@@ -156,31 +113,15 @@ function outcome(progressText, description) {
   log(line);
 }
 
-// ---------------------------------------------------------------------------
-// Single-source-of-truth step count — AC BO-1000a-2
-//
-// Derived from the numbered entries in meta.phases (entries whose key starts
-// with "step-", excluding "pre-flight"). The value must match every N in the
-// narrate() calls below. N must be identical in every start-of-step line
-// across a run and must equal the declared step count.
-//
-// When adding or removing a step:
-//   1. Update meta.phases.
-//   2. Update STEP_COUNT.
-//   3. Update the N literal in every affected narrate() call.
-// ---------------------------------------------------------------------------
+// Single source of truth for N in "Step X of N" — AC BO-1000a-2. When adding or removing a
+// step: update meta.phases, STEP_COUNT, and the N literal in every narrate() call.
 
 /** Total number of numbered steps in the finalize sequence (AC BO-1000a-2). */
 const STEP_COUNT = 9;
 
-// AC FIN-100h: statuses meaning "this agent DECLINED the dispatch".
-//
-// A refusal is categorically different from a failure: a failed step ran and
-// produced a result, a refused step never ran at all. The workflow previously
-// modelled only success/known-failure, so a refusal fell through whatever
-// terminal `else` a step happened to have — and on step 2 that else IS the
-// success path, so a refused merge was recorded as "Merged origin/main
-// cleanly". Load-bearing steps must halt on a refusal, never degrade.
+// AC FIN-100h: statuses meaning "this agent DECLINED the dispatch". A refusal never ran at
+// all (unlike a failure), so load-bearing steps must halt on it rather than fall through
+// to a success path.
 const REFUSAL_STATUSES = new Set(["refused", "wrong_agent", "declined", "not_permitted"]);
 
 /**
@@ -197,24 +138,45 @@ function isRefusalStatus(status) {
   return REFUSAL_STATUSES.has(s) || s.startsWith("out_of_scope");
 }
 
-// AC BO-1000a-2-i: step 3.5 is the intermediate closure step — it is
-// included in STEP_COUNT so its position is monotonic (3 < 3.5 < 4) and N
-// is unchanged for all other steps. Pre-flight aborts occur BEFORE the
-// first numbered step: no narrate() call is made in the pre-flight sections
-// (Pre-flight and Pre-flight 2); pre-flight failures use a distinct
-// non-numbered return ({ status: 'error', ... }).
+// INF-700a-5-i, Step 7 before the removal. Step 4's merge is not trusted, so the PR state is probed. Merged: the
+// read-only `observe --all-stages` names every stage's routed write HEAD lacks; not merged: every staged write.
+let unpublishedLearnings = [];
+async function announceUnpublishedLearnings() {
+  let merged = false;
+  try {
+    const probe = await agent(`Run: gh pr view ${prNumber} --json state --jq '.state'\nReturn ONLY a JSON object: { "state": "OPEN"|"MERGED"|"CLOSED" }`, { agentType: "status-checker", label: "step-7-pr-merged-probe", phase: "Step 7" });
+    merged = String(parsedOr(() => parseAgentJson(probe, { stage: "step-7-pr-merged-probe", agent: "status-checker" }), {}, "treating the branch as not merged").state || "").toUpperCase() === "MERGED";
+    // Read-only observation: one shell-runner dispatch of the exact command; a reply that is no usable result is
+    // recorded as "did not run" (never as nothing-unpublished) and the advisory step never blocks the removal.
+    const observed = shellStepReply(await shellStepDispatch(
+      `python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py observe --working-dir ${WORKTREE_ROOT} --commit-status ${merged ? "ok" : "not_run"} --all-stages`,
+      "step-7-unpublished-learnings", "Step 7"), "step-7-unpublished-learnings");
+    const reply = observed.ok
+      ? parsedOr(() => parseAgentJson(observed.stdout, { stage: "step-7-unpublished-learnings", agent: "shell-runner" }), {}, "announcing nothing; removal proceeds")
+      : { case: "did_not_run", detail: observed.reason + " -- " + observed.received };
+    unpublishedLearnings = (Array.isArray(reply.unwritten_records) ? reply.unwritten_records : [])
+      .filter((r) => r && typeof r === "object" && r.destination)
+      .map((r) => (merged || r.reason !== "stopped_before_publication" ? r : { ...r, reason: "branch_not_merged" }));
+    if (!reply.case || reply.case === "did_not_run") log(`[finalize-feature] step 7 unpublished-learning check did not run: ${reply.detail || "no usable reply"}`);
+  } catch (err) {
+    log(`[finalize-feature] step 7 unpublished-learning check unavailable (${err}) — removal proceeds`);
+  }
+  if (unpublishedLearnings.length === 0) return "";
+  const note = (merged ? `${unpublishedLearnings.length} learning(s) written in this worktree are NOT in the merged tree:\n`
+    : `branch not merged — every routed learning here is unpublished (${unpublishedLearnings.length}):\n`) +
+    unpublishedLearnings.map((r) => `  - ${r.destination} [${r.reason}; ${r.eligible === false
+      ? "NOT eligible: will not be written again" : "still eligible: a later completed unit of work writes it"}]: ${r.text}`).join("\n");
+  log(`[finalize-feature] step 7: ${note}`);
+  return `Before removing, tell the user verbatim (this does not block the removal):\n${note}\n\n`;
+}
 
-// ---------------------------------------------------------------------------
-// E2 top-level body — executed directly by the E2 engine
-//
-// NOTE on leaf invariant: workflow() is NOT called anywhere in this script.
-// In E2, workflow() throws — that throw IS the leaf guard. Since we never call
-// workflow(), the leaf invariant is preserved without any explicit check.
-// ---------------------------------------------------------------------------
+// AC BO-1000a-2-i: step 3.5 is counted in STEP_COUNT (3 < 3.5 < 4). Pre-flight sections make
+// no narrate() call; their failures use a non-numbered { status: 'error', ... } return.
 
-// -------------------------------------------------------------------------
+// E2 top-level body — executed directly by the E2 engine. workflow() is never called
+// (in E2 it throws, which is the leaf guard).
+
 // Pre-flight: detect branch and worktree root
-// -------------------------------------------------------------------------
 
 phase('Pre-flight')
 
@@ -253,9 +215,7 @@ function parseAgentJson(raw, ctx) {
     const code = raw.charCodeAt(i);
     if (code !== 123 && code !== 91) { continue; }
     const closeCode = closeFor[code];
-    let depth = 0;
-    let inString = false;
-    let j = i;
+    let depth = 0, inString = false, j = i;
     while (j < raw.length) {
       const ch = raw.charCodeAt(j);
       if (inString) {
@@ -270,22 +230,34 @@ function parseAgentJson(raw, ctx) {
         else if (ch === closeCode) {
           depth--;
           if (depth === 0) {
-            try {
-              return JSON.parse(raw.slice(i, j + 1));
-            } catch (_) {
-              break;
-            }
+            try { return JSON.parse(raw.slice(i, j + 1)); } catch (_) { i = j; break; }
           }
         }
       }
       j++;
     }
+    if (depth > 0) { break; }
   }
   throw new Error(
     "[" + stage + "] " + agent +
     " returned a reply with no parseable JSON — " +
     "all reply-reading sites must route through parseAgentJson"
   );
+}
+
+/**
+ * Run `parse` — a parseAgentJson(...) call written AT the dispatch site, so every
+ * reply-reading site stays visible as one (BP-300e-6 derivation). A malformed reply
+ * is logged with parseAgentJson's own "[stage] agent ..." message plus `note`, and
+ * answered with `fallback` (AC-4: degrade to the stage's conservative default).
+ */
+function parsedOr(parse, fallback, note) {
+  try {
+    return parse() || fallback;
+  } catch (err) {
+    log(`[finalize-feature] parse malformed — ${note}: ${err && err.message}`);
+    return fallback;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -385,7 +357,8 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
     if (recCheck.stale === true) {
       return { status: "unresumable_stale", run_id: runId, gate_id: gateId };
     }
-    return applyAnswerByType(args.resume_answer, incomingType);
+    // record_context lets a caller bind the answer to what the question was about (BO-400e-3-vii).
+    return { ...applyAnswerByType(args.resume_answer, incomingType), record_context: (recCheck.record && recCheck.record.context) || null };
   }
 
   // No matching resume_answer: call the live gate.
@@ -448,25 +421,7 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
 }
 
 // -------------------------------------------------------------------------
-// Pre-flight worktree resolution
-//
-// Fix (TICKET-20260707-Finalize_Preflight_Branch_Detection):
-// Previously the pre-flight ran `git branch --show-current` with no -C
-// anchor, reading from the session CWD — which is often the main clone on
-// `main`. This caused a false "must be run from a feature branch" abort even
-// when a valid epic worktree existed.
-//
-// The new approach:
-//   1. Extract the epic/ticket name from `args` (e.g. "EPIC-FooBar").
-//   2. Run `git worktree list --porcelain` (no anchor needed — lists all
-//      registered worktrees for this repo regardless of CWD) to find the
-//      worktree whose branch matches `EPIC-<name>` or the single-ticket branch.
-//   3. Anchor the branch/toplevel detection at the resolved worktree root
-//      using `git -C <worktree_root>`.
-//   4. When no matching worktree is found, fail with a clear, actionable
-//      message (not a silent misdetection or a false "on main" abort).
-//   5. When no arg is provided, fall back to the CWD-based detection so
-//      existing callers that pass no argument are unaffected.
+// Pre-flight workspace: branch and root come only from the workspace maker's answer (below).
 // -------------------------------------------------------------------------
 
 // Extract the epic/ticket argument passed to the workflow.
@@ -480,129 +435,32 @@ const _epicArgCandidate = (
     ? args
     : (args && (args.target || args.target_branch)) || ''
 );
-// A non-string target value (e.g. a number or object) is treated as no target —
-// it falls back to CWD detection (FIN-100g-2-i) rather than raising a .trim()
-// TypeError. Only a string candidate is trimmed.
+// A non-string target value (number, object) is treated as no target (FIN-100g-2-i), not a .trim() TypeError.
 const epicArg = (typeof _epicArgCandidate === 'string' ? _epicArgCandidate : '').trim();
 
-const preflightResult = await agent(
-  "Detect the target worktree branch and root path for /finalize-feature.\n" +
-  "\n" +
-  (epicArg
-    ? "A target argument was provided. Resolve the worktree from it.\n" +
-      `Argument: "${epicArg}"\n` +
-      "\n" +
-      "Step 1 — list all registered worktrees:\n" +
-      "  Run: git worktree list --porcelain\n" +
-      "  Parse the output. Each block starts with 'worktree <path>' followed by\n" +
-      "  'HEAD <sha>' and optionally 'branch refs/heads/<branch_name>'.\n" +
-      "  Detached-HEAD entries have no 'branch' line — skip them.\n" +
-      "\n" +
-      "Step 2 — find the matching worktree:\n" +
-      "  Find a worktree whose branch_name:\n" +
-      `    - equals "${epicArg}" (exact match), OR\n` +
-      `    - equals "feature/${epicArg}", OR\n` +
-      `    - contains "${epicArg}" as a substring.\n` +
-      "  Exclude any worktree whose branch_name is 'main' or 'master'.\n" +
-      "  If multiple candidates match, prefer the one whose branch_name is\n" +
-      "  shortest (fewest extra characters beyond the argument string).\n" +
-      "\n" +
-      "Step 3a — matching worktree found:\n" +
-      "  Let <wt_path> = the matched worktree path.\n" +
-      "  Run: git -C \"<wt_path>\" branch --show-current\n" +
-      "  Run: git -C \"<wt_path>\" rev-parse --show-toplevel\n" +
-      "  Return ONLY: { \"found\": true, \"branch\": \"<branch_name>\", \"worktree_root\": \"<path>\" }\n" +
-      "\n" +
-      "Step 3b — no matching worktree found (FIN-100g-3):\n" +
-      "  A target was supplied but resolves to no registered worktree. Build a\n" +
-      "  SINGLE actionable error string containing ALL THREE of:\n" +
-      `    (a) the unresolved target name '${epicArg}';\n` +
-      "    (b) the expected argument forms — a bare branch-name string, OR an\n" +
-      "        object with a target/target_branch key;\n" +
-      "    (c) the candidate worktrees that ARE currently registered and their\n" +
-      "        checked-out branches — list the '<path> [<branch>]' entries you\n" +
-      "        parsed from `git worktree list --porcelain` in Step 1, sorted by\n" +
-      "        path for deterministic output.\n" +
-      "  This message is intentionally more specific than the generic\n" +
-      "  branch-named error (it adds the expected forms and the candidate list).\n" +
-      `  Return ONLY: { "found": false, "branch": null, "worktree_root": null,\n` +
-      `               "error": "No worktree found matching target '${epicArg}'. ` +
-      `Expected a bare branch-name string OR an object with a target/target_branch key. ` +
-      `Candidate worktrees (from git worktree list --porcelain): <path> [<branch>], ..." }`
-    : "No target argument provided — fall back to CWD-based detection.\n" +
-      "1. Run: git branch --show-current\n" +
-      "2. Run: git rev-parse --show-toplevel\n" +
-      "Return ONLY: { \"found\": true, \"branch\": \"<name>\", \"worktree_root\": \"<path>\" }"
-  ),
-  { agentType: "status-checker", label: "pre-flight", phase: "Pre-flight" }
-)
+// BO-4300c-3 / BO-4300a-1-ia: ONE workspace -- the maker's answer (args.workspace, or exactly ONE verbatim dispatch).
+// Branch and root come from that answer only; a decline / prose / result-less reply ends the run quoting it.
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
 
-let preflightInfo;
-{
-  try {
-    preflightInfo = parseAgentJson(preflightResult, { stage: "pre-flight", agent: "status-checker" }) || { found: true, branch: "unknown", worktree_root: "unknown" };
-  } catch (_parseErr) {
-    log("[finalize-feature] pre-flight parse malformed — using safe defaults (branch: unknown)");
-    preflightInfo = { found: true, branch: "unknown", worktree_root: "unknown" };
-  }
-}
+const finalizeSlug = (epicArg || "finalize-feature").toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "finalize-feature";
+const finalizeWorkspace = await workspaceEnsure("Pre-flight", { kind: "feature", slug: finalizeSlug, outputRoot: "{{config.output_root}}" });
+if (!finalizeWorkspace.accepted) return workspaceFailure(finalizeWorkspace);
 
-// When the worktree resolution step found no matching worktree, fail with a
-// clear, actionable message rather than a silent misdetection.
-if (preflightInfo.found === false) {
-  return {
-    status: "error",
-    message:
-      preflightInfo.error ||
-      `/finalize-feature could not find a worktree matching target "${epicArg}". ` +
-      "Expected a bare branch-name string OR an object with a target/target_branch key. " +
-      "Run `git worktree list` to see the candidate worktrees and their branches, " +
-      "then re-run with the correct epic or ticket name.",
-    action_required: "resolve_worktree_argument",
-  };
-}
-
-const BRANCH = (preflightInfo.branch || "").trim();
-const WORKTREE_ROOT = (preflightInfo.worktree_root || "").trim();
+const BRANCH = workspaceBranch(finalizeWorkspace.answer);
+const WORKTREE_ROOT = finalizeWorkspace.workspace_path;
 
 if (!BRANCH || BRANCH === "main" || BRANCH === "master") {
   return {
     status: "error",
     message:
       "/finalize-feature must be run from a feature branch, not main/master " +
-      `(detected branch: "${BRANCH}" from worktree resolved via arg: "${epicArg}"). ` +
-      "Checkout your feature branch and re-run.",
+      `(the workspace maker named branch: "${BRANCH}" for target: "${epicArg}"). ` +
+      "Re-run with the feature's own name.",
     action_required: "switch_to_feature_branch",
   };
 }
 
-// ---------------------------------------------------------------------------
-// Run-progress journal — AC BO-1000c-1a (REDEFINED, BP-1100b-45, 2026-08-18)
-//
-// This script previously defined its own on-disk append-only journal
-// (a helper function plus a path variable, writing run-progress.journal.jsonl)
-// so an external launcher could poll in-flight progress. That mechanism could
-// never work: it loaded the Node.js "fs" module via the CommonJS module
-// loader, and the real E2 engine injects only
-// agent/parallel/pipeline/phase/log/args/workflow/budget into a workflow
-// script's top-level body — no filesystem primitive, no module loader
-// (ADR-030; docs/reference/workflow-authoring-contract.md #4/#6). The append
-// was wrapped in a try/catch that swallowed the throw and logged a WARNING
-// while the run still reported success, so the AC read work_status: done
-// while the mechanism had never once written a line.
-//
-// The E2 engine already writes its own per-run journal at
-// <transcriptDir>/journal.jsonl — a `{"type":"started",...}` /
-// `{"type":"result",...}` record pair per agent() dispatch. In-flight
-// visibility is provided by that engine-native journal, not by anything
-// this script writes. This is a granularity change from the old per-step
-// (narrate/outcome) journal to per-agent-dispatch — the engine journal does
-// not persist log() output, so per-step text lines are not recoverable from
-// it. See this ticket's Comments for the full decision record, and
-// BO-1000c-1a's amended_by entries for the AC-level history.
-// ---------------------------------------------------------------------------
-
-// Track completed and skipped steps for the final summary.
 const completedSteps = [];
 const skippedSteps = [];
 let prNumber = null;
@@ -610,63 +468,99 @@ let prUrl = null;
 let mergeResult = null;
 let testResult = null;
 const ticketsClosed = [];
-// Failures that could not be auto-ticketed (create-ticket is a workflow, not an agent).
-// Populated by step 6a; never confused with actually-created tickets.
+// Failures that could not be auto-ticketed (create-ticket is a workflow, not an agent); set by step 6a.
 const untrackedFailures = [];
 let worktreeRemoved = false;
-// Triage report from step 3; null means tests passed (no triage needed).
-let triageReport = null;
-// Closure counts from step 3.5 (pre-merge AC closure).
-let ticketsClosedPreMerge = 0;
+let triageReport = null; // from step 3; null means tests passed
+let ticketsClosedPreMerge = 0; // closure counts from step 3.5
 let acsClosed = 0;
 let acsSkipped = 0;
+let closureReport = []; // one line per closed/refused/left-open record from step 3.5
 
-// Baseline state (populated by step 0; forwarded to step 3 triage).
-// null means the baseline run did not complete — triage treats all failures
-// as regressions in that case (conservative classification).
+// Baseline state from step 0, forwarded to step 3 triage. null means the baseline run did
+// not complete, so triage treats every failure as a regression.
 let baselineFailures = null; // string[] | null
 let baselineSha = null;      // string | null
 let baselineRunAt = null;    // ISO string | null
 
-// Cleanup guard: remove temp baseline worktree on any early exit.
-// The path is set by step 0 and cleared after the worktree is removed.
-// args.baseline_ts replaces Date.now() (banned in E2 — non-deterministic).
-const baselineTmpPath = `/tmp/leafcutter-main-baseline-${args.baseline_ts || 'baseline'}`;
+// Cleanup guard: the scratch workspace of a baseline / targeted-rerun run, removed through the
+// workspace maker (never by a hand-written git or rm command) on any early exit.
+// The slug embeds args.baseline_ts, which replaces Date.now() (banned in E2 -- non-deterministic).
+const baselineSlug = ("finalize-baseline-" + String((args && args.baseline_ts) || "baseline"))
+  .toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
 let baselineWorktreePath = null;
+// BO-4300e-4: the outcome of clearing the scratch copy (the maker's `remove` answer) -- part of finalize's own result.
+let scratchClearing = null;
 
-/**
- * Attempt to remove the temporary baseline worktree if it still exists.
- * Silently swallows errors — this is a best-effort cleanup.
- */
+/** Remove the scratch baseline workspace: one shell-runner dispatch of the maker's `remove`; best-effort, a failed reply is logged. */
 async function cleanupBaselineWorktree() {
   if (!baselineWorktreePath) return;
-  // Use WORKTREE_ROOT for the -C anchor when it is already resolved; fall
-  // back to the baseline path itself (which is a valid git repo checkout) so
-  // the worktree remove still works even if WORKTREE_ROOT is "unknown".
-  const gitAnchor = (WORKTREE_ROOT && WORKTREE_ROOT !== "unknown")
-    ? WORKTREE_ROOT
-    : baselineWorktreePath;
-  try {
-    await agent(
-      `Remove the temporary baseline worktree if it still exists:\n` +
-      `Run: git -C "${gitAnchor}" worktree remove "${baselineWorktreePath}" --force 2>/dev/null || true\n` +
-      `Run: rm -rf "${baselineWorktreePath}" 2>/dev/null || true\n` +
-      `Return: { "removed": true }`,
-      { agentType: "status-checker", label: "cleanup-baseline-worktree" }
-    );
-  } catch (_err) {
-    // Swallow — cleanup is best-effort.
-  }
+  const path = baselineWorktreePath;
   baselineWorktreePath = null;
+  try {
+    const removal = shellStepReply(await shellStepDispatch(await workspaceRemoveCommand(path), "cleanup-baseline-worktree", "Cleanup"), "cleanup-baseline-worktree");
+    if (!removal.ok) log("[finalize-feature][WARNING] baseline workspace " + path + " was not removed: " + removal.reason + " -- " + removal.received);
+    scratchClearing = workspaceRemovalRecord(path, removal);
+  } catch (err) {
+    log("[finalize-feature][WARNING] baseline workspace cleanup failed: " + (err && err.message));
+    scratchClearing = workspaceRemovalRecord(path, null, String(err && err.message));
+  }
 }
 
-// -------------------------------------------------------------------------
+/**
+ * A scratch workspace from the maker, ONE pytest run in it (whole suite, or only `testIds`), its removal; every
+ * step is a shell-runner dispatch. status "declined" = an answer that was no usable result -- never "the step ran".
+ */
+async function mainTestRun(slug, testIds, phaseName, stepLabel) {
+  const made = await workspaceMade(phaseName, { kind: "scratch", slug: slug, outputRoot: "{{config.output_root}}" }, stepLabel + "-workspace");
+  if (!made.accepted) {
+    const makerSaidNo = made.kind === "refused" || made.kind === "error";
+    return { status: makerSaidNo ? "worktree_failed" : "declined", failures: null, sha: null, detail: made.reason + ": " + made.received };
+  }
+  const root = made.workspace_path;
+  baselineWorktreePath = root;
+  const sha = typeof made.answer.base_commit === "string" ? made.answer.base_commit : null;
+  // Deploy shims first (build parity with Step 3); pytest runs only when the deploy succeeded.
+  const deploy = shellStepReply(await shellStepDispatch(
+    "python3 \"" + root + "/scripts/build.py\" --target-dir \"" + root + "\"", stepLabel + "-deploy", phaseName), stepLabel + "-deploy");
+  const deployOk = deploy.ok && deploy.exit_status === 0;
+  const targets = testIds ? testIds.map((id) => "\"" + root + "/" + id + "\"").join(" ") : "\"" + root + "\"";
+  const run = deployOk
+    ? shellStepReply(await shellStepDispatch(
+      "python3 -m pytest --tb=no -q --rootdir \"" + root + "\" " + targets, stepLabel, phaseName), stepLabel)
+    : null;
+  await cleanupBaselineWorktree();
+  const fin = (status, detail, failures) => ({ status, failures: failures || null, sha, detail });
+  if (!deploy.ok) return fin("declined", deploy.reason + ": " + deploy.received);
+  if (!deployOk) return fin("build_failed", "build.py exited " + deploy.exit_status);
+  if (!run.ok) return fin("declined", run.reason + ": " + run.received);
+  if (run.exit_status !== 0 && run.exit_status !== 1) return fin("run_failed", "pytest exited " + run.exit_status);
+  return fin("ok", "", pytestFailedIds(run.stdout));
+}
+
+/** The failing test ids named in pytest's output (`FAILED <id> - ...` or `<id> FAILED`). */
+function pytestFailedIds(stdout) {
+  return String(stdout || "").split(/\r?\n/).map((l) => /^FAILED\s+(\S+)/.exec(l) || /^(\S+::\S+)\s+FAILED/.exec(l)).filter(Boolean).map((m) => m[1]);
+}
+
+/** Branch, PR and step-progress fields every halt return carries (each still states its own step_summary). */
+function haltRefs() {
+  return { branch: BRANCH, pr_number: prNumber, pr_url: prUrl, completed_steps: completedSteps, skipped_steps: skippedSteps, step_outcomes: stepOutcomes, scratch_clearing: scratchClearing };
+}
+
+/** A step_refused halt: the shell-runner's answer was no usable result, so whether the step ran is unknown. */
+async function refusedHalt(step, what, remedy) {
+  await cleanupBaselineWorktree();
+  outcome(`Step ${step} of ${STEP_COUNT}`, `halted: ${what}`);
+  return { status: "halted", halted_at_step: step, reason: "step_refused", message: remedy, ...haltRefs(),
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n') };
+}
+
 // Pre-flight 2 — gh account verification (EMU-aware, config-driven)
 //
 // Reads `gh_target_account` and `gh_repo` from the worktree's settings.json
 // (or config/settings.json). If the key is absent the pre-flight is a no-op
 // so installs with no EMU constraint are unaffected (AC-4).
-// -------------------------------------------------------------------------
 
 phase('Pre-flight 2')
 
@@ -679,21 +573,12 @@ const ghConfigResult = await agent(
   { agentType: "status-checker", label: "gh-config", phase: "Pre-flight 2" }
 )
 
-let ghConfig;
-{
-  try {
-    ghConfig = parseAgentJson(ghConfigResult, { stage: "gh-config", agent: "status-checker" }) || { gh_target_account: null, gh_repo: null };
-  } catch (_parseErr) {
-    log("[finalize-feature] gh config parse malformed — proceeding with no account constraint");
-    ghConfig = { gh_target_account: null, gh_repo: null };
-  }
-}
+const ghConfig = parsedOr(() => parseAgentJson(ghConfigResult, { stage: "gh-config", agent: "status-checker" }), { gh_target_account: null, gh_repo: null }, "proceeding with no account constraint");
 
 const GH_TARGET_ACCOUNT = (ghConfig.gh_target_account || "").trim() || null;
 const GH_REPO = (ghConfig.gh_repo || "").trim() || null;
 
 if (GH_TARGET_ACCOUNT) {
-  // Probe current active account.
   const ghStatusResult = await agent(
     "Run: gh auth status 2>&1\n" +
     "Parse the output to find which account is currently logged in and active.\n" +
@@ -703,41 +588,27 @@ if (GH_TARGET_ACCOUNT) {
     { agentType: "status-checker", label: "gh-auth-status", phase: "Pre-flight 2" }
   )
 
-  let ghStatus;
-  {
-    try {
-      ghStatus = parseAgentJson(ghStatusResult, { stage: "gh-auth-status", agent: "status-checker" }) || { active_account: null };
-    } catch (_parseErr) {
-      log("[finalize-feature] gh auth status parse malformed — assuming active_account is null");
-      ghStatus = { active_account: null };
-    }
-  }
+  const ghStatus = parsedOr(() => parseAgentJson(ghStatusResult, { stage: "gh-auth-status", agent: "status-checker" }), { active_account: null }, "assuming active_account is null");
 
   const activeAccount = (ghStatus.active_account || "").trim() || null;
 
   if (activeAccount !== GH_TARGET_ACCOUNT) {
-    // Switch to the configured account.
-    const ghSwitchResult = await agent(
-      `Run: gh auth switch --user "${GH_TARGET_ACCOUNT}" 2>&1\n` +
-      "Capture exit code and output.\n" +
-      "Then re-verify: run `gh auth status 2>&1` and extract the active account (see prior step).\n" +
-      "Return ONLY a JSON object: { \"switch_exit_code\": <integer>, \"verified_account\": \"<username or null>\" }",
-      { agentType: "status-checker", label: "gh-auth-switch", phase: "Pre-flight 2" }
-    )
-
-    let ghSwitch;
-    {
-      try {
-        ghSwitch = parseAgentJson(ghSwitchResult, { stage: "gh-auth-switch", agent: "status-checker" }) || { switch_exit_code: 1, verified_account: null };
-      } catch (_parseErr) {
-        log("[finalize-feature] gh switch parse malformed — assuming switch failed");
-        ghSwitch = { switch_exit_code: 1, verified_account: null };
-      }
+    // BO-4300a-1-ia: switch and re-verification are two shell-runner dispatches; no usable result ends the run quoting it.
+    const ghHalt = (r) => ({ status: "error", message: `gh account pre-flight failed: ${r.reason}. Received: ${r.received}`, action_required: "gh_login_required" });
+    const ghSwitch = shellStepReply(await shellStepDispatch(
+      `gh auth switch --user "${GH_TARGET_ACCOUNT}"`, "gh-auth-switch", "Pre-flight 2"), "gh-auth-switch");
+    if (!ghSwitch.ok) return ghHalt(ghSwitch);
+    const ghVerify = shellStepReply(await shellStepDispatch(
+      "gh auth status", "gh-auth-verify", "Pre-flight 2"), "gh-auth-verify");
+    if (!ghVerify.ok) return ghHalt(ghVerify);
+    // The active account is the one named just before an "Active account: true" line (gh prints one block per account).
+    let verifiedAccount = null;
+    for (const line of (ghVerify.stdout + "\n" + ghVerify.stderr).split(/\r?\n/)) {
+      const named = /Logged in to \S+ (?:account|as) (\S+)/.exec(line);
+      if (named) verifiedAccount = named[1];
+      if (/Active account:\s*true/i.test(line) && verifiedAccount) break;
     }
-
-    const verifiedAccount = (ghSwitch.verified_account || "").trim() || null;
-    const switchFailed =
-      ghSwitch.switch_exit_code !== 0 || verifiedAccount !== GH_TARGET_ACCOUNT;
+    const switchFailed = ghSwitch.exit_status !== 0 || verifiedAccount !== GH_TARGET_ACCOUNT;
 
     if (switchFailed) {
       return {
@@ -749,109 +620,35 @@ if (GH_TARGET_ACCOUNT) {
       };
     }
   }
-  // Active account is now confirmed to be GH_TARGET_ACCOUNT — proceed.
 }
 
-// -------------------------------------------------------------------------
 // Step 0 — Capture pre-merge test baseline on current main HEAD
 //
-// Creates a temporary worktree at origin/main, runs test-runner against it,
-// and stores the list of failing test IDs as the baseline. This baseline is
-// passed to the triage agent in step 3 so regressions can be distinguished
-// from pre-existing failures.
-//
-// Graceful degradation: if the worktree creation or test run fails for any
-// reason, log a warning and set baselineFailures = null. The workflow DOES
-// NOT halt — triage will classify all failures conservatively as regressions.
-//
-// Resumability: before creating the temp worktree, the agent probes for any
-// stale /tmp/leafcutter-main-baseline-* directory from a prior interrupted run
-// and removes it. This prevents git worktree add from failing because the
-// target path already exists.
+// Makes a scratch workspace at origin/main, runs the suite in it, and stores the failing test IDs as the
+// baseline passed to triage in step 3. Graceful degradation: if the workspace or the run fails, set
+// baselineFailures = null -- the workflow does NOT halt; triage classifies all failures as regressions.
 // -------------------------------------------------------------------------
 
 phase('Step 0')
 
 narrate("Step 0 of 9", 'Capturing pre-merge test baseline on current main HEAD...')
 
-// Set the cleanup guard path so cleanupBaselineWorktree() can remove it on
-// any early exit after this point. Step 0 clears it on success (step D).
-// baselineTmpPath uses args.baseline_ts (replaces Date.now(), banned in E2).
-baselineWorktreePath = baselineTmpPath;
-
-const baselineResult = await agent(
-  "Capture a pre-merge test baseline on the current main HEAD.\n" +
-  `Use git -C "${WORKTREE_ROOT}" for all git commands to avoid CWD ambiguity.\n` +
-  "\n" +
-  "Step A0 — Reclaim any stale baseline worktrees from prior interrupted runs:\n" +
-  "  Run: ls /tmp/leafcutter-main-baseline-* 2>/dev/null || true\n" +
-  "  For each path returned (if any):\n" +
-  `    Run: git -C "${WORKTREE_ROOT}" worktree remove \"<path>\" --force 2>/dev/null || true\n` +
-  "    Run: rm -rf \"<path>\" 2>/dev/null || true\n" +
-  "  Log each removed path as: 'Reclaimed stale baseline worktree: <path>'\n" +
-  "  If no paths found: log 'No stale baseline worktrees found.'\n" +
-  "\n" +
-  "Step A — Create a temporary detached worktree at origin/main:\n" +
-  `  Run: git -C "${WORKTREE_ROOT}" worktree add --detach "${baselineTmpPath}" origin/main\n` +
-  "  Capture the exit code.\n" +
-  "  If exit code is non-zero:\n" +
-  "    Log: 'Baseline worktree creation failed — triage will treat all failures as regressions.'\n" +
-  "    Return: { \"status\": \"worktree_failed\", \"baseline_sha\": null,\n" +
-  "              \"baseline_failures\": null, \"baseline_run_at\": null }\n" +
-  "\n" +
-  "Step B — Capture the SHA of main HEAD inside the temp worktree:\n" +
-  `  Run: git -C "${baselineTmpPath}" rev-parse HEAD\n` +
-  "  Store as <baseline_sha>.\n" +
-  "\n" +
-  "Step C — Deploy shims then run the test suite inside the temp worktree (FIN-100a-4):\n" +
-  `  Run: python3 "${baselineTmpPath}/scripts/build.py" --target-dir "${baselineTmpPath}"\n` +
-  "  (Deploys commit_guardian, feedback scripts, and .pre-commit-config.yaml — same build state as production.)\n" +
-  "  If build.py exits non-zero: log a warning but continue (shim deploy failure is non-fatal for baseline).\n" +
-  `  Then run inside "${baselineTmpPath}": pytest --tb=no -q 2>&1\n` +
-  "  Collect each line that matches the pattern '<file>::<test_name> FAILED'.\n" +
-  "  Build a list of failing test IDs (strings like 'test_foo.py::test_bar').\n" +
-  "  Note: a zero-length list means the baseline is clean (all tests pass).\n" +
-  "\n" +
-  "Step D — Remove the temp worktree:\n" +
-  `  Run: git -C "${WORKTREE_ROOT}" worktree remove "${baselineTmpPath}" --force\n` +
-  `  Run: rm -rf "${baselineTmpPath}" 2>/dev/null || true\n` +
-  "\n" +
-  "Step E — Return the baseline result:\n" +
-  "  If the test run completed (even with failures): return:\n" +
-  "    { \"status\": \"ok\",\n" +
-  "      \"baseline_sha\": \"<sha>\",\n" +
-  "      \"baseline_failures\": [<list of failing test IDs or empty>],\n" +
-  "      \"baseline_run_at\": \"<ISO 8601 timestamp>\" }\n" +
-  "  If the test run itself failed to execute (pytest not found, import error, etc.):\n" +
-  "    Log: 'Baseline run failed — triage will treat all failures as regressions.'\n" +
-  "    Return: { \"status\": \"run_failed\", \"baseline_sha\": \"<sha>\",\n" +
-  "              \"baseline_failures\": null, \"baseline_run_at\": \"<ISO 8601 timestamp>\" }",
-  // AC FIN-100h: NOT status-checker. This step provisions a git worktree, runs
-  // build.py and runs pytest — none of which is in that agent's contract, and
-  // it refuses the dispatch outright ("this task should be routed to whichever
-  // agent owns pre-merge CI baseline capture").
-  { agentType: "general-purpose", label: "step-0-baseline", phase: "Step 0" }
-)
-
-let baselineInfo;
-{
-  try {
-    baselineInfo = parseAgentJson(baselineResult, { stage: "step-0-baseline", agent: "status-checker" }) || { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null };
-  } catch (_parseErr) {
-    // AC-4: Malformed reply is not the same as "baseline failed" —
-    // degrade gracefully (same as run_failed path) without spuriously halting.
-    log("[finalize-feature] step 0 baseline parse malformed — treating as run_failed (triage will use conservative classification)");
-    baselineInfo = { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null };
-  }
-}
+// BO-4300a-1-ia: a scratch workspace from the maker (no hand-written workspace steps or rm) and one pytest run in it
+// (after the build.py deploy, so deploy-dependent tests are not RED in the baseline), each a shell-runner dispatch.
+const baselineRun = await mainTestRun(baselineSlug, null, "Step 0", "step-0-baseline");
+const baselineInfo = {
+  status: baselineRun.status,
+  baseline_sha: baselineRun.sha,
+  baseline_failures: baselineRun.failures,
+  baseline_run_at: null, // no clock in an E2 body
+  detail: baselineRun.detail,
+};
 
 const baselineStatus = (baselineInfo.status || "unknown").toLowerCase();
 
-// AC FIN-100h: a REFUSAL is not a run failure. run_failed / parse_failed mean
-// the baseline was attempted and produced nothing usable, which the degrade
-// path below handles conservatively. A refusal means the step never ran, so
-// there is no evidence either way — and the baseline is what the whole
-// regression comparison is measured against. Halt instead of degrading.
+// AC FIN-100h: a REFUSAL is not a run failure (run_failed / parse_failed degrade conservatively below). A
+// refusal means the step never ran -- no evidence either way, and the whole regression comparison rests on
+// the baseline -- so halt instead of degrading.
 if (isRefusalStatus(baselineStatus)) {
   await cleanupBaselineWorktree();
   outcome(`Step 0 of ${STEP_COUNT}`, `halted: baseline agent refused the dispatch (${baselineStatus})`);
@@ -864,12 +661,8 @@ if (isRefusalStatus(baselineStatus)) {
       "DECLINED the dispatch, so no baseline was captured and no test run happened. " +
       "Without a baseline the post-merge regression check has nothing to compare against, " +
       "so continuing would either halt on every pre-existing failure or merge unchecked. " +
-      "Re-dispatch step 0 to an agent whose contract covers git worktree provisioning, " +
-      "build.py and pytest.",
-    branch: BRANCH,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
-    step_outcomes: stepOutcomes,
+      "Received: " + baselineInfo.detail,
+    ...haltRefs(),
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   };
 }
@@ -880,16 +673,12 @@ if (baselineStatus === "ok") {
     : [];
   baselineSha = baselineInfo.baseline_sha || null;
   baselineRunAt = baselineInfo.baseline_run_at || null;
-  // Step D ran successfully — temp worktree already removed by the agent.
-  baselineWorktreePath = null;
   completedSteps.push(0);
 } else {
   // worktree_failed | run_failed | parse_failed | unknown — degrade gracefully.
   // baselineFailures stays null — triage will classify all failures as regressions.
   baselineSha = baselineInfo.baseline_sha || null;
   baselineRunAt = baselineInfo.baseline_run_at || null;
-  // The agent may have left the temp worktree behind if it failed part-way;
-  // keep baselineWorktreePath set so cleanup fires on any subsequent halt path.
   skippedSteps.push({
     step: 0,
     reason:
@@ -902,9 +691,7 @@ outcome('Step 0 of 9', baselineFailures !== null
   ? `Baseline captured: ${baselineFailures.length} pre-existing failure(s) at SHA ${baselineSha}`
   : `Baseline capture degraded (${baselineStatus}) — triage will use conservative classification`);
 
-// -------------------------------------------------------------------------
 // Step 1 — Open PR if missing (non-destructive, no confirmation gate)
-// -------------------------------------------------------------------------
 
 phase('Step 1')
 
@@ -918,17 +705,8 @@ const prProbeResult = await agent(
   { agentType: "status-checker", label: "step-1-pr-probe", phase: "Step 1" }
 )
 
-let prProbe;
-{
-  try {
-    prProbe = parseAgentJson(prProbeResult, { stage: "step-1-pr-probe", agent: "status-checker" }) || { found: false };
-  } catch (_parseErr) {
-    // AC-4: Malformed PR probe defaults to "not found" — safer to open a duplicate
-    // PR (which will be rejected by GH) than to silently skip creating one.
-    log("[finalize-feature] step 1 PR probe parse malformed — assuming no PR exists");
-    prProbe = { found: false };
-  }
-}
+// AC-4: a malformed probe means "not found" — a duplicate PR is rejected by GH; a skipped one is silent.
+const prProbe = parsedOr(() => parseAgentJson(prProbeResult, { stage: "step-1-pr-probe", agent: "status-checker" }), { found: false }, "assuming no PR exists");
 
 if (prProbe.found) {
   prNumber = prProbe.number;
@@ -954,15 +732,7 @@ if (prProbe.found) {
     { agentType: "pull-request", label: "step-1-open-pr", phase: "Step 1" }
   )
 
-  let openPr;
-  {
-    try {
-      openPr = parseAgentJson(openPrResult, { stage: "step-1-open-pr", agent: "pull-request" }) || {};
-    } catch (_parseErr) {
-      log("[finalize-feature] step 1 PR open parse malformed — pr_number and url will be null");
-      openPr = {};
-    }
-  }
+  const openPr = parsedOr(() => parseAgentJson(openPrResult, { stage: "step-1-open-pr", agent: "pull-request" }), {}, "pr_number and url will be null");
 
   prNumber = openPr.number || openPr.pr_number || null;
   prUrl = openPr.url || openPr.pr_url || null;
@@ -972,7 +742,6 @@ if (prProbe.found) {
     : 'Pull request status could not be determined');
 }
 
-// -------------------------------------------------------------------------
 // Step 2 — Merge origin/main into the feature worktree (no commit)
 //
 // Inserts the merged state into the worktree so that tests in step 3 run
@@ -984,7 +753,6 @@ if (prProbe.found) {
 // gate (step 3) can catch regressions before the feature lands on main.
 //
 // Resumability: probe git merge-base --is-ancestor to detect already-merged.
-// -------------------------------------------------------------------------
 
 phase('Step 2')
 
@@ -1020,19 +788,9 @@ const mergeMainResult = await agent(
   { agentType: "general-purpose", label: "step-2-merge-main", phase: "Step 2" }
 )
 
-let mergeMainInfo;
-{
-  try {
-    mergeMainInfo = parseAgentJson(mergeMainResult, { stage: "step-2-merge-main", agent: "status-checker" }) || { status: "already_up_to_date", merge_strategy: "already_up_to_date" };
-  } catch (_parseErr) {
-    // AC-4: A malformed reply is not the same as "conflict detected".
-    // Default to "already_up_to_date" (non-halting, safe) and log a warning.
-    // If the merge actually had a problem, it will become apparent at the
-    // test-runner phase (step 3) rather than spuriously halting here.
-    log("[finalize-feature] step 2 merge-main parse malformed — treating as already_up_to_date (non-halting safe default)");
-    mergeMainInfo = { status: "already_up_to_date", merge_strategy: "already_up_to_date" };
-  }
-}
+// AC-4: a malformed reply is not "conflict detected" — a real merge problem surfaces at step 3 instead.
+const mergeMainInfo = parsedOr(() => parseAgentJson(mergeMainResult, { stage: "step-2-merge-main", agent: "status-checker" }),
+  { status: "already_up_to_date", merge_strategy: "already_up_to_date" }, "treating as already_up_to_date (non-halting safe default)");
 
 const mergeStatus = (mergeMainInfo.status || "already_up_to_date").toLowerCase();
 
@@ -1044,12 +802,7 @@ if (mergeStatus === "conflict") {
     reason: "merge_conflict",
     message:
       "Feature branch has conflicts with main. Resolve conflicts and re-run.",
-    branch: BRANCH,
-    pr_number: prNumber,
-    pr_url: prUrl,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
-    step_outcomes: stepOutcomes,
+    ...haltRefs(),
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   };
 }
@@ -1073,12 +826,7 @@ if (isRefusalStatus(mergeStatus) || !["merged", "already_up_to_date"].includes(m
         : "this status is not part of the step's contract, so whether a merge happened is unknown. ") +
       "Refusing to treat this as a successful merge. Re-dispatch step 2 to an agent whose " +
       "contract covers git merge operations, or perform the merge by hand and re-run.",
-    branch: BRANCH,
-    pr_number: prNumber,
-    pr_url: prUrl,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
-    step_outcomes: stepOutcomes,
+    ...haltRefs(),
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   };
 }
@@ -1098,7 +846,6 @@ if (mergeStatus === "already_up_to_date") {
 
 const mergeStrategy = mergeMainInfo.merge_strategy || "already_up_to_date";
 
-// -------------------------------------------------------------------------
 // Step 3 — Run post-merge tests + triage (always runs)
 //
 // The baseline captured in step 0 is forwarded here so the triage agent
@@ -1110,7 +857,6 @@ const mergeStrategy = mergeMainInfo.merge_strategy || "already_up_to_date";
 // If tests pass: skip triage sub-steps and continue to step 4 (PR merge).
 // If tests fail: triage classifies failures; HALT here if any are regressions.
 // Only when blocks_finalization === false does the workflow proceed to step 4.
-// -------------------------------------------------------------------------
 
 phase('Step 3')
 
@@ -1133,28 +879,13 @@ testResult = await agent(
   { agentType: "test-runner", label: "step-3-test-run", phase: "Step 3" }
 )
 
-let testPassed;
-let postMergeFailures;
-{
-  try {
-    const parsed = parseAgentJson(testResult, { stage: "step-3-test-run", agent: "test-runner" }) || {};
-    testPassed = parsed.passed === true;
-    testResult = parsed;
-    postMergeFailures = Array.isArray(parsed.failing_tests) ? parsed.failing_tests : [];
-  } catch (_parseErr) {
-    // AC-4: A malformed test reply is ambiguous — we cannot determine pass/fail.
-    // Default to testPassed=false (conservative) but log clearly that this is a
-    // parse failure, not an agent-reported failure. The triage step will then
-    // attempt to classify failures, and if the triage reply is also malformed,
-    // that triage step's own safe default applies.
-    log("[finalize-feature] step 3 test-runner parse malformed — treating as failed (conservative; triage will classify)");
-    testPassed = false;
-    postMergeFailures = [];
-    testResult = { passed: false, output: "(parse malformed)", failing_tests: [] };
-  }
-}
+// AC-4: a malformed test reply is ambiguous — treated as failed (conservative), logged as a parse
+// failure rather than an agent-reported one; triage then classifies (with its own safe default).
+testResult = parsedOr(() => parseAgentJson(testResult, { stage: "step-3-test-run", agent: "test-runner" }),
+  { passed: false, output: "(parse malformed)", failing_tests: [] }, "treating as failed (conservative; triage will classify)");
+let testPassed = testResult.passed === true;
+let postMergeFailures = Array.isArray(testResult.failing_tests) ? testResult.failing_tests : [];
 
-// -------------------------------------------------------------------------
 // Step 3 (deploy-parity self-check — FIN-100g-4 / FIN-100g-4-i)
 //
 // Before triaging any failures, verify the post-merge worktree's DEPLOYED
@@ -1178,39 +909,28 @@ let postMergeFailures;
 // nothing to attribute to deploy skew, and rescuing an ambiguous/empty result to
 // "passed" would skip triage and merge on a malformed test run (H-1).
 if (!testPassed && postMergeFailures.length > 0) {
-  const deployParityResult = await agent(
-    `Verify the deployed layer of the post-merge worktree "${WORKTREE_ROOT}" is consistent BEFORE triage (FIN-100g-4).\n` +
-    "1. For every runtime artifact the failing tests import, check it is present at its\n" +
-    "   expected DEPLOYED location under the worktree root — INCLUDING gitignored,\n" +
-    "   non-git-tracked deployed copies (e.g. scripts/commit_guardian/*.py, scripts/feedback/*.py\n" +
-    "   deployed by install_shims), not just git-tracked files.\n" +
-    "2. If ANY expected deployed artifact is missing, re-run the deterministic deploy:\n" +
-    `     python3 "${WORKTREE_ROOT}/scripts/build.py" --target-dir "${WORKTREE_ROOT}"\n` +
-    "   (same build.py deploy as the Step 0 baseline and the Step 3 pre-test build), then\n" +
-    "   re-verify and re-run the previously-failing tests so build-state failures clear.\n" +
-    "3. A test that FAILED before the re-deploy but PASSES after it is an environment/\n" +
-    "   build-state condition — report it in build_state_only_failures. This classification\n" +
-    "   is data-driven (passes-after-verified-redeploy), NEVER keyed on a hard-coded name.\n" +
-    "   A build/deploy inconsistency is NEVER a test regression.\n" +
-    "Return ONLY: { \"deploy_consistent\": true|false, \"redeployed\": true|false, " +
-    "\"build_state_only_failures\": [\"<file>::<test>\", ...], \"still_failing\": [\"<file>::<test>\", ...] }",
-    { agentType: "test-runner", label: "step-3-deploy-parity", phase: "Step 3" }
-  )
-
+  // BO-4300a-1-ia: the deploy is ONE shell-runner dispatch of the exact build command; the re-run of the failing
+  // tests is a second. The classification is computed here from what the re-run reported, never taken from prose.
+  const deployReply = shellStepReply(await shellStepDispatch(
+    `python3 "${WORKTREE_ROOT}/scripts/build.py" --target-dir "${WORKTREE_ROOT}"`, "step-3-deploy-parity", "Step 3"), "step-3-deploy-parity");
+  if (!deployReply.ok) {
+    return await refusedHalt(3, `deploy-parity step produced no usable answer (${deployReply.reason})`,
+      `Step 3 (deploy parity) received no usable answer, so whether the deploy ran is unknown: ${deployReply.reason}. Received: ${deployReply.received}`);
+  }
   let buildStateOnly = [];
   let stillFailing = null;
-  {
-    try {
-      const parsedDp = parseAgentJson(deployParityResult, { stage: "step-3-deploy-parity", agent: "test-runner" }) || {};
-      buildStateOnly = Array.isArray(parsedDp.build_state_only_failures)
-        ? parsedDp.build_state_only_failures
-        : [];
-      // still_failing is the agent's post-redeploy remaining-failure set; null
-      // when the agent did not report it (older/ambiguous replies).
-      stillFailing = Array.isArray(parsedDp.still_failing) ? parsedDp.still_failing : null;
-    } catch (_parseErr) {
-      log("[finalize-feature] step 3 deploy-parity parse malformed — proceeding with the original post-merge failures (conservative).");
+  if (deployReply.exit_status === 0) {
+    const rerun = shellStepReply(await shellStepDispatch(
+      "python3 -m pytest --tb=no -q --rootdir \"" + WORKTREE_ROOT + "\" " +
+      postMergeFailures.map((id) => "\"" + WORKTREE_ROOT + "/" + id + "\"").join(" "), "step-3-deploy-parity-rerun", "Step 3"), "step-3-deploy-parity-rerun");
+    if (rerun.ok && (rerun.exit_status === 0 || rerun.exit_status === 1)) {
+      stillFailing = pytestFailedIds(rerun.stdout);
+      buildStateOnly = postMergeFailures.filter((t) => !stillFailing.includes(t));
+    } else {
+      log(`[finalize-feature] step 3 deploy-parity re-run gave no usable result (${rerun.ok ? "pytest exited " + rerun.exit_status : rerun.reason}); proceeding with the original post-merge failures (conservative).`);
     }
+  } else {
+    log(`[finalize-feature] step 3 deploy-parity: build.py exited ${deployReply.exit_status}; proceeding with the original post-merge failures (conservative).`);
   }
 
   // Contradiction guard (M-2): never exclude a test the agent itself still reports
@@ -1245,13 +965,11 @@ if (testPassed) {
   completedSteps.push(3);
   // triageReport remains null — forwarded to step 6 as-is.
 } else {
-  // -----------------------------------------------------------------------
   // Step 3 (triage sub-step) — Dispatch test-failure-triage when failures exist
   //
   // Passes post_merge_failures, baseline_failures, baseline_sha,
   // feature_branch, and changed_files (derived here via git diff) so the
   // triage agent can classify each failure as regression or pre-existing.
-  // -----------------------------------------------------------------------
 
   // Derive changed_files: files touched by the feature branch relative to
   // origin/main. Captured at this point (after the --no-commit merge) so
@@ -1263,18 +981,9 @@ if (testPassed) {
     { agentType: "status-checker", label: "step-3-changed-files", phase: "Step 3" }
   )
 
-  let changedFiles = [];
-  {
-    try {
-      const parsedCf = parseAgentJson(changedFilesResult, { stage: "step-3-changed-files", agent: "status-checker" }) || {};
-      changedFiles = Array.isArray(parsedCf.changed_files) ? parsedCf.changed_files : [];
-    } catch (_parseErr) {
-      log("[finalize-feature] step 3 changed_files parse malformed — triage will use empty changed_files list");
-      changedFiles = [];
-    }
-  }
+  const parsedCf = parsedOr(() => parseAgentJson(changedFilesResult, { stage: "step-3-changed-files", agent: "status-checker" }), {}, "triage will use empty changed_files list");
+  const changedFiles = Array.isArray(parsedCf.changed_files) ? parsedCf.changed_files : [];
 
-  // -----------------------------------------------------------------------
   // Step 3 (null-baseline targeted-rerun recovery — FIN-100c-4/5/6/9)
   //
   // When baselineFailures is null (Step 0 baseline unavailable) and there
@@ -1287,75 +996,28 @@ if (testPassed) {
   //   Tests in the recovered baseline → pre_existing; absent → regression.
   // Failure path: logs "targeted rerun unavailable" and falls back to the
   //   conservative null-baseline path (all failures = regressions, FIN-100c-9).
-  // -----------------------------------------------------------------------
-  let recoveredBaselineFailures = null;
-
   if (baselineFailures === null && postMergeFailures.length > 0) {
     log(
       `[finalize-feature] step 3: baseline unavailable — attempting targeted rerun of ` +
       `${postMergeFailures.length} failing test ID(s) against origin/main HEAD (FIN-100c-4).`
     );
 
-    const recoveryWorktreePath = `${baselineTmpPath}-recovery`;
-    // Register with the workflow-level cleanup guard so cleanupBaselineWorktree()
-    // fires on any early exit (crash/non-compliant agent/malformed output) that
-    // occurs while the recovery worktree exists (mirrors the Step 0 pattern at
-    // line 413 where baselineWorktreePath = baselineTmpPath is set before dispatch).
-    baselineWorktreePath = recoveryWorktreePath;
-
-    const recoveryResult = await agent(
-      "Perform a targeted rerun of specific failing test IDs against a fresh origin/main checkout.\n" +
-      "Rerun ONLY the specified failing test IDs — NOT the full suite (bounded runtime, FIN-100c-5).\n" +
-      "\n" +
-      "Step A — Create a temporary detached worktree at origin/main HEAD:\n" +
-      `  Run: git -C "${WORKTREE_ROOT}" worktree add --detach "${recoveryWorktreePath}" origin/main\n` +
-      "  Capture exit code.\n" +
-      "  If non-zero:\n" +
-      "    Log: 'targeted rerun unavailable — worktree checkout failed.'\n" +
-      "    Return: { \"status\": \"checkout_failed\", \"recovered_failures\": null }\n" +
-      "\n" +
-      "Step B — Deploy shims before rerun (build parity with Step 0 and Step 3, FIN-100c-4):\n" +
-      `  Run: python3 "${recoveryWorktreePath}/scripts/build.py" --target-dir "${recoveryWorktreePath}"\n` +
-      "  Capture exit code.\n" +
-      "  If non-zero:\n" +
-      "    Log: 'targeted rerun unavailable — build/deploy step failed.'\n" +
-      `    Run: git -C "${WORKTREE_ROOT}" worktree remove "${recoveryWorktreePath}" --force 2>/dev/null || true\n` +
-      `    Run: rm -rf "${recoveryWorktreePath}" 2>/dev/null || true\n` +
-      "    Return: { \"status\": \"build_failed\", \"recovered_failures\": null }\n" +
-      "\n" +
-      "Step C — Targeted rerun of ONLY the failing test IDs (not full suite):\n" +
-      `  Run in "${recoveryWorktreePath}": pytest --tb=no -q <each_failing_test_id_as_separate_arg>\n` +
-      "  Where the failing test IDs are listed in Context below.\n" +
-      "  Collect each output line matching '<file>::<test_name> FAILED'.\n" +
-      "  Build recovered_failures = list of test IDs that ALSO fail on origin/main HEAD.\n" +
-      "\n" +
-      "Step D — Remove the temp recovery worktree:\n" +
-      `  Run: git -C "${WORKTREE_ROOT}" worktree remove "${recoveryWorktreePath}" --force 2>/dev/null || true\n` +
-      `  Run: rm -rf "${recoveryWorktreePath}" 2>/dev/null || true\n` +
-      "\n" +
-      "Step E — Return result:\n" +
-      "  Return: { \"status\": \"ok\", \"recovered_failures\": [<list of test IDs that failed on origin/main>] }\n" +
-      "  An empty list means no post-merge failure also fails on main (all are regressions).\n" +
-      `Context: failing_test_ids=${JSON.stringify(postMergeFailures)}`,
-      { agentType: "status-checker", label: "step-3-targeted-rerun", phase: "Step 3" }
-    )
-
-    let recoveryInfo;
-    {
-      try {
-        recoveryInfo = parseAgentJson(recoveryResult, { stage: "step-3-targeted-rerun", agent: "status-checker" }) || { status: "parse_failed", recovered_failures: null };
-      } catch (_parseErr) {
-        log("[finalize-feature] step 3 targeted-rerun parse malformed — targeted rerun unavailable, using conservative fallback.");
-        recoveryInfo = { status: "parse_failed", recovered_failures: null };
-      }
+    // Deploy shims before rerun (build parity with Step 0): the helper runs build.py in the scratch workspace first.
+    // BO-4300a-1-ia: the same helper as Step 0 -- a scratch workspace from the maker, one pytest run of ONLY the
+    // failing ids in it, its removal. A reply that is no usable result ends the run; it is never "the rerun ran".
+    const recoveryRun = await mainTestRun(baselineSlug + "-recovery", postMergeFailures, "Step 3", "step-3-targeted-rerun");
+    if (recoveryRun.status === "declined") {
+      return await refusedHalt(3, `targeted rerun step produced no usable answer (${recoveryRun.detail})`,
+        "Step 3 (targeted rerun on origin/main) received no usable answer, so whether it ran is unknown: " + recoveryRun.detail);
     }
+    const recoveryInfo = { status: recoveryRun.status, recovered_failures: recoveryRun.failures };
 
     const recoveryStatus = (recoveryInfo.status || "").toLowerCase();
     if (recoveryStatus === "ok" && Array.isArray(recoveryInfo.recovered_failures)) {
       // Success: forward recovered baseline to triage (FIN-100c-6).
       // recoveredBaselineFailures = intersection of post-merge failures and those
       // that ALSO fail on origin/main HEAD. Tests absent from it → regression.
-      recoveredBaselineFailures = recoveryInfo.recovered_failures;
+      const recoveredBaselineFailures = recoveryInfo.recovered_failures; // FIN-100c-15: scoped to its only use
       baselineFailures = recoveredBaselineFailures; // [] means clean baseline, never null
       log(
         `[finalize-feature] step 3 targeted rerun complete: ` +
@@ -1407,40 +1069,21 @@ if (testPassed) {
     { agentType: "test-failure-triage", label: "step-3-triage", phase: "Step 3" }
   )
 
-  {
-    try {
-      triageReport = parseAgentJson(triageRaw, { stage: "step-3-triage", agent: "test-failure-triage" }) || {
-        blocks_finalization: true,
-        regressions: postMergeFailures,
-        pre_existing: [],
-        summary: "Triage report empty — treating all failures as regressions.",
-      };
-    } catch (_parseErr) {
-      // AC-4: A malformed triage reply is genuinely ambiguous — we cannot determine
-      // whether failures are regressions or pre-existing. Use conservative
-      // blocks_finalization=true, but log clearly that this is a parse failure
-      // (not an agent-reported regression), so the operator can distinguish
-      // "tests have regressions" from "triage reply was garbled".
-      log("[finalize-feature] step 3 triage parse malformed — treating as blocks_finalization=true (conservative; see note in summary)");
-      triageReport = {
-        blocks_finalization: true,
-        regressions: postMergeFailures,
-        pre_existing: [],
-        summary: "Triage reply was malformed (could not parse JSON) — treating all failures as regressions conservatively. If you believe this is a parse error rather than a real regression, re-run /finalize-feature.",
-      };
-    }
-  }
+  // AC-4: an empty or malformed triage reply is ambiguous — conservative blocks_finalization=true, logged
+  // as a parse failure so "tests have regressions" stays distinguishable from "triage reply was garbled".
+  triageReport = parsedOr(() => parseAgentJson(triageRaw, { stage: "step-3-triage", agent: "test-failure-triage" }), {
+    blocks_finalization: true, regressions: postMergeFailures, pre_existing: [],
+    summary: "Triage reply was empty or malformed (could not parse JSON) — treating all failures as regressions conservatively. If you believe this is a parse error rather than a real regression, re-run /finalize-feature.",
+  }, "treating as blocks_finalization=true (conservative; see note in summary)");
 
   // Log the triage report to the user for visibility.
   log("[finalize-feature] step 3 triage report: " + JSON.stringify(triageReport, null, 2));
 
-  // -----------------------------------------------------------------------
   // Step 3 (halt gate) — Halt-or-continue based on triage_report.blocks_finalization
   //
   // If blocks_finalization is true: HARD EARLY RETURN. Step 4 (PR merge) is
   // structurally unreachable from this point — no escape hatch.
   // If false: pass triage_report forward and continue to step 4.
-  // -----------------------------------------------------------------------
   if (triageReport.blocks_finalization) {
     await cleanupBaselineWorktree();
     return {
@@ -1454,12 +1097,7 @@ if (testPassed) {
       test_output:
         (testResult && testResult.output) ||
         JSON.stringify(testResult),
-      branch: BRANCH,
-      pr_number: prNumber,
-      pr_url: prUrl,
-      completed_steps: completedSteps,
-      skipped_steps: skippedSteps,
-      step_outcomes: stepOutcomes,
+      ...haltRefs(),
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     };
   }
@@ -1472,22 +1110,23 @@ outcome('Step 3 of 9', testPassed
   ? `Tests passed: no new failures (${baselineFailures !== null ? baselineFailures.length : 'N/A'} pre-existing on main)`
   : `Tests completed: ${postMergeFailures.length} pre-existing failure(s) — no regressions, proceeding`);
 
-// -------------------------------------------------------------------------
 // Step 3.5 — Pre-merge AC closure (runs on the feature branch, before Step 4)
 //
 // This step MUST run before the PR merge (step 4) so that ticket status and
 // source AC work_status are committed on the feature branch. The PR then
 // carries that closure commit to origin/main atomically. Writing closure on
 // local main is not possible because main is PR-only (branch protection).
-// -------------------------------------------------------------------------
 
 phase('Step 3.5')
 
 narrate("Step 3.5 of 9", 'Closing in-scope tickets and source ACs on the feature branch before merge...')
 
-// Probe: check whether a closure commit already exists on the branch.
+// Probe: check whether a closure commit already exists on the branch. Scoped to the branch's OWN
+// commits (origin/main..HEAD, the same base ref the derive step measures from): an unscoped search
+// finds main's earlier closure commits and would skip this step for every branch.
 const closureProbeResult = await agent(
-  `Run: git -C "${WORKTREE_ROOT}" log --oneline --grep 'chore(tickets): close tickets and source ACs' -1\n` +
+  `Run: git -C "${WORKTREE_ROOT}" log --oneline --grep 'chore(tickets): close tickets and source ACs' -1 origin/main..HEAD\n` +
+  "Only the command's standard output counts; if the command itself fails, treat the output as empty.\n" +
   "If the output is non-empty (a closure commit already exists on this branch):\n" +
   "  Return: { \"already_committed\": true }\n" +
   "Otherwise:\n" +
@@ -1495,16 +1134,10 @@ const closureProbeResult = await agent(
   { agentType: "status-checker", label: "step-3.5-closure-probe", phase: "Step 3.5" }
 )
 
-let closureAlreadyCommitted = false;
-{
-  try {
-    closureAlreadyCommitted = (parseAgentJson(closureProbeResult, { stage: "step-3.5-closure-probe", agent: "status-checker" }) || {}).already_committed === true;
-  } catch (_parseErr) {
-    log("[finalize-feature] step 3.5 closure probe parse malformed — assuming not already committed (will re-attempt closure)");
-    closureAlreadyCommitted = false;
-  }
-}
+const closureAlreadyCommitted = parsedOr(() => parseAgentJson(closureProbeResult, { stage: "step-3.5-closure-probe", agent: "status-checker" }),
+  {}, "assuming not already committed (will re-attempt closure)").already_committed === true;
 
+let step35Outcome = null; // set only on the two executed paths; the skip paths record their own outcome
 if (closureAlreadyCommitted) {
   log("Step 3.5 of 9: [skipped] Closure commit already present on this branch — skipping pre-merge closure");
   outcome(`Step 3.5 of ${STEP_COUNT}`, 'skipped: pre-merge closure commit already present on branch');
@@ -1521,14 +1154,8 @@ if (closureAlreadyCommitted) {
       "Return ONLY a JSON object: { \"state\": \"OPEN\"|\"MERGED\"|\"CLOSED\" }",
       { agentType: "status-checker", label: "step-3.5-pr-state", phase: "Step 3.5" }
     )
-    {
-      try {
-        prAlreadyMergedAtClosure = ((parseAgentJson(prClosureStateResult, { stage: "step-3.5-pr-state", agent: "status-checker" }) || {}).state || "").toUpperCase() === "MERGED";
-      } catch (_parseErr) {
-        log("[finalize-feature] step 3.5 PR state parse malformed — assuming PR is OPEN");
-        prAlreadyMergedAtClosure = false;
-      }
-    }
+    prAlreadyMergedAtClosure = String(parsedOr(() => parseAgentJson(prClosureStateResult, { stage: "step-3.5-pr-state", agent: "status-checker" }),
+      {}, "assuming PR is OPEN").state || "").toUpperCase() === "MERGED";
   }
 
   if (prAlreadyMergedAtClosure) {
@@ -1539,173 +1166,127 @@ if (closureAlreadyCommitted) {
       reason: "PR already merged — pre-merge closure step skipped (AC-5 idempotency)",
     });
   } else {
-    // -----------------------------------------------------------------------
-    // Sub-step A: Reset the Step 2 test-merge.
-    // -----------------------------------------------------------------------
-    const resetMergeResult = await agent(
-      "Reset any staged test-merge left by step 2 before editing ticket files.\n" +
-      `All git commands use the explicit worktree root: git -C "${WORKTREE_ROOT}"\n` +
-      "\n" +
-      "1. Check if a merge is in progress:\n" +
-      `   Run: git -C "${WORKTREE_ROOT}" rev-parse --verify MERGE_HEAD 2>/dev/null\n` +
-      "   Capture the exit code.\n" +
-      "\n" +
-      "2. If exit code is 0 (MERGE_HEAD exists — merge in progress):\n" +
-      `   Run: git -C "${WORKTREE_ROOT}" merge --abort\n` +
-      "   Log: 'Step 2 test-merge aborted — clean feature-branch state restored.'\n" +
-      "   Return: { \"status\": \"aborted\" }\n" +
-      "\n" +
-      "3. If exit code is non-zero (no merge in progress):\n" +
-      `   Run: git -C "${WORKTREE_ROOT}" reset --hard HEAD\n` +
-      "   Log: 'No merge in progress — reset to feature-branch HEAD.'\n" +
-      "   Return: { \"status\": \"reset\" }",
+    const halt35 = async (reason, message, extra) => {
+      await cleanupBaselineWorktree();
+      outcome(`Step 3.5 of ${STEP_COUNT}`, `halted: ${reason}`);
+      return { status: "halted", halted_at_step: "3.5", reason: reason, message: `${message} The PR has NOT been merged.`, ...extra, ...haltRefs(), step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n') };
+    };
+
+    // Sub-step A: abort a Step 2 test-merge still in progress (never touches uncommitted edits).
+    // The abort is re-checked: a merge that survives it would make the derivation read a half-merged tree.
+    const resetReply = await agent(
+      "If a merge is in progress in the worktree, abort it; otherwise change nothing.\n" +
+      `  Run: git -C "${WORKTREE_ROOT}" rev-parse --verify MERGE_HEAD\n` +
+      `  If (and only if) that succeeds, run: git -C "${WORKTREE_ROOT}" merge --abort\n` +
+      `  Then check again, run: git -C "${WORKTREE_ROOT}" rev-parse --verify MERGE_HEAD\n` +
+      "Return: { \"status\": \"aborted\"|\"no_merge\"|\"still_merging\" } — still_merging when that second check still succeeds.",
       { agentType: "status-checker", label: "step-3.5-reset-merge", phase: "Step 3.5" }
     )
-
-    // Derive the epic scope prefix from the branch name.
-    // For EPIC-* branches the closure is restricted to that epic's own ticket folder.
-    // For single-ticket branches (no EPIC- prefix) SCOPE_PREFIX is empty — git diff
-    // already limits discovery to files the branch changed, so no folder filter is needed.
-    const SCOPE_PREFIX = BRANCH.startsWith("EPIC-")
-      ? `tickets/00_inbox/epics/${BRANCH}/`
-      : "";
-
-    // Sub-step B + C + D + E: find in-scope tickets, close them, close ACs, commit.
-    const closureResult = await agent(
-      "Close in-scope tickets and their source ACs on the feature branch.\n" +
-      "\n" +
-      "=== CONTEXT ===\n" +
-      `Feature branch: ${BRANCH}\n` +
-      `Worktree root: ${WORKTREE_ROOT}\n` +
-      `SCOPE_PREFIX: '${SCOPE_PREFIX}'\n` +
-      "(SCOPE_PREFIX is non-empty for EPIC-* branches — only paths under it are eligible.)\n" +
-      "\n" +
-      "=== SUB-STEP B: FIND IN-SCOPE TICKETS ===\n" +
-      "CRITICAL: Only close tickets that this branch explicitly changed via git.\n" +
-      "DO NOT walk the whole ticket store — that causes cross-epic contamination.\n" +
-      "\n" +
-      "B1. List ticket files changed by this branch (git-only — no worktree walk):\n" +
-      `  Run: git -C ${WORKTREE_ROOT} diff --name-only origin/main HEAD -- 'tickets/**/*.md'\n` +
-      `  Run: git -C ${WORKTREE_ROOT} log --oneline origin/main..${BRANCH} --name-only --diff-filter=A -- 'tickets/**/*.md'\n` +
-      "  Combine both lists; deduplicate. Exclude Master_Plan.md.\n" +
-      `  If SCOPE_PREFIX ('${SCOPE_PREFIX}') is non-empty: discard every path that does NOT start with SCOPE_PREFIX.\n` +
-      "  Log: 'SCOPE_PREFIX=<value>; in-scope ticket candidates from git diff: <count>'\n" +
-      "\n" +
-      "B2. For each remaining file, read its frontmatter `status:` field.\n" +
-      "  Collect only files where status != 'done' (skip already-done tickets — idempotency).\n" +
-      "  Call this list OPEN_TICKETS.\n" +
-      "  If OPEN_TICKETS is empty: log 'No open tickets to close.' and skip to REPORTING.\n" +
-      "\n" +
-      "=== SUB-STEP C: SET status: done ===\n" +
-      "For each ticket in OPEN_TICKETS:\n" +
-      `  Run: python3 ${WORKTREE_ROOT}/{{config.output_root}}/scripts/set_ticket_status.py --ticket <ticket_path> --status done\n` +
-      "  NEVER write that value yourself and NEVER add --force: this script is the single writer of the finished state (ADR-047), and the override switches off the parity check that makes it the only one.\n" +
-      "  If exit code is 0: log 'Set status: done on <ticket_path>' and increment tickets_closed.\n" +
-      "  If exit code is non-zero: the ticket is NOT closed. Log 'REFUSED: <ticket_path> left open — <script stderr>' and increment tickets_refused. Do NOT close it by any other route and do NOT retry with --force; leaving it open is the correct outcome, and the archive check at step 5 surfaces it.\n" +
-      "\n" +
-      "=== SUB-STEP D: CLOSE SOURCE ACs ===\n" +
-      "For each ticket in OPEN_TICKETS:\n" +
-      "  Read the ticket frontmatter and look for a `source_ac:` field.\n" +
-      "  If `source_ac` is absent or empty: log 'No source_ac on <ticket_path> — skipping AC closure.' and skip (AC-3 no-op).\n" +
-      "  If `source_ac` is present:\n" +
-      `    Run: python3 ${WORKTREE_ROOT}/{{config.output_root}}/scripts/ac_store/mark_ac_done.py --ticket <ticket_path> --ac-root ${WORKTREE_ROOT}/docs/acceptance-criteria/\n` +
-      "    Capture the exit code.\n" +
-      "    If exit code is 0: increment acs_closed counter.\n" +
-      "    If exit code is non-zero: log 'WARNING: mark_ac_done.py exited <code> for <ticket_path> — skipping AC closure (non-fatal).' and increment acs_skipped counter. DO NOT fail finalize. (AC-4 non-fatal)\n" +
-      "\n" +
-      "=== SUB-STEP E: COMMIT ON FEATURE BRANCH ===\n" +
-      "If OPEN_TICKETS was non-empty (any edits were made):\n" +
-      `  Run: git -C ${WORKTREE_ROOT} add tickets/\n` +
-      `  Run: git -C ${WORKTREE_ROOT} add docs/acceptance-criteria/ 2>/dev/null || true\n` +
-      `  Run: git -C ${WORKTREE_ROOT} diff --cached --name-only\n` +
-      "  Capture the list as STAGED_PATHS.\n" +
-      "\n" +
-      "  SCOPE GUARD — verify every staged path is within the epic scope:\n" +
-      "  A path is allowed when ANY of these hold:\n" +
-      "    - It starts with 'docs/acceptance-criteria/' (AC closure files).\n" +
-      `    - SCOPE_PREFIX ('${SCOPE_PREFIX}') is non-empty AND the path starts with SCOPE_PREFIX.\n` +
-      "    - SCOPE_PREFIX is empty AND the path is in the OPEN_TICKETS list.\n" +
-      "  Any path that does not satisfy one of these conditions is a SCOPE VIOLATION.\n" +
-      "\n" +
-      "  If any SCOPE VIOLATION is found:\n" +
-      `    Run: git -C ${WORKTREE_ROOT} reset HEAD\n` +
-      "    Log: 'ABORT: closure commit aborted — staged paths fall outside epic scope.'\n" +
-      "    For each violating path log: 'OUT-OF-SCOPE: <path>'\n" +
-      "    Return:\n" +
-      "    {\n" +
-      '      "tickets_closed": [],\n' +
-      '      "acs_closed": 0,\n' +
-      '      "acs_skipped": 0,\n' +
-      '      "commit_made": false,\n' +
-      '      "scope_violation": true,\n' +
-      '      "out_of_scope_paths": ["<violating path 1>", ...]\n' +
-      "    }\n" +
-      "\n" +
-      "  If all staged paths pass the scope guard:\n" +
-      "    If staged files exist:\n" +
-      `      Run: COMMIT_AGENT_MODE=1 git -C ${WORKTREE_ROOT} commit -m 'chore(tickets): close tickets and source ACs'\n` +
-      "      Log: 'Closure commit created on feature branch.'\n" +
-      "    Else:\n" +
-      "      Log: 'Nothing staged after edits — all tickets were already done.'\n" +
-      "\n" +
-      "=== REPORTING ===\n" +
-      "Return a JSON object:\n" +
-      "{\n" +
-      '  "tickets_closed": ["<path1>", ...],\n' +
-      '  "acs_closed": <integer>,\n' +
-      '  "acs_skipped": <integer>,\n' +
-      '  "commit_made": true|false,\n' +
-      '  "scope_violation": false,\n' +
-      '  "out_of_scope_paths": []\n' +
-      "}",
-      { agentType: "status-checker", label: "step-3.5-closure", phase: "Step 3.5" }
-    )
-
-    let closureInfo;
-    {
-      try {
-        closureInfo = parseAgentJson(closureResult, { stage: "step-3.5-closure", agent: "status-checker" }) || { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false, scope_violation: false, out_of_scope_paths: [] };
-      } catch (_parseErr) {
-        log("[finalize-feature] step 3.5 closure parse malformed — assuming zero tickets/ACs closed");
-        closureInfo = { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false, scope_violation: false, out_of_scope_paths: [] };
-      }
+    const resetStatus = parsedOr(() => parseAgentJson(resetReply, { stage: "step-3.5-reset-merge", agent: "status-checker" }), {}, "reset-merge reply unreadable").status;
+    if (resetStatus !== "aborted" && resetStatus !== "no_merge") {
+      const stillMerging = resetStatus === "still_merging";
+      return await halt35(stillMerging ? "merge_still_in_progress" : "merge_state_unknown", stillMerging
+        ? "A merge is still in progress in the worktree after the abort, so the closable set cannot be worked out from a clean branch state. Nothing was closed. Resolve or abort the merge by hand and re-run /finalize-feature."
+        : "Could not confirm that no merge is in progress in the worktree (the reset reply was unreadable or unrecognised). Nothing was closed. Check `git status`, then re-run /finalize-feature.", {});
     }
 
-    // Surface any scope violation clearly so the operator can investigate.
-    // A scope violation means the agent staged paths outside the epic's own folder
-    // and the guard correctly aborted the commit (no closure commit was made).
-    if (closureInfo.scope_violation) {
-      const offendingPaths = Array.isArray(closureInfo.out_of_scope_paths)
-        ? closureInfo.out_of_scope_paths
-        : [];
-      log(
-        "[finalize-feature] step 3.5 SCOPE VIOLATION: closure commit aborted — " +
-        "staged paths fall outside epic scope (" + (SCOPE_PREFIX || "branch-diff-derived") + ").\n" +
-        "Offending paths:\n" +
-        offendingPaths.map(p => `  - ${p}`).join("\n")
+    // BO-400e-3-ii..-viii: the closable set is COMPUTED by finalize_closable_set.py, never selected
+    // by prose handed to an agent. This step dispatches the script and reads its reply. The script
+    // closes a ticket only through set_ticket_status.py --status done (the one writer of the finished
+    // state, ADR-047) and its source AC only through mark_ac_done.py; a non-zero exit is REFUSED, the
+    // ticket is not closed and its AC is left open.
+    const CLOSER_CLI = `python3 ${WORKTREE_ROOT}/{{config.output_root}}/scripts/build_orchestration/finalize_closable_set.py`;
+    const runCloser = async (label, subcommand) => {
+      const raw = await agent(
+        JSON.stringify({ step: label, command: `${CLOSER_CLI} ${subcommand}`, target: { workspace: WORKTREE_ROOT, branch: BRANCH, ac_id: "none" } }),
+        { agentType: "command-step-runner", label, phase: "Step 3.5" }
       );
+      const ctx = { stage: label, agent: "command-step-runner" };
+      const reply = parsedOr(() => parseAgentJson(raw, ctx), null, `${label} reply unreadable`);
+      // Only a runner reply that exited 0 with a string stdout is read; never the raw reply object
+      // itself (a failed or shapeless run must not be parsed as the closer's answer).
+      if (!reply || typeof reply !== "object" || reply.exit_status !== 0 || typeof reply.stdout !== "string") return null;
+      const body = parsedOr(() => parseAgentJson(reply.stdout, ctx), null, `${label} output unreadable`);
+      return body && typeof body === "object" ? body : null;
+    };
+
+    const derived = await runCloser("step-3.5-derive-set", `derive --worktree ${WORKTREE_ROOT} --branch ${BRANCH} --base-ref origin/main`);
+    if (!derived || !["closable", "nothing_to_close", "undeterminable"].includes(derived.outcome)) {
+      return await halt35("closable_set_unreadable", "Could not work out which tickets and acceptance criteria this branch may close (the derivation reply was unreadable). Nothing was closed. Re-run /finalize-feature.", {});
+    }
+    if (derived.outcome === "undeterminable") {
+      const undeterminableMessages = {
+        built_for_unknown: `Finalization could not establish which ticket branch ${BRANCH} was built for, so nothing was closed. Record it with: git config branch.${BRANCH}.leafcutterTicket <ticket path>, then re-run /finalize-feature.`,
+        uncommitted_record_changes: `Finalization found uncommitted edits to records it would close (${derived.detail || "no detail"}), most likely left by an earlier halted run, so it cannot tell what is still open. Commit or discard those record edits, then re-run /finalize-feature.`,
+        ambiguous_ticket_record: `Branch ${BRANCH} carries more than one built-for-ticket record (${derived.detail || "no detail"}), so nothing was closed. Leave exactly one with: git config --replace-all branch.${BRANCH}.leafcutterTicket <ticket path>, then re-run /finalize-feature.`,
+        diff_failed: `Finalization could not list what ${BRANCH} changed because a git call failed (${derived.detail || "no detail"}), so nothing was closed. Fix the repository state and re-run /finalize-feature.`,
+      };
+      return await halt35(derived.reason_code || "undeterminable", undeterminableMessages[derived.reason_code]
+        || `Finalization could not establish where ${BRANCH} left ${derived.base_ref} (no merge base), so nothing was closed. Fix the base ref and re-run /finalize-feature.`, { closure_report: [] });
+    }
+    if (derived.outcome === "nothing_to_close") {
+      completedSteps.push("3.5");
+      step35Outcome = (`Nothing to close (${derived.reason_code}): compared against merge base ${derived.merge_base}, no ticket or acceptance criterion of this branch was left open`);
+    } else {
+      // Person-only gate: only a resume answer from channel "person" is a yes; a live agent reply is never read.
+      const gate = await resolveGate("step-3.5-closure-gate", async () => null, args, { branch: BRANCH, set_digest: derived.set_digest },
+        { type: "single_choice", options: ["confirm", "decline"], prompt: `Close exactly these records on ${BRANCH} and commit them? (confirm / decline)\n${derived.listing_text}` },
+        (args && typeof args === "object" && args.run_id) || `finalize-${BRANCH.replace(/\//g, "-")}`);
+      if (gate && gate.status === "paused_awaiting_input") { await cleanupBaselineWorktree(); return gate; }
+      // The answer belongs to the set that was shown when the question was asked: a resumed answer is
+      // applied only when the re-derived set has the digest stored in the pause record.
+      if (gate && gate.action && "record_context" in gate && (gate.record_context || {}).set_digest !== derived.set_digest) {
+        return await halt35("closure_set_changed", "The set of records to close changed since the question was asked, so the answer was treated as unanswered and nothing was closed or committed. Re-run /finalize-feature to see the current list.",
+          { closure_report: derived.records.map(r => `${r.kind === "ac" ? r.id : r.path} left open`) });
+      }
+      const byPerson = !!(args && args.resume_answer && args.resume_answer.channel === "person");
+      if (!gate || gate.action !== "confirm" || !byPerson) {
+        const declined = !!gate && gate.action === "decline" && byPerson;
+        return await halt35(declined ? "closure_declined" : "closure_unanswered", declined
+          ? "Closure declined by the person: nothing was closed or committed. Re-running /finalize-feature shows the list again."
+          : "The closure confirmation was unanswered by a person, so nothing was closed or committed. Re-run /finalize-feature to see the list again.",
+          { closure_report: derived.records.map(r => `${r.kind === "ac" ? r.id : r.path} left open`) });
+      }
+      const closed = await runCloser("step-3.5-close-set", `close --worktree ${WORKTREE_ROOT} --set-file ${derived.set_file}`);
+      if (!closed || !Array.isArray(closed.results) || closed.set_digest !== derived.set_digest) {
+        return await halt35("closure_not_confirmed", "The closure did not complete: the closer's reply was unreadable or answered for a different set. Nothing was committed, but if the closer ran, some closed records may have been left modified and uncommitted in the worktree: check `git status`, and commit or discard them before re-running /finalize-feature.", {});
+      }
+      const changes = Array.isArray(closed.outside_set_changes) ? closed.outside_set_changes : [];
+      const stray = (Array.isArray(closed.out_of_set_paths) ? closed.out_of_set_paths : []).filter(p => !changes.some(c => c.path === p));
+      closureReport = closed.results.map(r => `${r.kind === "ac" ? r.id : r.path} ${r.result}${r.reason ? ` — ${r.reason}` : ""}`);
+      if (changes.length > 0 || stray.length > 0) {
+        return await halt35("closed_outside_set", "A record outside the shown list was changed during the closure; nothing was committed. The closed records were left modified and uncommitted in the worktree: commit or discard them before re-running /finalize-feature.", {
+          closure_report: [...closureReport, ...changes.map(c => `${c.path} closed outside its set, outside the shown list: ${c.before} -> ${c.after}`), ...stray.map(p => `${p} changed outside its set, outside the shown list`)],
+        });
+      }
+      const closedTickets = closed.results.filter(r => r.kind === "ticket" && r.result === "closed").map(r => r.path);
+      ticketsClosed.push(...closedTickets);
+      ticketsClosedPreMerge = closedTickets.length;
+      acsClosed = closed.results.filter(r => r.kind === "ac" && r.result === "closed").length;
+      acsSkipped = closed.results.filter(r => r.kind === "ac" && r.result !== "closed").length;
+      const commitPaths = Array.isArray(closed.commit_paths) ? closed.commit_paths : [];
+      let answer = null;
+      for (let attempt = 0; commitPaths.length > 0 && attempt < 3; attempt++) {
+        const commitReply = await agent(
+          "Commit the closed records through the shared commit step, once, in supervised mode. Use no other way of committing.\n" +
+          "1. Write this single line to a new temporary message file: chore(tickets): close tickets and source ACs\n" +
+          `2. With the working directory set to ${WORKTREE_ROOT}, run: python3 ${WORKTREE_ROOT}/{{config.output_root}}/scripts/commit_changes.py --message-file <that file> --supervised --run ${(args && typeof args === "object" && args.run_id) || BRANCH} ${commitPaths.join(" ")}\n` +
+          "3. Return { \"status\": \"<the answer's status>\", \"commit_answer\": <the step's JSON answer exactly as printed> }",
+          { agentType: "commit", label: "step-3.5-closure-commit", phase: "Step 3.5" }
+        );
+        answer = (parsedOr(() => parseAgentJson(commitReply, { stage: "step-3.5-closure-commit", agent: "commit" }), {}, "commit answer unreadable") || {}).commit_answer || null;
+        if (!answer || answer.status === "committed" || !String(answer.reason_code || "").startsWith("step_")) break;
+      }
+      if (commitPaths.length > 0 && (!answer || answer.status !== "committed")) {
+        return await halt35("closure_commit_not_committed", `The closing commit was not made (status ${answer ? answer.status : "unreadable"}, reason_code ${answer ? answer.reason_code : "none"}: ${answer ? answer.reason : "no commit answer"}). The closed records were left modified and uncommitted in the worktree: commit or discard them before re-running /finalize-feature.`, { closure_report: closureReport, commit_answer: answer });
+      }
+      completedSteps.push("3.5");
+      step35Outcome = `Closed ${ticketsClosedPreMerge} ticket(s) and ${acsClosed} source AC(s) on the feature branch; ${acsSkipped} AC(s) left open`;
     }
 
-    // Accumulate counts into workflow-level variables.
-    if (Array.isArray(closureInfo.tickets_closed)) {
-      ticketsClosedPreMerge = closureInfo.tickets_closed.length;
-      // Merge into the broader ticketsClosed list for the final summary.
-      ticketsClosed.push(...closureInfo.tickets_closed);
-    }
-    acsClosed = typeof closureInfo.acs_closed === "number" ? closureInfo.acs_closed : 0;
-    acsSkipped = typeof closureInfo.acs_skipped === "number" ? closureInfo.acs_skipped : 0;
-
-    completedSteps.push("3.5");
-
-    log(
-      `[finalize-feature] step 3.5 closure: tickets_closed=${ticketsClosedPreMerge} ` +
-        `acs_closed=${acsClosed} acs_skipped=${acsSkipped} ` +
-        `commit_made=${closureInfo.commit_made}`
-    );
   }
 }
 
-// -------------------------------------------------------------------------
 // Pre-Step-4 Sync Check — ensure local branch HEAD is on origin before merge
 //
 // AC-1 (TICKET-20260708-Finalize_Push_Before_Merge):
@@ -1718,7 +1299,6 @@ if (closureAlreadyCommitted) {
 // This check compares local HEAD to origin/<branch>. When local is ahead, it
 // pushes the branch to origin so the PR head is always current. When the push
 // fails or the branch has diverged, it halts with an actionable message.
-// -------------------------------------------------------------------------
 
 const syncCheckResult = await agent(
   "Check whether the local feature branch HEAD is ahead of origin and push if needed.\n" +
@@ -1768,6 +1348,11 @@ const syncCheckResult = await agent(
   { agentType: "status-checker", label: "pre-step-4-sync-check", phase: "Step 4" }
 )
 
+const SYNC_INDETERMINATE_MESSAGE =
+  "Could not confirm the local branch HEAD is on origin, so refusing to merge a possibly-stale head. " +
+  `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
+  "The PR has NOT been merged — no work is lost.";
+
 let syncCheckInfo;
 {
   let syncCheckValue;
@@ -1776,24 +1361,15 @@ let syncCheckInfo;
   } catch (_parseErr) {
     syncCheckValue = null;
   }
-  // H-1: Fail closed — malformed parse or null/missing value cannot be trusted.
-  // Refusing to merge an unverified head is safer than proceeding on unknown state.
+  // H-1: Fail closed — an unverified head is never merged.
   if (syncCheckValue === null || syncCheckValue === undefined) {
     await cleanupBaselineWorktree();
     return {
       status: "halted",
       halted_at_step: "pre-4",
       reason: "sync_check_indeterminate",
-      message:
-        "Could not confirm the local branch HEAD is on origin, so refusing to merge a possibly-stale head. " +
-        `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
-        "The PR has NOT been merged — no work is lost.",
-      branch: BRANCH,
-      pr_number: prNumber,
-      pr_url: prUrl,
-      completed_steps: completedSteps,
-      skipped_steps: skippedSteps,
-      step_outcomes: stepOutcomes,
+      message: SYNC_INDETERMINATE_MESSAGE,
+      ...haltRefs(),
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       action_required: "verify_and_push",
     };
@@ -1801,8 +1377,7 @@ let syncCheckInfo;
   syncCheckInfo = syncCheckValue;
 }
 
-// H-1: Explicit known-status gate — any status outside this set is indeterminate → HALT.
-// There must be NO code path where an unknown/unrecognised status falls through to Step 4.
+// H-1: any status outside this set is indeterminate → HALT; an unknown status never falls through to Step 4.
 const KNOWN_SYNC_STATUSES = new Set(["fetch_failed", "push_failed", "diverged", "pushed", "up_to_date"]);
 const syncStatus = (typeof syncCheckInfo.status === "string" ? syncCheckInfo.status : "").toLowerCase();
 
@@ -1812,16 +1387,8 @@ if (!KNOWN_SYNC_STATUSES.has(syncStatus)) {
     status: "halted",
     halted_at_step: "pre-4",
     reason: "sync_check_indeterminate",
-    message:
-      "Could not confirm the local branch HEAD is on origin, so refusing to merge a possibly-stale head. " +
-      `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
-      "The PR has NOT been merged — no work is lost.",
-    branch: BRANCH,
-    pr_number: prNumber,
-    pr_url: prUrl,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
-    step_outcomes: stepOutcomes,
+    message: SYNC_INDETERMINATE_MESSAGE,
+    ...haltRefs(),
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "verify_and_push",
   };
@@ -1839,12 +1406,7 @@ if (syncStatus === "fetch_failed") {
       "Sync state is unknown — refusing to merge a head that may be stale. " +
       "Verify network / remote access and re-run /finalize-feature. " +
       "The PR has NOT been merged — no work is lost.",
-    branch: BRANCH,
-    pr_number: prNumber,
-    pr_url: prUrl,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
-    step_outcomes: stepOutcomes,
+    ...haltRefs(),
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "retry_after_fetch",
   };
@@ -1860,12 +1422,7 @@ if (syncStatus === "push_failed") {
       "Local branch HEAD is ahead of origin but push failed. " +
       `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
       "The PR has NOT been merged — no work is lost.",
-    branch: BRANCH,
-    pr_number: prNumber,
-    pr_url: prUrl,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
-    step_outcomes: stepOutcomes,
+    ...haltRefs(),
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "push_local_commits",
   };
@@ -1887,22 +1444,18 @@ if (syncStatus === "diverged") {
       "Resolve any conflicts, verify tests pass, then re-run /finalize-feature. " +
       "Do NOT use plain 'git push' — that would be rejected or would silently drop origin commits. " +
       "The PR has NOT been merged — no work is lost.",
-    branch: BRANCH,
-    pr_number: prNumber,
-    pr_url: prUrl,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
-    step_outcomes: stepOutcomes,
+    ...haltRefs(),
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "resolve_divergence",
   };
 }
 
-// H-2: pushed — verify SHAs in JS; agent's self-reported status word is not trusted alone.
+// H-2: pushed / up_to_date — verify SHAs in JS; the agent's self-reported status word is not trusted alone.
+const localSha = (typeof syncCheckInfo.local_sha === "string" ? syncCheckInfo.local_sha : "").trim();
+const originSha = (typeof syncCheckInfo.origin_sha === "string" ? syncCheckInfo.origin_sha : "").trim();
+const shasMismatch = !localSha || !originSha || localSha !== originSha;
 if (syncStatus === "pushed") {
-  const localSha = (typeof syncCheckInfo.local_sha === "string" ? syncCheckInfo.local_sha : "").trim();
-  const originSha = (typeof syncCheckInfo.origin_sha === "string" ? syncCheckInfo.origin_sha : "").trim();
-  if (!localSha || !originSha || localSha !== originSha) {
+  if (shasMismatch) {
     await cleanupBaselineWorktree();
     return {
       status: "halted",
@@ -1914,12 +1467,7 @@ if (syncStatus === "pushed") {
         `Verify with: git -C "${WORKTREE_ROOT}" rev-parse HEAD "origin/${BRANCH}", ` +
         `then push manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
         "The PR has NOT been merged — no work is lost.",
-      branch: BRANCH,
-      pr_number: prNumber,
-      pr_url: prUrl,
-      completed_steps: completedSteps,
-      skipped_steps: skippedSteps,
-      step_outcomes: stepOutcomes,
+      ...haltRefs(),
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       action_required: "verify_and_push",
     };
@@ -1927,51 +1475,33 @@ if (syncStatus === "pushed") {
   log(`[finalize-feature] pre-step-4 sync-check: pushed and SHA-verified (sha=${localSha.slice(0, 8)}). PR head is now current.`);
   completedSteps.push("pre-4-push");
 } else if (syncStatus === "up_to_date") {
-  // H-2: up_to_date — verify SHAs in JS; agent's status word alone is not trusted.
-  const localSha = (typeof syncCheckInfo.local_sha === "string" ? syncCheckInfo.local_sha : "").trim();
-  const originSha = (typeof syncCheckInfo.origin_sha === "string" ? syncCheckInfo.origin_sha : "").trim();
-  if (!localSha || !originSha || localSha !== originSha) {
+  if (shasMismatch) {
     await cleanupBaselineWorktree();
     return {
       status: "halted",
       halted_at_step: "pre-4",
       reason: "sync_check_indeterminate",
-      message:
-        "Could not confirm the local branch HEAD is on origin, so refusing to merge a possibly-stale head. " +
-        `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
-        "The PR has NOT been merged — no work is lost.",
-      branch: BRANCH,
-      pr_number: prNumber,
-      pr_url: prUrl,
-      completed_steps: completedSteps,
-      skipped_steps: skippedSteps,
-      step_outcomes: stepOutcomes,
+      message: SYNC_INDETERMINATE_MESSAGE,
+      ...haltRefs(),
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       action_required: "verify_and_push",
     };
   }
   log(`[finalize-feature] pre-step-4 sync-check: up-to-date and SHA-verified (sha=${localSha.slice(0, 8)}). No push needed.`);
 }
-// At this point syncStatus is either "pushed" (SHA-verified, pre-4-push recorded) or
-// "up_to_date" (SHA-verified). Both are safe to proceed to Step 4.
 
-// Only record the executed-path outcome when step 3.5 was NOT skipped; the two
-// skip branches above already recorded their own 'skipped' outcome, so guarding
-// here prevents a duplicate stepOutcomes[] entry for the same step (BO-1000b-1-i AC-2).
-if (!skippedSteps.some(s => String(s.step) === "3.5")) {
-  outcome('Step 3.5 of 9', ticketsClosedPreMerge > 0
-    ? `Closed ${ticketsClosedPreMerge} ticket(s) and ${acsClosed} source AC(s) on the feature branch`
-    : 'Pre-merge AC closure completed (no open in-scope tickets on this branch)');
+// Record the executed-path outcome once, after the step's last dispatch; the skip branches
+// and halt35 record their own, so step35Outcome is only set when neither fired (BO-1000b-1-i AC-2).
+if (step35Outcome !== null) {
+  outcome('Step 3.5 of 9', step35Outcome);
 }
 
-// -------------------------------------------------------------------------
 // Step 4 — Merge PR to main (destructive — confirmation gate required)
 //
 // This step runs AFTER the worktree merge (step 2) and test + triage (step 3).
 // The gate only shows the confirmation prompt when blocks_finalization === false
 // (ensured by the halt in step 3). A defensive guard is included to catch any
 // edge case where blocks_finalization is truthy at this point.
-// -------------------------------------------------------------------------
 
 phase('Step 4')
 
@@ -1989,13 +1519,48 @@ if (triageReport !== null && triageReport.blocks_finalization) {
     message:
       "Defensive guard triggered: blocks_finalization is true at step 4. " +
       "The PR has NOT been merged. Fix regressions and re-run /finalize-feature.",
-    branch: BRANCH,
-    pr_number: prNumber,
-    pr_url: prUrl,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
-    step_outcomes: stepOutcomes,
+    ...haltRefs(),
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
+  };
+}
+
+// TQ-600a-13-xx: the correctness lane's hold check, recognised by EXACT name only
+// (no case-folding, trimming or prefix match) and a failing state.
+const POST_MERGE_HOLD_NAME = "Post-merge suite status";
+const FAILING_CHECK_STATES = new Set(["FAILURE", "ERROR", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"]);
+
+/** Pure: split a `gh pr checks` array into the external hold and the branch's own failures. */
+function classifyPrChecks(checks) {
+  const failing = (Array.isArray(checks) ? checks : []).filter((c) => c && typeof c === "object" &&
+    (c.bucket === "fail" || FAILING_CHECK_STATES.has(String(c.state || ""))));
+  return {
+    hold: failing.find((c) => c.name === POST_MERGE_HOLD_NAME) || null,
+    ownFailures: failing.filter((c) => c.name !== POST_MERGE_HOLD_NAME),
+  };
+}
+
+/** Halt payload for a PR the hold check blocks; records Step 4's one outcome for this path. */
+function holdHaltPayload(hold, ownFailures) {
+  const held = ownFailures.length === 0;
+  const named = (c) => `${c.name} (${c.link || "no link"})`;
+  const holdText = `External hold "${hold.name}": ${hold.description || "(no description)"} Link: ${hold.link || "(none)"}`;
+  const message = held
+    ? `Merge held externally, not by this branch. ${holdText}\n` +
+      "The cause is the correctness lane on main, not this branch. The PR has NOT been merged; the worktree and branch are kept. " +
+      "Re-run /finalize-feature once the hold lifts. If the hold check itself is broken, only the owner's break-glass procedure (TQ-600a-13-xvii) applies; this workflow never performs it."
+    : `Required checks failing on this branch: ${ownFailures.map(named).join("; ")}.\n` +
+      `Listed separately, not counted as the branch's own: ${holdText}\nThe PR has NOT been merged.`;
+  outcome(`Step 4 of ${STEP_COUNT}`, held ? `halted: PR #${prNumber} held externally by ${hold.name}`
+    : `halted: PR #${prNumber} has failing required checks: ${ownFailures.map((c) => c.name).join(", ")}`);
+  return {
+    status: "halted",
+    halted_at_step: 4,
+    reason: held ? "held_externally" : "required_checks_failing",
+    external_hold: { name: hold.name, state: hold.state, link: hold.link, description: hold.description },
+    own_failures: ownFailures,
+    message: message,
+    ...haltRefs(),
+    step_summary: stepOutcomes.map((e) => `${e.step}: ${e.outcome}`).join("\n"),
   };
 }
 
@@ -2006,15 +1571,7 @@ const prStateResult = await agent(
   { agentType: "status-checker", label: "step-4-pr-state", phase: "Step 4" }
 )
 
-let prState;
-{
-  try {
-    prState = parseAgentJson(prStateResult, { stage: "step-4-pr-state", agent: "status-checker" }) || { state: "OPEN" };
-  } catch (_parseErr) {
-    log("[finalize-feature] step 4 PR state parse malformed — assuming PR is OPEN");
-    prState = { state: "OPEN" };
-  }
-}
+const prState = parsedOr(() => parseAgentJson(prStateResult, { stage: "step-4-pr-state", agent: "status-checker" }), { state: "OPEN" }, "assuming PR is OPEN");
 
 if ((prState.state || "").toUpperCase() === "MERGED") {
   // PR already merged — skip the merge gate and proceed.
@@ -2022,6 +1579,21 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
   outcome(`Step 4 of ${STEP_COUNT}`, 'skipped: PR #' + prNumber + ' already merged');
   skippedSteps.push({ step: 4, reason: "PR already merged — skipping step 4" });
 } else {
+  // TQ-600a-13-xx: one read of the PR's checks, before the user is asked to merge.
+  const checksReply = await agent(
+    `Run: gh pr checks ${prNumber} --json name,state,bucket,link,description\n` +
+    "That command exits non-zero when a check fails or is pending; still return its output. " +
+    "Return ONLY the JSON array it printed, verbatim. Do not re-run, wait on, or change anything.",
+    { agentType: "status-checker", label: "step-4-pr-checks", phase: "Step 4" }
+  );
+  const checksParsed = parsedOr(() => parseAgentJson(checksReply, { stage: "step-4-pr-checks", agent: "status-checker" }), [], "treating checks as unreadable (no hold)");
+  if (!Array.isArray(checksParsed)) { log("[finalize-feature] step-4-pr-checks reply was not an array — treating as no hold"); }
+  const checkVerdict = classifyPrChecks(checksParsed);
+  if (checkVerdict.hold) {
+    await cleanupBaselineWorktree();
+    return holdHaltPayload(checkVerdict.hold, checkVerdict.ownFailures);
+  }
+
   // E2 has no prompt() global — implement the merge confirmation gate as an
   // explicit agent turn. The agent presents the question to the user, waits
   // for a response, and returns status: 'ok' (yes) or status: 'blocked' (no).
@@ -2040,14 +1612,8 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
         `Return status:"blocked" with message "User declined merge." if the user says no/cancel/n.`,
         { agentType: "status-checker", label: "step-4-merge-gate", phase: "Step 4" }
       );
-      // FIX 3: parse raw before reading .status — raw may be an unparsed string.
-      let parsed;
-      try {
-        parsed = (typeof raw === "string")
-          ? parseAgentJson(raw, { stage: "step-4-merge-gate", agent: "status-checker" })
-          : raw;
-      } catch (_parseErr) { parsed = null; }
-      const s = parsed && parsed.status;
+      // FIX 3: parse raw before reading .status — raw may be an unparsed string (an object passes through).
+      const s = parsedOr(() => parseAgentJson(raw, { stage: "step-4-merge-gate", agent: "status-checker" }), {}, "no gate decision").status;
       if (s === "ok") return { action: "ok" };
       if (s === "blocked") return { action: "blocked" };
       return null;
@@ -2062,27 +1628,16 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
     await cleanupBaselineWorktree();
     return _fzGateResult;
   }
-  // Normalise to the shape downstream code expects: { status: "ok" | "blocked" }
+  // Only an explicit approval merges; blocked, cancel or anything else halts.
   const _fzAction = _fzGateResult && _fzGateResult.action;
-  const mergeConfirmResult = (_fzAction === "ok" || _fzAction === "approve")
-    ? { status: "ok" }
-    : (_fzAction === "blocked" || _fzAction === "cancel")
-      ? { status: "blocked" }
-      : null;
-
-  if (!mergeConfirmResult || mergeConfirmResult.status !== "ok") {
+  if (_fzAction !== "ok" && _fzAction !== "approve") {
     await cleanupBaselineWorktree();
     return {
       status: "halted",
       halted_at_step: 4,
       reason: "user_declined_merge",
       message: "Finalization halted at merge step. No changes made to main.",
-      branch: BRANCH,
-      pr_number: prNumber,
-      pr_url: prUrl,
-      completed_steps: completedSteps,
-      skipped_steps: skippedSteps,
-      step_outcomes: stepOutcomes,
+      ...haltRefs(),
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     };
   }
@@ -2106,12 +1661,7 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
   outcome('Step 4 of 9', `PR #${prNumber} merged to main`);
 }
 
-// -------------------------------------------------------------------------
-// Step 5 — Sync local main (resumable)
-//
-// AC-2 note: this step does NOT make commits on main. It only runs
-// `git checkout main && git pull` (read operations).
-// -------------------------------------------------------------------------
+// Step 5 — Sync local main (resumable). Makes no commits on main: only checkout + pull.
 
 phase('Step 5')
 
@@ -2127,25 +1677,15 @@ const syncResult = await agent(
   { agentType: "status-checker", label: "step-5-sync-main", phase: "Step 5" }
 )
 
-let headSha = null;
-let headMessage = null;
-{
-  try {
-    const syncInfo = parseAgentJson(syncResult, { stage: "step-5-sync-main", agent: "status-checker" }) || {};
-    headSha = (typeof syncInfo.head_sha === "string" ? syncInfo.head_sha.trim() : null) || null;
-    headMessage = (typeof syncInfo.head_message === "string" ? syncInfo.head_message.trim() : null) || null;
-  } catch (_parseErr) {
-    log("[finalize-feature] step 5 sync-main parse malformed — HEAD SHA and message will be unknown");
-  }
-}
+const syncInfo = parsedOr(() => parseAgentJson(syncResult, { stage: "step-5-sync-main", agent: "status-checker" }), {}, "HEAD SHA and message will be unknown");
+const headSha = (typeof syncInfo.head_sha === "string" ? syncInfo.head_sha.trim() : null) || null;
+const headMessage = (typeof syncInfo.head_message === "string" ? syncInfo.head_message.trim() : null) || null;
 
 completedSteps.push(5);
 
 outcome('Step 5 of 9', `Local main synced: HEAD ${headSha || 'unknown'} — ${headMessage || 'message unknown'}`);
 
-// -------------------------------------------------------------------------
 // Step 6 — Report untracked pre-existing/flaky failures, then detect scope
-// -------------------------------------------------------------------------
 
 phase('Step 6')
 
@@ -2153,42 +1693,18 @@ narrate("Step 6 of 9", 'Reporting untracked pre-existing and flaky failures, the
 
 // Sub-step 6a: report pre-existing / flaky failures that require manual tracking.
 if (triageReport !== null) {
-  const triageEntries = Array.isArray(triageReport.triage_report)
-    ? triageReport.triage_report
-    : [];
-
-  const preExistingEntries = triageEntries.filter(
-    (entry) =>
-      entry.category === "pre_existing" || entry.category === "flaky"
-  );
-
-  if (preExistingEntries.length === 0) {
-    log(
-      "[finalize-feature] step 6a: no pre_existing or flaky entries in triage report — no tracking tickets needed"
-    );
-  } else {
-    // Collect untracked failures so the final summary is accurate.
-    for (const entry of preExistingEntries) {
-      const testId = entry.test_id || "<unknown test>";
-      const category = entry.category || "pre_existing";
-      untrackedFailures.push({ testId, category });
-    }
-
-    // Emit one structured report listing all untracked failures.
-    const failureLines = untrackedFailures
-      .map(
-        ({ testId, category }) =>
-          `  - [${category}] ${testId} (failing on main at SHA ${baselineSha || "unknown"})`
-      )
-      .join("\n");
-
-    log(
-      `[finalize-feature] step 6a: ${untrackedFailures.length} pre-existing/flaky failure(s) detected.\n` +
+  const triageEntries = Array.isArray(triageReport.triage_report) ? triageReport.triage_report : [];
+  // Collect untracked failures so the final summary is accurate.
+  for (const entry of triageEntries.filter((e) => e.category === "pre_existing" || e.category === "flaky")) {
+    untrackedFailures.push({ testId: entry.test_id || "<unknown test>", category: entry.category || "pre_existing" });
+  }
+  // Emit one structured report listing all untracked failures.
+  log(untrackedFailures.length === 0
+    ? "[finalize-feature] step 6a: no pre_existing or flaky entries in triage report — no tracking tickets needed"
+    : `[finalize-feature] step 6a: ${untrackedFailures.length} pre-existing/flaky failure(s) detected.\n` +
       `Auto-ticketing is disabled (create-ticket is a workflow, not an agent).\n` +
       `No tracking tickets were created. To track these failures, run /create-ticket for each:\n` +
-      failureLines
-    );
-  }
+      untrackedFailures.map(({ testId, category }) => `  - [${category}] ${testId} (failing on main at SHA ${baselineSha || "unknown"})`).join("\n"));
 }
 
 // Sub-step 6b: scope-detection only (no git writes on main)
@@ -2210,20 +1726,10 @@ const closeResult = await agent(
   { agentType: "status-checker", label: "step-6-scope-detect", phase: "Step 6" }
 )
 
-let closeInfo;
-{
-  try {
-    closeInfo = parseAgentJson(closeResult, { stage: "step-6-scope-detect", agent: "status-checker" }) || { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false };
-  } catch (_parseErr) {
-    log("[finalize-feature] step 6 scope-detect parse malformed — no tickets reported in summary");
-    closeInfo = { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false };
-  }
-}
+const closeInfo = parsedOr(() => parseAgentJson(closeResult, { stage: "step-6-scope-detect", agent: "status-checker" }),
+  { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false }, "no tickets reported in summary");
 
-// Step 6b is informational only — no ticket files were moved or written.
-if (closeInfo.tickets_done && Array.isArray(closeInfo.tickets_done)) {
-  ticketsClosed.push(...closeInfo.tickets_done);
-}
+// Step 6b is informational only: it never adds to the closed list (BO-400e-3-vi).
 
 if (closeInfo.skipped) {
   outcome(`Step 6 of ${STEP_COUNT}`, 'skipped: scope detection — no in-scope tickets found');
@@ -2235,9 +1741,7 @@ if (closeInfo.skipped) {
     `${Array.isArray(closeInfo.tickets_done) ? closeInfo.tickets_done.length : 0} ticket(s) confirmed done in scope`);
 }
 
-// -------------------------------------------------------------------------
 // Step 7 — Remove worktree (resumable; confirmation gate delegated to agent)
-// -------------------------------------------------------------------------
 
 phase('Step 7')
 
@@ -2250,41 +1754,23 @@ const worktreeProbeResult = await agent(
   { agentType: "status-checker", label: "step-7-worktree-probe", phase: "Step 7" }
 )
 
-let worktreeProbe;
-{
-  try {
-    worktreeProbe = parseAgentJson(worktreeProbeResult, { stage: "step-7-worktree-probe", agent: "status-checker" }) || { exists: true };
-  } catch (_parseErr) {
-    // AC-4: Malformed probe — conservative default is exists=true (safer to
-    // attempt removal than to skip and leave the worktree dangling).
-    log("[finalize-feature] step 7 worktree probe parse malformed — assuming exists=true (conservative)");
-    worktreeProbe = { exists: true };
-  }
-}
+// AC-4: a malformed probe means exists=true — safer to attempt removal than leave it dangling.
+const worktreeProbe = parsedOr(() => parseAgentJson(worktreeProbeResult, { stage: "step-7-worktree-probe", agent: "status-checker" }), { exists: true }, "assuming exists=true (conservative)");
 
 if (!worktreeProbe.exists) {
-  worktreeRemoved = false;
   log("Step 7 of 9: [skipped] Worktree already absent — skipping removal");
   outcome(`Step 7 of ${STEP_COUNT}`, 'skipped: worktree already absent — skipping step 7');
   skippedSteps.push({ step: 7, reason: "Worktree already absent — skipping step 7" });
 } else {
-  // Dispatch worktree-agent (it owns its own confirmation gate).
+  // Dispatch worktree-agent (it owns its own confirmation gate), carrying the INF-700a-5-i announcement.
   const worktreeResult = await agent(
+    (await announceUnpublishedLearnings()) +
     `Remove the worktree at ${WORKTREE_ROOT}. ` +
     "If conflict_pids are reported, surface them verbatim and stop. " +
     "Return a JSON object: { \"removed\": true|false, \"conflict_pids\": [] }",
     { agentType: "worktree-agent", label: "step-7-remove-worktree", phase: "Step 7" }
   )
-
-  let wResult;
-  {
-    try {
-      wResult = parseAgentJson(worktreeResult, { stage: "step-7-remove-worktree", agent: "worktree-agent" }) || { removed: false, conflict_pids: [] };
-    } catch (_parseErr) {
-      log("[finalize-feature] step 7 worktree-agent parse malformed — assuming removed=false, conflict_pids=[]");
-      wResult = { removed: false, conflict_pids: [] };
-    }
-  }
+  const wResult = parsedOr(() => parseAgentJson(worktreeResult, { stage: "step-7-remove-worktree", agent: "worktree-agent" }), { removed: false, conflict_pids: [] }, "assuming removed=false, conflict_pids=[]");
 
   if (wResult.conflict_pids && wResult.conflict_pids.length > 0) {
     // Surface conflict PIDs verbatim and stop — user must resolve manually.
@@ -2297,12 +1783,7 @@ if (!worktreeProbe.exists) {
         "Worktree removal blocked by conflicting processes. " +
         "Resolve the conflict PIDs below, then re-run /finalize-feature.",
       conflict_pids: wResult.conflict_pids,
-      branch: BRANCH,
-      pr_number: prNumber,
-      pr_url: prUrl,
-      completed_steps: completedSteps,
-      skipped_steps: skippedSteps,
-      step_outcomes: stepOutcomes,
+      ...haltRefs(),
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       tickets_closed: ticketsClosed,
     };
@@ -2315,14 +1796,7 @@ if (!worktreeProbe.exists) {
     : 'Worktree removal failed — no removal made');
 }
 
-// -------------------------------------------------------------------------
-// Final — Return success summary
-//
-// AC-1: ensure the baseline temp worktree is cleaned up on the success path.
-// baselineWorktreePath is already null when step 0 completed successfully
-// (the agent ran step D to remove it), so this is a no-op in the happy path.
-// It fires only when step 0 degraded but the workflow continued to completion.
-// -------------------------------------------------------------------------
+// Final — success summary. The cleanup is a no-op unless step 0 degraded and left its worktree.
 await cleanupBaselineWorktree();
 
 return {
@@ -2332,32 +1806,25 @@ return {
   pr_url: prUrl,
   merge_result: mergeResult,
   merge_strategy: mergeStrategy,
-  // Baseline context included in the summary for auditability.
   baseline_sha: baselineSha,
   baseline_failures: baselineFailures,
   baseline_run_at: baselineRunAt,
   test_result: testResult,
-  // Triage report from step 3; null means tests passed (no triage needed).
   triage_report: triageReport,
   tickets_closed: ticketsClosed,
-  // Pre-merge closure counts from step 3.5.
   tickets_closed_pre_merge: ticketsClosedPreMerge,
   acs_closed: acsClosed,
   acs_skipped: acsSkipped,
-  // Untracked failures from step 6a: pre_existing/flaky triage entries for which
-  // no tracking ticket was created (auto-ticketing is disabled — create-ticket is a
-  // workflow, not an agent). Operators should run /create-ticket manually for each.
+  closure_report: closureReport,
+  // Pre-existing/flaky failures with no tracking ticket (auto-ticketing is disabled).
   untracked_failures: untrackedFailures,
+  unpublished_learnings: unpublishedLearnings, // INF-700a-5-i: announced before the removal
   worktree_removed: worktreeRemoved,
+  scratch_clearing: scratchClearing,
   completed_steps: completedSteps,
   skipped_steps: skippedSteps,
-  // In-order per-step outcome record (AC BO-1000b-1).
-  // Consumed by BO-1000b-2 (end-of-run summary) and BO-1000c-1a (live relay).
   step_outcomes: stepOutcomes,
-  // End-of-run summary composed from the recorded per-step outcomes (AC BO-1000b-2).
-  // Each step is listed alongside the specific outcome text it recorded — not a bare
-  // overall status. Sourced directly from stepOutcomes[] so the summary cannot
-  // diverge from what was narrated live.
+  // Built from stepOutcomes[] so it cannot diverge from what was narrated live (BO-1000b-2).
   step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   message:
     `Feature "${BRANCH}" finalized. ` +

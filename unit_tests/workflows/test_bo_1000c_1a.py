@@ -64,7 +64,11 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    finalize_baseline_responses,
+    run_workflow_under_e2,
+    workspace_ensure_reply,
+)
 
 _HARNESS_TIMEOUT = 30
 
@@ -111,11 +115,10 @@ def _run_finalize_minimal(js_path: Path, worktree_root: str):
     real script, not assumed.
     """
     label_responses = {
-        "pre-flight": {
-            "found": True,
-            "branch": "feature/test-bp1100b4",
-            "worktree_root": worktree_root,
-        },
+        # BO-4300c-3: the maker's ready answer names the branch and the root; the Step 0 baseline is a scratch
+        # workspace from the maker plus one pytest run (each dispatch tagged "Step 0").
+        "workspace-ensure": workspace_ensure_reply(worktree_root, branch="feature/test-bp1100b4"),
+        **finalize_baseline_responses(),
     }
     return run_workflow_under_e2(
         js_path,

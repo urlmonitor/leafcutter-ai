@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given record R had readiness "draft" when the technical planner's stage began,
     and at the end of that stage R carries readiness "approved",
@@ -83,10 +83,23 @@ amended_by:
   by: it-po
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/13_TICKET-20261012-ACD-2500a-2-iv.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
   Standing rule honoured: ACD-400c ("a requirement only joins the buildable queue once a
   person has approved it"). IT-PO: the check needs to know each record's readiness at
   stage start (the stage's before-state); how it obtains that is an enrichment decision.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: ruleCheck
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

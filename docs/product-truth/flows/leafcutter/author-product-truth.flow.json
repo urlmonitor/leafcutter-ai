@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 1,
+  "version": 3,
   "tags": [
     "product-truth",
     "authoring",
@@ -30,19 +30,23 @@
     {
       "id": "classify",
       "label": "Classify what the request needs",
-      "human": "A classifier reads the plain-language request and decides which artifacts it needs — flow, mock data, mockups, or a subset — plus the target component and entities, so the pipeline only runs the agents that fit.",
+      "description": "The classifier agent reads the plain-language request and decides which of flow, mock data and mockups it needs, plus the target component and entities.",
       "order": 1,
       "agent": "pt-classifier",
-      "consumes": [
-        "user_request"
-      ],
+      "actor_kind": "llm",
+      "consumes": [],
       "produces": [
-        "classification.needs_flow",
-        "classification.needs_mock_data",
-        "classification.needs_mockup",
-        "classification.component",
-        "classification.entities",
-        "classification.decision (create|extend)"
+        "classifier/request: string (required)",
+        "classifier/expected/needs_flow: boolean (required)",
+        "classifier/expected/needs_mock_data: boolean (required)",
+        "classifier/expected/needs_mockup: boolean (required)",
+        "classifier/outcome: string (required)",
+        "classifier/component: string (required)",
+        "classifier/entities: array (required)",
+        "classifier/decision: string (required)",
+        "classifier/extends: null|string (optional)",
+        "classifier/dispatch: array (required)",
+        "classifier/anomalies: array (required)"
       ],
       "reads": [
         "Request"
@@ -51,39 +55,316 @@
         "UXP-530"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "classifier",
+            "fields": [
+              {
+                "path": "/request",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/expected/needs_flow",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/expected/needs_mock_data",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/expected/needs_mockup",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/outcome",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/decision",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/extends",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/dispatch",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/anomalies",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "classifier",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative classifier projection; not an execution receipt",
+            "value": {
+              "request": "Describe the complete journey to author and approve a feature.",
+              "expected": {
+                "needs_flow": true,
+                "needs_mock_data": true,
+                "needs_mockup": true
+              },
+              "outcome": "full-set",
+              "component": "ux-prototyping",
+              "entities": [
+                "Ac"
+              ],
+              "decision": "create",
+              "extends": null,
+              "dispatch": [
+                "mock-data-author",
+                "mockup-author",
+                "flow-author"
+              ],
+              "anomalies": []
+            }
+          }
+        ]
+      }
     },
     {
       "id": "search",
       "label": "Search the store (add vs create)",
-      "human": "Before drafting anything, the pipeline searches the product-truth index by component and entities to decide whether to extend an existing artifact or create a new one — there is one canonical dataset per entity per component.",
+      "description": "Before drafting, the authoring agent searches the product-truth store by component and entities to decide whether to extend an existing artifact or create one.",
       "order": 2,
       "agent": "mock-data-author / flow-author (add-vs-create)",
+      "actor_kind": "llm",
       "consumes": [
-        "classification.component",
-        "classification.entities"
+        "classifier/component: string (required)",
+        "classifier/entities: array (required)",
+        "classifier/decision: string (required)",
+        "classifier/extends: null|string (optional)",
+        "index/by_component: object (optional)",
+        "index/by_entity: object (optional)",
+        "index/artifacts: array (optional)"
       ],
       "produces": [
-        "extend_target | create_decision"
+        "classifier/decision: string (required)",
+        "classifier/extends: null|string (optional)"
       ],
       "implements": [
         "UXP-422a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "classifier",
+            "fields": [
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/decision",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/extends",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          },
+          {
+            "contract": "index",
+            "fields": [
+              {
+                "path": "/by_component",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/by_entity",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/artifacts",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "classifier",
+            "fields": [
+              {
+                "path": "/decision",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/extends",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "classifier",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative classifier projection; not an execution receipt",
+            "value": {
+              "component": "ux-prototyping",
+              "entities": [
+                "Ac"
+              ],
+              "decision": "create",
+              "extends": null
+            }
+          },
+          {
+            "contract": "index",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative index projection; not an execution receipt",
+            "value": {
+              "artifacts": [
+                {
+                  "id": "leafcutter/define-a-feature",
+                  "type": "flow",
+                  "path": "flows/leafcutter/define-a-feature.flow.json",
+                  "version": 3
+                }
+              ],
+              "by_component": {
+                "ux-prototyping": {
+                  "flows": [
+                    "leafcutter/define-a-feature"
+                  ],
+                  "mock_data": [],
+                  "mockups": []
+                }
+              },
+              "by_entity": {
+                "Ac": {
+                  "canonical_mock_data": {},
+                  "flows": {
+                    "ux-prototyping": [
+                      "leafcutter/define-a-feature"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          {
+            "contract": "classifier",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative classifier projection; not an execution receipt",
+            "value": {
+              "decision": "create",
+              "extends": null
+            }
+          }
+        ]
+      }
     },
     {
       "id": "mockData",
       "label": "Mock-data agent drafts the data",
-      "human": "The mock-data agent drafts or extends the one canonical dataset for the classified entities — realistic records the mockups and flow are built on, never a duplicate dataset.",
+      "description": "The mock-data agent drafts or extends the one canonical dataset of realistic records for the classified entities, which the mockups and flow are built on.",
       "order": 3,
       "agent": "mock-data-author",
+      "actor_kind": "llm",
       "consumes": [
-        "classification",
-        "extend_target"
+        "classifier/component: string (required)",
+        "classifier/entities: array (required)"
       ],
       "produces": [
-        "MockData (*.mock.json, records)"
+        "mock_data/id: string (required)",
+        "mock_data/component: string (required)",
+        "mock_data/version: integer (optional)",
+        "mock_data/readiness: string (required)",
+        "mock_data/entities/*/fields: object (required)",
+        "mock_data/entities/*/records: array (required)"
       ],
       "writes": [
         "MockData"
@@ -92,20 +373,137 @@
         "UXP-540"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "classifier",
+            "fields": [
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "mock_data",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/version",
+                "types": [
+                  "integer"
+                ],
+                "required": false
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities/*/fields",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities/*/records",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "classifier",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative classifier projection; not an execution receipt",
+            "value": {
+              "component": "ux-prototyping",
+              "entities": [
+                "Ac"
+              ]
+            }
+          },
+          {
+            "contract": "mock_data",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative mock_data projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/feature-review",
+              "component": "ux-prototyping",
+              "readiness": "draft",
+              "version": 1,
+              "entities": {
+                "Ac": {
+                  "fields": {
+                    "id": "string; stable acceptance criterion identifier"
+                  },
+                  "records": [
+                    {
+                      "id": "ACD-300"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "mockups",
       "label": "Mockup agent draws the screens",
-      "human": "The mockup agent drafts each screen the request implies, populated from the drafted mock data, registering a screen id the flow's steps can resolve.",
+      "description": "The mockup agent draws each screen the request implies, filled from the drafted mock data, and registers each screen so the flow's steps can point to it.",
       "order": 4,
       "agent": "mockup-author",
+      "actor_kind": "llm",
       "consumes": [
-        "classification",
-        "MockData"
+        "mock_data/id: string (required)",
+        "mock_data/entities: object (required)"
       ],
       "produces": [
-        "Mockup (*.mockup.json, screen id)"
+        "mockup/id: string (required)",
+        "mockup/screen: string (required)",
+        "mockup/title: string (required)",
+        "mockup/entities: array (required)",
+        "mockup/mock_data_ref: string (optional)",
+        "mockup/renders: null|string (required)",
+        "mockup/readiness: string (required)"
       ],
       "reads": [
         "MockData"
@@ -117,22 +515,150 @@
         "UXP-541"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "mock_data",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "mockup",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/screen",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/title",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/mock_data_ref",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/renders",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "mock_data",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative mock_data projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/feature-review",
+              "entities": {
+                "Ac": {
+                  "fields": {
+                    "id": "string; stable acceptance criterion identifier"
+                  },
+                  "records": [
+                    {
+                      "id": "ACD-300"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "contract": "mockup",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative mockup projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/feature-review",
+              "screen": "feature-review",
+              "title": "Review the feature",
+              "entities": [
+                "Ac"
+              ],
+              "renders": null,
+              "readiness": "draft",
+              "mock_data_ref": "leafcutter/feature-review"
+            }
+          }
+        ]
+      }
     },
     {
       "id": "flow",
       "label": "Flow agent assembles the journey",
-      "human": "The flow agent assembles the draft flow, ordering the steps and wiring each to its screen and the entities it reads and writes, with an acceptance_scenario per step.",
+      "description": "The flow agent assembles the draft flow, ordering the steps and linking each to its screen, the entities it reads and writes, and an acceptance scenario.",
       "order": 5,
       "agent": "flow-author",
+      "actor_kind": "llm",
       "consumes": [
-        "classification",
-        "MockData",
-        "Mockup"
+        "mockup/screen: string (required)",
+        "mockup/entities: array (required)",
+        "mockup/mock_data_ref: string (optional)"
       ],
       "produces": [
-        "Flow (*.flow.json, steps wired to screens+entities)",
-        "acceptance_scenarios"
+        "flow/id: string (required)",
+        "flow/component: string (required)",
+        "flow/kind: string (required)",
+        "flow/source: string (required)",
+        "flow/readiness: string (required)",
+        "flow/steps/*/id: string (required)",
+        "flow/steps/*/screen: string (optional)",
+        "flow/steps/*/implements: array (optional)",
+        "flow/acceptance_scenarios: array (optional)"
       ],
       "reads": [
         "MockData",
@@ -142,24 +668,178 @@
         "Flow"
       ],
       "implements": [
-        "UXP-542"
+        "UXP-542",
+        "UXP-542-1"
       ],
-      "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_status": "in_progress",
+      "impl_asof": "2026-10-05",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "mockup",
+            "fields": [
+              {
+                "path": "/screen",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/mock_data_ref",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/screen",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/steps/*/implements",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/acceptance_scenarios",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "mockup",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative mockup projection; not an execution receipt",
+            "value": {
+              "screen": "feature-review",
+              "entities": [
+                "Ac"
+              ],
+              "mock_data_ref": "leafcutter/feature-review"
+            }
+          },
+          {
+            "contract": "flow",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative flow projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/define-a-feature",
+              "component": "ux-prototyping",
+              "kind": "user",
+              "source": "real",
+              "readiness": "draft",
+              "steps": [
+                {
+                  "id": "approve",
+                  "order": 1,
+                  "label": "Approve the feature",
+                  "description": "Review the proposed behavior.",
+                  "implements": [],
+                  "screen": "feature-review"
+                }
+              ],
+              "acceptance_scenarios": [
+                {
+                  "for": "approve",
+                  "given": "A feature draft exists",
+                  "when": "The person reviews it",
+                  "then": "Their decision is retained"
+                }
+              ]
+            }
+          }
+        ]
+      }
     },
     {
       "id": "deriveAcs",
       "label": "Business-analyst derives the ACs",
-      "human": "Once the person approves the drafted flow, the business-analyst derives the L2/L3 acceptance criteria from the flow's steps and back-links each step via step.implements — the flow stays the reviewable source of truth.",
+      "description": "After the person approves the draft flow, the business analyst agent derives acceptance criteria from its steps and links each step back to them.",
       "order": 6,
       "agent": "business-analyst",
+      "actor_kind": "llm",
       "consumes": [
-        "Flow (approved)",
-        "acceptance_scenarios"
+        "flow/id: string (required)",
+        "flow/readiness: string (required)",
+        "flow/steps/*/id: string (required)",
+        "flow/acceptance_scenarios: array (optional)"
       ],
       "produces": [
-        "Ac (L2/L3)",
-        "step.implements back-links"
+        "ac/id: string (required)",
+        "ac/criteria: string (required)",
+        "ac/component: string (required)",
+        "ac/readiness: string (optional)",
+        "flow/steps/*/id: string (required)",
+        "flow/steps/*/implements: array (optional)"
       ],
       "reads": [
         "Flow"
@@ -171,7 +851,160 @@
         "UXP-402"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/acceptance_scenarios",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          },
+          {
+            "contract": "flow",
+            "fields": [
+              {
+                "path": "/steps/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/implements",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "flow",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative flow projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/define-a-feature",
+              "readiness": "draft",
+              "steps": [
+                {
+                  "id": "approve",
+                  "order": 1,
+                  "label": "Approve the feature",
+                  "description": "Review the proposed behavior.",
+                  "implements": [],
+                  "screen": "feature-review"
+                }
+              ],
+              "acceptance_scenarios": [
+                {
+                  "for": "approve",
+                  "given": "A feature draft exists",
+                  "when": "The person reviews it",
+                  "then": "Their decision is retained"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "component": "ac-driven-dev",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded.",
+              "readiness": "draft"
+            }
+          },
+          {
+            "contract": "flow",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative flow projection; not an execution receipt",
+            "value": {
+              "steps": [
+                {
+                  "id": "approve",
+                  "order": 1,
+                  "label": "Approve the feature",
+                  "description": "Review the proposed behavior.",
+                  "implements": [
+                    "UXP-531"
+                  ],
+                  "screen": "feature-review"
+                }
+              ]
+            }
+          }
+        ]
+      }
     }
   ],
   "branches": [
@@ -180,84 +1013,426 @@
       "from": "classify",
       "condition": "classifier outcome = mockup+data (a single screen, not a journey)",
       "label": "Skip the flow agent",
-      "human": "For a single-screen change the classifier returns mockup+data: the mock-data and mockup agents run, but the flow agent is skipped — there is no multi-step journey to assemble.",
+      "description": "For a single-screen change, the classifier agent runs only the mock-data and mockup agents, skipping the flow agent since there is no journey.",
       "agent": "pt-classifier (routing)",
+      "actor_kind": "llm",
       "consumes": [
-        "classification.outcome"
+        "classifier/expected: object (required)",
+        "classifier/outcome: string (required)",
+        "classifier/dispatch: array (required)"
       ],
       "produces": [
-        "dispatch: mock-data + mockup only"
+        "classifier/outcome: string (required)",
+        "classifier/dispatch: array (required)"
       ],
       "implements": [
         "UXP-543"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "classifier",
+            "fields": [
+              {
+                "path": "/expected",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/outcome",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/dispatch",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "classifier",
+            "fields": [
+              {
+                "path": "/outcome",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/dispatch",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "classifier",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative classifier projection; not an execution receipt",
+            "value": {
+              "expected": {
+                "needs_flow": false,
+                "needs_mock_data": true,
+                "needs_mockup": true
+              },
+              "outcome": "mockup+data",
+              "dispatch": [
+                "mock-data-author",
+                "mockup-author"
+              ]
+            }
+          },
+          {
+            "contract": "classifier",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative classifier projection; not an execution receipt",
+            "value": {
+              "outcome": "mockup+data",
+              "dispatch": [
+                "mock-data-author",
+                "mockup-author"
+              ]
+            }
+          }
+        ]
+      }
     },
     {
       "id": "dataOnly",
       "from": "classify",
       "condition": "classifier outcome = mock-data-only (backend/API/job, no screen)",
       "label": "Only the mock-data agent runs",
-      "human": "For backend logic, an API, or a batch job the classifier returns mock-data-only: just the mock-data agent runs so tests have realistic fixtures — no mockups, no flow.",
+      "description": "For backend logic, an API or a batch job, the classifier agent runs only the mock-data agent so tests get realistic fixtures, with no mockups or flow.",
       "agent": "pt-classifier (routing)",
+      "actor_kind": "llm",
       "consumes": [
-        "classification.outcome"
+        "classifier/expected: object (required)",
+        "classifier/outcome: string (required)",
+        "classifier/dispatch: array (required)"
       ],
       "produces": [
-        "dispatch: mock-data only"
+        "classifier/outcome: string (required)",
+        "classifier/dispatch: array (required)"
       ],
       "implements": [
         "UXP-543"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "classifier",
+            "fields": [
+              {
+                "path": "/expected",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/outcome",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/dispatch",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "classifier",
+            "fields": [
+              {
+                "path": "/outcome",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/dispatch",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "classifier",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative classifier projection; not an execution receipt",
+            "value": {
+              "expected": {
+                "needs_flow": false,
+                "needs_mock_data": true,
+                "needs_mockup": false
+              },
+              "outcome": "mock-data-only",
+              "dispatch": [
+                "mock-data-author"
+              ]
+            }
+          },
+          {
+            "contract": "classifier",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative classifier projection; not an execution receipt",
+            "value": {
+              "outcome": "mock-data-only",
+              "dispatch": [
+                "mock-data-author"
+              ]
+            }
+          }
+        ]
+      }
     },
     {
       "id": "mockupOnly",
       "from": "classify",
       "condition": "classifier outcome = mockup-only (a static screen with no records)",
       "label": "Only the mockup agent runs",
-      "human": "For a static screen with no business data (e.g. an About page) the classifier returns mockup-only: just the mockup agent runs — no dataset to draft, no journey.",
+      "description": "For a static screen with no business data, such as an About page, the classifier agent runs only the mockup agent, with no dataset or journey to draft.",
       "agent": "pt-classifier (routing)",
+      "actor_kind": "llm",
       "consumes": [
-        "classification.outcome"
+        "classifier/expected: object (required)",
+        "classifier/outcome: string (required)",
+        "classifier/dispatch: array (required)"
       ],
       "produces": [
-        "dispatch: mockup only"
+        "classifier/outcome: string (required)",
+        "classifier/dispatch: array (required)"
       ],
       "implements": [
         "UXP-543"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "classifier",
+            "fields": [
+              {
+                "path": "/expected",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/outcome",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/dispatch",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "classifier",
+            "fields": [
+              {
+                "path": "/outcome",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/dispatch",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "classifier",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative classifier projection; not an execution receipt",
+            "value": {
+              "expected": {
+                "needs_flow": false,
+                "needs_mock_data": false,
+                "needs_mockup": true
+              },
+              "outcome": "mockup-only",
+              "dispatch": [
+                "mockup-author"
+              ]
+            }
+          },
+          {
+            "contract": "classifier",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative classifier projection; not an execution receipt",
+            "value": {
+              "outcome": "mockup-only",
+              "dispatch": [
+                "mockup-author"
+              ]
+            }
+          }
+        ]
+      }
     },
     {
       "id": "none",
       "from": "classify",
       "condition": "classifier outcome = none (config / schema / docs, no product surface)",
       "label": "Draft no artifacts",
-      "human": "For a config change, a schema/perf tweak, or documentation the classifier returns none: no product-truth artifacts are drafted and the request goes straight to normal AC authoring.",
+      "description": "For a configuration, schema, performance or documentation change, the classifier agent drafts nothing and the request goes straight to normal criteria authoring.",
       "agent": "pt-classifier (routing)",
+      "actor_kind": "llm",
       "consumes": [
-        "classification.outcome"
+        "classifier/expected: object (required)",
+        "classifier/outcome: string (required)",
+        "classifier/dispatch: array (required)"
       ],
       "produces": [
-        "dispatch: none (straight to AC authoring)"
+        "classifier/outcome: string (required)",
+        "classifier/dispatch: array (required)"
       ],
       "implements": [
         "UXP-543"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "classifier",
+            "fields": [
+              {
+                "path": "/expected",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/outcome",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/dispatch",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "classifier",
+            "fields": [
+              {
+                "path": "/outcome",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/dispatch",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "classifier",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative classifier projection; not an execution receipt",
+            "value": {
+              "expected": {
+                "needs_flow": false,
+                "needs_mock_data": false,
+                "needs_mockup": false
+              },
+              "outcome": "none",
+              "dispatch": []
+            }
+          },
+          {
+            "contract": "classifier",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative classifier projection; not an execution receipt",
+            "value": {
+              "outcome": "none",
+              "dispatch": []
+            }
+          }
+        ]
+      }
     }
   ],
   "impl_summary": {
     "done": 4,
-    "in_progress": 2,
-    "not_started": 4,
+    "in_progress": 3,
+    "not_started": 3,
     "total": 10,
-    "asof": "2026-07-20"
+    "asof": "2026-10-05"
   },
   "acceptance_scenarios": [
     {
@@ -319,6 +1494,12 @@
       "given": "a request classified none",
       "when": "the pipeline dispatches agents",
       "then": "no product-truth artifacts are drafted and the request goes straight to normal AC authoring"
+    },
+    {
+      "for": "flow",
+      "given": "the structured JSON contract metadata and the applicable source contracts",
+      "when": "Flow agent assembles the journey",
+      "then": "The flow author also records each real handoff using source-bound fields and coherent JSON examples, distinguishes runtime contracts from reviewed documentation or illustrative designs, and states any genuinely undefined proposed binding. Internal human/UI transitions state why there is no JSON handoff. The author then regenerates compatibility text and validates the artifact."
     }
   ],
   "provenance": [
@@ -327,6 +1508,42 @@
       "by": "BrainCandy (product-truth Atlas session)",
       "date": "2026-07-14",
       "note": "Real data-flow of the product-truth authoring agents (classify -> search -> mock data -> mockups -> flow -> derive ACs) with the agent + consumes/produces handoff contract and the classifier decision branches (mockup+data / mock-data-only / mockup-only / none). Specs the agents behind define-a-feature's draft step — none built yet, so all steps are not_started."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (agent-led I/O contract migration)",
+      "date": "2026-10-03",
+      "note": "Added source-bound field/type/requiredness/default metadata and explicitly illustrative JSON projections. Preserved topology, actor ownership, realization and AC status. Non-JSON artifacts and genuinely undefined proposed interfaces remain explicit."
+    },
+    {
+      "action": "extended",
+      "by": "Codex release integrator",
+      "date": "2026-10-05",
+      "note": "Linked the reviewed contract-display and authoring acceptance criteria to their actual behavior; corrected the validator stdout boundary."
     }
-  ]
+  ],
+  "contract_definitions": {
+    "classifier": {
+      "schema": "docs/product-truth/schemas/pt-classifier-output.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity."
+    },
+    "index": {
+      "schema": "docs/product-truth/schemas/product-truth-index-projection.schema.json",
+      "authority": "source_reviewed",
+      "note": "Projection of generate_product_truth.py write_index/build_by_ac/build_by_flow. Documents index.json lookups, not a complete runtime validator or automatic source parity."
+    },
+    "mock_data": {
+      "schema": "docs/product-truth/schemas/mock-data.schema.json"
+    },
+    "mockup": {
+      "schema": "docs/product-truth/schemas/mockup.schema.json"
+    },
+    "flow": {
+      "schema": "docs/product-truth/schemas/flow.schema.json"
+    },
+    "ac": {
+      "schema": "config/ac_store_schema.json"
+    }
+  }
 }

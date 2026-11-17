@@ -1,0 +1,120 @@
+id: INF-700a-1-iv
+components:
+  - infrastructure
+  - knowledge_system
+  - build_orchestration
+title: "An epic drive routes learnings around each ticket's commit, and N tickets leave one copy"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: done
+priority: high
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a-1.yaml"
+criteria: |
+  Given an epic drive in which ticket-supervisor drives each ticket and
+    dispatches that ticket's commit phase while holding the commit-phase lock,
+  When a ticket reaches its commit phase,
+  Then inside that lock and before the commit agent is spawned, the
+    supervisor runs the routing step's stage in the epic's worktree,
+  And the commit agent is told to stage every path the stage reported, by
+    name, alongside the ticket's own files, and never by a sweep,
+  And after the commit agent returns, on success and on failure alike, the
+    supervisor runs exactly one observe, still inside the lock, and that
+    observation is the knowledge_routing it returns for the ticket,
+  And the epic drive's own result carries each ticket's knowledge_routing and
+    the total written and unwritten across the drive,
+  And a learning whose text an earlier commit on the same branch already
+    carries is not written again, not marked routed, and is counted as
+    already_on_branch, so an epic of N tickets merges one copy of each
+    learning rather than N,
+  And a learning a refused commit left uncommitted in the worktree is staged
+    by the next ticket's commit without being appended a second time,
+  And no routing problem (a stage or observe that cannot run, or an
+    unrecognised reply) changes the ticket's or the drive's own outcome.
+depends_on: [INF-700a-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-040-knowledge-write-publication-rides-completion-commit.md
+    relationship: constrains
+    status: exists
+  - path: docs/reference/knowledge-routing-step.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+it_requirements:
+  - "WHERE IT RUNS: templates/skills/building-epics/SKILL.md section 5.9, the procedure ticket-supervisor follows around its commit phase (ADR-040 section 3). build-epic.js only dispatches ticket-supervisor and makes no commit of its own, so it stays EXCLUDED in knowledge_routing_wiring, with covered_by naming the skill section. The build-time guard enumerates workflow artefacts only and cannot see a skill-hosted step."
+  - "WHY INSIDE THE LOCK: sibling tickets share one worktree, and the CLI keeps one run record per worktree git dir. Stage, commit and observe must not interleave across tickets."
+  - "THE DEDUPE LIVES IN THE ROUTING MODULE, NOT THE DRIVER (INF-700a-1: idempotence is inherited, not rebuilt): stage_completion checks HEAD's copy of the destination before writing, and the worktree copy before appending."
+  - "Fail-open per ADR-034."
+delivers_to:
+  agent: python-coder
+  contract: "Per-ticket routing figures on the epic drive's result, with one copy of each learning per branch"
+expects_from:
+  ac_id: INF-700a-1
+  contract: "The routing step dispatched before the path's own commit, with its result consumed by the driver"
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/workflows/test_inf_700a_1_iv_branch_dedupe.py
+- unit_tests/workflows/test_inf_700a_1_iv_epic_drive_wiring.py
+implemented_by:
+- scripts/knowledge/completion_routing.py
+- scripts/knowledge/completion_routing_cli.py
+- templates/skills/building-epics/SKILL.md
+- templates/agents/ticket-supervisor.md
+- templates/workflows-js/build-epic.js
+- config/guardrail_gates.yaml
+test_spec:
+  - name: test_three_ticket_commits_on_one_branch_merge_exactly_one_copy
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Real CLI, real scratch git: three stage/commit-by-name/observe cycles on one branch, then merge; the merged destination holds the learning once."
+  - name: test_a_record_already_on_head_is_skipped_unclaimed_and_counted
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "The second ticket's stage names no manifest path, reports already_on_branch 1 in both the stage reply and the observe report, and claims nothing in the state file."
+  - name: test_a_write_left_by_a_refused_commit_is_restaged_without_a_second_append
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "A refused commit leaves the write in the worktree; the next stage names it in the manifest without appending again, and the next commit carries one copy."
+  - name: test_the_epic_result_carries_each_tickets_routing_and_the_drive_totals
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Drive build-epic.js under the engine harness with ticket-supervisor replies carrying different knowledge_routing figures; assert the epic result lists each ticket's figures and sums them, and that differing figures produce differing results with equal status."
+  - name: test_the_skill_orders_stage_commit_by_name_and_observe_inside_the_commit_lock
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Parse the commit-phase procedure ticket-supervisor follows into its ordered steps, and assert lock-acquire, then stage, then the commit spawn whose stage list consumes the manifest, then one observe whose reply is returned, then lock-release."
+test_rationale: |
+  The duplicate defect is only visible across several commits on one branch,
+  so the dedupe tests drive the real CLI through real git for more than one
+  ticket. Skill prose cannot be executed in the unit layer, so its test asserts
+  that the step's output is consumed in the procedure's control flow. The
+  epic-level consumption is exercised by running build-epic.js itself.
+notes: |
+  Found 2026-10-09 while wiring ADR-040 section 3. PR #1071 removed
+  build-epic.js's workflow-level routing step because no commit followed it.
+  Moving the step to the per-ticket commit exposed the N-copies defect, because
+  the stage had assumed one stage per branch. The real /build-feature epic route
+  is build-feature.js, which runs its own per-phase driver and dispatches commit
+  itself without ticket-supervisor. It is NOT covered by this AC and stays
+  excluded, with a corrected reason.
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary

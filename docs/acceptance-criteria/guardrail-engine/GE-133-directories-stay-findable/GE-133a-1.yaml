@@ -1,0 +1,406 @@
+id: GE-133a-1
+title: "Only the location the configuration declares is set aside: a feature family can cross the limit without a skipped check, a same-named source or test folder is still judged, and a declaration that cannot be read sets nothing aside"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the configuration declares one set-aside location, the AC store's root
+    folder docs/acceptance-criteria/, with a stated ground that its folders hold
+    records read by tools and navigated by nobody,
+  And a feature folder under it, docs/acceptance-criteria/build-orchestration/
+    BO-3800-refusal-summons-specialist/, held 15 countable files at the parent
+    revision,
+  When the author stages 4 further record files in that folder, taking it to 19,
+    and in the same commit creates a new feature folder under a component folder
+    of the store holding 20 record files, and performs an ordinary commit,
+  Then the commit completes,
+  And the configuration holding the declaration is byte-for-byte what it was
+    before the commit, so a feature family joins the set-aside location without
+    anyone adding it by name.
+
+  And given the same declaration, and three folders outside the store that each
+    held 15 countable files at the parent revision: the source folder
+    templates/acceptance-criteria/, the test folder
+    unit_tests/acceptance-criteria/, and docs/acceptance-criteria-archive/, whose
+    path begins with the same characters as the declared location,
+  When one commit adds one file to each of the three and 4 record files to the
+    BO-3800 store folder, and the author performs an ordinary commit,
+  Then the commit does not complete,
+  And the folders it names as too dense are exactly those three, each at 16
+    files, and the store folder is not named — a folder sharing the store's
+    name, or the first characters of its path, is not thereby inside it.
+
+  And given instead that the configuration holds no set-aside declaration at
+    all,
+  When the author stages the same 4 record files into the BO-3800 store folder
+    and performs an ordinary commit,
+  Then the commit does not complete, the store folder is named as too dense at
+    19 files and is not reported as set aside,
+  And the outcome states that the set-aside declaration could not be read and
+    names where it was looked for,
+  And given instead a declaration whose single entry names no location, the same
+    commit is refused in the same way and the outcome names the entry it could
+    not interpret.
+
+  And given instead that the declaration is present, readable and lists no
+    locations,
+  When the author stages the same 4 record files and performs an ordinary
+    commit,
+  Then the commit does not complete and the store folder is named as too dense,
+  And the outcome does not state that the declaration could not be read — an
+    empty declaration is a decision that nothing is set aside, and is reported
+    differently from one that could not be read.
+
+  And given instead that the declaration names a different location,
+    records/criteria/, and does not name docs/acceptance-criteria/,
+  When the author stages the same 4 record files into the store folder and, in
+    the same commit, takes a folder under records/criteria/ from 15 files to 19,
+  Then the commit does not complete, the only folder it names as too dense is
+    the store folder, and the folder under records/criteria/ is not named — so
+    which location is set aside follows the declaration and is not a path built
+    into the check.
+depends_on:
+  - GE-133a
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-133-directories-stay-findable/GE-133a.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE MODEL for the first and fourth arms: a crossing that must complete, a new member
+      that joins with no edit, and an empty declaration as the negative control.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE MODEL for the second arm: a resemblance in the name is not membership.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-2-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE MODEL for the third and fourth arms: absent and malformed declarations judge and
+      say so; an empty declaration judges and does not claim it could not be read.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      INHERITED AND NOT REPEALED: the component's fail-open convention for an internal
+      error, and GE-120's line over it. A check that cannot read its set-aside declaration
+      has NOT had an internal error in the sense that convention protects: it can still
+      judge every folder, so it judges them and says what it could not read. Falling open
+      there would set the whole repository aside, which the third arm exists to prevent.
+  - path: templates/scripts/commit_guardian/check_folder_density.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The folder_density section's existing list of directory names skipped by name is the
+      shape the second arm rules out: it matches a name at any depth, and it skips silently.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Behavioural verification is binding: every arm is a real commit in a real throwaway
+      repository with the verdict read from the check's own exit and output.
+  - path: templates/scripts/commit_guardian/config.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The loader the check reads its section through. Named because a default merged in
+      here would make an absent declaration indistinguishable from a present one (arm 3).
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the declaration shape this record reuses (key set_aside_locations, entries
+      of path + ground, blank ground rejected). Shape shared, list separate, no build
+      dependency; see it_requirements.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/pre-commit-hooks.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The user-facing description of the check. Its update is carried by GE-133a-2's
+      it_requirements, not by this record.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - "WHERE AND WHAT (IT PO decision). The declaration lives in the folder_density section of
+    templates/scripts/commit_guardian/commit_guardian.json, beside max_files_per_folder and
+    excluded_dirs, under the key set_aside_locations: a list of objects, each with a
+    repo-relative directory `path` and a non-blank `ground` string. No new configuration
+    file. Ship exactly two entries: (1) path docs/acceptance-criteria/, ground 'Holds
+    acceptance-criteria records that tools read and write and nobody navigates by hand. It
+    is flat by design, one folder per feature family, and its folders are bounded by the
+    AC store''s tree limits rather than by a file count.'; (2) path docs/decisions/, ground
+    'Holds kernel decision records, one file per decision, written and read by the
+    kernel''s publish, index and precedent tools; people review records in PRs, not by
+    browsing the folder.' Each ground ships as worded here; inside a quoted ground, ''
+    stands for one apostrophe. No size bound on either entry (dropped by BrainCandy,
+    2026-10-12)."
+  - "SHARED WITH GE-127g: SHAPE AND KEY NAME, NOT THE LIST. Use the same key name, entry
+    shape and blank-ground rule GE-127g's L1 pins for the doc_length section, so one
+    configuration file expresses a set-aside one way. Keep a separate list in
+    folder_density: a location set aside from the length standard is not thereby set aside
+    from the density standard, and the reverse. GE-133 must NOT depend on GE-127g being
+    built: if a shared parsing helper already exists on main when this is built, reuse it;
+    otherwise implement locally. Either way, any new helper module lives in
+    templates/scripts/commit_guardian/ so the build's rglob of that directory deploys it
+    with no deploy-map edit."
+  - "MATCHING. A staged file's folder is set aside when that folder equals a declared path
+    or lies beneath it, compared by whole path components (a trailing slash on the entry is
+    optional and normalised). Never by directory name at any depth, never by plain string
+    prefix: docs/acceptance-criteria-archive/ and templates/acceptance-criteria/ are not
+    inside docs/acceptance-criteria/. The existing name-matched excluded_dirs list keeps its
+    current members and must not gain acceptance-criteria."
+  - "WHICH LOCATIONS ARE SET ASIDE COMES ONLY FROM THE DECLARATION. No path is built into the
+    check, and nothing in the check or in config.py supplies a default set_aside_locations:
+    an absent key must reach the check as absent. Adding a feature folder under a declared
+    location requires no edit to any file, and the check never writes to its configuration."
+  - "UNREADABLE IS NOT EMPTY, AND IS NOT FAIL-OPEN. Three distinct states, each reported
+    differently: (a) key absent -> judge every folder and state that the set-aside
+    declaration could not be read, naming the configuration file and key it looked in;
+    (b) key present but malformed (not a list, an entry that is not an object, a path that
+    is missing, empty, absolute, contains '..', or names the repository root, a ground that
+    is missing or blank) -> judge every folder and state that the declaration could not be
+    interpreted, naming each offending entry; one bad entry voids the whole declaration
+    rather than honouring its siblings; (c) present and empty -> judge every folder and say
+    nothing about unreadability. None of (a)-(c) may take the component's fail-open path for
+    internal errors or exit clean on its own account (GE-127's convention covers a check
+    that cannot judge; this check can still judge)."
+  - "Set-aside determination must be pure path computation over the folders the check
+    already collects: no additional git subprocess per folder, and no measurable change in
+    the check's run time on a commit touching 100 folders."
+  - "templates/scripts/commit_guardian/ is the SOURCE; scripts/commit_guardian/ and
+    .leafcutter/ copies are build outputs. Edit only the templates."
+  - "TESTS. Every test drives a real git commit in a scratch repository whose pre-commit hook
+    runs the DEPLOYED check taken from the shared_reference_layout fixture (marker
+    @pytest.mark.shared_layout_reader). The fixture is read-only: copy what the test needs out
+    of it and vary the declaration only in the scratch copy. No test spawns build.py; the
+    file adds zero build.py invocations."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md, rules
+    1-4)."
+  - "POST-WRITE COMMANDS (from the worktree root): ruff check
+    templates/scripts/commit_guardian/; python -m pytest
+    unit_tests/commit_guardian/test_folder_density_set_aside.py -q; python
+    scripts/ac_store/validate_ac_schema.py
+    docs/acceptance-criteria/guardrail-engine/GE-133-directories-stay-findable"
+test_spec:
+  - name: test_store_crossing_and_new_family_commit_without_declaration_edit
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: scripts/commit_guardian/check_folder_density.py
+    description: >-
+      Arm 1. RED today. Parent revision has a store feature folder at 15 files; the commit
+      adds 4 (to 19) and creates a new feature folder under a store component folder with
+      20 files. Assert git commit exits 0 AND the configuration file holding the
+      declaration is byte-identical before and after the commit.
+    must_catch:
+      - "name the over-limit store folders individually in the configuration instead of declaring the location"
+      - "append a newly seen store folder to the declaration at run time"
+  - name: test_lookalike_folders_outside_store_are_still_judged
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: scripts/commit_guardian/check_folder_density.py
+    description: >-
+      Arm 2. RED today. templates/acceptance-criteria/, unit_tests/acceptance-criteria/ and
+      docs/acceptance-criteria-archive/ each go 15 -> 16 while the store folder goes 15 ->
+      19. Assert the commit is refused and the folders named as too dense are exactly those
+      three at 16, with the store folder not named.
+    must_catch:
+      - "add acceptance-criteria to the name-matched excluded_dirs list"
+      - "treat a folder as inside the location when its path string starts with the declared text"
+      - "disable the check or skip every folder under docs/"
+  - name: test_absent_or_malformed_declaration_judges_and_says_so
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    surface_invoked: scripts/commit_guardian/check_folder_density.py
+    description: >-
+      Arm 3. RED today on the statement clauses. With the key removed, then with a single
+      entry naming no location: assert the commit is refused, the store folder is named too
+      dense at 19 and not as set aside, and the output states the declaration could not be
+      read naming where it looked (absent case) or names the uninterpretable entry
+      (malformed case).
+    must_catch:
+      - "treat an absent or uninterpretable declaration as set everything aside, or exit clean"
+      - "report an unreadable declaration the same way as an empty one"
+      - "supply a default set_aside_locations from config.py so absence is never seen"
+  - name: test_empty_declaration_judges_without_claiming_unreadable
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: scripts/commit_guardian/check_folder_density.py
+    description: >-
+      Arm 4, the negative control. GREEN today by design. set_aside_locations is an empty
+      list; assert the commit is refused with the store folder named too dense, and the
+      output does not state that the declaration could not be read.
+    must_catch:
+      - "hard-code docs/acceptance-criteria/ in the check and ignore the declaration"
+      - "report an empty declaration as unreadable"
+  - name: test_set_aside_follows_the_declared_location_not_a_built_in_path
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: scripts/commit_guardian/check_folder_density.py
+    description: >-
+      Arm 5. RED today. The declaration names only records/criteria/; the store folder goes
+      15 -> 19 and a folder under records/criteria/ goes 15 -> 19. Assert the commit is
+      refused and the only folder named too dense is the store folder.
+    must_catch:
+      - "hard-code docs/acceptance-criteria/ in the check and ignore the declaration"
+  - name: test_shipped_declaration_sets_aside_both_record_stores
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: deployed
+    surface_invoked: scripts/commit_guardian/check_folder_density.py
+    description: >-
+      The shipped declaration, not a scratch one. RED on origin/main e93eda09a, which ships
+      only the docs/acceptance-criteria/ entry. The scratch repository uses the deployed
+      commit_guardian.json copied UNMODIFIED out of shared_reference_layout. At the parent
+      revision docs/decisions/ holds 15 countable files and a store feature folder holds 15;
+      the commit adds 2 decision records to docs/decisions/ (to 17) and 4 records to the
+      store folder (to 19). Assert git commit exits 0 and the outcome names both folders as
+      set aside, each with the ground the first it_requirement words for its entry.
+    must_catch:
+      - "ship only the docs/acceptance-criteria/ entry"
+      - "add decisions to the name-matched excluded_dirs list instead of declaring the location"
+      - "ship a ground other than the one the first it_requirement words for that entry"
+test_rationale: >-
+  Every entry is a real git commit in a scratch repository whose pre-commit hook runs the
+  deployed check copied out of the session-scoped shared_reference_layout, so the tests
+  prove the deployed copy reads the declaration and add no build.py spawn (each is marked
+  @pytest.mark.shared_layout_reader). A test that asserts the key is present in
+  commit_guardian.json passes on a check that never reads it, so none is written. The
+  must_catch lists are the BA's named mutations (1)-(7), distributed to the arm that
+  catches each. Red/green today: arms 1, 2, 3 and 5 RED; arm 4 GREEN by design as the
+  negative control that a switched-off or hard-coded check fails. The sixth entry
+  (added 2026-10-12, dec-e34583d93c00584f) is the only one that runs the SHIPPED
+  configuration unmodified: it proves the two shipped entries and their grounds by a real
+  commit, not by a presence test.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    Per run, the folder_density check holds the declaration read from
+    templates/scripts/commit_guardian/commit_guardian.json (deployed copy at run time) as:
+    state (one of absent | malformed | empty | ok); the configuration file path and key it
+    looked in; for malformed, the list of offending entries as written; for ok, the
+    honoured entries as (path: str, repo-relative POSIX directory, normalised without
+    trailing slash; ground: str, non-blank). A folder's membership answer is (set_aside:
+    bool, ground: str or null), computed by whole-path-component containment. GE-133a-2's
+    report consumes this; it must not re-read configuration.
+expects_from: null
+declares_side_effect: false
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by:
+  - reason: absorbed-sibling-by-user-decision
+    date: '2026-10-12'
+    by: business-analyst
+    entry: >-
+      BrainCandy slimmed GE-133a to two L2s. This record absorbed the deleted GE-133a-3's
+      guarantees (second, third and fourth arms) and dropped its own standalone
+      new-folder arm, which now rides in the first arm's commit.
+  - reason: second-shipped-set-aside-entry-and-approval-by-user-decision
+    date: '2026-10-12'
+    by: it-po
+    entry: >-
+      BrainCandy's decision dec-e34583d93c00584f (2026-10-12, "Build GE-133, both
+      stores"). The first it_requirement (WHERE AND WHAT) now ships exactly two
+      set_aside_locations entries instead of one: docs/acceptance-criteria/ with its
+      ground unchanged, and docs/decisions/, the decision kernel's flat record store (one
+      file per decision, written and read by the kernel's publish, index and precedent
+      tools; past the limit of 15 it blocks merges). One sentence now says each ground
+      ships as worded and that '' inside a quoted ground stands for one apostrophe.
+      test_spec gained test_shipped_declaration_sets_aside_both_record_stores, the one
+      test that runs the shipped configuration unmodified; test_rationale says so.
+      readiness moved draft -> approved by the same decision. work_status moved done ->
+      todo: the build merged in PR #1168 ships one entry, and its docs/acceptance-criteria/
+      ground ("the AC store is flat by design: records read by tools and navigated by
+      nobody (GE-133a)") is not the one this requirement words, so the amended
+      requirement is not met on main. The done-proof gate cannot see that (every existing
+      test uses a scratch declaration), so the status has to say it. The record goes done
+      again when the second entry, the worded grounds and the new test land. criteria,
+      title, req_status and depends_on are unchanged.
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_folder_density_set_aside.py
+  - unit_tests/commit_guardian/test_folder_density_windows_paths.py
+  - unit_tests/commit_guardian/test_folder_density_shipped_declaration.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_folder_density.py
+  - templates/scripts/commit_guardian/_density_set_aside.py
+  - templates/scripts/commit_guardian/commit_guardian.json
+  - docs/pre-commit-hooks.md
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  WHICH ARMS GO RED AGAINST THE CHECK AS IT STANDS (read from its source and configuration
+  on 2026-10-09; there is no set-aside declaration and nothing reads one):
+    - ARM 1: RED. A folder going from 15 to 19 is exactly what the check refuses (the
+      BO-3800 refusal of 2026-10-09, reproduced), and a folder absent at the parent
+      revision counts as 0 before and 20 after, so it is refused as newly dense too.
+    - ARM 2: RED. Today all four folders, the store folder included, are named as too dense.
+      The arm stays red under every name-shaped or prefix-shaped fix, which is its purpose.
+    - ARM 3: RED on the statement clauses. The refusal half is already true today; nothing
+      looks for a declaration, so nothing states that one could not be read or interpreted.
+    - ARM 4: GREEN TODAY ON ITS REFUSAL, by design: an empty declaration must behave like
+      today's check. It is the negative control that a switched-off check fails, and its
+      last clause tells it apart from arm 3.
+    - ARM 5: RED. Today the records/criteria/ folder is refused alongside the store folder.
+
+  THE NEW FOLDER IN ARM 1 IS WHAT TELLS A DECLARED LOCATION FROM A LIST. The BO-3800 half
+  alone is satisfied by naming that folder. Only a folder that did not exist when the
+  declaration was last edited, committed with the declaration untouched, separates the two.
+
+  THE TWO NAMES IN ARM 2 ARE PARTLY MEASURED. templates/acceptance-criteria/ exists in this
+  repository as the template the installer ships. unit_tests/acceptance-criteria/ and
+  docs/acceptance-criteria-archive/ do not exist; they are fixture names chosen to cover
+  the test-folder case and the string-prefix case.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM.
+    (1) THE LIST. Name the over-limit store folders individually. MUST GO RED: arm 1 (the
+        new folder). MUST STAY GREEN: arm 4.
+    (2) THE SWITCH-OFF. Disable the check, or skip every folder under docs/. MUST GO RED:
+        arms 2, 3, 4 and 5. MUST STAY GREEN: arm 1, which a disabled check satisfies.
+    (3) THE BUILT-IN PATH. Hard-code docs/acceptance-criteria/ in the check and ignore the
+        declaration. MUST GO RED: arms 3, 4 and 5. MUST STAY GREEN: arms 1 and 2.
+    (4) THE NAME RULE. Add acceptance-criteria to the check's existing list of directory
+        names skipped by name. MUST GO RED: arm 2 (source and test folders skipped), and
+        arms 3, 4 and 5. MUST STAY GREEN: arm 1. Recorded because it is the one-line "fix"
+        most likely to be tried first.
+    (5) THE STRING PREFIX. Treat a folder as inside the location when its path starts with
+        the declared text. MUST GO RED: arm 2 (the -archive folder).
+    (6) THE FAIL-OPEN DECLARATION. Treat an absent or uninterpretable declaration as "set
+        everything aside", or let the check exit clean. MUST GO RED: arm 3.
+    (7) THE CONFLATION. Report an empty declaration as unreadable, or an unreadable one as
+        empty. MUST GO RED: arm 4's last clause, or arm 3's statement clauses.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec and test_rationale. Those are the IT PO's, as are the declaration's key name
+  and shape (GE-133a's notes recommend reusing GE-127g's).

@@ -1,0 +1,236 @@
+{
+  "authorship": {
+    "ba_prompt": "C:/Users/Hendrik/Code/leafcutter/.claude/agents/business-analyst.md",
+    "ba_prompt_sha256": "daab34e425661dec3ec458c2a1d6861fffe28bb0732de26822446d7b0fd61d66",
+    "ba_agents": [
+      "ba_native_records",
+      "ba_native_artifacts"
+    ],
+    "it_po_prompt": "C:/Users/Hendrik/Code/leafcutter/.claude/agents/it-po.md",
+    "it_po_prompt_sha256": "ee11f1909771d0e73a844fb82c369f71b187aa61e699a8a8254e21a8a7cd2d27",
+    "it_po_agent": "itpo_native_contracts"
+  },
+  "cross_review": {
+    "complete": true,
+    "decision_reference_scope_corrected_by_ba": true
+  },
+  "types": [
+    {
+      "kind": "AcceptanceCriterion",
+      "ac_id": "KM-400a-1-i",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-i.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 8,
+      "linked_cases_passed": 11,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "a6942b17cce24c5f236d95315ba9cf25aff5a09f5e15c17c8e494907c5e9039c"
+    },
+    {
+      "kind": "ADR",
+      "ac_id": "KM-400a-1-ii",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-ii.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 6,
+      "linked_cases_passed": 6,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "672eadb8de688f9624534abfc9497878e415ad82ade8a344e654ca537c9a96cb"
+    },
+    {
+      "kind": "Component",
+      "ac_id": "KM-400a-1-iii",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-iii.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 7,
+      "linked_cases_passed": 16,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "868b4e9598ac8084cf27a60a688215b303b5e9d0fd8435aff65ca77262fdf97f"
+    },
+    {
+      "kind": "Agent",
+      "ac_id": "KM-400a-1-iv",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-iv.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 8,
+      "linked_cases_passed": 21,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "3eb3a72669b033a096efd0426ad649b80077a9aff8492feb8d94db71b234ea0c"
+    },
+    {
+      "kind": "Skill",
+      "ac_id": "KM-400a-1-v",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-v.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 10,
+      "linked_cases_passed": 23,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "acc30d1f18d09a6176ad2123110769c4e05eca8dd05ea779a0d644d1a1aa91dd"
+    },
+    {
+      "kind": "Ticket",
+      "ac_id": "KM-400a-1-vi",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-vi.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 7,
+      "linked_cases_passed": 9,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "153a384dcb2d66e487ea5c2777c1952e9ed6c8459d26a33b3282ccb0f72bbca1"
+    },
+    {
+      "kind": "Document",
+      "ac_id": "KM-400a-1-vii",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-vii.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 9,
+      "linked_cases_passed": 13,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "acdcad51c9280872367a442cbe595393b197f764ddf84edd45a52087849f09a0"
+    },
+    {
+      "kind": "RoadmapPhase",
+      "ac_id": "KM-400a-1-viii",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-viii.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 10,
+      "linked_cases_passed": 30,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "8f5071dd4e315a2e118692b65a02263d209ad8bd13f1a23289e5c70d30eeb612"
+    },
+    {
+      "kind": "GlossaryTerm",
+      "ac_id": "KM-400a-1-ix",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-ix.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 12,
+      "linked_cases_passed": 23,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "d09b70fc5ab25cfcf1b0e5ad4e606eadb0e8c3ae16e97cd7a709847676e753a5",
+      "additional_evidence": "reports/native-fields/glossary-linux-symlink-verified.xml",
+      "evidence_scope": "Original passing Windows cases plus the unchanged symlink case passing in Linux; prior run history is retained."
+    },
+    {
+      "kind": "Flow",
+      "ac_id": "KM-400a-1-x",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-x.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 10,
+      "linked_cases_passed": 35,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "b42f9a9ca75f7c4652338942c02ad070e6c8ef7c24cb91b6e9cf383208a6887e"
+    },
+    {
+      "kind": "Mockup",
+      "ac_id": "KM-400a-1-xi",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xi.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 10,
+      "linked_cases_passed": 23,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "fb7c29117b4ea7ebd97f8df8d73a8c64ab3dc2f34d17f31cac06466c66003d25"
+    },
+    {
+      "kind": "MockData",
+      "ac_id": "KM-400a-1-xii",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xii.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 10,
+      "linked_cases_passed": 18,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "66ba41f18222f177e87add698e28ff889562c68866be581a0d506df773c83202"
+    },
+    {
+      "kind": "ChangelogEntry",
+      "ac_id": "KM-400a-1-xiii",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xiii.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 10,
+      "linked_cases_passed": 20,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "65f419d7aeaf66c661e08c216184fb5b5ca278b4b1ef8a0d57e4a5e5259e1e0e"
+    },
+    {
+      "kind": "Capability",
+      "ac_id": "KM-400a-1-xiv",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xiv.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 11,
+      "linked_cases_passed": 30,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "9ca6309fe9fcf51f97f86b7ffb6d0411cd0e857c079e507957b53461ae8731d3"
+    },
+    {
+      "kind": "Decision",
+      "ac_id": "KM-400a-1-xv",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xv.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 15,
+      "linked_cases_passed": 62,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "8c52fa8383f5a48ba313080ab8513b7319bb0de42f0bb7036703a94b0e96d542"
+    },
+    {
+      "kind": "SourceFile",
+      "ac_id": "KM-400a-1-xvi",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xvi.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 9,
+      "linked_cases_passed": 18,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "176e5325fcf35d24c50208bf108053a2c381d7c28e004c16940e94e66abeb977"
+    },
+    {
+      "kind": "Test",
+      "ac_id": "KM-400a-1-xvii",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xvii.yaml",
+      "readiness": "reviewed",
+      "work_status": "done",
+      "test_links": 10,
+      "linked_cases_passed": 24,
+      "skipped_tests": [],
+      "criteria_raw_sha256": "6089c5576438873b9b37c25e253c361a95cf82eee10e0cc041c5d0ba6caa9ab4"
+    }
+  ],
+  "fresh_tests": {
+    "report": "reports/native-fields/ac-linked-strict.xml",
+    "passed": 388,
+    "skipped": 1,
+    "failed": 0,
+    "scope": "17 native reader modules plus shared property and projection integration; no database rerun for comment-only edits.",
+    "historical_run": true
+  },
+  "new_aura_publication": false,
+  "new_ac_count": 17,
+  "test_links": 162,
+  "unique_linked_test_functions": 160,
+  "parent_backlinks_verified": true,
+  "canonical_covers_scanner_verified": true,
+  "source_test_executable_asts_unchanged": true,
+  "new_ids_unique": true,
+  "existing_L1_L2_counts_unchanged": true,
+  "criteria_changed_by_root": false,
+  "work_status_counts": {
+    "done": 17
+  },
+  "followup_verification": {
+    "report": "reports/native-fields/glossary-linux-symlink-verified.xml",
+    "passed": 1,
+    "skipped": 0,
+    "test_source_unchanged": true,
+    "all_17_implementation_contracts_done": true
+  }
+}

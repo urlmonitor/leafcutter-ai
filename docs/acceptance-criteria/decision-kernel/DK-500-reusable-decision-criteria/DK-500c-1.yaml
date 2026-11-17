@@ -1,0 +1,159 @@
+id: DK-500c-1
+title: Only a person's approval in a kernel run turns a candidate into a staged category record
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the candidate cat-73d233fc8b15c735 with proposed_by criteria_mining, approval_status proposed and the preferred wording "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?",
+  When human:user accepts it in a kernel run after changing its preferred wording to "Does it keep working with little upkeep as decisions, components and the harness evolve?",
+  And that run ends,
+  Then the category carries approval_status approved, approved_by human:user and the time of the approval,
+  And its id is still cat-73d233fc8b15c735 after the wording change,
+  And its record is written into that run's staged area with lifecycle_stage staged and that run's id, and it has no place in the published library yet,
+  And no file in the repository changes.
+depends_on:
+- DK-500c
+- DK-500b-1
+covered_by:
+- DK-500c-1-i
+- DK-500c-1-ii
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: 'Staged category record in the approving run''s staged area (<run_root>/runs/<run_id>/staged/criterion_categories/<id>.yaml): {id: cat-<16 hex>, repository_id, kind: criterion_category, pref_label, alt_labels[], broader: id|null, replaced_by: [], members[] {decision_id, criterion_id}, decision_types[], components[], lifecycle_stage: staged, approval_status: approved, proposed_by, proposed_at, approved_by: human(:<name>), approved_at, run_id, retirement: null, mined_from[]}, plus base_sha256: sha256 of the published file the change started from, or null for a new category. Validated against config/criterion_category_record.schema.json. Consumed by publish (DK-500c-2).'
+expects_from:
+  ac_id: DK-500b-1
+  contract: Grouping suggestions and mined candidates presented in a kernel run.
+change_target:
+- code
+- schema
+risk_surface: contract_boundary
+it_requirements:
+- 'IT PO default (confirm with the user): review happens in a kernel run a person starts with python -m kernel criteria review. The run is bound to a new native capability criteria.review, registered in config/capability_registry.json through native_registration (ADR-055). It presents the open candidates and grouping suggestions from the mining store at one human approval interaction, where each item is accepted (optionally changed), rejected or left open.'
+- Approval sets approval_status approved, approved_by from the human-answer submission (human(:<name>)?) and approved_at in ISO-8601 UTC. Editing a label, broader or the filters keeps the kernel-minted id.
+- When the run ends, each accepted item is written once to <run_root>/runs/<run_id>/staged/criterion_categories/<id>.yaml with lifecycle_stage staged and run_id set (record_path null). The run's limitations name each staged path and the publish command, exactly as decision staging does.
+- 'A new record schema, config/criterion_category_record.schema.json beside the decision record schema, defines the record file with authored fields only: id, repository_id, kind, pref_label, alt_labels, broader, replaced_by, members, decision_types, components, lifecycle_stage, approval_status, proposed_by, proposed_at, approved_by, approved_at, run_id, retirement, mined_from. Derived views (usage_count, member_view, replaces) and paths never appear in the file; it uses the same plain-YAML subset as decision records.'
+- 'Filters come only from declared vocabularies (ADR-061 section 4): component ids from the component registry, and decision_types validated by the same rule as decision_type in the decision record schema.'
+- No file in the repository is written during the run (ADR-060); the staged files and the run record are its only durable outputs.
+- 'Staging is idempotent per run: resuming or re-finalizing a run never stages a second copy or a different id.'
+test_required: true
+test_spec:
+- name: test_accepted_candidate_is_approved_by_human_with_time
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: After human:user accepts cat-73d233fc8b15c735 with a changed preferred wording, it carries approval_status approved, approved_by human:user and the approval time.
+- name: test_id_kept_after_wording_change
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The record's id is still cat-73d233fc8b15c735 after the wording change.
+- name: test_record_staged_in_run_area_with_run_id
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: When the run ends, the record is under <run_root>/runs/<run_id>/staged/criterion_categories/ with lifecycle_stage staged and the run id, and not in docs/criteria/.
+- name: test_no_repository_file_changes
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A before/after snapshot of the repository shows no changed file.
+- name: test_review_command_reachable
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: python -m kernel criteria review starts a run that waits for a human with the candidates in its question payload.
+- name: test_staging_idempotent_on_resume
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: Resuming the finished run again stages no second copy and no different id.
+test_rationale: Exercise the review run and the publish command through their public CLI and RunService boundaries on a temporary repository copy and run root; assert staged files, published files, exit codes and byte-level before/after snapshots of docs/decisions/. Model-level unit tests alone would not prove that nothing is written outside the staged area or that publish is all-or-nothing.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+  relationship: constrains
+  status: exists
+- path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+  relationship: related
+  status: exists
+  relevance: The stage-then-publish path decision records follow; category records follow it by analogy.
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
+- path: docs/architecture/adrs/ADR-055-capability-registry-starts-empty.md
+  relationship: constrains
+  status: exists
+  relevance: A new native kernel capability (the review run) enters config/capability_registry.json through native_registration.
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/colony-memory.md
+  relationship: describes
+  status: exists
+  relevance: ColonyMemory port, decision staging and publish path, and the planned Neo4j statistics backend.
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+declares_side_effect: true
+notes: |
+  Flow nodes: criteria-library approve and stage (the stage step is the immediate consequence of the approval when the run ends, so both are one behaviour here).
+  SETTLED by dec-93c1c730463c1f3c: records are staged in the run root and enter Git only through a human-run publish.
+  MOCK ASSUMPTIONS this AC adopts and asks the user to confirm: the id scheme cat-<16 hex>, kernel-minted at proposal and never changed by a label edit, merge or split; the staging location <run_root>/runs/<run_id>/staged/criterion_categories/<id>.yaml (kept out of the criteria text, which says "that run's staged area"); approved_by matching human(:<name>).
+  Open: where the person reviews candidates (which kernel capability or command opens the review run).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: approve, stage.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+  IT PO (2026-10-05): the BA's open point 'where the person reviews candidates' is settled as an IT PO default to confirm: python -m kernel criteria review, a run bound to the new native capability criteria.review. The mock assumptions this AC adopted (cat-<16 hex>, the staging path, approved_by human(:<name>)) are taken as the technical contract.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: approve
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+    source: mock
+    asof: '2026-10-04'
+  - flow: leafcutter/criteria-library
+    node: stage
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+    source: mock
+    asof: '2026-10-04'

@@ -31,7 +31,14 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: user-decisions-q5-q6
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Notes only; criteria unchanged. Q5 (sibling landing folder per project) and Q6 (no install copy
+    inside the package repository; build.py refuses an implicit build there) recorded as DECIDED
+    (user, 2026-09-28). readiness stays approved.
 superseded_by: null
 covered_by: [BO-4300b-1, BO-4300b-2, BO-4300b-3, BO-4300b-4, BO-4300b-5]
 implemented_by: []
@@ -49,13 +56,26 @@ notes: |
   first match, another refuses anything but exactly one. The customer intent is "refuse
   when ambiguous, never guess".
 
-  OPEN, NOT DECIDED HERE: Q5 where workspaces live for a project that installed the tools
-  (inside the project, or beside it where every project in a folder would share one
-  directory). The intent is only "predictable per project". Q6 (whether the package
-  repository should carry its own stale install copy) bears on "the right project is
-  found" because today's resolver prefers that stale copy -- implementation, for IT PO.
+  Q5 where workspaces live -- DECIDED (user, 2026-09-28): in a SIBLING folder per project,
+  <parent-of-project>/<project-dir-name>-worktrees/<slug>, outside the project so tools and
+  tests never scan the clones and two projects in one parent folder never collide. It applies
+  to the package's own dev layout too, unless an explicit --landing-root override is given,
+  which the maker still validates (BO-4300b-2, BO-4300b-2-i).
+  Q6 the package repository's own install copy -- DECIDED (user, 2026-09-28):
+  leafcutter-ai/.leafcutter/ must NOT exist. It is deleted, and build.py refuses to build into
+  the package repository itself unless an explicit --target-dir is given (BO-4300f-2). The
+  resolver never reads any install copy (BO-4300b-2-ii), so "the right project is found" does
+  not depend on the deletion.
 
   Distinct from ACD-2100a, which is the requirements entry route finding its OWN files
   from any folder. This record is about the workspace that any route receives.
   "Any platform" includes a Windows/WSL mix: decision 1 (clones embed no absolute path)
   is what makes that possible; paths handed back must be usable from either side.
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04)
+#   Q5 (sibling landing folder) and Q6 (no install copy in the package repository) recorded as
+#   DECIDED (user, 2026-09-28). Notes only; criteria unchanged.
+# ====================================================================

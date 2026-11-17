@@ -1,0 +1,14 @@
+{
+  "recorded_at": "2026-10-09T21:18:22.259117+00:00",
+  "reason": "BA review requested explicit fields detail mode for IP07/IP08, already required by the original pre-output handoff. This completes transcription, not a response-dependent gold change.",
+  "prior_sha256": {
+    "cases.json": "3ee13c7b924177e85d5d94b0f0040b19e664bd9b36cce492bf3f03e7fba33961",
+    "plan.json": "dad1b6c11459eaa086edce4d254a4b5fd124d5f8fc018077fe107b5d3ec7948e"
+  },
+  "current_sha256": {
+    "cases.json": "5bcdb6182f6123461e5fbca2d726b3937e3e731c9992f0417c7b1a6d5228662c",
+    "plan.json": "8e34e293b82077737f53da0dfafe9cef73ead2c10195a77a4b0adc7d61f95dc7"
+  },
+  "new_model_outputs": 0,
+  "closed_aura_baseline_changed": false
+}

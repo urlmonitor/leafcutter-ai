@@ -1,0 +1,196 @@
+id: AR-300c-5
+title: "Which sub-agents an agent may dispatch is declared once, in its own definition beside its permitted tools, and delivery reads only that"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an agent definition that declares which other agents it may dispatch,
+    in the same header block that declares which tools it is permitted to use,
+  When the build compiles that agent's prompt,
+  Then the sub-agents named in the compiled prompt are exactly the sub-agents
+    that header declares -- none added from elsewhere, none omitted,
+    And changing only that header changes the compiled prompt accordingly on the
+      next build, with no other definition or record edited,
+    And changing only the central registry's record of permitted sub-agents,
+      while the header is left alone, does not change the compiled prompt,
+    And a declaration may name "every ticket-phase agent" as a single entry,
+      which stays that one entry in the header and is resolved to the agents
+      that are ticket-phase agents on each build -- so marking a further agent
+      as a ticket-phase agent permits it to every agent holding that entry, with
+      no edit to any of their headers,
+    And both halves of the declaration -- the sub-agents permitted and the tools
+      permitted -- can be read from the same block, so the two can be compared
+      against each other without consulting a second file,
+  So there is one place to change who an agent may call on, and no second place
+    that can disagree with it.
+depends_on:
+  - AR-300c
+doc_links:
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: modifies
+    status: exists
+    relevance: "Already documents a header key for permitted sub-agents (resolved today only through a body placeholder no template carries) and describes the ticket-phase macro. The reference for the block this criterion makes authoritative."
+  - path: config/agent_registry.json
+    relationship: modifies
+    status: exists
+    relevance: "Holds the per-agent sub-agent permission today, including the ticket-phase macro on ticket-supervisor. After this criterion that field is derived, not authored."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The abilities half of the same decision. This criterion is AR-300c-1 with the thing granted swapped from abilities to sub-agents; it should reuse the same header-reading path rather than grow a second one."
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: "The channels through which an agent receives context at invocation time; the compiled sub-agent section is a pre-execution channel of the same kind as the delivered abilities section."
+  - path: docs/architecture/adrs/ADR-002-dual-platform-compilation.md
+    relationship: describes
+    status: exists
+    relevance: "Every agent is compiled for each platform root; delivery evidence is read from every root, not one."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+  - "DECLARATION KEY (decided by IT PO, 2026-10-09): the frontmatter key is `spawn_allowlist`, a YAML list of agent ids, placed in the same frontmatter block as `tools:` (the abilities counterpart is `skills:`). Rationale: it is already documented in docs/reference/agent-template-frontmatter.md, already present in four templates (frontend-coder, onboard, ac-triage, onboard-config-section), and identical to the registry field it now drives, so the derived copy and the declaration share one field name. Test-writer, coder and documentation use this one spelling; no alias is accepted."
+  - "THE MACRO IS STORED VERBATIM: the 'every ticket-phase agent' entry is the literal list item `__ticket_phase_agents__` in the frontmatter list, never pre-expanded. It is resolved on every compile against the agents whose registry `is_ticket_phase` is true (that flag stays authored in config/agent_registry.json; this criterion does not move it). Resolution dedupes, so an explicit entry also covered by the macro is named once."
+  - "ONE HEADER-READING PATH: the `spawn_allowlist` declaration must be read by the same frontmatter parse that reads `skills:` and `tools:` for AR-300c-1, not by a second parser. The negative clause depends on it: the compiled sub-agent section is computed from the frontmatter declaration ONLY. A delivery that falls back to, merges with, or cross-checks against the registry `spawn_allowlist` field passes the positive clauses and fails 'editing only the registry changes nothing'."
+  - "The existing builder build_per_agent_spawn_table (scripts/injection_builders.py) reads the REGISTRY spawn_allowlist, so calling it as-is violates the negative clause. Either feed it the declared list through a net-neutral-or-shorter change, or replace it in a new module and delete the dead builder and its re-export -- grepping every importer (tests included) in the same change. scripts/injection_builders.py is over the 400-content-line limit (measured by templates/scripts/commit_guardian/_file_size_ratchet.py count_content_lines) and may not grow."
+  - "File-size ratchet: new logic lands in NEW modules (a sibling of scripts/agent_skills_declaration.py is the natural home). scripts/template_compiler.py (315 content lines) may take only the wiring; scripts/build_main_helpers.py has 11 lines of headroom and must not be the home of new logic."
+  - "Both halves -- `tools:` and `spawn_allowlist:` -- must be returned from one parse of one block, so AR-200b-3's comparison consumes this parse rather than re-reading the file. `tools:` is a bare comma-separated string that may carry a trailing YAML comment (business-analyst); the parse must be exercised against on-disk templates, not hand-typed fixtures."
+  - "Evidence is the COMPILED prompt in every platform root under the declared output root (<output_root>/agents/ and <output_root>/gemini/agents/), never the registry or the template. Derive populations; 25 holders / 24 ticket-phase agents are 2026-10-09 measurements, not constants."
+test_spec:
+  - name: test_compiled_sub_agents_equal_the_frontmatter_declaration
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "For an agent with a `spawn_allowlist` declaration, the sub-agents named in its compiled prompt (both platform roots) are exactly the declared ones after macro resolution -- none added, none omitted."
+  - name: test_editing_only_the_declaration_changes_the_compiled_prompt
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Changing only the frontmatter `spawn_allowlist` changes the compiled section on the next compile, with no other file edited."
+  - name: test_editing_only_the_registry_spawn_allowlist_changes_nothing_compiled
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Changing only the registry `spawn_allowlist` field, header untouched, leaves the compiled prompt byte-identical."
+    must_catch:
+      - "delivery reads the registry spawn_allowlist field (the current build_per_agent_spawn_table behaviour)"
+      - "delivery merges the registry field with the declaration"
+  - name: test_ticket_phase_macro_stays_one_entry_and_resolves_per_build
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The declaration keeps `__ticket_phase_agents__` as one list item; the compiled section names the agents whose is_ticket_phase is true on that build, each once."
+  - name: test_tools_and_spawn_allowlist_parse_from_the_same_block_on_real_templates
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "On the real templates, one parse returns both the tools set and the spawn_allowlist for every agent, including a tools line carrying a trailing YAML comment."
+test_rationale: >-
+  'One place' is only distinguishable from 'also read' by the negative clause, so the
+  registry-only-edit descriptor is the discriminating test and carries must_catch: the
+  shipped builder reads the registry today and would pass every positive clause. The
+  macro descriptor exists because pre-expanding the macro is the cheap migration and
+  silently breaks AR-300d-5-i. Real-template parsing is included because the tools
+  line on disk is not the clean shape fixtures tend to use.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A per-agent declaration read from one frontmatter parse --
+    {agent: str, tools: list[str], spawn_allowlist_declared: list[str] (verbatim,
+    may contain "__ticket_phase_agents__") | None when the key is absent,
+    spawn_allowlist_resolved: list[str] (macro expanded against registry
+    is_ticket_phase, deduped, order-stable)} -- consumed by AR-300a-5 (delivery),
+    AR-300c-5-ii (derived-copy comparison), AR-300c-5-iii (resolution) and
+    AR-200b-3 (Agent-tool check).
+expects_from:
+  ac_id: AR-300c-1
+  contract: "The frontmatter header-reading path AR-300c-1 established for `skills:` beside `tools:`; this criterion extends it to `spawn_allowlist:` rather than adding a second parser."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+- reason: contradicted-by-later-decision
+  agent: business-analyst
+  date: '2026-10-12'
+  changed: "NOTE ONLY -- criteria, it_requirements, test_spec, status and readiness unchanged. The it_requirement 'Resolution dedupes, so an explicit entry also covered by the macro is named once' TOLERATES a declaration that lists an agent the __ticket_phase_agents__ entry already covers. User decision 4 (BrainCandy, 2026-10-12) makes that declaration a declaration-shape error that stops the build (AR-400f-1, judged on each build per AR-400f-1-ii) and removes ticket-supervisor's explicit llm-expert entry (AR-400f-2). De-duplication at DELIVERY may stay -- the compiled hand-off list still names each agent once -- but ACCEPTING the redundant declaration may not. Where the two disagree, AR-400f-1 governs."
+superseded_by: null
+covered_by:
+  - AR-300c-5-i
+  - AR-300c-5-ii
+  - AR-300c-5-iii
+  - AR-300c-5-iv
+implemented_by:
+  - scripts/agent_spawn_declaration.py
+  - scripts/agent_declaration_shape.py
+  - scripts/agent_declared_sections.py
+notes: |
+  USER DECISION CARRIED DOWN (BrainCandy, 2026-10-09, conditions_decisions.md
+  item 9). The per-agent spawn allowlist is delivered in the AR-300 pull request
+  with the same treatment skills received: one declaration in the agent's own
+  frontmatter beside `tools:`, one generated section in the compiled prompt, the
+  hand-written "Available Sub-Agents" tables removed, coverage by the AR-300b
+  gate. The placement question is not re-opened here.
+
+  WHY THIS SITS UNDER AR-300c. AR-300's own altitude note says the goal "survives
+  swapping the thing granted: the second dead delivery ... is not a skills table
+  at all". A permission to dispatch another agent is a granted ability in the
+  L0's sense. AR-300c's promise -- one record, beside the permissions -- applies
+  unchanged. AR-300c was at 4 of 5 L2s; this takes the last slot, so the
+  consolidation, derived-copy, unresolvable-target and authoring-reference
+  behaviours are L3s under this record rather than sibling L2s.
+
+  THE MACRO DECISION -- KEPT AS A MACRO, EXPANDED AT COMPILE TIME. The registry
+  convention `__ticket_phase_agents__` (ticket-supervisor today) is represented
+  in the declaration as that single entry and resolved on every build. The
+  alternative -- expanding it into a list of names during the migration -- was
+  rejected because it makes the declaration correct on migration day and stale
+  the first time a ticket-phase agent is added: the new agent would then need a
+  second edit to ticket-supervisor's header, which breaks AR-300d's "no extra
+  wiring" promise and re-creates the exact silent-omission shape this goal
+  exists to end. Expansion-at-compile-time keeps "a new ticket-phase agent is
+  permitted with no second edit" true; AR-300d-5-i pins it.
+
+  WHERE TICKET-PHASE MEMBERSHIP LIVES -- NOT MOVED HERE. The macro resolves
+  against each agent's ticket-phase flag. That flag is authored today in
+  config/agent_registry.json (`is_ticket_phase`), not in agent frontmatter. This
+  criterion does not relocate it. If the registry is later made fully derived,
+  that flag needs a home in the agent's own header or the macro resolves against
+  a derived copy; raised as an open item, not decided.
+
+  A THIRD RIVAL SOURCE ALREADY EXISTS. Besides the registry field and the five
+  hand-written body tables, four templates already carry a frontmatter
+  `spawn_allowlist:` key (frontend-coder and onboard non-empty; ac-triage and
+  onboard-config-section `[]`). Measured 2026-10-09 by the BA: the two non-empty
+  ones agree with the registry. The documented key name is the natural candidate
+  for the declaration, but naming is the IT PO's call.
+
+  MEASURED FACTS (orchestrator probe, /home/henzeh/ar300_probe/spawn_divergence.py,
+  production code): build_per_agent_spawn_table is defined and re-exported but
+  nothing calls it, so no agent receives its spawn allowlist today. 25 agents
+  hold a non-empty allowlist after macro expansion. `tools:` is a bare
+  comma-separated string. These are measurements, not constants to hard-code.
+
+  THE NEGATIVE CLAUSE IS THE TEST OF 'ONE PLACE', exactly as in AR-300c-1: a
+  header that is authoritative and a header that is merely also read are the
+  same implementation unless editing the registry alone is shown to change
+  nothing.
+
+  NO ASSIGNED AGENT, IT REQUIREMENTS OR TEST SPEC ON PURPOSE -- the IT PO's lane.

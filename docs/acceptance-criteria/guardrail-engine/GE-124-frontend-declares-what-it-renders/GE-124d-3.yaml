@@ -99,7 +99,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Required one verdict-resolution step over (base, warn-listed?, accepted reason?) rather than two independent downgrade passes, made the precedence input an ACCEPTED reason (adding the refused-marker composition case), stated the suppression_reason biconditional as the mechanical form of the invariant, and carried the BA's precedence flag forward for user confirmation. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/30_TICKET-20261023-GE-124d-3.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -125,3 +126,4 @@ notes: |
   it is a product decision, not a technical one. Note only that whichever way it
   goes, it is one line of the resolution step and one test, so it is cheap to
   change after the fact; it does not need to block implementation.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

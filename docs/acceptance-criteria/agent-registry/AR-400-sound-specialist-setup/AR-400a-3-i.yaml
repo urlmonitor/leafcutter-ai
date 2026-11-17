@@ -1,0 +1,86 @@
+id: AR-400a-3-i
+title: "research-agent no longer routes questions to three abilities inherited from a trading project"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given research-agent's definition in the package's real tree,
+  When the build compiles research-agent's prompt,
+  Then the compiled prompt contains no instruction to use "import-scanner",
+    "find-context-candle" or "trade-analysis", and no routing row for "the
+    latest 1-minute candle near a price level" or "why a trade fired",
+    And the question "which Python files import a specific symbol" is still
+      routed in the compiled prompt, to a means research-agent is granted (one
+      of its declared search tools), not to an ability that does not exist,
+    And the build reports no finding about research-agent of the kind "ability
+      does not exist".
+depends_on:
+  - AR-400a-3
+doc_links:
+  - path: templates/agents/research-agent.md
+    relationship: modifies
+    status: exists
+    relevance: "Routing-table rows at lines 142-144 (dated snapshot, 2026-10-12)."
+assigned_agent: llm-expert
+estimated_complexity: S
+change_target: prompt
+risk_surface: internal
+it_requirements:
+  - "Remove the import-scanner, find-context-candle and trade-analysis rows from templates/agents/research-agent.md's routing table (lines ~142-144, dated snapshot) and re-point the 'which Python files import a symbol' row at a tool already in research-agent's `tools:` frontmatter; do not add a tool for it."
+  - "research-agent's `tools:` line is a long comma-separated list; any edit to the frontmatter must leave every existing tool present (assert the full set before and after)."
+  - "The fix is verified on the COMPILED prompt (the build's output root, both platform roots per ADR-002), not on the template text."
+test_spec:
+  - name: test_compiled_research_agent_has_no_trading_ability_instructions
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Compile research-agent from the real template; the compiled prompt names none of import-scanner, find-context-candle, trade-analysis and has no candle / trade-fired routing row, in every platform root."
+  - name: test_import_question_is_routed_to_a_granted_tool
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The compiled routing table still contains the 'which Python files import a specific symbol' question, and its target is a member of research-agent's declared tools."
+    must_catch:
+      - "the import row is deleted outright"
+      - "the import row points at an ability that does not exist"
+  - name: test_validator_reports_no_nonexistent_finding_for_research_agent
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The registry validator over the real tree reports no 'ability does not exist' finding whose subject is research-agent."
+test_rationale: >-
+  The routing table is prose; the only trustworthy evidence is the compiled
+  prompt plus the wired check, and the import-row descriptor guards the
+  over-correction of deleting a legitimate route.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400a-3.yaml
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400a_3_template_refs.py
+implemented_by:
+  - templates/agents/research-agent.md
+  - scripts/check_skill_refs.py
+notes: |
+  THE IMPORT QUESTION IS KEPT, ONLY ITS TARGET CHANGES. "Who imports this
+  symbol" is a legitimate research question this package's research-agent
+  answers with its own search tools (it owns the find-importers / references
+  tools). Deleting the row outright would silently drop a routing the other two
+  rows never had a use for here. The two trading rows are removed outright.
+  Which granted means the import row points at is the implementer's choice.
+
+  research-agent's missing knowledge-query grant is AR-400b-3-i, not this record.

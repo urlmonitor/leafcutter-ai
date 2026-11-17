@@ -1,0 +1,79 @@
+id: BP-1300e-4
+components:
+  - precommit_hooks
+  - commit_guardian
+  - build_pipeline
+title: "Reference: the one lint-scope declaration, who reads it, and the commit-time check's outcomes"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the commit-time lint check and the single lint-scope declaration exist,
+  When the documentation step for this feature runs,
+  Then a reference document states where the declaration lives, its fields (the
+    trees linted, the second-step rule set and the trees it covers) and the
+    default when undeclared,
+  And it lists every runner that reads the declaration — the commit-time check,
+    this repository's CI lint job, the sign-off gate's lint runner (BO-570-3) and
+    any manual mirror — and states that none of them may hold its own copy,
+  And it lists the check's outcomes with what each means: refused with findings,
+    passed after inspecting named files, nothing to inspect, and could not run
+    (with each cannot-run cause),
+  And it states the per-file judging rule and the cross-file-rule assumption it
+    rests on (BP-1300e-1-ii).
+depends_on:
+  - BP-1300e
+  - BP-1300e-1-i
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300e.yaml
+    relationship: parent
+    status: exists
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+  - path: docs/reference/commit-time-lint-gate.md
+    relationship: describes
+    status: planned
+    relevance: "The reference doc this record produces."
+  - path: docs/reference/README.md
+    relationship: modifies
+    status: exists
+    relevance: "Reference index; the new page gets a row."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: reference-author
+estimated_complexity: S
+test_required: false
+test_rationale: >-
+  Documentation-only; no executable behaviour. Every field, default, runner and
+  outcome it lists is read off the landed files (leafcutter-lint.json,
+  _lint_scope.py's default constant, check_outcome.py, ci.yml's lint job,
+  run_ci_local.py) at authoring time, and the reviewer re-checks each against
+  those files.
+it_requirements:
+  - "NEW FILE docs/reference/commit-time-lint-gate.md (type: reference, components including commit_guardian, precommit_hooks, build_pipeline) plus a row in docs/reference/README.md."
+  - "THE DECLARATION: leafcutter-lint.json at the project's git toplevel, tracked and project-owned, never written by build.py; fields version, steps[].name, steps[].paths ('.' = whole project; repo-relative, no globs), steps[].select (optional; replaces the ruff configuration's selection for that step while its exclude/ignore/per-file-ignores still apply); the default when absent; that a malformed declaration refuses rather than defaulting. Show this repository's file as the worked example, copied from disk."
+  - "THE RUNNERS, AND THE NO-COPY RULE: check-lint-gate (staged mode, commit time), ci.yml job lint 'Lint (ruff)' (full mode, template source), scripts/run_ci_local.py (full mode), BO-570-3's sign-off adapter (files mode, --json); none holds its own tree or rule list. State BO-570-3's status as it stands at authoring time (approved/unbuilt today) rather than asserting it is wired."
+  - "THE OUTCOMES: refused (findings listed), ok (passed after inspecting named files), nothing_to_inspect, could_not_check with each reason (ruff_not_installed, ruff_failed_to_start, ruff_config_unreadable, declaration_unreadable, ruff_config_partially_staged, no_repository, internal_error); exit status per outcome; that the RESULT line and --json 'outcome' carry the distinction and the exit code does not; and why every could_not_check blocks (pre-commit prints Passed for any exit 0)."
+  - "THE JUDGING RULE: whole staged file, from the index; the predates label and how it is derived (HEAD comparison); --force-exclude; and the recorded cross-file-rule assumption with what must change if a cross-file rule is ever selected."
+  - "Also list check-lint-rule-claims (BP-1300e-2) and what it checks, since it reads the same declaration."
+delivers_to: null
+expects_from:
+  ac_id: BP-1300e-1-i
+  contract: "The landed leafcutter-lint.json, _lint_scope.py default, check_lint_gate.py modes and --json shape, and the runner list (see BP-1300e-1-i delivers_to to reference-author); plus BP-1300e-1-iii's reason vocabulary."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Produced for the parent's documentation_triggers: reference-doc.

@@ -1,0 +1,160 @@
+{
+  "kind": "Mockup",
+  "status": "reader_implemented_and_verified",
+  "review": "reports/native-fields/review-Mockup.json",
+  "owned_files": [
+    "knowledge/native_types/mockup.py",
+    "tests/knowledge/test_native_mockup.py"
+  ],
+  "source_validation_policy": "Validate object shape, product-scoped identity/path correspondence, presentation fields, renders type, unique identities and supporting-source containment. Retain all authored fields including future extensions; no schema defaults or hardcoded field allowlist.",
+  "implemented": [
+    "10 canonical JSON records, including unregistered fern-and-fig/sign-in",
+    "All authored fields and nested provenance/null/empty shapes preserved",
+    "9 original manifest entries and their locators retained separately; differing summary/tags do not overwrite source metadata",
+    "5 HTML source attachments retained as exact decoded UTF-8 text plus SHA-256 of original bytes; no execution",
+    "Missing optional store returns []; missing safe declared render remains a record with explicit missing marker",
+    "Reject duplicate identities, malformed sources, unsafe paths, manifest path/identity conflicts and resolved snapshot escapes"
+  ],
+  "verification": {
+    "red": {
+      "tests_failed": 23,
+      "reason": "ModuleNotFoundError before implementation",
+      "receipt": "reports/native-fields/mockup-red.xml"
+    },
+    "green": {
+      "tests_passed": 23,
+      "receipt": "reports/native-fields/mockup-green.xml"
+    },
+    "real_records_compared": 10,
+    "mutation_method": "Process-local mutation of imported reader, restored after every probe; no source files were mutated.",
+    "mutation_proofs": [
+      {
+        "test": "test_mockup_all_fields_unknown_extensions_and_shape_are_preserved",
+        "alteration": "drop authored future nested field",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_manifest_and_render_remain_separate_exact_supporting_sources",
+        "alteration": "overwrite source summary with manifest summary",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_manifest_and_render_remain_separate_exact_supporting_sources",
+        "alteration": "normalize original HTML line endings",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_missing_store_and_absent_optional_fields_are_not_manufactured",
+        "alteration": "fill absent optional tags with empty list",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_safe_missing_render_is_reported_without_losing_record",
+        "alteration": "omit explicit missing-render marker",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_malformed_records_fail_explicitly",
+        "alteration": "discard malformed record as empty: {",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_malformed_records_fail_explicitly",
+        "alteration": "discard malformed record as empty: []",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_malformed_records_fail_explicitly",
+        "alteration": "discard malformed record as empty: {}",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_malformed_records_fail_explicitly",
+        "alteration": "discard malformed record as empty: {\"id\":\"plant/cart\",\"title\":null}",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_malformed_records_fail_explicitly",
+        "alteration": "discard malformed record as empty: {\"id\":\"other/cart\",\"title\":\"T\",\"summary\":\"S\",\"renders\":null}",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_duplicate_records_and_manifest_ids_fail_explicitly",
+        "alteration": "silently discard duplicate identities",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_render_paths_cannot_escape_or_fetch_urls",
+        "alteration": "silently discard unsafe render: ../../../../../../outside.html",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_render_paths_cannot_escape_or_fetch_urls",
+        "alteration": "silently discard unsafe render: C:/outside.html",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_render_paths_cannot_escape_or_fetch_urls",
+        "alteration": "silently discard unsafe render: C:\\outside.html",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_render_paths_cannot_escape_or_fetch_urls",
+        "alteration": "silently discard unsafe render: /outside.html",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_render_paths_cannot_escape_or_fetch_urls",
+        "alteration": "silently discard unsafe render: //server/share/a.html",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_render_paths_cannot_escape_or_fetch_urls",
+        "alteration": "silently discard unsafe render: https://example.com/a.html",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_render_paths_cannot_escape_or_fetch_urls",
+        "alteration": "silently discard unsafe render: file:outside.html",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_manifest_path_and_identity_conflicts_fail",
+        "alteration": "ignore invalid manifest association: {\"id\": \"plant/cart\", \"type\": \"mockup\", \"path\": \"../outside.json\"}",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_manifest_path_and_identity_conflicts_fail",
+        "alteration": "ignore invalid manifest association: {\"id\": \"plant/cart\", \"type\": \"mockup\", \"path\": \"mockups/plant/other.mockup.json\"}",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_manifest_path_and_identity_conflicts_fail",
+        "alteration": "ignore invalid manifest association: {\"id\": \"plant/missing\", \"type\": \"mockup\", \"path\": \"mockups/plant/cart.mockup.json\"}",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_manifest_path_and_identity_conflicts_fail",
+        "alteration": "ignore invalid manifest association: {\"id\": \"plant/cart\", \"type\": \"mockup\", \"path\": \"https://example.com/mockup.json\"}",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_duplicate_records_and_manifest_ids_fail_explicitly",
+        "alteration": "ignore duplicate manifest IDs after native duplicate check succeeds",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_real_canonical_population_includes_unregistered_and_null_renders",
+        "alteration": "drop canonical record not present in manifest",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_mockup_resolved_escape_is_rejected_before_read",
+        "alteration": "use lexical containment and ignore resolved symlink escape",
+        "outcome": "caught"
+      }
+    ],
+    "lint": "ruff format and ruff check passed"
+  },
+  "integration_boundary": "Shared native property projection, database publication and Aura verification are coordinator responsibilities; this report makes no deployed claim."
+}

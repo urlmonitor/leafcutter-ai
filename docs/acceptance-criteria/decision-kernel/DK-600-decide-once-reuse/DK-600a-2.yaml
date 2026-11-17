@@ -1,0 +1,206 @@
+id: DK-600a-2
+title: "Your question is grounded in evidence retrieved from your own repository"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a decision goal, for example the decision-record question in DK-600a-1,
+  When grounding research runs,
+  Then evidence is retrieved from the repository, each item carrying an explicit locator: the
+    repository-relative file path plus the section or line range it was taken from,
+  And Jev reranks the retrieved items before any of them is used as grounding evidence,
+  And every grounding evidence item names its locator, so the passage it rests on can be opened
+    from the locator alone.
+depends_on:
+  - DK-600a
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-forming step ground. Add this AC id to each named
+      node's implements list.
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: describes
+    status: exists
+    relevance: 'Which mechanism answers each check: code, Jev, an LLM host or a human.'
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - Every grounding evidence item carries a repository-relative locator that names a section or line
+    range and a content hash over the stored excerpt.
+  - Search candidates are judged by Jev for relevance before they count as grounding; the rerank batch
+    size and the coverage bar come from config.retrieval and config.research.
+  - Retrieval stays inside the configured read roots and deny globs; nothing outside the scope is
+    read.
+  - 'This L2 has L3 children, so done_proof treats it as a composite unless it carries its own covers
+    tag: tag the tests of its own clauses so it proves itself, not only through its children.'
+  - 'Failures follow the project error-handling policy: an I/O, provider or budget failure is logged
+    at an appropriate level and surfaces as a typed result or a stated limitation, never as a silent
+    pass.'
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_unknown_options_first_ask_for_research_not_for_options
+    target_dir: tests/kernel/grounding/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/grounding/test_decision_grounding.py::TestGroundingFlow::test_unknown_options_first_ask_for_research_not_for_options):
+      a decision without options requests grounding research before options'
+    covers:
+      - DK-600a-2
+  - name: test_the_options_request_carries_the_researched_evidence
+    target_dir: tests/kernel/grounding/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/grounding/test_decision_grounding.py::TestGroundingFlow::test_the_options_request_carries_the_researched_evidence):
+      the evidence handed to the host for options is the researched evidence'
+    covers:
+      - DK-600a-2
+  - name: test_the_alternatives_section_is_a_candidate_with_its_heading_in_the_locator
+    target_dir: tests/kernel/retrieval/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/retrieval/test_retrieval_sections.py::TestSectionsOfAnAdr::test_the_alternatives_section_is_a_candidate_with_its_heading_in_the_locator):
+      a retrieved item''s locator names its file and heading'
+    covers:
+      - DK-600a-2
+  - name: test_section_locators_and_hashes_match_the_text
+    target_dir: tests/kernel/retrieval/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/retrieval/test_retrieval_sections.py::TestSectionsOfAnAdr::test_section_locators_and_hashes_match_the_text):
+      locator and hash open exactly the passage the item quotes'
+    covers:
+      - DK-600a-2
+  - name: test_evidence_has_locator_hash_revision_and_provenance
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/capabilities/test_retrieval_repository.py::TestEvidenceShape::test_evidence_has_locator_hash_revision_and_provenance):
+      every evidence item has locator, hash, revision and provenance'
+    covers:
+      - DK-600a-2
+  - name: test_a_need_sends_at_most_rerank_max_per_need_candidates_in_one_call
+    target_dir: tests/kernel/retrieval/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/retrieval/test_pool_and_rerank.py::TestOneRerankCallPerNeed::test_a_need_sends_at_most_rerank_max_per_need_candidates_in_one_call):
+      Jev reranks the candidates of a need in one call before any is kept'
+    covers:
+      - DK-600a-2
+  - name: test_every_grounding_item_locator_names_a_section_or_line_range
+    target_dir: tests/kernel/grounding/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'TO WRITE (in tests/kernel/grounding/test_decision_grounding.py): over a grounded
+      run, every item handed to the options request has a locator with ''#'' (heading or Lx-Ly) or
+      ''::Symbol'', never a bare path'
+    covers:
+      - DK-600a-2
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_and_tested
+    implementation_pointers:
+      - kernel/capabilities/decision/basis.py#needs_grounding
+      - kernel/capabilities/decision/requests.py#grounding_request
+      - kernel/capabilities/research/executor.py#ResearchExecutor
+      - kernel/capabilities/retrieval/executor.py#RepositoryRetrievalExecutor
+      - kernel/capabilities/retrieval/chunking.py#split_sections
+      - kernel/capabilities/retrieval/evidence_build.py#build_evidence
+      - kernel/capabilities/retrieval/rerank.py#rerank
+    test_pointers:
+      - tests/kernel/grounding/test_decision_grounding.py::TestGroundingFlow::test_unknown_options_first_ask_for_research_not_for_options
+      - tests/kernel/grounding/test_decision_grounding.py::TestGroundingFlow::test_the_options_request_carries_the_researched_evidence
+      - tests/kernel/retrieval/test_retrieval_sections.py::TestSectionsOfAnAdr::test_the_alternatives_section_is_a_candidate_with_its_heading_in_the_locator
+      - tests/kernel/retrieval/test_retrieval_sections.py::TestSectionsOfAnAdr::test_section_locators_and_hashes_match_the_text
+      - tests/kernel/capabilities/test_retrieval_repository.py::TestEvidenceShape::test_evidence_has_locator_hash_revision_and_provenance
+      - tests/kernel/retrieval/test_pool_and_rerank.py::TestOneRerankCallPerNeed::test_a_need_sends_at_most_rerank_max_per_need_candidates_in_one_call
+    gaps:
+      - Explicit-locator hits are kept without a Jev rerank by design (tests/kernel/retrieval/test_retrieval_locators.py::TestEachForm::test_an_explicit_hit_is_kept_without_being_judged).
+        Grounding research carries no option context, so it has none; the 'reranked before use' clause
+        holds for search hits.
+      - No test asserts that EVERY grounding item's locator carries a section or line range (window
+        fallback and file-head offers exist); one test to write.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by:
+  - DK-600a-2-i
+  - tests/kernel/grounding/test_decision_grounding.py::TestGroundingFlow::test_unknown_options_first_ask_for_research_not_for_options
+  - tests/kernel/grounding/test_decision_grounding.py::TestGroundingFlow::test_the_options_request_carries_the_researched_evidence
+  - tests/kernel/retrieval/test_retrieval_sections.py::TestSectionsOfAnAdr::test_the_alternatives_section_is_a_candidate_with_its_heading_in_the_locator
+  - tests/kernel/retrieval/test_retrieval_sections.py::TestSectionsOfAnAdr::test_section_locators_and_hashes_match_the_text
+  - tests/kernel/capabilities/test_retrieval_repository.py::TestEvidenceShape::test_evidence_has_locator_hash_revision_and_provenance
+  - tests/kernel/retrieval/test_pool_and_rerank.py::TestOneRerankCallPerNeed::test_a_need_sends_at_most_rerank_max_per_need_candidates_in_one_call
+implemented_by:
+  - kernel/capabilities/decision/basis.py#needs_grounding
+  - kernel/capabilities/decision/requests.py#grounding_request
+  - kernel/capabilities/research/executor.py#ResearchExecutor
+  - kernel/capabilities/retrieval/executor.py#RepositoryRetrievalExecutor
+  - kernel/capabilities/retrieval/chunking.py#split_sections
+  - kernel/capabilities/retrieval/evidence_build.py#build_evidence
+  - kernel/capabilities/retrieval/rerank.py#rerank
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-forming    step    ground
+
+  DERIVATION. Scenario ground, positive half: repository evidence with explicit
+  (exact, section-aware) locators, reranked by Jev. The negative half of the same
+  scenario ("a precedent alone is not accepted as grounding") is the L3
+  DK-600a-2-i, kept separate so it can be judged built or not on its own evidence.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built and tested for the positive half.
+  Grounding research, section-aware locators and the Jev rerank exist in
+  kernel/capabilities/research/ and kernel/capabilities/retrieval/. Gap: no test asserts
+  that every grounding item's locator names a section or line range; explicit-locator
+  hits skip the rerank by design (grounding has none). Pointers: amended_by it-po entry.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: ground
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

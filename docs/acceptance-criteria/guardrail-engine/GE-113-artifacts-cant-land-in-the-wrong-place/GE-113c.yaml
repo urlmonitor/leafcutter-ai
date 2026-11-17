@@ -6,7 +6,7 @@ component: guardrail-engine
 level: L1
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: medium
 criteria: |
@@ -29,6 +29,8 @@ covered_by:
   - GE-113c-1
   - GE-113c-2
   - GE-113c-3
+  - GE-113c-4
+  - GE-113c-5
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: "Internal robustness fix to guard project-root resolution in the installed layout; no new user-facing behavior or workflow is introduced."

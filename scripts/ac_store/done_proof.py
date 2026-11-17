@@ -57,8 +57,8 @@ ARCHITECTURE: Subprocess-invoking utility.  Scans the test tree for covers tags
             │       └── [composite] _verify_composite_eligible(...)
             │               └── _resolve_all_child_ids(covered_by, ac_status_map)
             │               └── _collect_linked_tests(child_id, all_tags)
-            │               └── _run_pytest_and_parse(test_files)
-            │               └── _classify_outcomes(child_tests, pytest_results)
+            │               └── _split_linked_tests_by_language(child_tests)
+            │               └── _run_python_test_phase / _run_ts_test_phase
             └── _split_linked_tests_by_language(linked_tests) → py_linked, ts_linked
             └── _maybe_reachability_verdict(reachability_spec, py_linked, ...)
             │       └── _check_reachability_for_linked_tests(...)
@@ -165,7 +165,6 @@ ARCHITECTURE: Subprocess-invoking utility.  Scans the test tree for covers tags
 
 from __future__ import annotations
 
-import ast
 import json
 import os
 import re
@@ -178,6 +177,12 @@ from pathlib import Path
 # test_enforcement lazily imports done_proof inside a function body,
 # so this top-level import does NOT create a circular dependency.
 from test_enforcement import COVERS_TAG_RE
+from project_python import resolve_for_files, with_import_failures  # TQ-500f-3-vi
+from pytest_outcome_reader import (  # TQ-500g-4: the ONE shared reading of a pytest run
+    _PYTEST_RUN_INCOMPLETE_SENTINEL,
+    describe_subcases,
+    parse_pytest_outcomes as _parse_pytest_verbose_output,
+)
 
 # BP-100n-4-ii: import the sibling module's relocated private helpers at
 # top level. This is safe in EITHER load order: _done_proof_phase_helpers
@@ -194,61 +199,38 @@ from _done_proof_phase_helpers import (
     _execute_vitest,
     _handle_no_direct_tests, _maybe_reachability_verdict,
     _parse_vitest_stdout,
-    _resolve_pytest_run_cwd,  # BO-2900a-3
+    _manual_opt_in_args, _resolve_pytest_run_cwd,  # BO-2900a-3, ticket 19
     _run_python_test_phase,
     _run_ts_test_phase,
     _split_linked_tests_by_language,
     is_covers_tag_waived,  # noqa: F401  # BP-100n-4-ii-ii: re-exported, see module docstring
 )
+# TQ-500f-3-iii: the ONE tag-to-test matcher; legacy names re-exported for direct callers
+from covers_tag_identity import (AMBIGUOUS_PREFIX, _find_nodeid_for_test, _find_nodeids_for_test,  # noqa: F401
+                                 _nodeid_function_name, judge_tag)
 from _done_proof_entry_point_gate import _apply_entry_point_reachability_gate  # BO-2900a-1
-from _done_proof_automation_gate import (  # BO-2900a-3 rework
-    build_no_entry_point_refusal,
-    unit_is_invoked_by_automation,
+from _done_proof_composite import (  # noqa: F401  # re-exported for phase helpers
+    _has_resolvable_child,
+    _resolve_all_child_ids,
+    _retired_verdict,
+    _verify_composite_eligible,
+)
+from _done_proof_reachability_gate import (  # noqa: F401  # BO-2900d-1: re-exported, moved verbatim
+    _COMMIT_GUARDIAN_DIR,
+    _MAIN_GUARD_RE,
+    _apply_reachability_gate,
+    _find_no_entry_point_unit,
+    _has_entry_point_of_its_own,
+    _infer_project_root,
+    _is_imported_elsewhere,
+    _is_within,
+    _local_import_module_names,
+    _resolve_candidate_unit,
+    _sys_path_insert_dirs,
 )
 
-# ---------------------------------------------------------------------------
-# BO-2900d-1: shared reachability-exemption seam import.
-#
-# _reachability_inventory.py lives beside check_done_proof.py under the
-# sibling commit_guardian/ directory in BOTH layouts this module runs in:
-#     <repo>/scripts/ac_store/done_proof.py           -> ../commit_guardian
-#     <repo>/.leafcutter/scripts/ac_store/done_proof.py -> ../commit_guardian
-# (the same sibling-directory relationship check_done_proof.py already
-# relies on to reach ac_store/ from the other side). The import itself is
-# guarded by try/except ImportError directly at its call site inside
-# _apply_reachability_gate() below (the codebase's own optional-dependency
-# idiom — see check_ac_schema.py's _ac_store_index and
-# check_done_proof.py's own module-level guard of this same module) rather
-# than behind an unguarded helper function: a helper that merely wraps the
-# import and lets ImportError propagate to its caller reads, to static
-# analysis, as an unconditional dependency on a file this module does not
-# actually require to exist (BP-900h-4's declaring-files scan treats a bare
-# import of a leading-underscore name as declaring a sibling file the
-# importing script "cannot run without" UNLESS the import itself sits
-# inside a try/except ImportError — confirmed missing from a genuine
-# consumer install by that scan on 2026-09-07 while this indirection was in
-# place). Guarding at the true import site is not just scanner-compliance:
-# it also degrades to "no exemptions" (fail-open per the error-handling
-# policy: an unreadable/absent exemption mechanism must never itself grant
-# a pass, and must never crash the eligibility oracle) without ever raising
-# out of this module at all, one indirection layer thinner.
-# ---------------------------------------------------------------------------
-_COMMIT_GUARDIAN_DIR = Path(__file__).resolve().parent.parent / "commit_guardian"
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
-# Matches a pytest -v result line: <nodeid> <OUTCOME>
-# Handles relative and absolute paths including "../" prefixes.
-# Outcomes: PASSED, FAILED, XFAIL, XPASS, SKIPPED, ERROR.
-_PYTEST_RESULT_RE = re.compile(
-    r"^(\S+::test_\w+(?:\[.*?\])?)\s+(PASSED|FAILED|XFAIL|XPASS|SKIPPED|ERROR)",
-    re.MULTILINE,
-)
-
-# Matches a function definition whose name starts with "test_".
-_TEST_DEF_RE = re.compile(r"^\s*def\s+(test_\w+)")
+# Matches synchronous and asynchronous test definitions; both carry coverage tags.
+_TEST_DEF_RE = re.compile(r"^\s*(?:async\s+)?def\s+(test_\w+)")
 
 # BP-1100g-3: matches the SECOND tag axis on a test function -- "which kind
 # of proof this test was written to give" -- mirroring COVERS_TAG_RE's own
@@ -351,12 +333,8 @@ _PYTEST_PER_FILE_BUDGET_SECONDS = 300.0
 # otherwise. See _resolve_pytest_timeout_seconds.
 _ENV_TIMEOUT_OVERRIDE_VAR = "LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS"
 
-# Sentinel key _run_pytest_and_parse returns whenever the run did not finish
-# -- a subprocess timeout OR a completed-but-truncated process, e.g. killed by
-# machine/OOM/scheduler contention (BO-2500a-7). Shaped so it never collides
-# with a real nodeid (every real nodeid contains "::"); only the two
-# eligibility-reason call sites read it directly (KI-TQ-20260901-1310 bullet 2).
-_PYTEST_RUN_INCOMPLETE_SENTINEL = "__done_proof_pytest_timeout__"
+# Sentinel key (defined in pytest_outcome_reader) returned whenever the run did
+# not finish or contradicts itself; read by the two eligibility-reason call sites.
 
 
 def _resolve_pytest_timeout_seconds(test_files: list[Path]) -> float:
@@ -593,20 +571,13 @@ def _observe_reachability(
     }
     try:
         with tempfile.TemporaryDirectory() as tmp_dir:
-            # Deliberately Path(tmp_dir, name) rather than Path(tmp_dir) / name:
-            # the latter's AST shape (a "/"-joined leading-underscore ".py"
-            # string literal) is exactly what BP-900h-4's declaring-files
-            # scanner (_declaring_files_scan._helper_module_declaring_files)
-            # treats as "this guardrail loads a deployed sibling module" and
-            # requires to exist under the deployed tree. This file is a
-            # runtime-only script materialised fresh inside a TemporaryDirectory
-            # and never a deployed sibling of done_proof.py, so it must not
-            # produce that declaring-file entry. Same resulting Path either way.
+            # Path(tmp_dir, name), never Path(tmp_dir) / name: BP-900h-4's declaring-files scanner reads the
+            # "/"-joined "_x.py" shape as a deployed sibling; this runtime-only temp script is not one.
             script_path = Path(tmp_dir, "_reachability_runner.py")
             script_path.write_text(_REACHABILITY_RUNNER_SCRIPT, encoding="utf-8")
             proc = subprocess.run(
                 [
-                    sys.executable,
+                    *resolve_for_files([test_file]).argv,
                     str(script_path),
                     str(test_file),
                     function_name,
@@ -824,14 +795,12 @@ def run_vitest_and_parse(
     }
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers — I/O layer
+# Internal helpers - I/O layer
 #
 # BP-100n-4-ii-ii: _build_ac_status_map itself now lives in
 # _done_proof_phase_helpers.py (re-exported below, same pattern as
 # is_covers_tag_waived) — see this module's own docstring "Second relocation"
 # paragraph for why.
-# ---------------------------------------------------------------------------
 
 
 def _is_excluded_path(path: Path) -> bool:
@@ -1290,20 +1259,7 @@ def find_unrecognised_angle_tags(records: list[dict]) -> list[dict]:
     return unrecognised
 
 
-def _parse_pytest_verbose_output(output: str) -> dict[str, str]:
-    """Parse ``pytest -v`` stdout into a ``{nodeid: outcome}`` mapping.
-
-    Args:
-        output: Raw stdout string from a ``pytest -v`` run.
-
-    Returns:
-        Dict mapping pytest nodeid strings to their outcome strings
-        (``PASSED``, ``FAILED``, ``XFAIL``, ``XPASS``, ``SKIPPED``, ``ERROR``).
-    """
-    return {m.group(1): m.group(2) for m in _PYTEST_RESULT_RE.finditer(output)}
-
-
-def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
+def _run_pytest_and_parse(test_files: list[Path], linked_functions: tuple[str, ...] = ()) -> dict[str, str]:
     """Execute pytest on *test_files* and return ``{nodeid: outcome}``.
 
     Runs ``python -m pytest -v --tb=no --no-header`` on the given files as a
@@ -1355,6 +1311,16 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     no such rootdir ancestor exists at all, so the original OS-temp-dir
     fixture motivation above is unchanged.
 
+    TQ-500f-3-vi (2026-10-22): the child runs under the PROJECT's interpreter
+    (``project_python.resolve_for_files``: configured command, else the
+    worktree ``.venv``, else ``uv run``, else ``sys.executable``), not under
+    whatever launched this process — an adopter whose package lives only in
+    its venv otherwise fails every conftest import. An unfinished run's
+    sentinel dict also carries the modules it could not import
+    (``missing_modules``), so a caller can name an un-importable project
+    package instead of reporting "no red". The reachability observation's
+    child runs under the same resolved interpreter.
+
     A genuine timeout still fails closed exactly as before — no test can be
     reported as passing — but the returned dict now carries
     :data:`_PYTEST_RUN_INCOMPLETE_SENTINEL` instead of being silently empty,
@@ -1372,8 +1338,15 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     reported with the same sentinel, so a killed run is never mistaken for a
     completed run whose named tests genuinely failed.
 
+    Ticket 19 (KI-ACS-20261013): *linked_functions* names the AC's linked
+    test functions; when any is ``_MANUAL``, the sibling
+    ``_manual_opt_in_args`` adds ``-m``/``-k`` so exactly those linked tests
+    run even where addopts deselects manual tests by default. Empty (the
+    default) leaves the selection untouched, for every other caller.
+
     Args:
         test_files: Absolute paths to Python test files to execute.
+        linked_functions: Bare names of the linked test functions.
 
     Returns:
         Dict mapping pytest nodeid strings to outcome strings.  Returns an
@@ -1384,8 +1357,8 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     """
     if not test_files:
         return {}
-    cmd = [sys.executable, "-m", "pytest", "-v", "--tb=no", "--no-header"]
-    cmd.extend(str(f) for f in test_files)
+    cmd = [*resolve_for_files(test_files).argv, "-m", "pytest", "-v", "--tb=no", "--no-header"]
+    cmd.extend([*_manual_opt_in_args(linked_functions), *(str(f) for f in test_files)])
     child_env = {**os.environ, "AC_ENFORCE_STRICT": "1"}
     timeout_seconds = _resolve_pytest_timeout_seconds(test_files)
     try:
@@ -1413,8 +1386,8 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     if proc.returncode not in (0, 1):
         message = f"pytest run unfinished: {len(test_files)} file(s), returncode {proc.returncode}"
         print(f"WARNING: done_proof: {message}", file=sys.stderr)
-        return {_PYTEST_RUN_INCOMPLETE_SENTINEL: message}
-    return _parse_pytest_verbose_output(proc.stdout)
+        return with_import_failures({_PYTEST_RUN_INCOMPLETE_SENTINEL: message}, proc)
+    return _parse_pytest_verbose_output(proc.stdout, proc.returncode)
 
 
 # ---------------------------------------------------------------------------
@@ -1467,170 +1440,8 @@ def _collect_linked_tests(ac_id: str, all_tags: list[dict]) -> list[dict]:
     return [t for t in all_tags if t["ac_id"] == ac_id]
 
 
-def _has_resolvable_child(covered_by: list[str], ac_status_map: dict[str, dict]) -> bool:
-    """Return whether at least one entry of *covered_by* resolves to a real AC.
-
-    BO-2500a-6 remediation M-2: legacy ACs written before the child-id
-    convention hold TEST FILE PATHS in ``covered_by`` (e.g.
-    ``['tests/test_skill_registry.py']``) rather than child AC ids. None of
-    those entries resolve to a record in *ac_status_map*, so such an AC must
-    be classified as a LEAF (falling back to the direct-linked-test
-    requirement) rather than a COMPOSITE with phantom "uncovered children".
-    The classification is data-driven — it never hard-codes an AC-id
-    allowlist — it simply checks store resolvability.
-
-    Args:
-        covered_by: The AC's own ``covered_by`` list (may be empty, may hold
-            AC ids, legacy test-file path strings, or a mix).
-        ac_status_map: Mapping ``{ac_id: {"status": ..., "covered_by": [...]}}``
-            from the AC store.
-
-    Returns:
-        ``True`` iff at least one entry of *covered_by* is a key in
-        *ac_status_map* (i.e. resolves to a real AC record).
-    """
-    return any(entry in ac_status_map for entry in covered_by)
-
-
-def _resolve_all_child_ids(
-    covered_by: list[str],
-    ac_status_map: dict[str, dict],
-    _seen: set[str] | None = None,
-) -> list[str]:
-    """Flatten a composite's ``covered_by`` tree into its leaf descendant ids.
-
-    A child that is itself a composite (its own ``covered_by`` RESOLVES to real
-    ACs — BO-2500a-6-ii) is expanded recursively rather than treated as a leaf
-    requiring a direct test; a child holding only test-file paths is a LEAF
-    needing its own covers-tagged test.  Cycles are broken via *_seen* (a
-    malformed store could otherwise recurse forever); a child id already
-    visited is not expanded a second time.
-
-    A *covered_by* entry that does not resolve to a real AC record in
-    *ac_status_map* (BO-2500a-6 remediation M-2 — e.g. a legacy test-file
-    path string predating the child-id convention) is skipped entirely: it
-    is neither a leaf requiring its own covers-tagged test nor a composite to
-    expand, since it is not a store-resolvable AC id at all.  Callers decide
-    whether to classify the AC itself as composite via
-    :func:`_has_resolvable_child` before calling this function.
-
-    Args:
-        covered_by: The composite's own list of direct child AC ids.
-        ac_status_map: Mapping ``{ac_id: {"status": ..., "covered_by": [...]}}``
-            from the AC store, used to look up each child's own ``covered_by``.
-        _seen: Internal recursion guard; callers should omit this argument.
-
-    Returns:
-        List of leaf AC id strings reachable from *covered_by*, in traversal
-        order with duplicates removed by the cycle guard.  Unresolvable
-        entries contribute nothing to the result.
-    """
-    seen = _seen if _seen is not None else set()
-    leaf_ids: list[str] = []
-    for child_id in covered_by:
-        if child_id in seen:
-            continue
-        seen.add(child_id)
-        child_info = ac_status_map.get(child_id)
-        if child_info is None:
-            continue  # unresolvable entry (e.g. legacy test-file path) — skip
-        child_covered_by = child_info.get("covered_by", [])
-        if _has_resolvable_child(child_covered_by, ac_status_map):
-            leaf_ids.extend(_resolve_all_child_ids(child_covered_by, ac_status_map, seen))
-        else:
-            leaf_ids.append(child_id)
-    return leaf_ids
-
-
-def _nodeid_function_name(nodeid: str) -> str:
-    """Return the bare function/method name a pytest nodeid's final segment names.
-
-    A pytest nodeid's last ``::``-delimited segment is the function (or
-    method) name, optionally followed by a ``[params]`` suffix when the test
-    is parametrized (e.g. ``path::TestClass::test_widget[case1]``). The
-    bracket suffix is stripped FIRST, by splitting on the first ``[``, and
-    only then is the last ``::`` segment taken. This repository parametrizes
-    tests over nodeid strings, so a parameter id can itself legitimately
-    contain ``::`` (e.g. ``test_nodeid[path.py::test_x]``); stripping the
-    bracket first guarantees such a ``::`` is never mistaken for the
-    file/function delimiter. Splitting on the last ``::`` first (before
-    stripping brackets) would instead pick a segment from inside the
-    parameter id, which is the realistic failure mode here -- a parameter id
-    containing ``[`` in the file path is the only way this order fails, and
-    that is pathological rather than realistic.
-
-    Args:
-        nodeid: A pytest nodeid, e.g. ``"path::test_widget[case1]"``.
-
-    Returns:
-        The bare function/method name, e.g. ``"test_widget"``.
-    """
-    base = nodeid.split("[", 1)[0]
-    return base.rsplit("::", 1)[-1]
-
-
-def _find_nodeids_for_test(func_name: str, file_basename: str, pytest_results: dict[str, str]) -> list[str]:
-    """Return every pytest nodeid belonging to a function, same-file first.
-
-    A parametrized test (e.g. ``test_b[0]``, ``test_b[1]``, ...) produces
-    multiple nodeids that all share the same bare function name. ACS-200f-2:
-    a caller that inspects only the first match (as the single-nodeid
-    ``_find_nodeid_for_test`` used to do on its own) silently ignores every
-    later case, so a parametrised covering test with one failing case among
-    several passing ones was wrongly read as proof of done. This helper
-    collects the FULL match set so a caller can inspect every case.
-
-    Matching compares *func_name* for exact equality against the nodeid's
-    final ``::``-delimited segment with any trailing ``[params]`` suffix
-    stripped (see :func:`_nodeid_function_name`), never a substring/prefix/
-    ``endswith`` check, so a lookup for ``test_foo`` cannot match an
-    unrelated sibling such as ``test_foo_bar`` or its parametrized form
-    ``test_foo_bar[X]``.
-
-    Same-file precedence is unchanged from the original single-match
-    behaviour: nodeids whose text contains *file_basename* are preferred as
-    a group over name-only matches elsewhere. When at least one same-file
-    match exists, only those are returned; the name-only fallback is used
-    solely when the same-file set is empty.
-
-    Args:
-        func_name: Python function name (e.g. ``"test_foo"``).
-        file_basename: Basename of the test file (e.g. ``"test_foo.py"``).
-        pytest_results: Dict of ``{nodeid: outcome}`` from ``_run_pytest_and_parse``.
-
-    Returns:
-        All matching nodeid strings, same-file matches preferred as a group;
-        an empty list if nothing matches.
-    """
-    matches = [nodeid for nodeid in pytest_results if _nodeid_function_name(nodeid) == func_name]
-    return [nodeid for nodeid in matches if file_basename in nodeid] or matches
-
-
-def _find_nodeid_for_test(func_name: str, file_basename: str, pytest_results: dict[str, str]) -> str | None:
-    """Find the pytest nodeid for a function, preferring a match in the expected file.
-
-    Built on :func:`_find_nodeids_for_test`'s full match set. ACS-200f-2: when
-    a parametrised test has multiple matching cases, any non-``PASSED`` case
-    makes the function non-passing overall, so the first such non-passing
-    nodeid (in *pytest_results* order, independent of which case pytest
-    happened to report first) is returned instead of whichever case merely
-    matched first. Only when every matched case is ``PASSED`` is the first
-    match returned. This keeps the single-nodeid return contract
-    (:func:`_classify_outcomes` and the fast-lane caller
-    ``_fl_red_baseline_support._resolve_tag_outcome`` both read exactly one
-    nodeid's outcome) correct without either call site needing to change.
-
-    Args:
-        func_name: Python function name (e.g. ``"test_foo"``).
-        file_basename: Basename of the test file (e.g. ``"test_foo.py"``).
-        pytest_results: Dict of ``{nodeid: outcome}`` from ``_run_pytest_and_parse``.
-
-    Returns:
-        A matching nodeid string, or ``None`` if no match is found.
-    """
-    matches = _find_nodeids_for_test(func_name, file_basename, pytest_results)
-    default = matches[0] if matches else None
-    return next((nodeid for nodeid in matches if pytest_results[nodeid] != "PASSED"), default)
+# _has_resolvable_child and _resolve_all_child_ids (ACS-900d-4-iv) now live in
+# _done_proof_composite.py and are re-exported by the import near the top.
 
 
 def _describe_non_passing(nodeid: str, pytest_results: dict[str, str]) -> str:
@@ -1650,9 +1461,11 @@ def _describe_non_passing(nodeid: str, pytest_results: dict[str, str]) -> str:
     Returns:
         A phrase such as ``"linked test failed: <nodeid>"``.
     """
+    if nodeid.startswith(AMBIGUOUS_PREFIX):  # TQ-500f-3-iii: names the tag + every candidate
+        return nodeid
     outcome = pytest_results.get(nodeid)
     label = outcome.lower() if outcome else "not run"
-    return f"linked test {label}: {nodeid}"
+    return f"linked test {label}: {nodeid}{describe_subcases(pytest_results, nodeid)}"
 
 
 def _pytest_incomplete_run_reason(ac_id: str, pytest_results: dict[str, str]) -> str | None:
@@ -1707,127 +1520,10 @@ def _classify_outcomes(
     passing: list[str] = []
     failing: list[str] = []
     for test in linked_tests:
-        func_name = test["function"]
-        file_basename = Path(test["file"]).name
-        matched = _find_nodeid_for_test(func_name, file_basename, pytest_results)
-        if matched is None:
-            # Could not locate result — treat as non-passing (fail-closed).
-            failing.append(f"{test['file']}::{func_name}")
-            continue
-        if pytest_results[matched] == "PASSED":
-            passing.append(matched)
-        else:
-            failing.append(matched)
+        test_passing, test_failing = judge_tag(test, pytest_results)  # TQ-500f-3-iii
+        passing.extend(test_passing)
+        failing.extend(test_failing)
     return passing, failing
-
-
-# ---------------------------------------------------------------------------
-# Internal helpers — composite eligibility layer (I/O via _run_pytest_and_parse)
-# ---------------------------------------------------------------------------
-
-
-def _verify_composite_eligible(
-    ac_id: str,
-    covered_by: list[str],
-    *,
-    ac_status_map: dict[str, dict],
-    all_tags: list[dict],
-    dangling_tags: list[dict],
-) -> dict:
-    """Derive a composite AC's eligibility verdict from its covered children.
-
-    Per BO-2500a-6, a composite (an AC whose own ``covered_by`` is non-empty)
-    does NOT require a direct ``# covers:`` tag of its own — its proof of
-    done is derived from its children instead.  It is satisfied when every
-    leaf descendant reachable through *covered_by* (see
-    :func:`_resolve_all_child_ids`, which also handles a child that is
-    itself a composite) has at least one covers-tagged test and every such
-    test passes.  A child with zero linked tests makes the composite
-    ineligible — the exemption only removes the requirement for the
-    composite's OWN id, it does not let an uncovered child pass silently.
-
-    Args:
-        ac_id: The composite AC's own identifier (used only for the reason
-            string; its id is never looked up in *all_tags*).
-        covered_by: The composite's direct child AC ids (already known
-            non-empty by the caller).
-        ac_status_map: Mapping ``{ac_id: {"status": ..., "covered_by": [...]}}``
-            from the AC store.
-        all_tags: All covers tag dicts produced by the scanner.
-        dangling_tags: Dangling-tag entries computed once by the caller,
-            passed through unchanged (composite resolution does not add or
-            remove dangling tags).
-
-    Returns:
-        A verdict dict with the same shape as :func:`verify_done_eligible`.
-    """
-    leaf_child_ids = _resolve_all_child_ids(covered_by, ac_status_map)
-    if not leaf_child_ids:
-        return {
-            "eligible": False,
-            "reason": f"composite {ac_id} has no coverable children",
-            "passing_tests": [],
-            "failing_tests": [],
-            "dangling_tags": dangling_tags,
-        }
-
-    per_child_tests = {
-        child_id: _collect_linked_tests(child_id, all_tags) for child_id in leaf_child_ids
-    }
-    uncovered_children = sorted(
-        child_id for child_id, tests in per_child_tests.items() if not tests
-    )
-    if uncovered_children:
-        return {
-            "eligible": False,
-            "reason": (
-                f"composite {ac_id} has uncovered children: "
-                + ", ".join(uncovered_children)
-            ),
-            "passing_tests": [],
-            "failing_tests": [],
-            "dangling_tags": dangling_tags,
-        }
-
-    all_child_tests = [test for tests in per_child_tests.values() for test in tests]
-    test_files = list({t["file"] for t in all_child_tests})
-    pytest_results = _run_pytest_and_parse(test_files)
-    incomplete_reason = _pytest_incomplete_run_reason(ac_id, pytest_results)
-    if incomplete_reason is not None:
-        return {
-            "eligible": False,
-            "reason": incomplete_reason,
-            "passing_tests": [],
-            "failing_tests": [],
-            "dangling_tags": dangling_tags,
-        }
-
-    passing_tests: list[str] = []
-    failing_tests: list[str] = []
-    for tests in per_child_tests.values():
-        child_passing, child_failing = _classify_outcomes(tests, pytest_results)
-        passing_tests.extend(child_passing)
-        failing_tests.extend(child_failing)
-
-    if failing_tests:
-        reasons = [
-            _describe_non_passing(nid, pytest_results) for nid in failing_tests
-        ]
-        return {
-            "eligible": False,
-            "reason": "; ".join(reasons),
-            "passing_tests": passing_tests,
-            "failing_tests": failing_tests,
-            "dangling_tags": dangling_tags,
-        }
-
-    return {
-        "eligible": True,
-        "reason": "",
-        "passing_tests": passing_tests,
-        "failing_tests": [],
-        "dangling_tags": dangling_tags,
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -1842,348 +1538,12 @@ def _verify_composite_eligible(
 # never applies to the composite path.
 # ---------------------------------------------------------------------------
 
-# Matches a module's own runtime entry-point guard.
-_MAIN_GUARD_RE = re.compile(r'if\s+__name__\s*==\s*[\'"]__main__[\'"]\s*:')
-
-
-def _local_import_module_names(test_file: Path) -> set[str]:
-    """Return bare (non-dotted) module names imported at the top of *test_file*.
-
-    Uses :mod:`ast` (never a text-match of import statements) so a bare
-    ``import foo`` or ``from foo import bar`` is recognised regardless of
-    formatting.  Dotted imports (``import pkg.sub``, third-party or stdlib
-    packages) are excluded — this gate only reasons about single-file
-    project-local modules reached the same way the fixture units in
-    BO-2900d-1's own test_spec are: a flat ``sys.path.insert`` plus a bare
-    module import.
-
-    Args:
-        test_file: Path to the covers-tagged test file to scan.
-
-    Returns:
-        Set of bare module name strings.  Empty when the file cannot be
-        read or does not parse as Python.
-    """
-    try:
-        text = test_file.read_text(encoding="utf-8")
-        tree = ast.parse(text)
-    except (OSError, SyntaxError, UnicodeDecodeError):
-        return set()
-    names: set[str] = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                if "." not in alias.name:
-                    names.add(alias.name)
-        elif isinstance(node, ast.ImportFrom):
-            if node.module and node.level == 0 and "." not in node.module:
-                names.add(node.module)
-    return names
-
-
-def _is_within(path: Path, root: Path) -> bool:
-    """True when *path* is *root* itself or lives under it."""
-    try:
-        path.relative_to(root)
-    except ValueError:
-        return False
-    return True
-
-
-_SYS_PATH_INSERT_RE = re.compile(
-    r"""sys\.path\.insert\(\s*0\s*,\s*['"]([^'"]+)['"]\s*\)"""
-)
-
-
-def _sys_path_insert_dirs(test_file: Path) -> list[Path]:
-    """Return directories the test file inserts onto ``sys.path`` via a literal.
-
-    Matches ``sys.path.insert(0, "<literal path>")`` (the exact form the
-    fixture units in BO-2900d-1's test_spec use to make a bare import
-    resolve). Only literal string arguments are recognised — this is a
-    static hint, not an execution of the test file.
-
-    Args:
-        test_file: Path to the covers-tagged test file to scan.
-
-    Returns:
-        List of existing directory Paths, in the order they appear in the
-        file (mirroring Python's own sys.path search order). Empty when the
-        file cannot be read or inserts no literal directory.
-    """
-    try:
-        text = test_file.read_text(encoding="utf-8")
-    except OSError:
-        return []
-    dirs: list[Path] = []
-    for match in _SYS_PATH_INSERT_RE.finditer(text):
-        candidate = Path(match.group(1))
-        if candidate.is_dir():
-            dirs.append(candidate)
-    return dirs
-
-
-def _resolve_candidate_unit(
-    module_name: str, test_file: Path, project_root: Path, test_root: Path
-) -> Path | None:
-    """Find the ``.py`` file *module_name* resolves to when imported by *test_file*.
-
-    A bare module name can exist at more than one path in a project (two
-    unrelated units both named ``helpers.py`` is entirely legal Python). A
-    project-wide search that just picks "the first file with this name" is
-    ambiguous exactly there, and would silently attribute one test's import
-    to a different, same-named unit elsewhere in the tree. Resolution
-    therefore mirrors how the import actually resolves at runtime: prefer a
-    directory the test itself inserted onto ``sys.path`` (see
-    :func:`_sys_path_insert_dirs`) — the same directories Python's own
-    import machinery would search first for that test. Only when the test
-    inserts no such directory does this fall back to a project-wide search,
-    accepting the ambiguity as a best-effort default for tests that resolve
-    their import some other way (e.g. an installed/editable package).
-
-    Args:
-        module_name: Bare module name imported by *test_file*.
-        test_file: The covers-tagged test file doing the importing.
-        project_root: Root directory to search recursively (fallback only).
-        test_root: Excluded from the search — a module physically living
-            inside the test tree is test-support code, not implementing code.
-
-    Returns:
-        The resolved path, or ``None`` when no matching file exists.
-    """
-    for sys_path_dir in _sys_path_insert_dirs(test_file):
-        candidate = sys_path_dir / f"{module_name}.py"
-        if candidate.is_file() and not _is_excluded_path(candidate):
-            return candidate
-
-    try:
-        matches = sorted(project_root.rglob(f"{module_name}.py"))
-    except OSError:
-        return None
-    for candidate in matches:
-        if _is_excluded_path(candidate):
-            continue
-        if _is_within(candidate, test_root):
-            continue
-        return candidate
-    return None
-
-
-def _has_entry_point_of_its_own(module_path: Path) -> bool:
-    """True when *module_path* defines its own ``if __name__ == "__main__":`` guard."""
-    try:
-        text = module_path.read_text(encoding="utf-8")
-    except OSError:
-        return False
-    return bool(_MAIN_GUARD_RE.search(text))
-
-
-def _is_imported_elsewhere(
-    module_name: str, module_path: Path, project_root: Path, test_root: Path
-) -> bool:
-    """True when some OTHER project file (outside test_root) genuinely imports
-    *module_name*.
-
-    Per the BO-2900a-3 constraint, this is established from the import graph
-    built by AST-parsing each candidate file — via the same
-    :func:`_local_import_module_names` seam used to inspect a linked test's
-    own imports — never from a text scan of import statements. A regex
-    search for the literal words ``import <name>`` would also match a
-    docstring, comment, or log string that merely mentions the import
-    spelling without containing a real ``ast.Import``/``ast.ImportFrom``
-    node; parsing the syntax tree cannot be fooled that way. A test
-    importing the unit does not count (excluded via *test_root*) — that is
-    exactly the case this gate exists to catch.
-
-    Args:
-        module_name: The bare module name to search for.
-        module_path: The candidate unit's own path (excluded from the search).
-        project_root: Root directory to search recursively.
-        test_root: Excluded from the search.
-
-    Returns:
-        ``True`` iff some other project file's parsed AST contains a real
-        import of the module by name.
-    """
-    try:
-        candidates = project_root.rglob("*.py")
-    except OSError:
-        return False
-    for candidate in candidates:
-        if _is_excluded_path(candidate):
-            continue
-        if candidate == module_path or _is_within(candidate, test_root):
-            continue
-        if module_name in _local_import_module_names(candidate):
-            return True
-    return False
-
-
-def _infer_project_root(ac_root: Path, test_root: Path) -> Path:
-    """Return the common ancestor of *ac_root* and *test_root*.
-
-    Both are conventionally rooted at the same project, so their common
-    ancestor bounds the reachability scan to that project rather than the
-    whole filesystem. Falls back to *test_root* on the rare filesystem where
-    the two share no common path (e.g. different drives on Windows).
-    """
-    try:
-        return Path(
-            os.path.commonpath([str(ac_root.resolve()), str(test_root.resolve())])
-        )
-    except ValueError:
-        return test_root.resolve()
-
-
-def _find_no_entry_point_unit(
-    linked_tests: list[dict], project_root: Path, test_root: Path
-) -> str | None:
-    """Return the repo-relative path of a linked test's unit with no way in.
-
-    For each Python linked test, inspects the bare module names it imports
-    directly. A candidate unit "has no way in" when BOTH hold: it defines no
-    ``if __name__ == "__main__":`` of its own, AND no other project file
-    (outside the test tree) imports it. Only Python linked tests are
-    inspected — this gate does not extend to the TypeScript/JS path.
-
-    Args:
-        linked_tests: Covers-tagged test dicts for the AC being evaluated.
-        project_root: Root directory bounding the reachability scan.
-        test_root: The project's test tree, excluded from candidate
-            resolution and from the "imported elsewhere" search.
-
-    Returns:
-        The first no-way-in unit's path, relative to *project_root* when
-        possible (absolute otherwise); ``None`` when every resolvable
-        candidate has a way in.
-    """
-    for test in linked_tests:
-        test_file = Path(test["file"])
-        if test_file.suffix != ".py":
-            continue
-        for module_name in sorted(_local_import_module_names(test_file)):
-            candidate = _resolve_candidate_unit(
-                module_name, test_file, project_root, test_root
-            )
-            if candidate is None:
-                continue
-            if _has_entry_point_of_its_own(candidate):
-                continue
-            if _is_imported_elsewhere(module_name, candidate, project_root, test_root):
-                continue
-            try:
-                return str(candidate.relative_to(project_root))
-            except ValueError:
-                return str(candidate)
-    return None
-
-
-def _apply_reachability_gate(
-    verdict: dict, *, ac_id: str, linked_tests: list[dict], ac_root: Path, test_root: Path
-) -> dict:
-    """Apply the BO-2900d-1 reachability gate to an otherwise-eligible verdict.
-
-    Intended to run only when *verdict* is already ``eligible: True`` (leaf
-    path, all linked tests passing) — an EARLIER gate in the same
-    composition (BO-2900a-1's ``_apply_entry_point_reachability_gate``) may
-    already have refused the verdict for its OWN, distinct
-    ``refusal_cause`` before this function ever runs. This function must
-    not overwrite that refusal with its own, different "no way in" verdict
-    for the same unit (BO-2900e-1 requires two disjoint refusal_cause
-    values, never one merged verdict), so an already-ineligible *verdict*
-    is returned unchanged, restoring this function's documented
-    precondition mechanically rather than by convention alone. When
-    *verdict* is eligible, finds the first linked unit whose module defines
-    no ``main()`` of its own AND is not genuinely imported elsewhere (see
-    :func:`_find_no_entry_point_unit` -- conditions (1) and (2)); when none
-    exists, returns *verdict* unchanged. When one exists, condition (3) is
-    checked next: :func:`_done_proof_automation_gate.unit_is_invoked_by_automation`
-    answers "does some real automation script run this unit as a program?"
-    against the shared BO-2900b-1/BO-2900b-3 ``collected_invocations()``
-    seam; a unit that IS run as a program by automation does not satisfy
-    this condition, so the refusal does not fire at all and *verdict* is
-    returned unchanged. Only when all three conditions hold does this
-    function check the shared reachability-exemption seam (BO-2900d-1): a
-    recorded, reasoned exemption for that exact unit releases the refusal
-    and is announced on the returned verdict (never silently absorbed); the
-    absence of one refuses the criterion with ``refusal_cause:
-    "no_entry_point_reaches_code"`` and ``clearing_actions`` naming the two
-    ways the verdict flips (see
-    :func:`_done_proof_automation_gate.build_no_entry_point_refusal`).
-
-    Args:
-        verdict: The eligibility verdict computed so far. May already be
-            ``eligible: False`` (an earlier gate's refusal, passed through
-            unchanged) or ``eligible: True`` (the case this gate evaluates).
-        ac_id: The AC identifier being evaluated (for the refusal message).
-        linked_tests: The AC's Python covers-tagged linked tests.
-        ac_root: Root directory of the AC YAML store.
-        test_root: Root directory of the test tree.
-
-    Returns:
-        *verdict* unchanged when it arrived already ineligible, when no
-        no-way-in unit is found, when the unit IS run as a program by real
-        automation (condition (3) fails), or when the unit is exempted
-        (with exemption details attached); an ``eligible: False`` verdict
-        carrying ``refusal_cause``, ``unit``, and ``clearing_actions``
-        otherwise.
-    """
-    if not verdict.get("eligible"):
-        return verdict
-    project_root = _infer_project_root(ac_root, test_root)
-    unit = _find_no_entry_point_unit(linked_tests, project_root, test_root)
-    if unit is None:
-        return verdict
-
-    exemptions: list[dict] = []
-    exempt_verdict = False
-    collected_invocations = None
-    if str(_COMMIT_GUARDIAN_DIR) not in sys.path:
-        sys.path.insert(0, str(_COMMIT_GUARDIAN_DIR))
-    try:
-        from _reachability_inventory import (
-            ReachabilityRegistryError,
-            collected_invocations,
-            is_exempt,
-            load_exemptions,
-        )
-    except ImportError as exc:
-        print(
-            f"WARNING: done_proof: reachability-exemption seam unavailable, "
-            f"treating {unit} as unexempted: {exc}", file=sys.stderr,
-        )
-    else:
-        registry_path = project_root / "config" / "reachability_exemptions.yaml"
-        try:
-            exemptions = load_exemptions(registry_path)
-        except ReachabilityRegistryError as exc:
-            print(
-                f"WARNING: done_proof: cannot load {registry_path}: {exc}", file=sys.stderr,
-            )
-        exempt_verdict = is_exempt(unit, exemptions)
-
-    # BO-2900a-3 condition (3): a unit run as a program by real automation
-    # does not satisfy "no automation runs it" -- verdict unchanged.
-    if unit_is_invoked_by_automation(unit, project_root, test_root, collected_invocations):
-        return verdict
-
-    if exempt_verdict:
-        matched_reason = next(
-            (e.get("reason") for e in exemptions if e.get("item") == unit), ""
-        )
-        exempted = dict(verdict)
-        exempted["exemption"] = {"item": unit, "reason": matched_reason}
-        return exempted
-
-    return build_no_entry_point_refusal(verdict, ac_id=ac_id, unit=unit)
-
-
 # ---------------------------------------------------------------------------
-# BP-100n-4-ii: _split_linked_tests_by_language, _handle_no_direct_tests,
-# _maybe_reachability_verdict, _run_python_test_phase, _run_ts_test_phase,
-# _classify_ts_outcomes, and _build_failure_reason — the orchestration
-# helpers verify_done_eligible's body below calls — now live in the sibling
-# module _done_proof_phase_helpers.py (imported at the top of this file).
+# BO-2900d-1 / BO-2900a-3: _local_import_module_names, _is_within,
+# _sys_path_insert_dirs, _resolve_candidate_unit, _has_entry_point_of_its_own,
+# _is_imported_elsewhere, _infer_project_root, _find_no_entry_point_unit and
+# _apply_reachability_gate now live in the sibling module
+# _done_proof_reachability_gate.py (imported at the top of this file).
 # Moved verbatim, no behaviour change.
 # ---------------------------------------------------------------------------
 
@@ -2348,6 +1708,9 @@ def verify_done_eligible(
     ac_status_map = _build_ac_status_map(ac_root)
     all_tags = _scan_test_root_for_covers_tags(test_root)
     dangling_tags = _collect_dangling_tags(all_tags, ac_status_map)
+    retired = _retired_verdict(ac_id, ac_status_map, dangling_tags)  # ACS-900d-4
+    if retired is not None:
+        return retired
     linked_tests = _collect_linked_tests(ac_id, all_tags)
 
     if not linked_tests:
@@ -2530,3 +1893,7 @@ def verify_done_eligible(
 #   fixing a spurious collection FileNotFoundError from the prior unset cwd.
 #   (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)
 # - 2026-09-28 00:31 [python-coder/BO-2900a-3 rework]: CI regression on PR #925 (Linux): "pytest run unfinished: 2 file(s), returncode 4" for BO-2900a-1 and BO-2900a-3. The 2026-09-25 cwd= fix above anchored the child unconditionally to *test_files*' own common ancestor, but this repo's own pytest.ini (addopts -p scripts.ac_store.pytest_ac_enforcement) lives several directories ABOVE unit_tests/ac_store, so that addopts plugin became unimportable from the anchored cwd -- python -m pytest only puts the subprocess's OWN cwd on sys.path, not the ini's directory. Fixed entirely inside the sibling module's _resolve_pytest_run_cwd() (ratchet: fixed there, see its own DECISION HISTORY entry for the full mechanism); this file's only change is this docstring paragraph. No call site or return contract changed. (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)
+# - 2026-10-05 07:01 UTC [python-coder]: Move composite orchestration to its own
+#   sibling and reuse Python/TypeScript phases. Child coverage stays mandatory;
+#   TS children no longer enter pytest. Keep the re-export and runner seams.
+#   (#TICKETLESS reason=user-authorized-composite-proof-ci-repair)

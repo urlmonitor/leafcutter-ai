@@ -37,6 +37,11 @@ expects_from:
   ac_id: ACD-1800d-1
   contract: "The implemented per-deliverable back-reference behaviour (canonical-source resolution, bidirectional navigation) to document."
 test_required: false
+test_rationale: Delivered is the ac-schema.md passage on deliverable-grain implemented_by back-references,
+  the rule that each points at hand-edited source under templates/ or scripts/ and never a deployed
+  copy, and how to navigate from requirement to artefact and back. Whether a reader can actually
+  make that round trip from the instructions is a judgement for a person. Review against ACD-1800d-1
+  and the ACD-1600d canonical-source rule covers it, later formalised as a verified_by inspection.
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []

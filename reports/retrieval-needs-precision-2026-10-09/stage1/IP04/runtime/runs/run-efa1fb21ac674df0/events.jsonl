@@ -1,0 +1,8 @@
+{"schema_version":"1.0","seq":0,"run_id":"run-efa1fb21ac674df0","kind":"run.started","at":"2026-10-09T21:24:50.928105Z","refs":{"task_id":"task-51d3eb51afa34b02","work_item_id":"work-6dc33da8647f443a"},"detail":"What behavior does KM-500c-2 require?"}
+{"schema_version":"1.0","seq":1,"run_id":"run-efa1fb21ac674df0","kind":"context.recognized","at":"2026-10-09T21:24:50.931774Z","refs":{"work_item_id":"work-6dc33da8647f443a"},"detail":"disabled: 0 meaning(s)"}
+{"schema_version":"1.0","seq":2,"run_id":"run-efa1fb21ac674df0","kind":"routing.assessed","at":"2026-10-09T21:24:50.953466Z","refs":{"work_item_id":"work-6dc33da8647f443a","assessment_id":"ra-52ab6adde7e54ca4"},"detail":"selected"}
+{"schema_version":"1.0","seq":3,"run_id":"run-efa1fb21ac674df0","kind":"interaction.opened","at":"2026-10-09T21:24:50.958044Z","refs":{"work_item_id":"work-6dc33da8647f443a","interaction_id":"int-c1a42a9f97b143d2"},"detail":"host"}
+{"schema_version":"1.0","seq":4,"run_id":"run-efa1fb21ac674df0","kind":"interaction.answered","at":"2026-10-09T21:27:58.392443Z","refs":{"work_item_id":"work-6dc33da8647f443a","interaction_id":"int-c1a42a9f97b143d2"},"detail":"host"}
+{"schema_version":"1.0","seq":5,"run_id":"run-efa1fb21ac674df0","kind":"gap.recorded","at":"2026-10-09T21:27:58.392793Z","refs":{"work_item_id":"work-6dc33da8647f443a","gap_id":"gap-5d9044f1b03500cb"},"detail":"host_only"}
+{"schema_version":"1.0","seq":6,"run_id":"run-efa1fb21ac674df0","kind":"result.integrated","at":"2026-10-09T21:27:58.400407Z","refs":{"work_item_id":"work-6dc33da8647f443a","invocation_id":"inv-6c02e2d7812b45f9"},"detail":"completed"}
+{"schema_version":"1.0","seq":7,"run_id":"run-efa1fb21ac674df0","kind":"run.finished","at":"2026-10-09T21:27:58.433992Z","refs":{},"detail":"completed"}

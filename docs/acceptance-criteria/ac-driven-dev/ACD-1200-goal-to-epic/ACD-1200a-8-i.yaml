@@ -2,7 +2,7 @@ id: ACD-1200a-8-i
 components:
   - ac_driven_dev
   - build_pipeline
-readiness: draft
+readiness: approved
 priority: high
 title: "The generated Master_Plan is accepted by the same frontmatter gate that guards a hand-written one"
 component: ac-driven-dev
@@ -78,9 +78,67 @@ delivers_to: null
 expects_from:
   ac_id: ACD-1200a-8
   contract: "The generated Master_Plan file at the epic folder root, whose CONTENT that AC specifies. This criterion constrains the frontmatter it carries, so the file that AC produces can actually be committed."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/epic_master_plan.py
+  n_location_rule: "1 -- the Master_Plan frontmatter renderer (_render_master_plan). The goal-title pass-through in scripts/ac_store/epic_phases.py (_write_master_plan_safely) and its caller in scripts/ac_store/epic_pipeline.py are companion edits named in constraints."
+  required_skills:
+    - python-coder
+    - test-writer
+  post_write_commands:
+    - "python -m pytest unit_tests/ac_store/test_master_plan_generation.py"
+  constraints:
+    - "Both enforcement points, both satisfied. The commit-time gate is check-doc-frontmatter, which reads doc_frontmatter.ticket_frontmatter.required_fields from the commit_guardian config (the deployed config and its packaged template source). The authoring-time gate is templates/hooks/ticket_frontmatter_guard.py, deployed to .claude/hooks/ and run on Edit|Write. Neither gate, its required set or its file patterns may change, and no exemption for generated or Master_Plan files may be added."
+    - "The frontmatter block is produced by a real YAML serialiser and round-trips: parsing the written block gives exactly the values the generator intended, including a goal title that contains ':' or quote characters. No frontmatter line is assembled by string concatenation."
+    - "Fields, from design section 6c. title is 'EPIC: <goal title>', type is epic, and depends_on is []. Out-of-epic dependencies belong in a body section, never in depends_on, which the ticket guard resolves to sibling files. change_target and risk_surface are the union across the epic's tickets. requires_diagram and requires_adr are a tri-state roll-up: true if any ticket is true, otherwise false if any ticket is false, otherwise null. The existing epic_name, created, status, components and source_ac keys are kept unchanged."
+    - "Every value must be in the shape the authoring-time guard accepts for that key. If the guard rejects the null branch of the roll-up, or a multi-value union for a single-valued key, stop and report it at review. Do not coerce a value to make the guard pass, and do not change the guard."
+    - "One writer: the goal title reaches the renderer through the existing post-assembly write phase (_write_master_plan_safely in scripts/ac_store/epic_phases.py). No second Master_Plan writer is introduced."
+    - "Deterministic: the same epic inputs produce a byte-identical Master_Plan frontmatter with a stable key order, so regenerating an epic shows no spurious diff."
+    - "Nothing outside the Master_Plan frontmatter changes. The ticket files, the epic folder name (ACD-1200a-3-iii) and the Master_Plan body are unchanged. The status value stays out of scope (see notes). This lands after T7 (--ids honours --dry-run), which also edits scripts/ac_store/epic_pipeline.py."
+test_required: true
+test_spec:
+  - name: test_generated_master_plan_passes_the_commit_time_frontmatter_gate
+    target_dir: unit_tests/ac_store/
+    type: integration
+    angle: real_artifact
+    description: "Generate a real epic from a temporary AC store through the real generator, with no hand edits. Run the real check-doc-frontmatter check, using the repository's own configuration, over the generated Master_Plan. It is accepted, title and depends_on included."
+  - name: test_generated_master_plan_passes_the_authoring_time_ticket_guard
+    target_dir: unit_tests/ac_store/
+    type: integration
+    angle: real_artifact
+    description: "Run the real ticket_frontmatter_guard validation over the same generated Master_Plan. It is accepted, whatever the guard's required set is at the time."
+  - name: test_master_plan_title_with_a_colon_round_trips
+    target_dir: unit_tests/ac_store/
+    type: integration
+    angle: boundary
+    description: "A goal title that contains ':' produces a frontmatter title that parses back to exactly 'EPIC: <goal title>', and both real gates accept the file."
+  - name: test_gate_with_an_added_required_field_rejects_the_generated_master_plan
+    target_dir: unit_tests/ac_store/
+    type: integration
+    angle: failure
+    description: "Running the commit-time gate over the generated Master_Plan with a copy of the real configuration whose required set has one extra field rejects the file. This proves the coverage follows the gate's own required set. The test holds no list of field names of its own."
+  - name: test_requires_rollup_with_no_ticket_values_still_passes_both_gates
+    target_dir: unit_tests/ac_store/
+    type: integration
+    angle: boundary
+    description: "An epic whose tickets declare no requires_diagram or requires_adr value still produces a Master_Plan that both real gates accept."
+  - name: test_master_plan_gates_hold_through_the_goal_to_epic_entry_point
+    target_dir: unit_tests/ac_store/
+    type: integration
+    angle: reachability
+    description: "The same acceptance holds when the epic is generated by running goal_to_epic --ids as a subprocess, rather than by calling the renderer directly."
+test_rationale: "The defect is a producer drifting away from its gates, so a test that lists field names is a second copy that drifts the same way. Only running the real gates over a really generated file proves acceptance, and it keeps proving it when a gate's required set changes; the added-field case shows the test notices that change. The title round trip is separate because EPIC titles routinely contain ':', which a hand-assembled line breaks."
 origin_agent: business-analyst
 created: 2026-08-25
-amended_by: []
+amended_by:
+  - date: 2026-10-06
+    agent: business-analyst
+    reason: "user decision 2026-10-06: approved (readiness draft -> approved, priority high) so ticket T9 of the build-tooling fix design (section 6c, Master_Plan passes both frontmatter gates) may be built. Criteria unchanged. Checked against design section 6c before approving, with no contradiction: 6c writes the missing title and depends_on that the commit-time gate requires, plus the fields the authoring-time ticket guard requires (change_target, risk_surface, and the requires_* roll-up), and it adds type: epic. It keeps the existing fields and is tested by generating a real epic and running both real gates over it, with no field list in the test. No gate is weakened. That matches all three clauses, the no-weakening clause and the coverage note. It does not touch the status value, which the notes keep out of scope. it_requirements and test_spec are absent and are left for the IT PO."
+  - date: 2026-10-06
+    agent: it-po
+    reason: "it-po-build-tooling-fix: user decision 2026-10-06 (ACD-1200a-8-i approved so ticket T9 may be built; build-tooling fix design, section 6c). Criteria untouched. Added assigned_agent python-coder (the surface is scripts/ac_store/epic_master_plan.py, epic_phases.py and epic_pipeline.py) and estimated_complexity M. it_requirements is a structured object, because validate_ac.py classifies this AC as package-surface (python-coder, with build_pipeline in components); reference_file_path is scripts/ac_store/epic_master_plan.py. Its constraints, from section 6c, name both enforcement points, YAML-serialised round-tripping frontmatter, the field roll-up and the shapes the guard accepts, the single writer, determinism, no change outside the frontmatter, and the no-weakening rule. Also added test_required true, a six-case test_spec that generates a real epic and runs the real ticket guard and check-doc-frontmatter over Master_Plan, with no field list in the test, and test_rationale. With this test contract, check_ac_schema's approved-code-AC rule passes. readiness, work_status, doc_links, expects_from, covered_by and implemented_by untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []

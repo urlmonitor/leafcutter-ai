@@ -1,0 +1,656 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="21" skipped="1" tests="22" time="0.531" timestamp="2026-10-02T08:46:16.898239+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_preserves_fields_and_exact_markdown" time="0.018"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_preserves0')
+
+    def test_native_glossary_preserves_fields_and_exact_markdown(tmp_path):
+        # covers: KM-400a-3-i; type: unit; angle: criterion
+        metadata = {
+            "title": "Whole glossary",
+            "status": "active",
+            "components": ["finalize"],
+            "created": date(2026, 10, 2),
+            "quoted_date": "2026-10-02",
+            "extension": {"null": None, "empty": [], "map": {}, "flag": False},
+        }
+        definition = "\n First line with two spaces.  \n\n[link](target.md)\n\n#### Detail\n|a|b|\n|---|---|\n|1|2|\n\n"
+        path = _write(tmp_path, "# Glossary\n\n###  Mixed Term / A  \n" + definition, metadata, newline="\r\n")
+        before = path.read_bytes()
+&gt;       (record,) = _extract(tmp_path)
+                    ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_glossary_term.py:48: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_ignores_comments_and_fences_without_truncation" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_ignores_c0')
+
+    def test_native_glossary_ignores_comments_and_fences_without_truncation(tmp_path):
+        # covers: KM-400a-3-i; type: unit; angle: boundary
+        prefix = "&lt;!--\n### Comment example\n--&gt;\n```md\n### Fenced introduction\n```\n"
+        definition = """\nDefinition before examples.
+    &lt;!--
+    ### False comment term
+    ## False boundary
+    ```
+    --&gt;
+    &lt;!-- same-line ### False term --&gt;
+    ````markdown
+    ### False backtick term
+    ```
+    ## Still inside the longer fence
+    ```` trailing content is not a closing fence
+    ### Still fenced
+    ````
+       ~~~~markdown
+    ### False tilde term
+    ````
+    ~~~
+    ## Still inside the tilde fence
+    ~~~~
+        ### Indented example
+     ### One-space example
+    &gt; ### Quoted example
+    #### Nested content
+    Real final paragraph.
+    """
+        _write(tmp_path, prefix + "### Real\n" + definition + "### Next\nNext definition.\n")
+&gt;       records = _extract(tmp_path)
+                  ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_glossary_term.py:93: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_true_section_boundaries_and_empty_definition" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_true_sect0')
+
+    def test_native_glossary_true_section_boundaries_and_empty_definition(tmp_path):
+        # covers: KM-400a-3-i; type: unit; angle: boundary
+        _write(tmp_path, "### A\nA text.\n#### Nested\nNested text.\n## Group\nGroup intro.\n### Empty\n### C\nC text.\n# Appendix\nNot a term definition.\n")
+&gt;       records = _extract(tmp_path)
+                  ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_glossary_term.py:102: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_identities_survive_insertion_and_reordering" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_identitie0')
+
+    def test_native_glossary_identities_survive_insertion_and_reordering(tmp_path):
+        # covers: KM-400a-3-i; type: unit; angle: boundary
+        terms = ["create-ticket.js", "ticket creation pipeline", "A/B", "A B", "A%2FB"]
+        _write(tmp_path, "".join(f"### {term}\nDefinition of {term}.\n" for term in terms))
+&gt;       before = {record.title: (record.native_id, record.locator) for record in _extract(tmp_path)}
+                                                                                 ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_glossary_term.py:114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_duplicate_normalized_terms_fail[Name]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_duplicate0')
+second = 'Name'
+
+    @pytest.mark.parametrize("second", ["Name", "nAmE", "  NAME  "])
+    def test_native_glossary_duplicate_normalized_terms_fail(tmp_path, second):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, f"### Name\nFirst.\n### {second}\nSecond.\n")
+        with pytest.raises(ValueError, match="duplicate.*term"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_glossary_term.py:129: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_duplicate_normalized_terms_fail[nAmE]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_duplicate1')
+second = 'nAmE'
+
+    @pytest.mark.parametrize("second", ["Name", "nAmE", "  NAME  "])
+    def test_native_glossary_duplicate_normalized_terms_fail(tmp_path, second):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, f"### Name\nFirst.\n### {second}\nSecond.\n")
+        with pytest.raises(ValueError, match="duplicate.*term"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_glossary_term.py:129: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_duplicate_normalized_terms_fail[  NAME  ]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_duplicate2')
+second = '  NAME  '
+
+    @pytest.mark.parametrize("second", ["Name", "nAmE", "  NAME  "])
+    def test_native_glossary_duplicate_normalized_terms_fail(tmp_path, second):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, f"### Name\nFirst.\n### {second}\nSecond.\n")
+        with pytest.raises(ValueError, match="duplicate.*term"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_glossary_term.py:129: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_custom_path_and_absent_surface_default" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_custom_pa0')
+
+    def test_native_glossary_custom_path_and_absent_surface_default(tmp_path):
+        # covers: KM-400a-3-i; type: unit; angle: seam
+        _write(tmp_path, "### Default\nDefault definition.\n")
+        _config(tmp_path, {"surfaces": {"docs": {"path": "docs/"}}})
+&gt;       assert [record.native_id for record in _extract(tmp_path)] == ["default"]
+                                               ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_glossary_term.py:136: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_invalid_configuration_fails[value0]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_invalid_c0')
+value = []
+
+    @pytest.mark.parametrize("value", [[], {"surfaces": []}, {"surfaces": {"glossary": None}}, {"surfaces": {"glossary": {}}}, {"surfaces": {"glossary": {"path": ""}}}, {"surfaces": {"glossary": {"path": "../outside.md"}}}, {"surfaces": {"glossary": {"path": "C:/outside.md"}}}, {"surfaces": {"glossary": {"path": 42}}}])
+    def test_native_glossary_invalid_configuration_fails(tmp_path, value):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _config(tmp_path, value)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_glossary_term.py:149: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_invalid_configuration_fails[value1]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_invalid_c1')
+value = {'surfaces': []}
+
+    @pytest.mark.parametrize("value", [[], {"surfaces": []}, {"surfaces": {"glossary": None}}, {"surfaces": {"glossary": {}}}, {"surfaces": {"glossary": {"path": ""}}}, {"surfaces": {"glossary": {"path": "../outside.md"}}}, {"surfaces": {"glossary": {"path": "C:/outside.md"}}}, {"surfaces": {"glossary": {"path": 42}}}])
+    def test_native_glossary_invalid_configuration_fails(tmp_path, value):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _config(tmp_path, value)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_glossary_term.py:149: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_invalid_configuration_fails[value2]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_invalid_c2')
+value = {'surfaces': {'glossary': None}}
+
+    @pytest.mark.parametrize("value", [[], {"surfaces": []}, {"surfaces": {"glossary": None}}, {"surfaces": {"glossary": {}}}, {"surfaces": {"glossary": {"path": ""}}}, {"surfaces": {"glossary": {"path": "../outside.md"}}}, {"surfaces": {"glossary": {"path": "C:/outside.md"}}}, {"surfaces": {"glossary": {"path": 42}}}])
+    def test_native_glossary_invalid_configuration_fails(tmp_path, value):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _config(tmp_path, value)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_glossary_term.py:149: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_invalid_configuration_fails[value3]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_invalid_c3')
+value = {'surfaces': {'glossary': {}}}
+
+    @pytest.mark.parametrize("value", [[], {"surfaces": []}, {"surfaces": {"glossary": None}}, {"surfaces": {"glossary": {}}}, {"surfaces": {"glossary": {"path": ""}}}, {"surfaces": {"glossary": {"path": "../outside.md"}}}, {"surfaces": {"glossary": {"path": "C:/outside.md"}}}, {"surfaces": {"glossary": {"path": 42}}}])
+    def test_native_glossary_invalid_configuration_fails(tmp_path, value):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _config(tmp_path, value)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_glossary_term.py:149: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_invalid_configuration_fails[value4]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_invalid_c4')
+value = {'surfaces': {'glossary': {'path': ''}}}
+
+    @pytest.mark.parametrize("value", [[], {"surfaces": []}, {"surfaces": {"glossary": None}}, {"surfaces": {"glossary": {}}}, {"surfaces": {"glossary": {"path": ""}}}, {"surfaces": {"glossary": {"path": "../outside.md"}}}, {"surfaces": {"glossary": {"path": "C:/outside.md"}}}, {"surfaces": {"glossary": {"path": 42}}}])
+    def test_native_glossary_invalid_configuration_fails(tmp_path, value):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _config(tmp_path, value)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_glossary_term.py:149: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_invalid_configuration_fails[value5]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_invalid_c5')
+value = {'surfaces': {'glossary': {'path': '../outside.md'}}}
+
+    @pytest.mark.parametrize("value", [[], {"surfaces": []}, {"surfaces": {"glossary": None}}, {"surfaces": {"glossary": {}}}, {"surfaces": {"glossary": {"path": ""}}}, {"surfaces": {"glossary": {"path": "../outside.md"}}}, {"surfaces": {"glossary": {"path": "C:/outside.md"}}}, {"surfaces": {"glossary": {"path": 42}}}])
+    def test_native_glossary_invalid_configuration_fails(tmp_path, value):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _config(tmp_path, value)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_glossary_term.py:149: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_invalid_configuration_fails[value6]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_invalid_c6')
+value = {'surfaces': {'glossary': {'path': 'C:/outside.md'}}}
+
+    @pytest.mark.parametrize("value", [[], {"surfaces": []}, {"surfaces": {"glossary": None}}, {"surfaces": {"glossary": {}}}, {"surfaces": {"glossary": {"path": ""}}}, {"surfaces": {"glossary": {"path": "../outside.md"}}}, {"surfaces": {"glossary": {"path": "C:/outside.md"}}}, {"surfaces": {"glossary": {"path": 42}}}])
+    def test_native_glossary_invalid_configuration_fails(tmp_path, value):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _config(tmp_path, value)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_glossary_term.py:149: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_invalid_configuration_fails[value7]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_invalid_c7')
+value = {'surfaces': {'glossary': {'path': 42}}}
+
+    @pytest.mark.parametrize("value", [[], {"surfaces": []}, {"surfaces": {"glossary": None}}, {"surfaces": {"glossary": {}}}, {"surfaces": {"glossary": {"path": ""}}}, {"surfaces": {"glossary": {"path": "../outside.md"}}}, {"surfaces": {"glossary": {"path": "C:/outside.md"}}}, {"surfaces": {"glossary": {"path": 42}}}])
+    def test_native_glossary_invalid_configuration_fails(tmp_path, value):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _config(tmp_path, value)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_glossary_term.py:149: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_symlink_outside_snapshot_fails" time="0.003"><skipped type="pytest.skip" message="Host does not permit symlink creation: [WinError 1314] Dem Client fehlt ein erforderliches Recht: 'C:\\Users\\Hendrik\\AppData\\Local\\Temp\\pytest-of-Hendrik\\pytest-3010\\test_native_glossary_symlink_o0\\outside.md' -&gt; 'C:\\Users\\Hendrik\\AppData\\Local\\Temp\\pytest-of-Hendrik\\pytest-3010\\test_native_glossary_symlink_o0\\snapshot\\docs\\glossary.md'">C:\Users\Hendrik\Code\leafcutter\worktrees\aura-domain-graph\tests\knowledge\test_native_glossary_term.py:161: Host does not permit symlink creation: [WinError 1314] Dem Client fehlt ein erforderliches Recht: 'C:\\Users\\Hendrik\\AppData\\Local\\Temp\\pytest-of-Hendrik\\pytest-3010\\test_native_glossary_symlink_o0\\outside.md' -&gt; 'C:\\Users\\Hendrik\\AppData\\Local\\Temp\\pytest-of-Hendrik\\pytest-3010\\test_native_glossary_symlink_o0\\snapshot\\docs\\glossary.md'</skipped></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_malformed_frontmatter_fails[---\ntitle: unfinished\n]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_malformed0')
+text = '---\ntitle: unfinished\n'
+
+    @pytest.mark.parametrize("text", ["---\ntitle: unfinished\n", "---\n- not\n- mapping\n---\n", "---\nbroken: [\n---\n"])
+    def test_native_glossary_malformed_frontmatter_fails(tmp_path, text):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, text)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_glossary_term.py:171: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_malformed_frontmatter_fails[---\n- not\n- mapping\n---\n]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_malformed1')
+text = '---\n- not\n- mapping\n---\n'
+
+    @pytest.mark.parametrize("text", ["---\ntitle: unfinished\n", "---\n- not\n- mapping\n---\n", "---\nbroken: [\n---\n"])
+    def test_native_glossary_malformed_frontmatter_fails(tmp_path, text):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, text)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_glossary_term.py:171: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_malformed_frontmatter_fails[---\nbroken: [\n---\n]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_malformed2')
+text = '---\nbroken: [\n---\n'
+
+    @pytest.mark.parametrize("text", ["---\ntitle: unfinished\n", "---\n- not\n- mapping\n---\n", "---\nbroken: [\n---\n"])
+    def test_native_glossary_malformed_frontmatter_fails(tmp_path, text):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, text)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_glossary_term.py:171: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_missing_and_empty_store_emit_no_placeholder" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3010/test_native_glossary_missing_a0')
+
+    def test_native_glossary_missing_and_empty_store_emit_no_placeholder(tmp_path):
+        # covers: KM-400a-3-i; type: unit; angle: boundary
+&gt;       assert _extract(tmp_path) == []
+               ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_glossary_term.py:176: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_glossary_term" name="test_native_glossary_real_corpus_matches_all_authored_sections" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'">def test_native_glossary_real_corpus_matches_all_authored_sections():
+        # covers: KM-400a-3-i; type: integration; angle: real_artifact
+        root = Path(__file__).resolve().parents[2]
+        from knowledge.native_types.common import frontmatter
+    
+        metadata, body = frontmatter(root / "docs/glossary.md")
+&gt;       records = _extract(root)
+                  ^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_glossary_term.py:191: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_glossary_term.py:18: in _extract
+    return import_module("knowledge.native_types.glossary_term").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.glossary_term'
+import_ = &lt;function _gcd_import at 0x000001AAE5C0BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.glossary_term'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase></testsuite></testsuites>

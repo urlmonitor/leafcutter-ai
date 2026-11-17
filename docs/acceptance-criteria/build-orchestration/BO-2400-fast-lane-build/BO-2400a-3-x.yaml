@@ -1,0 +1,175 @@
+id: BO-2400a-3-x
+components:
+  - build_orchestration
+  - testing_quality
+title: "A backfilled test is accepted only after it is seen to fail against a deliberately broken implementation"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given UXP-510 is classified as a test backfill, with newly-added tests T1, T2, T3
+    and T4 all green at baseline,
+  When the mutation proof runs for UXP-510,
+  Then the code those tests exercise is broken in place, one deliberate change at a
+    time, where that code existed before this run and this run has not changed it,
+  And T1 to T4 are re-run against each broken version,
+  And a test counts as proven when it is classified red, under the rule of
+    BO-2400a-3-vi, against at least one broken version,
+  And UXP-510 passes the mutation proof only when every one of T1, T2, T3 and T4 is
+    proven.
+
+  Given a broken version that stops the code from being imported or collected, so that
+    T1 is reported errored rather than failed,
+  When the mutation proof classifies T1 against that version,
+  Then T1 is not proven by it, because an errored test is inconclusive and any test
+    errors against code that cannot load.
+
+  Given UXP-510 has passed the mutation proof,
+  When the verdict is reported,
+  Then it records, for each of T1 to T4, the broken version that made it red: what was
+    changed, in which file and where, so a reviewer can repeat the break by hand,
+  And once the code is restored, T1 to T4 are re-run and reported passed before the
+    run continues.
+depends_on: [BO-2400a-3, BO-2400a-3-ix, BO-2400a-3-vi]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/prove-ac-done.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The discrimination angle: a test must go red under a plausible wrong version, not only when the code is absent."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-iii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The shared wrong-version runner's as-written copies, journal and put-back. The mutation proof reuses this and does not build a second restore mechanism."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment:
+    fast_lane_mutation_proof:
+      type: object
+      description: "New subcommand: fast_lane.py mutation_proof --ac-ids <csv> --test-root <run worktree> --ac-root <store> --base-ref <merge-base sha>. It prints one JSON verdict: {status: 'passed' | 'halted', reason: null | <halt reason of BO-2400a-3-xi / -3-xii>, per_ac: [{ac_id: str, passed: bool, mutations: [{id: str, file: str, line: int, col: int, operator: str, before: str, after: str}], tests: [{nodeid: str, proven_by: str | null, outcomes: {<mutation id>: <raw outcome>}}]}], post_restore: {<nodeid>: <raw outcome>}}. An AC passes iff every one of its newly-added tests has a non-null proven_by and every post_restore outcome is PASSED."
+  reference_file_path: "scripts/build_orchestration/_fl_cli.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --validate-only"
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Module placement: create scripts/build_orchestration/_fl_mutation_gen.py for target selection and mutant generation. It is pure apart from reading source at the working tree and at --base-ref. Create scripts/build_orchestration/_fl_mutation_proof.py for the apply, run, classify, restore and verdict steps. Register the subcommand in _fl_cli.py (268 measured lines). fast_lane.py (391 of 400 measured) may gain at most the dispatch line. Every new module stays under the 400-line cap."
+    - "Reuse the shared wrong-version runner's machinery instead of writing a second copy. scripts/build_orchestration/_wvr_gate.py provides as-written copies and a journal under <git rev-parse --git-dir>/leafcutter/wrong-version-runs/<run-id>/, plus restore_entries and recover_all (TQ-500g-1-iii). scripts/build_orchestration/_wvr_pytest.py provides run_selected, which runs a strict per-test child with AC_ENFORCE_STRICT=1 and reads failure kinds. The verdict rule is this record's own: a test is proven by at least one mutant. The runner's per-test must_catch rule is not used."
+    - "Target selection is deterministic. (1) Parse every newly-added test file of the AC with ast and collect the modules it imports that resolve to .py files inside --test-root. (2) Drop test and fixture code: anything under unit_tests/ or tests/, test_*.py, *_test.py, conftest.py, and helper or fixture modules in test directories. Also drop any file that is absent at --base-ref. (3) In what is left, keep the functions and methods the test source names, either as an imported name or through module.attr or Class.method access. (4) Keep a function only if its source span is byte-identical at --base-ref and in the working tree, so code added or changed in this run is never a target."
+    - "Mutation operators form a fixed, ordered set. return-value: return <expr> becomes return None, and a bool-literal return is flipped. comparison: == and != swap, < becomes >=, > becomes <=, in and not in swap, is and is not swap. boolean: and and or swap, and a unary not is removed. arithmetic: + and - swap. constant: an int literal n becomes n+1. Each mutant changes exactly one AST node. It is applied as a text replacement over that node's (lineno, col_offset, end_lineno, end_col_offset) span, so every other byte of the file is unchanged. Never re-serialise the whole file with ast.unparse. A mutant whose bytes equal the original is dropped and never run."
+    - "Order is (file path, line, col, operator index), interleaved round-robin across target functions so that the cap spreads across functions. Two runs on the same tree produce the same mutant list in the same order."
+    - "Runtime bound: by default at most 12 mutants per backfill AC and 40 per run. Each default is a named constant with one documented override. Against each mutant, run only the AC's newly-added tests that are not yet proven, under the shared runner's per-run pytest timeout. A proven test is not re-run. An AC's proof stops as soon as all of its tests are proven. If the budget is exhausted with tests still unproven, those tests count as survivors (BO-2400a-3-xi)."
+    - "Classification follows BO-2400a-3-vi. failed and xfailed are red. skipped and errored are inconclusive and never prove a test. A failure that is only an absence error is inconclusive under the shared runner's absence-versus-assertion rule (TQ-500g-1-ii). Examples are ImportError, AttributeError, or a collection error caused by a mutant that breaks loading."
+    - "No agent takes part in the proof. Applying mutants, running tests and deciding the verdict are script steps. The workflow invokes the subcommand as a command step (BO-2400a-3-xiv)."
+    - "Containment: resolve every target path with realpath and refuse it unless it lies inside --test-root, the run's own worktree. Write nothing to the main checkout, another worktree, the shared stash or any path outside the worktree and its git dir."
+    - "Mutated test runs set PYTHONDONTWRITEBYTECODE=1 (or pass -B), so no bytecode compiled from a mutant is cached in the workspace."
+delivers_to:
+  agent: python-coder
+  contract: "mutation_proof JSON verdict on stdout (shape as in config_schema_fragment). The fast-lane-ship workflow (BO-2400a-3-xiv) reads status, reason and per_ac[].passed to decide the next step, and copies per_ac[].tests[].proven_by plus the matching mutations[] record into the run result and the PR body."
+expects_from:
+  ac_id: BO-2400a-3-ix
+  contract: "verify_red_baseline verdict field mutation_required [{ac_id, tests: [nodeid]}] naming each backfill AC and its green newly-added tests."
+test_spec:
+  - name: test_mutants_target_only_preexisting_unchanged_code
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "On a temp git repo with a base commit, a function changed in this run, a function added in this run, test files and conftest.py never appear as mutant targets. An unchanged function that the tests import does appear."
+  - name: test_each_mutant_changes_one_node_and_is_applied_alone
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Every generated mutant differs from the original file in exactly one node span, and the file is back to its as-written bytes before the next mutant is applied."
+  - name: test_newly_added_tests_rerun_against_each_mutant
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "T1-T4 are each run against every mutant until proven, and outcomes are recorded per mutant id."
+  - name: test_ac_passes_only_when_every_test_is_proven
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "When all 4 tests are red under some mutant, the AC passes. When one test asserts only a constant it built itself, that test is never proven and the AC does not pass."
+    must_catch:
+      - "proof counted per AC instead of per test"
+  - name: test_import_breaking_mutant_does_not_prove
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "A mutant that stops the module importing leaves T1 errored or absence-red, and proven_by stays null for that mutant."
+    must_catch:
+      - "errored outcome counted as red"
+  - name: test_verdict_records_reproducible_break_per_test
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "For each proven test, the verdict names the mutation id with file, line, col, operator, before and after. Re-applying that record by hand to the restored file reproduces the red outcome."
+  - name: test_post_restore_rerun_all_passed_before_continue
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "After restoration T1-T4 are re-run and post_restore reports PASSED for each. A non-PASSED post-restore outcome makes status not passed."
+  - name: test_mutant_budget_bounds_runtime_deterministically
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "With 30 candidate mutants, at most 12 run for the AC. Two runs on the same tree produce the same ordered mutant list. Proven tests are not re-run."
+  - name: test_target_outside_worktree_is_refused
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "A module that resolves outside --test-root (through a symlink or an absolute sys.path entry) is never mutated, and its bytes and mtime are unchanged."
+  - name: test_mutation_proof_cli_on_real_repo_fixture
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Running fast_lane.py mutation_proof as a subprocess on a temp git repo, with real pytest and the AC enforcement plugin loaded, prints a passed verdict for a genuinely constraining test set."
+  - name: test_mutation_modules_ship_in_deployed_layout
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "build.py into a temp target ships _fl_mutation_gen.py and _fl_mutation_proof.py under .leafcutter/scripts/build_orchestration/, and the deployed fast_lane.py mutation_proof --help exits 0."
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The user's constraint is "still never accepting tests that pass against a broken
+  implementation", so the bar is set per test, not per criterion. If one red test per
+  criterion were enough, the other tests could still pass against broken code without
+  anyone noticing, which is the property the user ruled out. Errored outcomes do not count
+  as kills: otherwise a syntax-error mutation would prove every test.

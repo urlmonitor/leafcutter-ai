@@ -10,18 +10,34 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
+  Scenario 1 - the declared telemetry stream cannot be written
   Given /build-feature is invoked for an epic that has at least one ready ticket,
+  And the install's telemetry location query prints exactly one absolute path,
+    the declared telemetry stream (for example
+    /home/dev/proj/debugging/logs/agent_telemetry.jsonl),
   And the pre-drive feedback-sink reachability probe attempts to append one probe
-    line to the telemetry sink at debugging/logs/agent_telemetry.jsonl,
-  When the probe returns a non-zero result (the append fails — for example the
-    path is not writable),
+    line to that printed absolute path,
+  When the append fails (for example the file at that path is not writable),
   Then no ticket-supervisor is dispatched for the epic,
   And the drive halts immediately at the pre-dispatch stage,
-  And the operator is shown an actionable message that names the failing sink
-    path (debugging/logs/agent_telemetry.jsonl),
-  And that message states the remediation needed to make the sink writable,
+  And the operator is shown an actionable message that names the absolute path
+    the location query printed,
+  And that message states the remediation needed to make the stream writable,
   And no epic tickets are transitioned to in_progress.
-depends_on: [BO-100d-1]
+
+  Scenario 2 - the install declares no usable telemetry location
+  Given /build-feature is invoked for an epic that has at least one ready ticket,
+  When the telemetry location query exits non-zero, or exits zero but prints
+    nothing, or prints a path whose enduring log root no longer exists,
+  Then no ticket-supervisor is dispatched and the drive halts at the
+    pre-dispatch stage,
+  And the probe does not fall back to the workspace-relative path
+    debugging/logs/agent_telemetry.jsonl or to any other path,
+  And the probe creates no file and no directory,
+  And the operator message states that the telemetry location is not declared
+    (or is stale) and that the remediation is to rebuild the install,
+  And no epic tickets are transitioned to in_progress.
+depends_on: [BO-100d, BO-100d-1, INF-500d-4-iii]
 doc_links:
   - path: docs/architecture/agent_delivery_workflows.md
     relationship: describes
@@ -30,6 +46,12 @@ doc_links:
     relationship: describes
     status: exists
   - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration/resolved/resolved-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md
     relationship: describes
     status: exists
 assigned_agent: python-coder
@@ -42,15 +64,34 @@ it_requirements:
   - "The probe must be idempotent: a probe run appends exactly one probe line and must not corrupt or duplicate prior sink content."
   - "Handle the probe's external I/O (filesystem append, mkdir) gracefully per the project error handling policy (CLAUDE.md Rules 1-3): wrap the I/O in typed except, log at WARNING, and surface a clear operator message rather than swallowing the failure."
   - "Deployed/template parity (ADR-001 self-hosting): build-epic.js is a package source; if a probe helper is added as a script, edit the package source and verify the deployed copy via the build.py round-trip — never edit only one side."
+  - "The probe target must come ONLY from the stdout of the install's telemetry location query (sink_resolution.py --print-location telemetry). A non-zero exit, an exit 0 with empty stdout (the shape of a deployed copy older than INF-500d-4-iii), or a printed path whose enduring root is absent are all an unusable declaration: block with remediation 'rebuild' and never substitute debugging/logs/agent_telemetry.jsonl or any other derived or default path."
+  - "Every refusal path (unusable declaration, stale enduring root, genuine write failure) must create no file and no directory anywhere — not in the worktree, not under the declared root, not above it. The stale-root case in particular must never be 'repaired' by creating the missing enduring root."
+  - "The block result is the workflow's terminal payload and the operator message is the only output on the block path; no ticket file's frontmatter may be rewritten (no transition to in_progress) before the gate passes."
 delivers_to:
   agent: python-coder
-  contract: "A shared pre-drive sink probe helper plus the build-epic.js pre-dispatch gate that consumes it. The helper exposes: (1) first-probe append of one line to debugging/logs/agent_telemetry.jsonl; (2) mkdir-and-reprobe remediation when the only failure cause is the absent parent directory; (3) genuine-write-failure classification (not-writable / is-a-directory / read-only FS) distinct from directory-absence; returning a typed pass/fail result. On fail the gate blocks all parallel() dispatch and returns { status: 'blocked', sink_unreachable: true, sink_path: 'debugging/logs/agent_telemetry.jsonl', remediation: <string> }."
-expects_from: null
+  contract: "A shared pre-drive sink probe helper plus the build-epic.js pre-dispatch gate that consumes it. The helper exposes: (0) resolution of the stream location through the install's telemetry location query (sink_resolution.py --print-location telemetry, INF-500d-4-iii), treating a non-zero exit, empty output, or a stale enduring root as an unusable declaration that blocks with remediation 'rebuild' and never falls back to a relative path; (1) first-probe append of one line to the absolute path that query printed; (2) mkdir-and-reprobe remediation when the only failure cause is the absent log directory under a live enduring root; (3) genuine-write-failure classification (not-writable / is-a-directory / read-only FS) distinct from directory-absence; returning a typed pass/fail result. On fail the gate blocks all parallel() dispatch and returns { status: 'blocked', sink_unreachable: true, sink_path: <absolute path printed by the location query, or null when none was declared>, remediation: <string> }."
+expects_from:
+  ac_id: INF-500d-4-iii
+  contract: "The side-effect-free telemetry location query that prints the declared absolute operational_telemetry_stream (or nothing plus an error, exit 1, when no usable declaration exists)."
 origin_agent: it-po
 created: 2026-06-22
-amended_by: []
+amended_by:
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Criteria re-pointed from the workspace-relative debugging/logs/agent_telemetry.jsonl to the absolute stream the install's telemetry location query prints, and a second scenario added: a missing, empty or stale declaration blocks with 'rebuild' and never falls back to the relative path (KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path; fix direction from INF-500d-4 it_requirements bullet 8). delivers_to contract updated to match and expects_from now names INF-500d-4-iii. depends_on gains BO-100d, this AC's id-derived parent, which now lists it in covered_by. readiness lowered from approved to draft because the approved criteria text changed; it needs IT PO review of it_requirements and the test contract, then the user's re-approval."
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Parent back-link only: covered_by now lists BO-100d-1a-i and BO-100d-1a-ii, the replacements for BO-100d-1-i and BO-100d-1-ii, which already depended on this record but were id-children of the retired BO-100d-1, so done-proof never counted them toward BO-100d. No other field changed; work_status untouched."
+  - by: it-po
+    at: "2026-10-16"
+    reason: "IT PO review of the re-pointed criteria. Added test_required: true and an 8-entry behavioral test_spec plus test_rationale: every test runs the real location query (sink_resolution.py --print-location telemetry) against a real temp declaration and drives build-epic.js under the E2 harness, covering the unwritable stream, the missing, empty and stale declarations, no relative-path fallback, nothing created on refusal, top-level reachability and the deployed copy. Added three it_requirements (location query is the only probe target; refusal creates nothing; no in_progress transition before the gate passes). Re-pointed the KI doc_link from open/open-high-ki-bo-20261009-... to resolved/resolved-high-ki-bo-20261009-..., the file's location after resolution. assigned_agent (python-coder, which owns .js per agent_registry), estimated_complexity M, delivers_to and expects_from kept. criteria and work_status unchanged."
+  - by: BrainCandy
+    at: "2026-10-16"
+    reason: "BrainCandy approved readiness on 2026-10-16 (relayed via the orchestrating session): 'approve all 13 ACs'. readiness: draft -> approved; criteria and work_status unchanged."
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-100d-1a-i
+  - BO-100d-1a-ii
 implemented_by: []
 notes: |
   Split from BO-100d-1 by it-po. This child owns the deterministic enforcement
@@ -64,3 +105,77 @@ notes: |
   is the precedent shape for a blocking pre-dispatch gate.
 change_target: pipeline
 risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_unwritable_declared_stream_blocks_before_any_dispatch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Scenario 1. A temp install whose real knowledge_sink.json declares an absolute operational_log_root outside the worktree; the real location query (sink_resolution.py --print-location telemetry) is run and prints the stream path; that stream file exists and is made non-writable. build-epic.js runs under the E2 harness over an epic with one ready ticket. Asserts the terminal payload is { status: 'blocked', sink_unreachable: true } with sink_path equal to the path the query printed, zero ticket-supervisor / phase agent() dispatches, and every ticket file's frontmatter byte-identical before and after (no in_progress). Skips when run as root, where chmod cannot make a file unwritable."
+    must_catch:
+      - "warn-only gate that logs the failure and continues to dispatch"
+      - "gate placed after the first parallel() batch"
+  - name: test_block_message_names_printed_path_and_writability_remediation
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Scenario 1. Same unwritable-stream run: the operator message contains the exact absolute path the location query printed and a remediation telling the operator to make that stream writable; it does not contain debugging/logs/agent_telemetry.jsonl as a relative path."
+  - name: test_missing_declaration_blocks_with_rebuild_and_creates_nothing
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Scenario 2, non-zero exit. The temp install has no knowledge_sink.json, so the real location query exits non-zero. build-epic.js under E2 returns blocked with sink_path null and a remediation naming 'rebuild', makes zero dispatches, and a recursive snapshot (paths + mtimes) of the worktree and of the would-be log root's parent is identical before and after the run."
+    must_catch:
+      - "fall back to <worktree>/debugging/logs/agent_telemetry.jsonl when the query fails"
+      - "treat a failed location query as a pass"
+  - name: test_empty_location_output_is_an_unusable_declaration
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Scenario 2, exit 0 with empty stdout. The resolved location query is a stand-in that exits 0 and prints nothing (the shape of a deployed sink_resolution.py older than INF-500d-4-iii). The gate blocks with 'rebuild', makes zero dispatches and creates no file or directory (snapshot unchanged)."
+    must_catch:
+      - "check only the exit code of the location query"
+  - name: test_stale_enduring_root_blocks_with_rebuild_and_is_not_recreated
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Scenario 2, stale root. A real declaration is written, then its enduring root directory is deleted; the real location query is run and its printed path recorded. The gate blocks with a message stating the location is stale and naming 'rebuild', makes zero dispatches, and afterwards the enduring root still does not exist and the snapshot of its parent is unchanged."
+    must_catch:
+      - "mkdir -p the full printed path, resurrecting the deleted enduring root"
+  - name: test_refusal_never_writes_to_the_workspace_relative_telemetry_path
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Scenario 2, no fallback. Across the missing, empty and stale declaration runs, <worktree>/debugging/logs/agent_telemetry.jsonl and <worktree>/debugging/ do not exist after the run, while a control run with a pre-created writable <worktree>/debugging/logs/ still blocks (the relative path being writable must not turn the refusal into a pass)."
+    must_catch:
+      - "probe the workspace-relative path debugging/logs/agent_telemetry.jsonl"
+  - name: test_sink_gate_runs_from_build_epic_top_level_body_before_dispatch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "The block is produced by executing build-epic.js's own top-level body under the E2 harness, not by importing or calling the probe helper directly: the harness records the location-query subprocess call, records no agent() dispatch after it, and the workflow's returned payload is the block result."
+  - name: test_deployed_build_epic_js_hard_blocks_on_unwritable_stream
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "Using the shared_reference_layout fixture (marked shared_layout_reader), runs the DEPLOYED build-epic.js and probe helper under the E2 harness against an unwritable declared stream and asserts the same blocked payload and zero dispatches, proving the template change reached the deployed copy."
+test_rationale: >-
+  The gate's whole value is that it refuses before dispatch, so every test drives
+  build-epic.js's real top-level body under the E2 harness and observes dispatches
+  and the terminal payload; a direct helper test would pass on a helper the
+  workflow never calls, the phantom-done shape the repo CLAUDE.md warns about.
+  The probe target is always obtained by running the real location query against
+  a real temp declaration (never a hard-coded path), because the defect this AC
+  fixes (KI-BO-20261009) was a probe that pinned a relative path. The empty-stdout
+  case uses a stand-in query only because a real current query cannot produce
+  that shape. Refusal tests assert a before/after filesystem snapshot, since
+  "creates no file and no directory" is a negative claim only a snapshot can
+  check. No test greps build-epic.js or build-feature.md text.

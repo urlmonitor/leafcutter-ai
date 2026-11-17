@@ -3,24 +3,32 @@ components:
   - ac_driven_dev
 readiness: reviewed
 priority: medium
-title: "Gate after BA v3 shows L2/L3 ACs and offers approve, edit, or cancel"
+title: "Gate after the business analyst shows L2/L3 ACs and offers approve, edit, or cancel"
 component: ac-driven-dev
 level: L2
 status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given BA v3 has written L2/L3 ACs to the AC store with readiness: draft,
+  Given the business analyst has written L2/L3 ACs to the AC store with readiness: draft,
   When the workflow presents gate 2 to the user,
   Then it displays: the AC ids, titles, criteria text, and the parent L1 each
     L2/L3 decomposes,
   And it offers three actions:
-    - "approve" — proceed to IT PO v3 enrichment,
-    - "edit" — provide feedback text; BA v3 is re-invoked with the feedback
-      and rewrites the L2/L3 ACs (loop until approved),
+    - "approve" — proceed to the technical planner's enrichment,
+    - "edit" — provide feedback text; the business analyst is re-invoked once with the
+      feedback, rewrites the L2/L3 ACs, and gate 2 is shown again,
     - "cancel" — abort the pipeline; all ACs remain with readiness: draft,
-  And if the user approves, the workflow logs the approval timestamp
-    and proceeds to IT PO v3.
+  And if the user chooses "edit" a second time at gate 2, the run aborts with an error
+    stating that the business analyst did not produce satisfactory ACs after 2 attempts,
+    nothing from the business analyst's stage is committed, and its L2/L3 ACs remain in
+    the store with readiness: draft,
+  And if the user approves, the workflow commits the business analyst's L2/L3 ACs to the
+    authoring branch as that stage's own commit, naming the approved AC ids and the run
+    id; that commit is the record of the approval, and the technical planner (it-po),
+    whose stage has no human gate of its own, starts only after it succeeds,
+  And if that commit fails, the run stops with an error and the technical planner
+    does not start.
 depends_on: [ACD-300c]
 doc_links: []
 assigned_agent: python-coder
@@ -29,9 +37,32 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after #1245/#1246: BA v3 / IT PO v3 are now the business-analyst
+    and it-po agents; gate 2 is the last human gate before the final gate, because the
+    technical planner''s stage is auto-gated. Gate 2 behaviour unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: 'criteria match /plan-feature: "edit" re-invokes the business analyst once (a second
+    edit aborts without committing) instead of looping until approved; nothing logs an approval
+    timestamp, so that clause is replaced by the stage commit that records the approval.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: stageGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

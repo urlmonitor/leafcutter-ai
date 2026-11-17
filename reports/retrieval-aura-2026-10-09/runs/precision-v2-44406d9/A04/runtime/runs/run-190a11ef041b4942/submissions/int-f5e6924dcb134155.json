@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-190a11ef041b4942",
+  "interaction_id": "int-f5e6924dcb134155",
+  "sha256": "89119a3587c9ca1f577d562770d5098f5c4d45e1525e7eedbdd13fb081afb5d6",
+  "submission": {
+    "schema_version": "1.0",
+    "run_id": "run-190a11ef041b4942",
+    "interaction_id": "int-f5e6924dcb134155",
+    "expected_state_revision": 2,
+    "actor": {
+      "schema_version": "1.0",
+      "id": "host:blind-aura-proof",
+      "kind": "host"
+    },
+    "relayed_by": null,
+    "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+    "response": {
+      "schema_version": "1.0",
+      "original_question": "For KM-500c-2, what must tests demonstrate?",
+      "source_scope": {
+        "read_roots": [
+          "docs"
+        ],
+        "repository_id": "leafcutter",
+        "revision": "0000000000000000000000000000000000000000",
+        "source_ids": [
+          "knowledge.graph"
+        ]
+      },
+      "selections": {
+        "entity_types": [
+          "ac"
+        ],
+        "target_ids": [
+          "KM-500c-2"
+        ],
+        "required_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": []
+      },
+      "uncertain": {
+        "entity_types": [],
+        "target_ids": [],
+        "required_fields": [],
+        "document_types": [],
+        "relationships": []
+      },
+      "detail_mode": "fields",
+      "completeness": "single_entity",
+      "hierarchy_scope": "not_applicable",
+      "hierarchy_levels": [],
+      "scope_resolution": "sufficient",
+      "unresolved": [],
+      "rationale": "The named criterion's acceptance clauses and authored verification obligations jointly specify what tests must demonstrate. The supplied source scope is preserved unchanged; this interpretation does not establish source or field availability. No linked test records or test execution results are requested.",
+      "engine": "host_llm",
+      "status": "decided",
+      "model_id": null
+    },
+    "new_evidence": [],
+    "usage": []
+  },
+  "accepted_at": "2026-10-10T06:21:37.177420Z"
+}

@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "original_question": "Where does work_status travel from AC YAML into returned evidence?",
+  "source_scope": {
+    "allow_retrieval": false,
+    "read_roots": [
+      "docs",
+      "kernel",
+      "knowledge",
+      "integrations"
+    ],
+    "repository": "leafcutter",
+    "source_revision": "planning-probe-only"
+  },
+  "selections": {
+    "entity_types": [
+      "ac",
+      "source_file",
+      "schema"
+    ],
+    "target_ids": [],
+    "required_fields": [
+      "mapping",
+      "content",
+      "provenance"
+    ],
+    "document_types": [
+      "ac_yaml",
+      "source_code",
+      "schema"
+    ],
+    "relationships": []
+  },
+  "uncertain": {
+    "entity_types": [],
+    "target_ids": [],
+    "required_fields": [],
+    "document_types": [],
+    "relationships": []
+  },
+  "detail_mode": "fields",
+  "completeness": "exhaustive_set",
+  "hierarchy_scope": "not_applicable",
+  "hierarchy_levels": [],
+  "scope_resolution": "discovery_needed",
+  "unresolved": [],
+  "rationale": "The question asks for the complete work_status data path from canonical AC input through its producer and consumer handoffs into returned evidence. This needs inspected transformations and their source locations, rather than the value of any individual criterion's implementation status.",
+  "engine": "host_llm",
+  "status": "decided",
+  "model_id": null
+}

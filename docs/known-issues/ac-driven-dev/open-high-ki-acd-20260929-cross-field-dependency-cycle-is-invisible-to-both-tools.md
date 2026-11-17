@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-29'
-last_updated: '2026-09-30'
+last_updated: '2026-10-12'
 components:
   - ac_driven_dev
 related_docs:
@@ -17,8 +17,9 @@ related_docs:
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 2 (both in the same AC tree: `TQ-600a-1-i`/`-1-ii`, then `TQ-600a-2`/`-5`)
-- **First seen:** 2026-09-28 · **Last seen:** 2026-09-29
+- **Occurrences:** 3 (`TQ-600a-1-i`/`-1-ii` and `TQ-600a-2`/`-5`, both in the TQ-600 tree; then
+  `ACD-2500c-3`/`-c-1` on 2026-10-12, see Occurrence 3)
+- **First seen:** 2026-09-28 · **Last seen:** 2026-10-12
 - **Where:** `templates/scripts/commit_guardian/check_ac_circular_deps.py`
   (`_build_depends_graph`, `_extract_depends_on`); `scripts/ac_store/_gtfa_store.py`
   (`_build_ticket_depends_on`, `_expects_from_ac_ids`)
@@ -92,5 +93,56 @@ defect is that no tool reads them together.
 
 **Pattern:** two tools that disagree about whether a field is load-bearing, where the
 one that believes it cannot refuse and the one that can refuse does not believe it.
+
+---
+
+**Occurrence 3 — 2026-10-12, `ACD-2500c-3` / `ACD-2500c-1`, refused this time by the epic
+sequencer.** `ACD-2500c-3` declared `depends_on: ACD-2500c-1`, while `ACD-2500c-1`'s
+`expects_from` names `ACD-2500c-3` as the producer of the entry shape it consumes. Both records
+had been committed to `main`. The commit hook let them through because it reads `depends_on`
+only. Re-verified on origin/main `a104d934`: `check_ac_circular_deps.py` contains zero
+occurrences of `expects_from`, and its only change since this entry was filed is the loader swap
+in `f91b1cae`. This time the refusal came from `goal_to_epic.py --ids` on the 48-id ACD-2500 build
+set, which exited 1 with:
+
+```text
+ERROR: Circular dependency detected: ACD-2500c-3 -> ACD-2500c-1 -> ACD-2500c-3
+  ACD-2500c-3 -> ACD-2500c-1 (depends_on, parent-link: false)
+  ACD-2500c-1 -> ACD-2500c-3 (expects_from, parent-link: false)
+```
+
+This was reproduced with `--dry-run` against a scratch snapshot of the store as it stood before
+the fix (`a4ba3d37`). It was fixed in `e21501e3` by deleting `c-3`'s `depends_on` edge, which
+pointed the wrong way.
+
+**What has changed since this entry was filed: there are three readers now, not two.** Commit
+`49d6139f` (2026-10-07, BO-2600a-5 AC-7/AC-8) moved the epic sequencer
+(`scripts/ac_store/epic_dependencies.py` `_scan_edges`, `:86-116`) onto
+`depends_on ∪ expects_from`, read through the shared `_gtfa_store._prerequisite_ac_ids`. It made
+one exception: a child's `depends_on` on its own structural parent is dropped when the parent's
+`expects_from` names that child (`:112`). The sequencer refuses on a cycle and names every edge
+with its field and a parent-link flag (`_cycle_message`, `:369`). So the cycle hook reads one
+field and cannot refuse a cross-field cycle. The generator reads two fields and drops edges. The
+sequencer reads two fields, accepts the parent-to-own-child contract, and refuses on a real
+cycle.
+
+**That exception matters for Remediation 1.** IT-PO enrichment routinely writes an L2
+`expects_from` that names its own L3 child, while the child's `depends_on` lists the parent.
+ACD-2500 had four such pairs: `b-1`/`b-1-i`, `d-3`/`d-3-i`, `d-5`/`d-5-i`, and `d-1`, whose
+`expects_from` named `d-3-i`. The sequencer orders all of them. On the same snapshot, with only
+the `c-3` edge removed, `resolve_leaf_dependencies()` plus `topological_sort()` ordered all 48 ids
+with no cycle. A hook given "the same union of edge sources" without the parent-yield rule would
+refuse all four. The helper the hook shares should therefore be the sequencer's edge function,
+yield rule included, not `_prerequisite_ac_ids` on its own.
+
+**A cost of the gap, observed.** The untangle commit `e21501e3` also set `expects_from: null` on
+those four L2s. Its message describes them as cycle-closing. No tool on this branch treats them as
+a cycle: the sequencer accepts them as shown above, and the hook,
+`scan_ac_store._drain_cycles` and `ticket_prioritizer.py` contain no reference to `expects_from`.
+So the change deleted each consumer's statement of the contract it reads. The producer's
+`delivers_to` still carries it. Whether to restore those four is a store decision. It is recorded
+here because the refusal has two properties that invite over-correction. It reports only the
+first cycle it finds (`_extract_cycle`, `:250`, returns one path per run). And it says nothing
+about which edge is spurious, beyond flagging the field and whether the edge is a parent link.
 
 ---

@@ -71,6 +71,7 @@ covered_by:
   - UXP-591
   - UXP-596
   - UXP-611
+  - UXP-617
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

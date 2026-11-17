@@ -63,13 +63,13 @@ flowchart TD
     ticket_supervisor["ticket-supervisor\n(supervisor tier, priority ?)"]:::target
     __ticket_phase_agents__["__ticket_phase_agents__\n(phase tier)"]:::phase
     brainstorm_lead["brainstorm-lead\n(phase tier)"]:::phase
-    llm_expert["llm-expert\n(phase tier)"]:::phase
+    test_breaker["test-breaker\n(phase tier)"]:::phase
 
     user -->|dispatches| ticket_supervisor
     epic_supervisor -->|dispatches| ticket_supervisor
     ticket_supervisor -->|spawns| __ticket_phase_agents__
     ticket_supervisor -->|spawns| brainstorm_lead
-    ticket_supervisor -->|spawns| llm_expert
+    ticket_supervisor -->|spawns| test_breaker
 ```
 ---
 
@@ -106,6 +106,7 @@ flowchart TD
 | `Edit` |
 | `Write` |
 | `Agent` |
+| `Skill` |
 ---
 
 ## Skills Used
@@ -113,7 +114,7 @@ flowchart TD
 | Skill | Mode | Condition |
 |-------|------|-----------|
 | `building-epics` | always | — |
-| `signoff` | conditional | — |
+| `signoff` | always | — |
 ---
 
 ## Configuration

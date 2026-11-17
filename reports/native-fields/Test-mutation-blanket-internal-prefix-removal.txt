@@ -1,0 +1,16 @@
+AC-ENFORCEMENT [STRICT]: tests/knowledge/test_native_test.py::test_test_reference_removes_only_exact_adapter_keys covers not-done AC KM-400a-3-i — NOT masked (AC_ENFORCE_STRICT=1); reported as a real failure.
+F                                                                        [100%]
+================================== FAILURES ===================================
+_____________ test_test_reference_removes_only_exact_adapter_keys _____________
+tests\knowledge\test_native_test.py:169: in test_test_reference_removes_only_exact_adapter_keys
+    assert record.metadata["properties"] == {
+E   AssertionError: assert {'nested': {'...manufactured'} == {'_native_fut...manufactured'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Right contains 2 more items:
+E     {'_native_future': {'field': True}, '_native_projection_extra': False}
+E     Use -v to get more diff
+shared-layout-routing: declared_mutators=0 undeclared=0
+=========================== short test summary info ===========================
+FAILED tests/knowledge/test_native_test.py::test_test_reference_removes_only_exact_adapter_keys
+1 failed in 18.87s

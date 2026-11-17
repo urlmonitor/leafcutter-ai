@@ -1,0 +1,25 @@
+{
+  "created_at": "2026-10-03T07:39:31.811467+00:00",
+  "base_commit": "2d4bee9fe665bc2f9b173baa752081bde69bc34c",
+  "dataset_sha256": "b067c5721cc49f3510d2c2b99feaa82272db9acf0ad686ad541b2fa182fcf5d7",
+  "files_sha256": {
+    "integrations/retrieval_needs_models.py": "ea6207a413ffb01f4feb465e056d8c2cc407aa003d690a221dbd69bbc51014b4",
+    "integrations/retrieval_needs_questions.py": "447bb89a7d9ee64d9db94b6ab4365c2187888d27e76e31bccc1ca599d06eba5e",
+    "integrations/retrieval_needs_probe.py": "d935adec7d852a0aeb8903be30d2be3e2bc22076cdfa4e5d999b8abb393024f5",
+    "scripts/evaluate_retrieval_needs_probe.py": "7c991767b6566300e0be9bde3c6bb39c3963a431c38580e5f2662fdc6e238563"
+  },
+  "limits": {
+    "schema_version": "1.0",
+    "max_questions_per_call": 128,
+    "max_state_chars": 50000,
+    "timeout_seconds": 120.0,
+    "selected_probability": 0.7,
+    "rejected_probability": 0.3,
+    "max_relation_depth": 3
+  },
+  "max_live_cases": 12,
+  "tracing": "local-only; no tracer or Langfuse client instantiated",
+  "retries": 0,
+  "retrieval_executed": false,
+  "expected_labels_sent_to_provider": false
+}

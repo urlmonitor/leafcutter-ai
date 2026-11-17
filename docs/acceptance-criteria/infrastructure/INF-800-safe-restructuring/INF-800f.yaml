@@ -22,11 +22,18 @@ doc_links:
   - path: templates/workflows/code-refactoring-specialist.md
     relationship: evolves
     status: exists
+  - path: templates/agents/restructuring-specialist.md
+    relationship: related
+    status: exists
+  - path: docs/agents/cards/restructuring-specialist.card.md
+    relationship: related
+    status: exists
 origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-800f-1
 implemented_by: []
 change_target: prompt
 risk_surface: contract_boundary

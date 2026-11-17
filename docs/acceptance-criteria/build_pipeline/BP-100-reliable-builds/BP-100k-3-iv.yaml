@@ -1,0 +1,180 @@
+id: BP-100k-3-iv
+components:
+  - build_pipeline
+title: "A recorded output whose content drifted, and which carries a grounded exemption entry, is reported as a drift exemption naming its ground and does not block"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+work_status: done
+criteria: |
+  Given a build manifest recording three deployed outputs, of which one still
+    matches its recorded fingerprint and two have been hand-edited since the
+    build so their content no longer matches,
+  And given the exemption registry is empty,
+  When check-output-drift runs over that workspace,
+  Then both edited outputs are reported as drifted, the run summary states
+    drifted=2 and exempt=0, no output is reported as a drift exemption, and
+    the run blocks the commit,
+  And given instead the registry holds one entry naming the first edited
+    output with the non-blank ground "Hand-maintained consumer file; no build
+    phase writes deterministic content to it.",
+  When check-output-drift runs over the same workspace,
+  Then the first edited output is reported on its own line as a drift
+    exemption that names the output and echoes that ground verbatim,
+  And that line is distinguishable from the existing verdict for an
+    exempted artifact the build never recorded, so a reader can tell "recorded,
+    compared and differs, excused" from "never recorded, excused",
+  And the run summary states exempt=1, drifted=1 and gaps=0,
+  And given instead the registry holds a grounded entry for each of the two
+    edited outputs,
+  When check-output-drift runs over the same workspace,
+  Then the run summary states verified=3, exempt=2, drifted=0, missing=0 and
+    the run does not block the commit,
+  And every verdict is taken from running the deployed gate as a separate
+    process and reading its emitted per-artifact lines, RESULT line and exit
+    status.
+depends_on:
+  - BP-100k-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-3.yaml"
+    relationship: parent
+    status: exists
+    relevance: "Owns the exemption registry and the four-verdict vocabulary. Its first clause covers only an artifact the build deliberately does not manage (never recorded). This record covers the case PR #1013 added: the artifact IS recorded, WAS compared, and differs."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-3-v.yaml"
+    relationship: related
+    status: exists
+    relevance: "Sibling constraint that pins how narrow this suppression must stay (per key, ground-gated). Read the two together: this record says what the excusal does, -v says what it must never become."
+  - path: "templates/scripts/commit_guardian/check_output_drift.py"
+    relationship: implements
+    status: exists
+    relevance: "Pass 2's hash-mismatch branch and the DRIFT-EXEMPT REPORTING docstring section (added 2026-10-05, PR #1013, no AC at the time). Read for context only; verdicts come from running the gate."
+  - path: "templates/scripts/commit_guardian/_drift_exemptions.py"
+    relationship: describes
+    status: exists
+    relevance: "ScanResult's docstring defines verified / uncomparable / gaps. The current code counts a drift-exempt key under both verified and uncomparable, which that docstring says never happens. That counting question is open; see notes."
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: describes
+    status: exists
+    relevance: "Holds drift_gate_exemption_registry and its __drift_gate_exemption_registry_doc charter ('not a way to silence a finding the gate got right')."
+  - path: "unit_tests/commit_guardian/test_drift_exempt_recorded_key.py"
+    relationship: tested-by
+    status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+  - path: "docs/2b_direction_b_output_drift_detection.md"
+    relationship: describes
+    status: exists
+    relevance: "The reader-facing verdict table for check-output-drift (EXEMPT / GAP / MISSING / UNREADABLE and the RESULT line). As of 2026-10-08 it has NO row for the DIRECT-DRIFT: EXEMPT verdict this record describes. That is a documentation gap, not a code gap. See the it-po amended_by entry."
+assigned_agent: test-writer
+estimated_complexity: S
+declares_side_effect: false
+package_surface: false
+it_requirements:
+  - "No production change is owed. The behaviour shipped in PR #1013 and is on origin/main. Any later change to check_output_drift.py or _drift_exemptions.py must keep the three covering tests named in test_spec green, unmodified in what they assert."
+  - "The verdict line for a recorded, compared and drifted key that is excused must stay lexically distinct, by its line prefix alone, from the verdict line for an unrecorded artifact that is excused. Today these are DIRECT-DRIFT: EXEMPT and UNCOMPARABLE: EXEMPT. A consumer that reads only the prefix must be able to tell 'content question' from 'registration question'."
+  - "The ground printed on the drift-exemption line must be the declared ground's text. Trimming leading and trailing whitespace is allowed, and the validator already does it. Truncating the text, rewording it or replacing it with a generic label is not."
+  - "RESULT-line compatibility: existing fields keep their names and relative order. Any new column is appended after the last existing field, following the precedent set when unreadable was added (B-2). The positional regex in the covering test suite must keep matching."
+  - "OPEN QUESTION, DELIBERATELY NOT ENCODED: whether a drift-exempt key belongs in uncomparable, in a separate drift_exempt column, or in neither is going to an ADR. Neither this record nor its tests may assert the uncomparable value for a drift-exempt key. If the ADR changes what exempt counts, the exempt=1 / exempt=2 clauses and the matching test assertions must be amended in the same change as the code."
+  - "Verify behaviorally only (repo rule 'Gate / Workflow ACs: Verify Behaviorally, Not by Grep'). Every verdict comes from executing check_output_drift.py as a separate process from a deployed-shaped layout and reading its stderr lines, RESULT line and exit status. Grepping the gate source is forbidden, and so is importing the scan function to inspect its return value."
+  - "Before work_status may move to done, each covering test must carry a '# covers: BP-100k-3-iv' tag, because check_done_proof accepts only covers-tagged tests as proof. Adding the tags is a test-file edit and must wait until the in-flight refactor of unit_tests/commit_guardian/ has landed. If that refactor renames or moves any covering test, covered_by and test_spec must be updated in the same change that tags it."
+  - "Must follow the repo error-handling policy. No new I/O is introduced by this record, so the constraint is met by leaving the existing, already-compliant I/O in the gate untouched."
+test_spec:
+  - name: test_drifted_and_unexempt_still_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    surface_invoked: "check_output_drift.py copied from templates/scripts/commit_guardian/ into a synthesized .leafcutter/scripts/commit_guardian/ layout, run as a subprocess with HOOK_TEST_CONFIG pointing at a fixture registry"
+    description: "EXISTS, passes on origin/main. Control case for the first clause. With an empty registry the gate exits 1, the RESULT line reads drifted=2 exempt=0, and no DIRECT-DRIFT: EXEMPT line is emitted. This proves the fixture is genuine drift before any exemption is applied. It asserts the drifted COUNT, not that each of the two keys is named individually."
+  - name: test_declared_key_is_reported_as_direct_drift_exempt
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "same deployed-shaped subprocess run as above"
+    description: "EXISTS, passes on origin/main. With one grounded entry, the output contains 'DIRECT-DRIFT: EXEMPT <declared key>' and 'ground=<ground>' verbatim, and the RESULT line reads exempt=1 drifted=1 gaps=0."
+  - name: test_both_keys_declared_yields_a_clean_exit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "same deployed-shaped subprocess run as above"
+    description: "EXISTS, passes on origin/main. With both drifted keys grounded, the gate process exits 0 and the RESULT line reads verified=3 exempt=2 drifted=0 missing=0."
+test_rationale: |
+  RETROFIT CONTRACT: THESE THREE TESTS ALREADY EXIST in
+  unit_tests/commit_guardian/test_drift_exempt_recorded_key.py and pass on the
+  current code. They are listed so the ticket generator and test-writer see the
+  contract as satisfied, not so they are written again. All three run the real
+  gate as a subprocess and assert on the emitted lines, the RESULT line and
+  the exit status. That is the only shape that distinguishes a wired exemption
+  from a defined-but-ignored one, so the shape is right.
+
+  HONEST RESIDUAL GAPS between the criteria and what the tests assert. None of
+  these blocks, and none is planned here as new work:
+    (a) "distinguishable from the existing verdict for an exempted artifact
+        the build never recorded". The tests assert that the DIRECT-DRIFT: EXEMPT
+        prefix is present. They do not assert that no 'UNCOMPARABLE: EXEMPT
+        <declared key>' line appears too, so a gate that printed both lines
+        would still pass.
+    (b) "on its own line ... echoes that ground verbatim". The key and the
+        ground are asserted as two separate substrings of the combined output,
+        not as parts of the same line.
+    (c) The control asserts drifted=2 as a count. It does not assert that each
+        edited output is named individually.
+  If the record is later tightened, (a) is the one worth a one-line
+  assertNotIn. It is a cheap discrimination check against a double-reporting
+  regression.
+delivers_to: null
+expects_from:
+  ac_id: BP-100k-3
+  contract: "The drift_gate_exemption_registry mechanism, read from templates/scripts/commit_guardian/commit_guardian.json (or from HOOK_TEST_CONFIG in tests), plus its validation. validate_exemption_registry returns a dict[str, str] mapping each recorded key to a non-blank ground, and rejected entries are excluded. Also the stderr RESULT line 'check-output-drift: RESULT verified=<int> uncomparable=<int> exempt=<int> gaps=<int> drifted=<int> missing=<int> unreadable=<int>'. This record adds one per-artifact stderr line shape, 'DIRECT-DRIFT: EXEMPT <repo-relative key> ground=<ground text>', and adds no RESULT column."
+origin_agent: BrainCandy
+created: 2026-10-08
+created_by_ticket: null
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    by: it-po
+    at: 2026-10-08
+    entry: "Added package_surface: false (the record registers no config key, so the legacy python-coder + build-pipeline proxy in validate_ac.py must not demand a fictional structured spec), it_requirements (8 policy constraints), test_spec (3 descriptors describing the EXISTING tests, each marked EXISTS), test_rationale (with three honest residual gaps between criteria and assertions), a doc_link to docs/2b_direction_b_output_drift_detection.md, and a sharper expects_from contract naming the exact line shapes. readiness draft -> reviewed. criteria, assigned_agent (python-coder, kept), estimated_complexity (S, kept), covered_by, work_status, req_status and notes are unchanged. The uncomparable counting question is deliberately left unencoded pending the ADR. Documentation gap found: docs/2b_direction_b_output_drift_detection.md's verdict table has no DIRECT-DRIFT: EXEMPT row."
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_drift_exempt_recorded_key.py::TestRecordedKeyDriftExemption::test_drifted_and_unexempt_still_blocks
+  - unit_tests/commit_guardian/test_drift_exempt_recorded_key.py::TestRecordedKeyDriftExemption::test_declared_key_is_reported_as_direct_drift_exempt
+  - unit_tests/commit_guardian/test_drift_exempt_recorded_key.py::TestRecordedKeyDriftExemption::test_both_keys_declared_yields_a_clean_exit
+implemented_by:
+  - templates/scripts/commit_guardian/check_output_drift.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  RETROFIT. Authored 2026-10-08, after the fact, for behaviour shipped without
+  an AC by PR #1013 (merge 2d895308, 2026-10-05). Nothing here needs building:
+  the code is on origin/main. The criteria were written to match what the
+  existing tests actually assert, so covered_by reflects real coverage.
+
+  DONE ON 2026-10-08, AS A RETROFIT. The three covering tests now carry
+  "# covers: BP-100k-3-iv" tags, and done_proof.verify_done_eligible returned
+  eligible: true for this id. This record was written AFTER the behaviour
+  shipped (PR #1013), so its tests describe the code rather than having
+  constrained it; there was no red baseline. The declared-key test was also
+  tightened the same day: key and ground must now share one line, and the key
+  must NOT also appear under UNCOMPARABLE: EXEMPT.
+
+  WHAT THIS RECORD DELIBERATELY DOES NOT PIN: the uncomparable column. Today
+  a drift-exempt recorded key is added to the uncomparable count (and therefore
+  to the derived exempt field) while still counted in verified. That
+  contradicts the ScanResult docstring and arguably conflicts with BP-100k-3's
+  last clause ("could not compare" and "compared and matched" must be
+  distinguishable). The obvious alternative follows the precedent of the
+  unreadable column added in adversarial-review finding B-2: a separate drift_exempt
+  field and its own RESULT column. The criteria above name only what the tests
+  assert (verified, exempt, drifted, gaps, missing, exit status) and say nothing
+  about uncomparable, so they do not lock in either choice.
+  CAVEAT: if the ADR picks the separate column and the exempt field stops counting
+  these keys, the exempt=1 / exempt=2 clauses here and their tests must be
+  amended in the same change. That cost belongs with the decision. It does not
+  argue for leaving the decision open.

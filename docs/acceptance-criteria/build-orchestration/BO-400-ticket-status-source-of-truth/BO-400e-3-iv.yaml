@@ -1,0 +1,143 @@
+id: BO-400e-3-iv
+title: "An acceptance criterion is closed only when the ticket that delivered it was actually closed in the same run"
+component: build-orchestration
+components:
+  - build_orchestration
+  - finalize
+  - ac_store
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given the closable set for branch "EPIC-Alpha" holds two tickets
+      "alpha-01.md" (source acceptance criterion "BO-9100a-1") and
+      "alpha-02.md" (source acceptance criterion "BO-9100a-2")
+    And "alpha-01.md" names the phase "pull-request" as needed with no sign-off
+    And "alpha-02.md" has every phase signed off or not needed
+  When finalization closes the set
+  Then "alpha-02.md" is closed and "BO-9100a-2" is marked done
+    And the checking mechanism refuses "alpha-01.md", which stays open
+    And "BO-9100a-1" keeps the status it had before the run
+    And the run's report names "alpha-01.md" as refused and "BO-9100a-1" as left open
+      because its ticket was not closed
+
+  Given a ticket in the closable set that carries no source acceptance criterion
+  When finalization closes that ticket
+  Then no acceptance criterion is marked done on its account
+  Because an acceptance criterion marked done is taken off the backlog for good, so closing
+    one whose delivering ticket was just refused records as finished the very work the refusal
+    said was not finished.
+depends_on:
+  - BO-400e-3
+  - BO-400e-3-i
+  - BO-400e-3-ii
+doc_links:
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Sub-step C (:1365-1370) closes tickets one by one and may refuse; sub-step D (:1372-1380) then iterates 'For each ticket in OPEN_TICKETS' -- the candidate list, not the tickets C actually closed -- so a refused ticket's source AC is still marked done."
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400e-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Specifies the refusal this record must respect: a refused ticket is left open and named."
+  - path: docs/architecture/adrs/ADR-047-single-writer-ticket-close-path.md
+    relationship: describes
+    status: exists
+    relevance: "set_ticket_status.py stays the single writer of the finished state; the closer invokes it and never writes the field itself."
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    The closing loop moves out of the dispatched prompt (today's sub-steps C and D) and into the
+    close step of scripts/build_orchestration/finalize_closable_set.py. For each ticket in the fixed
+    set, in set order, it invokes the deployed set_ticket_status.py --status done, never with
+    --force (BO-400e-3-i and ADR-047 are preserved unchanged). Only for a ticket whose invocation
+    exited 0 IN THIS RUN does it then invoke mark_ac_done.py for that ticket's source AC. The AC
+    id comes from the fixed set, not from re-reading the ticket, so the AC closed is the one that
+    was listed.
+  - >-
+    The AC loop is driven by the per-ticket outcome of this run's closes, never by the candidate
+    list. Today's sub-step D iterates OPEN_TICKETS, which is exactly this defect. A refused ticket's
+    source AC is reported as left_open with the reason "ticket not closed". A ticket with no
+    source_ac closes no AC.
+  - >-
+    The close step's reply carries one entry per record in the set, with result "closed",
+    "refused" (the ticket's set_ticket_status.py exit was non-zero; its stderr is kept as the
+    reason) or "left_open" (an AC whose ticket was refused, or a non-zero mark_ac_done.py exit with
+    its stderr). finalize-feature.js builds its report from that reply only. It must not compute
+    "closed" from counts or assume success.
+  - >-
+    A refusal is not retried, not forced, and not written by another route (BO-400e-3-i). A refused
+    ticket does not stop the remaining tickets from being attempted. The archive check at finalize
+    step 5 continues to surface the open ticket downstream.
+  - "The invocations use the deployed copies of set_ticket_status.py and ac_store/mark_ac_done.py under the worktree's configured output root, the same scripts the drivers invoke, so the closer goes through the same guarded door."
+delivers_to:
+  agent: python-coder
+  contract: >-
+    In the close step's JSON reply: results: [{kind: "ticket"|"ac", id: str, path: str, before:
+    str, after: str, result: "closed"|"refused"|"left_open", reason: str|null}] in set order, plus
+    set_digest echoed from the set file. Consumed by finalize-feature.js's report (BO-400e-3-vi)
+    and by the commit path list (BO-400e-3-v: only the files of records whose result is "closed").
+expects_from:
+  - ac_id: BO-400e-3-ii
+    contract: "The persisted closable set: tickets with their source_ac id (or null) and ACs, with set_digest."
+  - ac_id: BO-400e-3-i
+    contract: "set_ticket_status.py --status done exits non-zero and leaves the ticket unchanged when any needed phase lacks a sign-off; no --force on the close path."
+test_required: true
+test_spec:
+  - name: test_refused_tickets_source_ac_keeps_its_status
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Real scratch store: alpha-01 names pull-request needed with no sign-off (source BO-9100a-1), alpha-02 all signed off (source BO-9100a-2); after the real close step alpha-02 is done, BO-9100a-2 is done, alpha-01 is unchanged and BO-9100a-1 keeps its captured status."
+    must_catch:
+      - "iterate the candidate ticket list when closing source ACs"
+      - "close the source AC before the ticket's close outcome is known"
+  - name: test_close_reply_names_the_refused_ticket_and_the_ac_left_open
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The close reply has alpha-01.md with result refused (reason carries the script's stderr) and BO-9100a-1 with result left_open, reason ticket not closed. NEGATIVE CONTROL: with alpha-01 signed off the same run closes both, which proves the refusal comes from the real set_ticket_status.py check and not from the fixture."
+  - name: test_ticket_without_source_ac_closes_no_ac
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A closable ticket with no source_ac closes and no AC file in the store changes work_status."
+  - name: test_finalize_report_carries_refused_and_left_open_from_the_close_reply
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "Drive finalize-feature.js through run_workflow_under_e2 with the close dispatch answered by the real module's reply for the refusal fixture; the final report names alpha-01.md as refused and BO-9100a-1 as left open because its ticket was not closed."
+test_rationale: >-
+  The defect is control flow: the AC loop follows the wrong list. A test can only observe it when a
+  real refusal happens, so the fixture uses a real ticket that the real set_ticket_status.py
+  refuses, with no stubbed exit code, and asserts on the store afterwards. The negative control
+  shows the refusal comes from the guarded door. The workflow test proves the finalize report is
+  built from the closer's per-record results and not from counts.
+origin_agent: BrainCandy
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_orchestration/test_bo_400e_3_iv_close.py
+  - unit_tests/workflows/test_bo_400e_3_finalize_wiring.py
+implemented_by:
+  - scripts/build_orchestration/_fcs_close.py
+  - templates/workflows-js/finalize-feature.js
+notes: |
+  Requested by BrainCandy 2026-10-15 (KI-BO-20260930). Found while confirming causes (1)-(3):
+  not on the caller's list, but it is the same defect shape -- a record outside the "actually
+  delivered" set receiving done -- reached through the refusal path BO-400e-3-i introduced.
+  BO-400e-3-i made sub-step C able to refuse; sub-step D was not updated to follow its
+  outcome. Line citations are against origin/main at authoring time.

@@ -1,0 +1,241 @@
+id: GE-123e-2
+components:
+  - commit_guardian
+title: "No word in the commit's own message, by any route the message travels, switches the feedback-id check off"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a scratch repository with the commit checks installed,
+  And a staged ticket change that appends the sign-off heading
+    "### 2026-11-16 10:00 — python-coder (status: ok)" with no feedback-id line,
+  When that change is committed by each of these six routes in turn, from the
+    same starting state:
+    an inline message whose subject is "Add sign-off [NO-FEEDBACK-CHECK]";
+    an inline message whose subject is "Add sign-off" and whose body line is
+      "[NO-FEEDBACK-CHECK]";
+    a message file holding that subject and body, handed to the commit by file;
+    the shared commit step agents use, given that message file;
+    a commit by file whose environment also names that message file in the
+      GIT_COMMIT_MSG variable;
+    a commit by file whose environment also names that message file in a
+      variable called COMMIT_EDITMSG,
+  Then every one of the six commits is refused and the branch tip is unchanged
+    after each attempt,
+  And each refusal is the same refusal the same change receives when committed
+    with the plain inline message "Add sign-off",
+  And no output of any of the six attempts says that the check was skipped.
+
+  Given the same repository,
+  And a staged ticket change that appends the same heading followed, on the next
+    line, by "feedback-id: fb_2026-11-16_a1b2c3d4",
+  When that change is committed with the inline message
+    "Add sign-off [NO-FEEDBACK-CHECK]",
+  Then the commit succeeds,
+  Because the token is now ordinary text: it neither excuses a missing id nor
+    causes a present one to be refused.
+depends_on:
+  - GE-123e
+  - GE-123e-1
+doc_links:
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20260901-feedback-id-escape-hatch-reads-the-previous-commit-message.md
+    relationship: related
+    status: exists
+    relevance: "Directly observed twice: the token in an inline subject, an inline body and a message file changed nothing. Reported workaround that worked: passing the message file's location through the environment. Both are arms of this criterion, and both must now be refused."
+  - path: docs/testing/test-angles-failure-catalogue.md
+    relationship: describes
+    status: exists
+    relevance: "FP-7: tests set the environment the check reads themselves and stayed green over a bypass that never fired."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113b-2.yaml
+    relationship: related
+    status: exists
+    relevance: "FENCE. The structural-change bypass token on other checks is approved behaviour and is not touched by this criterion."
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20261116-arch-bypass-token-reads-the-previous-commit-message.md
+    relationship: related
+    status: exists
+    relevance: "FENCE. The same stale-message pattern on the [NO-ARCH-UPDATE] token of five other checks. Not touched here."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: related
+    status: exists
+    relevance: "The check is edited in templates/; the deployed copies are build outputs."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "Consumed by GE-123e-2-i. The check in templates/scripts/commit_guardian/check_feedback_id.py with every message source it read for the token removed (the --commit-msg-file argument, the GIT_COMMIT_MSG and COMMIT_EDITMSG environment variables and the COMMIT_EDITMSG file in the git directory) and no replacement source added, so no message, current or earlier, can change its verdict; and the skip branch and its 'skipped via [NO-FEEDBACK-CHECK] escape hatch' output line removed."
+expects_from:
+  ac_id: GE-123e-1
+  contract: "The single refusal verdict for a newly added id-less sign-off heading, identical across the inline-message, message-file and shared-commit-step routes."
+declared_files:
+  - path: templates/scripts/commit_guardian/check_feedback_id.py
+    state: existing
+  - path: tests/test_check_feedback_id.py
+    state: existing
+it_requirements:
+  - "REMOVE, DO NOT NARROW: remove every message source the check reads for the token. That is the --commit-msg-file argument, the GIT_COMMIT_MSG and COMMIT_EDITMSG environment variables, and the COMMIT_EDITMSG file in the git directory. Do not introduce a replacement source that could carry a token (git log, MERGE_MSG, SQUASH_MSG, a prepare-commit-msg or commit-msg stage). An argument kept only for backward compatibility must not influence the verdict and must not turn into a refusal or a skip."
+  - "Remove the skip branch and its output line ('skipped via [NO-FEEDBACK-CHECK] escape hatch'). Update the module docstring, the CLI help text and the DECISION HISTORY so that no surface of the check describes a bypass. The help text and the refusal advertise it today."
+  - "REGRESSION LOCK TO RETIRE, IN THE SAME CHANGE: tests/test_check_feedback_id.py exists only to assert the skip. It hand-writes COMMIT_EDITMSG into a fake git directory around its lines 92-161, sets the two environment variables, and imports _should_skip from the scripts/ build output. Delete it, or replace it with real-commit tests that assert the inverse, in the same change as the code. Leaving it next to the new tests is a defect, because one of the two is then wrong. The module cannot survive unchanged anyway: the symbol it imports is removed."
+  - "ENVIRONMENT ARMS: each is a real commit by file run with GIT_COMMIT_MSG (respectively COMMIT_EDITMSG) set in that commit's own environment, and each asserts that commit's outcome. Setting either variable without making a commit is not evidence for any arm (notes, FP-7)."
+  - "FENCE: this change does not touch the structural-change token [NO-ARCH-UPDATE] on other checks (GE-113b-*; its own stale-message defect is KI-CG-20261116-arch-bypass-token-reads-the-previous-commit-message), the commit framework's per-hook SKIP setting, or the shared commit step's handling of a skip request."
+  - "HOUSEKEEPING for the implementing change (not a declared file of this record): KI-CG-20260901-feedback-id-escape-hatch-reads-the-previous-commit-message moves to resolved in the commit-guardian known-issues register and cites this record."
+  - "CANONICAL SOURCE: templates/scripts/commit_guardian/check_feedback_id.py (ADR-001). The deployed copies are build outputs. Show parity with a build.py round-trip."
+  - "TEST EVIDENCE (binding): real git commits in a scratch repository with the hook installed, one per route. The routes are inline -m with the token in the subject, inline -m with the token in the body, a commit by file with the shared commit step's git arguments (commit -q --cleanup=verbatim -F <file>), the shared commit step itself, and the two environment arms. The 'same refusal' clause compares each route's refusal text with the plain-message refusal taken from the same starting state. Expected test home: unit_tests/commit_guardian/, reusing GE-123e-1's harness."
+test_intent:
+  - clause: every one of the six commits is refused and the branch tip is unchanged after each attempt
+    needs_test: true
+    reason: Each route is a distinct message source the check used to read, and only a real commit per route, not a variable set without a commit, proves that none of them still switches the check off.
+  - clause: each refusal is the same refusal the same change receives when committed with the plain inline message "Add sign-off"
+    needs_test: true
+    reason: A message-dependent branch that still changes the refusal shows up only as a text difference from the plain-message refusal.
+  - clause: no output of any of the six attempts says that the check was skipped
+    needs_test: true
+    reason: The skip line is the observable trace of the old bypass, so its absence on every route is executable evidence that the bypass is gone.
+  - clause: 'the commit succeeds, Because the token is now ordinary text: it neither excuses a missing id nor causes a present one to be refused'
+    needs_test: true
+    reason: This negative control fails an implementation that refuses any message carrying the token.
+test_spec:
+  - name: test_ge_123e_2_six_token_routes_all_refused_tip_unchanged
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Parametrised over the six routes, each a real git commit from the same starting state with the deployed hook installed: token in inline subject; token in inline body; message file by commit -q --cleanup=verbatim -F; commit_changes.py with that file; the same -F commit with GIT_COMMIT_MSG naming the file in that commit's own environment; the same with a COMMIT_EDITMSG variable. Every attempt exits non-zero and HEAD is unchanged. RED today for the two environment arms (the check reads both variables and skips); the first four are already refused today because the check reads a stale file."
+    proves_clause: 'every one of the six commits is refused and the branch tip is unchanged after each attempt'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+  - name: test_ge_123e_2_no_message_source_still_switches_check_off
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "One real commit per message source the check used to read: the --commit-msg-file argument (hook wrapper passes it), GIT_COMMIT_MSG naming a file, GIT_COMMIT_MSG holding the raw string, COMMIT_EDITMSG naming a file, and the COMMIT_EDITMSG file git itself wrote in the git directory. Each carries the token and each is refused. The environment is set only on a real commit, never without one."
+    proves_clause: 'every one of the six commits is refused and the branch tip is unchanged after each attempt'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - the GIT_COMMIT_MSG variable is still read for the token
+      - the COMMIT_EDITMSG variable is still read for the token
+      - the --commit-msg-file argument is still read for the token
+      - the check reads the message file git writes for the current commit instead of the old one
+  - name: test_ge_123e_2_each_refusal_equals_plain_message_refusal
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "From the same starting state commit the id-less change with the plain inline message Add sign-off and keep the refusal text. Each of the six token routes must produce byte-identical hook refusal text (the shared-step route read from hook_output). Catches a message-dependent branch that changes wording without skipping."
+    proves_clause: 'each refusal is the same refusal the same change receives when committed with the plain inline message "Add sign-off"'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+  - name: test_ge_123e_2_no_attempt_says_check_was_skipped
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Across all six real attempts, assert stdout plus stderr contain neither the word skipped nor the phrase escape hatch. RED today on the two environment arms, which print the skip line."
+    proves_clause: 'no output of any of the six attempts says that the check was skipped'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - the skip line is still printed on a route that is nevertheless refused
+      - the skip branch survives for the environment routes only
+  - name: test_ge_123e_2_token_with_real_id_commits_as_ordinary_text
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Staged change appends the heading plus feedback-id: fb_2026-11-16_a1b2c3d4; committed inline with Add sign-off [NO-FEEDBACK-CHECK]. The commit succeeds and HEAD advances by one. Fails a check that refuses any message carrying the token."
+    proves_clause: 'the commit succeeds, Because the token is now ordinary text: it neither excuses a missing id nor causes a present one to be refused'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - a check that refuses any commit whose message carries the token
+      - a check that treats the token as a reason to inspect the heading more strictly
+  - name: test_ge_123e_2_shared_commit_step_with_token_file_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "Run commit_changes.py as a subprocess with a message file holding the subject and the token body line plus the id-less ticket path. Assert exit 1, one JSON answer with status hook_failed, hook_output free of any skip line, and HEAD unchanged."
+    proves_clause: 'every one of the six commits is refused and the branch tip is unchanged after each attempt'
+    code_file: templates/scripts/commit_changes.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+  - templates/scripts/commit_changes.py
+  - tests/test_check_feedback_id.py
+  - unit_tests/commit_guardian/_ge_133a_harness.py
+  - unit_tests/commit_guardian/test_folder_density_merge_commit.py
+file_findings:
+  - file: templates/scripts/commit_guardian/check_feedback_id.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the _should_skip message sources, the skip branch and the escape-hatch help and refusal text that this criterion removes.
+    decision: null
+  - file: tests/test_check_feedback_id.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the regression lock that asserts the skip through a hand-written COMMIT_EDITMSG and environment variables, which this criterion retires.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+  - tests/test_check_feedback_id.py
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by:
+  - GE-123e-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PROMISE 2 OF GE-123e, first half: this commit's OWN message. The carry-over half
+  (a message left by an EARLIER commit) is the L3 child GE-123e-2-i. It is the arm
+  that actually catches the defect, and it is split out so it cannot be dropped as
+  a variant of this one.
+
+  THE PROMISE IS ABOUT THE WORD, WHATEVER ROUTE CARRIES IT (GE-123e notes). The
+  direction chosen is to REMOVE the bypass entirely: no token, and no message
+  source read for it. Nobody asked for a narrower bypass, so none is specified. An
+  implementation that keeps reading a message source but "fixes" which file it
+  reads still fails this criterion, because the token must change nothing on any
+  route.
+
+  WHY THE SECOND ARM. A check that refuses any commit whose message carries the
+  token satisfies every refusal arm above. The token-plus-real-id arm rules that
+  out.
+
+  THE TWO ENVIRONMENT ARMS ARE NOT SIMULATION. They reproduce the reported
+  workaround exactly: a real commit by file, run with the environment variable
+  naming the message file. The assertion is that real commit's outcome. That is
+  different from what FP-7 records, where a test set the variable and called the
+  check directly, in place of a commit, and asserted a skip. Setting either
+  variable WITHOUT making a real commit is not evidence for any arm here.
+
+  REGRESSION LOCK TO RETIRE (for the IT PO). The existing test module for this check
+  writes the repository's last-commit-message file by hand and asserts a skip. It
+  locks the defect in, and it must be removed or inverted in the same change, not
+  left beside the new tests. A green run with both present means one of them is
+  wrong.
+
+  OUT OF SCOPE: the structural-change bypass token on other checks (GE-113b-*; its
+  own stale-message defect is KI-CG-20261116); the commit framework's per-check skip
+  setting, which is not a word in a message; the feedback-id value-shape check.
+
+  TEST-EVIDENCE RULE (for the IT PO; non-negotiable). Every scenario is verified
+  through REAL git commit calls in a scratch repository with the hook installed.
+  Use both an inline -m message and a message file passed the way the shared commit
+  step passes it, and drive the shared commit step itself for the agent route.
+  Hand-writing the repository's last-commit-message file, or setting the
+  environment variables the check reads in place of making a commit, is NOT
+  evidence (test-angles failure catalogue, EPIC-ComputedQualityGates FP-7).

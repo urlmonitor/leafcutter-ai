@@ -4,7 +4,7 @@ description: "The baseline business information every product rests on -- Mock D
 type: reference
 status: active
 created: 2026-07-10
-last_updated: 2026-09-25
+last_updated: 2026-10-09
 components:
   - ux_prototyping
 related_docs:
@@ -82,7 +82,7 @@ mock records those steps read/write. Click a step → see its ACs' live status +
 ## Reading a flow (for humans)
 
 Open `flows/<product>/<name>.md` — a plain-language rendering generated from the JSON
-(flow `summary`, each step's `human` line, the "what if" branches, and the acceptance
+(flow `summary`, each step's `description`, the "what if" branches, and the acceptance
 checks). **Never edit the `.md`** — edit the `.flow.json` and regenerate. The JSON stays
 the single source of truth; the `.md` and the flow-site are two read-only views of it.
 

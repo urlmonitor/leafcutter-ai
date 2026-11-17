@@ -359,7 +359,6 @@ class TestManifestParity(unittest.TestCase):
         # covers: BP-100i-2 (fail-open)
         legacy_manifest = _make_manifest(self.legacy_dir, ["check-alpha"])
         canonical_manifest = self.canonical_dir / "commit_guardian.json"
-        # canonical_manifest does not exist
 
         violations = _mod.check_manifest_parity(canonical_manifest, legacy_manifest)
 
@@ -374,7 +373,6 @@ class TestManifestParity(unittest.TestCase):
         # covers: BP-100i-2 (fail-open)
         canonical_manifest = _make_manifest(self.canonical_dir, ["check-alpha"])
         legacy_manifest = self.legacy_dir / "commit_guardian.json"
-        # legacy_manifest does not exist
 
         violations = _mod.check_manifest_parity(canonical_manifest, legacy_manifest)
 
@@ -458,7 +456,6 @@ class TestDeployedParity(unittest.TestCase):
         (self.canonical / "check_alpha.py").write_text("", encoding="utf-8")
         (self.deployed / "check_alpha.py").write_text("", encoding="utf-8")
         (self.canonical / "check_new_hook.py").write_text("", encoding="utf-8")
-        # deployed does NOT have check_new_hook.py yet (build.py not run)
 
         violations = _mod.check_deployed_parity(
             self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
@@ -516,7 +513,6 @@ class TestDeployedParity(unittest.TestCase):
         """BP-100i-3-i: deployed output dir absent → skip, no violation (exit 0)."""
         # covers: BP-100i-3-i
         (self.canonical / "check_alpha.py").write_text("", encoding="utf-8")
-        # self.deployed does NOT exist
 
         violations = _mod.check_deployed_parity(
             self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
@@ -564,7 +560,6 @@ class TestIntegrationMain(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self.project_root = Path(self._tmp.name)
 
-        # Create the directory structure
         self.runtime_dir = self.project_root / "scripts" / "commit_guardian"
         self.canonical_dir = self.project_root / "templates" / "scripts" / "commit_guardian"
         self.legacy_dir = self.project_root / "templates" / "commit-guardian"
@@ -594,13 +589,11 @@ class TestIntegrationMain(unittest.TestCase):
         )
 
         # Write minimal canonical manifest (needed by manifest parity check)
-        (self.canonical_dir / "commit_guardian.json").write_text(
-            json.dumps({"hooks_manifest": {"hooks": []}}), encoding="utf-8"
-        )
-        # Write minimal legacy manifest
-        (self.legacy_dir / "commit_guardian.json").write_text(
-            json.dumps({"hooks_manifest": {"hooks": []}}), encoding="utf-8"
-        )
+        empty_manifest = json.dumps({"hooks_manifest": {"hooks": []}})
+        for manifest_dir in (self.canonical_dir, self.legacy_dir):
+            (manifest_dir / "commit_guardian.json").write_text(empty_manifest, encoding="utf-8")
+        # Committed package declaration table (no judgment hooks registered -> no rules)
+        (self.canonical_dir.parent / "precommit-autofix.json").write_text('{"rules": []}', encoding="utf-8")
 
     def tearDown(self) -> None:
         """Remove temporary project."""
@@ -721,7 +714,6 @@ class TestConfigLoadFailOpen(unittest.TestCase):
             os.chdir(original_cwd)
 
         # Either 0 (in sync) or 1 (parity violation exists in current repo state).
-        # Just verify it's a valid exit code (0 or 1) and doesn't raise.
         self.assertIn(result, (0, 1), msg="main() must return 0 or 1.")
 
     def test_main_returns_0_when_config_absent(self) -> None:
@@ -775,8 +767,15 @@ class TestConfigLoadFailOpen(unittest.TestCase):
         )
 
     def test_main_returns_0_on_malformed_hooks_manifest(self) -> None:
-        """H-1 fail-open: main() returns 0 when hooks_manifest is not a dict."""
+        """H-1: main() does not raise when hooks_manifest is not a dict; GE-132a-1: reports could-not-check (exit 2).
+
+        The name predates GE-132a-1 and is kept so the contract-shrinking guard and the test's history
+        stay continuous. GE-132a-1: an existing manifest without a hooks_manifest object is
+        could-not-check (exit 2), no longer fail-open; H-1 (no raise) still holds.
+        """
         # covers: H-1 (AttributeError from malformed hooks_manifest is handled)
+        import contextlib
+        import io
         import os
 
         # Set up a full project structure so check_script_parity passes,
@@ -803,7 +802,6 @@ class TestConfigLoadFailOpen(unittest.TestCase):
         (runtime_dir / "commit_guardian.json").write_text(
             json.dumps({"hook_parity": parity_cfg}), encoding="utf-8"
         )
-        # Write a manifest where hooks_manifest is a string, not a dict
         malformed = {"hooks_manifest": "oops"}
         (canonical_dir / "commit_guardian.json").write_text(
             json.dumps(malformed), encoding="utf-8"
@@ -815,15 +813,13 @@ class TestConfigLoadFailOpen(unittest.TestCase):
         original_cwd = Path.cwd()
         try:
             os.chdir(self.tmp)
-            result = _mod.main()
+            with contextlib.redirect_stdout(io.StringIO()) as captured:
+                result = _mod.main()
         finally:
             os.chdir(original_cwd)
 
-        self.assertEqual(
-            result,
-            0,
-            msg="H-1: malformed hooks_manifest must not raise; main() must return 0.",
-        )
+        self.assertIn("could_not_check", captured.getvalue())
+        self.assertEqual(result, 2, msg="H-1: malformed hooks_manifest must not raise; GE-132a-1: main() returns 2 (could-not-check).")
 
     def test_all_in_sync_silent_stdout_stderr(self) -> None:
         """BP-100i-5: when all dirs are in sync, stdout AND stderr are completely silent."""
@@ -855,15 +851,11 @@ class TestConfigLoadFailOpen(unittest.TestCase):
         (runtime_dir / "commit_guardian.json").write_text(
             json.dumps({"hook_parity": parity_cfg}), encoding="utf-8"
         )
-        (canonical_dir / "commit_guardian.json").write_text(
-            json.dumps({"hooks_manifest": {"hooks": [{"id": "check-hook-parity", "enabled": True}]}}),
-            encoding="utf-8",
-        )
-        (legacy_dir / "commit_guardian.json").write_text(
-            json.dumps({"hooks_manifest": {"hooks": [{"id": "check-hook-parity", "enabled": True}]}}),
-            encoding="utf-8",
-        )
-        # Same hook script in both runtime and canonical dirs
+        parity_manifest = json.dumps({"hooks_manifest": {"hooks": [{"id": "check-hook-parity", "enabled": True}]}})
+        for manifest_dir in (canonical_dir, legacy_dir):
+            (manifest_dir / "commit_guardian.json").write_text(parity_manifest, encoding="utf-8")
+        # Committed package declaration table (no judgment hooks registered -> no rules)
+        (canonical_dir.parent / "precommit-autofix.json").write_text('{"rules": []}', encoding="utf-8")
         (runtime_dir / "check_alpha.py").write_text("", encoding="utf-8")
         (canonical_dir / "check_alpha.py").write_text("", encoding="utf-8")
 
@@ -1068,7 +1060,6 @@ class TestDeployedParityContentHash(unittest.TestCase):
         """
         # covers: BP-100i-3
         (self.canonical / "check_new.py").write_text("# new script\n", encoding="utf-8")
-        # deployed dir exists but does NOT have check_new.py
 
         violations = _mod.check_deployed_parity(
             self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
@@ -1112,7 +1103,6 @@ class TestDeployedParityContentHash(unittest.TestCase):
 # ---------------------------------------------------------------------------
 # BP-100i-3: Process-level (real subprocess exit code) coverage
 # ---------------------------------------------------------------------------
-#
 # GAP THIS CLASS CLOSES: every test above calls check_deployed_parity(...)
 # directly and inspects the returned Python list. Nothing in the suite runs
 # the hook as an actual OS process and asserts its returncode. An adversarial
@@ -1224,7 +1214,6 @@ class TestDeployedParityProcessInvocation(unittest.TestCase):
             (self.canonical_dir / name).write_text("", encoding="utf-8")
         for name in ("check_alpha.py", "check_beta.py", "run_hook.py"):
             (self.deployed_dir / name).write_text("", encoding="utf-8")
-        # check_gamma.py and check_delta.py intentionally NOT deployed.
 
         result = self._run_hook_as_process()
 

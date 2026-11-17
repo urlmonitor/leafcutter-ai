@@ -1,0 +1,266 @@
+id: GE-120g-4-i
+title: "Seeing the same verdict again on a later day is not news, so the liveness check leaves the stored record and the file alone and writes only when a verdict actually changes"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  GE-120g-4 says a run of the liveness check that finds no `currently` block
+  needing an update leaves the deployed manifest byte-for-byte identical. On the
+  day the manifest was built that holds. On every later day it does not: each run
+  builds a fresh `currently` record stamped with today's date and today's
+  evidence, so a run that sees exactly what the last one saw still differs from
+  what is stored, and the file is rewritten. The next commit then fails
+  `check-output-drift` on a file the author never touched — the very defect the
+  parent exists to close, reached by the calendar instead of by the rendering.
+
+  This record fixes what "needing an update" means.
+
+  Definition — "the same verdict". A newly observed verdict is the same as the
+  stored one when, and only when, all of these hold:
+    - its `state` equals the stored `state`,
+    - it carries the same number of evidence entries as the stored record,
+    - each evidence entry, taken in order, names the same command and ended
+      with the same exit code as the stored entry in that position.
+  The output text an evidence command printed is NOT part of the verdict, and
+  neither is the date. A verdict is a fact about what the probes decided; the
+  exit code is that decision. The text around it may legitimately change with
+  nothing about the decision changing — a linter upgrade rewords a message, a
+  version string in a banner moves from one release to the next — and if text
+  counted, every such upgrade would rewrite the deployed file in every built
+  layout and break the following commit, which is the defect this record closes.
+  A changed command or a changed number of entries does count: the check is then
+  examining something different, and the stored record would otherwise describe
+  a probe that no longer runs.
+
+  Definition — `observed`. After this change, `observed` is the date on which the
+  current verdict was FIRST observed, not the date of the most recent run. It
+  answers "since when has this been true?", and it moves only when the verdict
+  does.
+
+  Scenario: Re-observing the same verdict on a later day changes nothing
+    Given a deployed manifest whose negative control has a stored `currently`
+      record with `state: passing`, `observed: 2026-10-11`, and two evidence
+      entries — the known-bad probe with exit code 1 and the known-clean probe
+      with exit code 0,
+    And the check is run on 2026-10-12,
+    And on that run the known-bad probe again exits 1 and the known-clean probe
+      again exits 0, so the state is again `passing`,
+    When the check runs to completion and exits,
+    Then the stored record still reads `state: passing` and `observed: 2026-10-11`,
+    And its evidence entries, including their output text, are exactly as they
+      were stored,
+    And the manifest file's bytes are exactly what they were before the run,
+    Because nothing the author needs to know has changed, and a file that changes
+      every morning for no reason is a file whose changes nobody can trust — and
+      here it also blocks the day's second commit.
+
+  Scenario: Different wording around the same decision is still the same verdict
+    Given the same stored record as above,
+    And on this run the known-bad probe exits 1 and the known-clean probe exits 0,
+      but the known-bad probe's printed message is worded differently from the
+      stored output text, as it would be after a linter upgrade,
+    When the check runs to completion and exits,
+    Then the stored record, including the old output text and `observed:
+      2026-10-11`, is kept unchanged,
+    And the manifest file's bytes are exactly what they were before the run,
+    Because the stored evidence is the record of when this verdict was first
+      established, not a transcript of the latest run.
+
+  Scenario: A verdict that changes is recorded
+    Given a stored `currently` record with `state: passing` and `observed:
+      2026-10-11`,
+    And on a run made on 2026-10-12 the known-bad probe now exits 0 — the control
+      no longer catches what it exists to catch — so the newly observed state is
+      `failing`,
+    When the check runs to completion and exits,
+    Then the stored record reads `state: failing` and `observed: 2026-10-12`,
+    And its evidence entries are the ones from this run, with this run's commands,
+      exit codes and output text,
+    And the manifest file on disk has been rewritten to carry that record,
+    Because a check that keeps its file still by never writing it would hide the
+      one event this record exists to surface: a control that stopped working.
+
+  Scenario: Every direction of change is a change
+    Given a stored `currently` record in one of these states, and a run whose
+      newly observed state differs from it:
+        | stored     | newly observed |
+        | passing    | failing        |
+        | failing    | passing        |
+        | unverified | passing        |
+        | unverified | failing        |
+    When the check runs to completion and exits,
+    Then for each row the stored record carries the newly observed state, the
+      date of that run as `observed`, and that run's evidence,
+    Because a recovery is as much news as a failure, and a control's first real
+      observation is the most important entry it will ever get.
+
+  Scenario: Same state, different exit code, is a change
+    Given a stored `currently` record with `state: failing` whose known-clean
+      evidence entry ended with exit code 1,
+    And on a later run the state is still `failing` but the known-clean probe now
+      ends with exit code 2,
+    When the check runs to completion and exits,
+    Then the stored record carries this run's evidence and this run's date as
+      `observed`,
+    Because the exit code is the decision itself; two different decisions that
+      happen to fold into the same state are still two different things to have
+      seen.
+
+  Scenario: The verdict and the printed result are unaffected
+    Given any manifest and any stored `currently` records,
+    When the check runs,
+    Then the per-check result lines it prints and the exit code it ends with are
+      what they would have been before this change,
+    Because this record governs what the check writes down, not what it decides
+      or reports — the same fence its parent draws.
+depends_on:
+  - GE-120g-4
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120g-4.yaml"
+    relationship: parent
+    status: exists
+    relevance: "Its first scenario is the one this record makes true across days. Read its it_requirements: the data-not-rendering comparison it prescribes is correct and stays — this record narrows what counts as a data change."
+  - path: "templates/scripts/commit_guardian/check_negative_control_liveness.py"
+    relationship: specifies
+    status: exists
+    relevance: "Where a fresh `currently` record is built on every run, stamped with today's date and today's evidence, and where the write decision compares the parsed document against its pre-sweep snapshot. The fix lives here."
+  - path: "docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20260929-hook-run-strips-em-dashes-from-deployed-config.md"
+    relationship: context
+    status: exists
+    relevance: "The original rewrite-the-deployed-file defect GE-120g-4 fixed. This record closes the same failure reached by a different route: the date rather than the rendering."
+  - path: "templates/scripts/commit_guardian/_negative_control_pairing.py"
+    relationship: related
+    status: exists
+    relevance: "`ncp`. `blocked_pair_currently()` and `no_entry_disposition()` build `blocked` records stamped with today's date and evidence that carries NO `exit_code`; the comparison must cover that shape. Also the precedent home for a pure helper when the liveness file lacks line headroom."
+  - path: "unit_tests/commit_guardian/test_ge_120g_4.py"
+    relationship: related
+    status: exists
+    relevance: "The parent's tests, whose byte-identity arm runs the REAL deployed manifest whose check-lint-gate record reads `observed: 2026-10-12`. It is green today only because today IS 2026-10-12; from 2026-10-13 it goes red on current code. This record is what keeps it green. The new tests mirror its subprocess harness."
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+    relevance: "Why the template copy is the only one to edit."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "CANONICAL SOURCE, ADR-001. Edit templates/scripts/commit_guardian/check_negative_control_liveness.py (and, only if the helper is placed there, templates/scripts/commit_guardian/_negative_control_pairing.py). scripts/commit_guardian/ and .leafcutter/ are build.py outputs; never edit them."
+  - "ONE PURE 'SAME VERDICT' COMPARISON, implementing the criterion's definition exactly and nothing else: stored and new `state` equal; `evidence` lists of equal length; for every position, equal `command` and equal `exit_code`. `output` and `observed` are never compared. A stored `currently` that is absent, not a dict, or whose `evidence` is not a list compares as NOT the same verdict (it is then replaced, as today) -- the helper must not raise on such a record."
+  - "BLOCKED RECORDS, DECIDED: an evidence entry's `exit_code` is compared as present-or-absent. Absent on both sides is EQUAL (a `blocked` record re-observed with the same commands and the same missing exit code(s) is the same verdict and is kept); absent on one side and present on the other is a CHANGE. This covers every blocked shape `_examine` builds: `_blocked()` (one entry, no exit_code), `ncp.blocked_pair_currently()` for the declaration-level cannot-discriminate case (one entry, no exit_code, acceptable command folded into `output`), `ncp.no_entry_disposition()` (same shape), and the failed-second-invocation case (entry 0 with exit_code, entry 1 without). The schema (config/verification_flow.schema.json $defs/currently.evidence) makes exit_code optional, so absent is a legitimate value, not an error."
+  - "KNOWN CONSEQUENCE, accepted by the criterion's definition: in the declaration-level cannot-discriminate blocked record the acceptable command lives only in `output`, so changing ONLY the declared acceptable command of a still-non-discriminating pair does not count as a change. Do not widen the comparison to cover it -- that would contradict 'output text is NOT part of the verdict'. Record it in the DECISION HISTORY entry."
+  - "KEEP THE STORED BLOCK BY NOT ASSIGNING. In `_build_records`' examined branch, assign `negative_control['currently'] = currently` only when the new `currently` is NOT the same verdict as the stored one. When it is the same, leave the stored dict object untouched (do not copy fields across, do not refresh `observed`, do not replace evidence), so `main()`'s existing `data != before_sweep` deepcopy comparison sees no change and does not call `_write_manifest`. `_examine` itself still runs both subprocesses every time; only the assignment is conditional."
+  - "THE `_unverified` PATH IS UNCHANGED. It is reached only when the hook is excluded by `--check-id` AND has no stored `currently`, so there is never a stored verdict to compare against and it writes, as today. The excluded-with-record branch is also unchanged (already writes nothing)."
+  - "DO NOT CHANGE `main()`'s WRITE DECISION OR THE RENDERING. GE-120g-4's data-not-rendering comparison (`copy.deepcopy` snapshot before `_build_records`, write only when `data != before_sweep`) and `_write_manifest`'s `ensure_ascii=False` stay exactly as they are; this record changes only what `_build_records` puts into `data`."
+  - "PRINTED LINES AND EXIT CODE UNCHANGED. `_build_records` reads the record's `state` from `negative_control['currently']['state']` after the (now conditional) assignment; that equals the newly observed state in both branches (kept only when states are equal), so `_format_result_line` output and `_exit_code_for` are unaffected. `demonstration`, `discrimination` and `entry_point` keep coming from this run's `_examine` result, never from the stored block."
+  - "ERROR-HANDLING POLICY (CLAUDE.md Rule 4): the comparison helper is pure -- no try/except, no logging inside it. Existing OSError/JSONDecodeError handling on load/write and the subprocess wrapping in `_run_negative_control_command` stay as they are."
+  - "FILE SIZE: the liveness module has historically sat near its 400-counted-line limit (DECISION HISTORY entries for GE-120f-1-ii/-i). If the helper does not fit, place it in `_negative_control_pairing.py` (the established split precedent; deployed wholesale with the commit_guardian tree, no deploy-map change) and call it as `ncp.<name>`. Do not compress existing code to make room."
+  - "ADD A DECISION HISTORY ENTRY to the module docstring of every file touched, dated, tagged GE-120g-4-i: the calendar-driven rewrite measured on 2026-10-12; the 'same verdict' definition; `observed` now meaning first-observed; the blocked missing-exit_code decision; the acceptable-command-in-output consequence above."
+  - "NO TEMPLATE CONFIG CHANGE. templates/scripts/commit_guardian/commit_guardian.json already stores `observed: 2026-10-12` on check-lint-gate's `currently`, which under the new meaning is its first-observed date. Its stored evidence `command` fields are written in deployed-resolved form (`python .leafcutter/scripts/...`), matching what `_examine` records from the resolved declaration in a built layout -- spot-check that by running the deployed check twice against a freshly built layout's manifest with the stored date backdated, and confirming the file is untouched."
+test_spec:
+  - name: test_same_verdict_on_a_later_day_leaves_manifest_bytes_identical
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Fixture (shared by every test in test_ge_120g_4_i.py): a temp dir holding probe.py, outcomes.json and commit_guardian.json. probe.py takes one arg (`bad` or `accept`), reads outcomes.json from cwd, prints that role's `text` and exits with that role's `exit`; commands stay textually constant so only outcomes.json varies between runs. The manifest has one hook: id `probe-hook`, entry `<py> probe.py`, command `<py> probe.py accept`, negative_control.command `<py> probe.py bad` (`<py>` = shlex.quote(sys.executable), so identity resolves to `probe` on both sides -> demonstration=entry_point). It is serialised with indent=4 (NOT json.dumps(indent=2)), so ANY rewrite changes the bytes. The stored currently is state passing, observed 2026-10-11 (a fixed past date -- no clock mocking), evidence [bad cmd/exit 1/text X, accept cmd/exit 0/text Y]. Run the check as a subprocess with cwd=tmp dir and --manifest <tmp>/commit_guardian.json; outcomes bad exit 1 text X, accept exit 0 text Y. Assert sha256 of the manifest bytes unchanged. RED today: the fresh record is stamped with today's date, so data != snapshot and the file is rewritten."
+  - name: test_reworded_output_with_same_exit_codes_keeps_stored_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Same fixture; outcomes.json changes the bad probe's text to a different wording, exit codes unchanged (1 / 0). Assert bytes unchanged AND, parsed, the stored record still has observed 2026-10-11 and the OLD output text X. RED today (rewritten with today's date and the new text)."
+  - name: test_passing_to_failing_is_recorded_with_new_date_and_evidence
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Same fixture; outcomes.json makes the bad probe exit 0 (new text Z). Assert the parsed record reads state failing, observed == date.today().isoformat(), evidence == this run's [bad cmd/exit 0/text Z, accept cmd/exit 0/text Y], and the file bytes differ from before. GREEN ON ARRIVAL (current code always rewrites); it is the regression guard against the cheapest fix -- never writing -- which the notes name."
+  - name: test_every_direction_of_state_change_is_recorded
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "subTest per row of the direction table: (passing->failing), (failing->passing), (unverified->passing), (unverified->failing). Each row seeds the stored record in the stored state (unverified seeded in the shape `_unverified` builds: one entry, no exit_code) with observed 2026-10-11, sets outcomes.json to produce the newly observed state, runs the check, and asserts stored state == new state, observed == date.today().isoformat(), evidence == this run's. GREEN ON ARRIVAL for the same reason as the previous test; guards against a fix that keeps the stored record too eagerly."
+  - name: test_same_state_different_exit_code_is_recorded
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Stored record state failing, observed 2026-10-11, known-clean (accept) evidence exit_code 1 with bad exit 1 (refuses_without_discriminating). Run with accept exit 2, bad exit 1 -- state still failing. Assert evidence carries exit_code 2 for the accept entry and observed == date.today().isoformat(). GREEN ON ARRIVAL; guards against a comparison that looks only at `state`."
+  - name: test_blocked_record_reobserved_unchanged_is_kept
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Hook with NO acceptable `command` (declaration-level cannot-discriminate: blocked, no subprocess run). Stored record is the blocked shape the check itself produces (one evidence entry: the negative_control command, an output string, no exit_code) with observed 2026-10-11 and DIFFERENT output text from what this run produces. Assert manifest bytes unchanged. RED today. Pins the decision that a missing exit_code on both sides is equal."
+  - name: test_printed_lines_and_exit_code_match_the_observed_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Scope fence. For the same-verdict fixture assert exit 0 and stdout is exactly one line `NEGATIVE_CONTROL_RESULT check_id=probe-hook state=passing entry_point=probe demonstration=entry_point discrimination=discriminates command=<negative_control.command>`; for the passing->failing fixture assert exit 1 and the same line with state=failing discrimination=n/a. GREEN ON ARRIVAL -- these are what current code prints; the test catches a fix that alters output or exit code on the way past."
+test_rationale: |
+  The first, second and sixth arms are the ones red today, and together they are
+  the criterion: the same verdict seen on a later day, with or without reworded
+  output, and in the blocked shape whose evidence has no exit code, must leave the
+  file alone. They assert on a byte digest of a manifest deliberately serialised
+  with indent=4, so a fix that still rewrites (even with identical data) cannot pass.
+
+  The third, fourth and fifth arms are green on arrival and exist because the
+  cheapest way to satisfy the red arms is to stop writing altogether, or to compare
+  only `state`. GE-120g-4's own rationale named that hole ("a test that forces a
+  real update would"); these are those tests. A green-on-arrival arm is not
+  evidence the fix landed; it is the fence that keeps the fix honest.
+
+  The fixture controls probe outcomes through outcomes.json in the run's cwd rather
+  than through the command text, because the definition counts a changed command
+  as a change: varying the command to vary the result would test the wrong rule.
+  Dates are controlled by a stored past `observed`; "today" is asserted against
+  date.today(), so no clock mocking is needed.
+
+  The seventh arm is the scope fence, green on arrival.
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_ge_120g_4_i.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_negative_control_liveness.py
+  - templates/scripts/commit_guardian/_negative_control_pairing.py
+change_target: code
+risk_surface: internal
+notes: |
+  VERIFIED 2026-10-12, NOT HYPOTHETICAL. A copy of the deployed manifest whose
+  negative-control record was backdated to `observed: 2026-10-11` was rewritten to
+  `observed: 2026-10-12` by a single run, with the verdict unchanged — `passing`
+  before and after.
+
+  WHY IT WAS LATENT AND WHY IT IS URGENT NOW. Until branch fast-lane/bp-1300e-1 no
+  registered hook carried an examinable negative control, so the sweep had nothing
+  to stamp. `check-lint-gate` is the first. The liveness sweep runs on every commit,
+  so from the day after that branch merges, the first commit each day in every built
+  layout — this repository and every adopter — rewrites the deployed manifest and
+  the next commit fails `check-output-drift`. This record should land with, or
+  before, that branch.
+
+  WHY THE SECOND, THIRD AND FIFTH SCENARIOS EXIST. The cheapest change that satisfies
+  the first scenario is to stop writing at all. GE-120g-4's own test_rationale
+  names that hole ("a test that forces a real update would"); the change scenarios
+  are that test. The wording scenario exists because the next-cheapest fix — compare
+  everything except the date — still rewrites the file on every linter upgrade,
+  since the stored evidence carries the linter's version banner.
+
+  CONSEQUENCE OF THE `observed` REDEFINITION. A stored record's evidence text may be
+  older than the tool now in use. That is intended: it is the evidence on which the
+  current verdict was first established. Anyone who needs the latest transcript gets
+  it from the printed result lines, which this record does not touch.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity,
+  it_requirements, test_spec, test_rationale. Those are the IT PO's.

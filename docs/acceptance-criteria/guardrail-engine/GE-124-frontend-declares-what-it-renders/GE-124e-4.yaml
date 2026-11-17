@@ -120,7 +120,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Made the two-route union the single non-negotiable requirement of this AC and carried it into the delivers_to contract verbatim, because route A alone is the natural reading of every file-path precedent in this repo and would leave the gate near-inert. Pinned route B to a shared-reader run over the changed front-end files (not a diff-text grep, so a declaration on an unchanged line of a changed file is still in scope), fixed the changed set to the done-proof job's --base form, and required absence from every collection rather than a skipped or exempt marker. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/36_TICKET-20261023-GE-124e-4.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -176,3 +177,4 @@ notes: |
   contract is written specifically to fail on that implementation, and the
   delivers_to contract states the union so a coder reading only the contract
   still cannot miss it.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

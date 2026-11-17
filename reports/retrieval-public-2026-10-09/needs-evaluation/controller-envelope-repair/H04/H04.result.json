@@ -1,0 +1,255 @@
+{
+  "case_id": "H04",
+  "original_rejected_receipt": "../H04.result.json",
+  "response_sha256": "346806b412e01d55a29d2002a04c186e9dfd77d0952dd0351174318ca8e03011",
+  "response_unchanged": true,
+  "envelope": {
+    "schema_version": "1.0",
+    "run_id": "run-dc3c5d56ebc9428d",
+    "root_task_id": "task-04643173bd1b4b61",
+    "state_revision": 3,
+    "status": "completed",
+    "output": {
+      "schema_version": "1.0",
+      "schema_id": "leafcutter.retrieval_needs_output.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "original_question": "What is the current CPU temperature of the operator's laptop?",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "unknown",
+        "unresolved": [
+          "needs_outside_catalog",
+          "The catalog has no device telemetry entity, temperature field, or live sensor document type.",
+          "entity_types",
+          "document_types",
+          "required_fields",
+          "target_ids",
+          "scope_resolution"
+        ],
+        "rationale": "A current laptop CPU temperature is live device telemetry, which the offered repository-oriented catalog does not express. The original source scope remains unchanged.",
+        "engine": "host_llm",
+        "status": "needs_resolution",
+        "model_id": null
+      }
+    },
+    "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-dc3c5d56ebc9428d\\artifacts\\report.md",
+    "decision_ids": [],
+    "evidence_ids": [],
+    "open_questions": [],
+    "pending_interaction": null,
+    "limitations": [
+      "host-reported; not verified by the kernel",
+      "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+    ],
+    "gaps": [
+      {
+        "schema_version": "1.0",
+        "id": "gap-9f4b68224be8e386",
+        "created_at": "2026-10-09T15:35:06.796991Z",
+        "updated_at": "2026-10-09T15:35:06.796991Z",
+        "created_seq": 0,
+        "gap_key": "2354052d3d2e11a3449363b67ab1f13eaba61c5f75f8f8123c17f10a12c22a5f",
+        "gap_type": "host_only",
+        "goal": "What is the current CPU temperature of the operator's laptop?",
+        "normalized_need": "cpu current laptop operator s temperature what",
+        "request_kind": "capability",
+        "input_schema": "leafcutter.retrieval_needs_request.v1",
+        "output_schema": "leafcutter.retrieval_needs_output.v1",
+        "scope_component_ids": [],
+        "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+        "candidates_considered": [
+          "host.retrieval_needs"
+        ],
+        "candidate_exclusions": {},
+        "need_title": "What is the current CPU temperature of the operator's laptop?",
+        "why_insufficient": "host-backed only; no native implementation exists",
+        "occurrence_count": 1,
+        "example_run_ids": [
+          "run-dc3c5d56ebc9428d"
+        ],
+        "example_trace_urls": [],
+        "fallback_outcome": "host_completed",
+        "missing_native_capability": "native implementation of host.retrieval_needs",
+        "proposal": {
+          "schema_version": "1.0",
+          "author": "template",
+          "title": "Capability for: What is the current CPU temperature of the operator's laptop?",
+          "purpose": "host_only need",
+          "draft_ref": "drafts/2354052d3d2e11a3449363b67ab1f13eaba61c5f75f8f8123c17f10a12c22a5f.md"
+        },
+        "first_seen": "2026-10-09T15:35:06.796991Z",
+        "last_seen": "2026-10-09T15:35:06.796991Z"
+      }
+    ],
+    "usage_summary": {
+      "schema_version": "1.0",
+      "jev_calls": 0,
+      "host_operations": 1,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd_known": null,
+      "cost_unknown_calls": 1,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "host",
+          "model_id": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "duration_ms": 449602,
+          "cost_usd": null,
+          "cost_provenance": "unavailable",
+          "calls": 1
+        }
+      ]
+    },
+    "trace_refs": {
+      "schema_version": "1.0",
+      "trace_id": "780a4376ffbd15696a4878279982ab11",
+      "trace_url": null,
+      "observability": "ok"
+    },
+    "errors": []
+  },
+  "result": {
+    "schema_version": "1.0",
+    "original_question": "What is the current CPU temperature of the operator's laptop?",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "single_entity",
+    "hierarchy_scope": "not_applicable",
+    "hierarchy_levels": [],
+    "scope_resolution": "unknown",
+    "unresolved": [
+      "needs_outside_catalog",
+      "The catalog has no device telemetry entity, temperature field, or live sensor document type.",
+      "entity_types",
+      "document_types",
+      "required_fields",
+      "target_ids",
+      "scope_resolution"
+    ],
+    "rationale": "A current laptop CPU temperature is live device telemetry, which the offered repository-oriented catalog does not express. The original source scope remains unchanged.",
+    "engine": "host_llm",
+    "status": "needs_resolution",
+    "model_id": null
+  },
+  "shared_semantics": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "original_question",
+        "passed": true,
+        "actual": "What is the current CPU temperature of the operator's laptop?",
+        "expected": "What is the current CPU temperature of the operator's laptop?"
+      },
+      {
+        "name": "exclude.entity_types",
+        "passed": true,
+        "actual": [],
+        "expected": {
+          "forbidden": [
+            "ac",
+            "source_file",
+            "test",
+            "adr",
+            "schema",
+            "report",
+            "component"
+          ]
+        }
+      },
+      {
+        "name": "exclude.required_fields",
+        "passed": true,
+        "actual": [],
+        "expected": {
+          "forbidden": [
+            "criteria",
+            "work_status",
+            "status"
+          ]
+        }
+      },
+      {
+        "name": "status",
+        "passed": true,
+        "actual": "needs_resolution",
+        "expected": [
+          "needs_resolution"
+        ]
+      },
+      {
+        "name": "unsupported_need_disclosed",
+        "passed": true,
+        "actual": [
+          "needs_outside_catalog",
+          "The catalog has no device telemetry entity, temperature field, or live sensor document type.",
+          "entity_types",
+          "document_types",
+          "required_fields",
+          "target_ids",
+          "scope_resolution"
+        ],
+        "expected": "Explicit unmet catalog dimension, unresolved; no synthetic confidence"
+      }
+    ]
+  },
+  "overlay": {
+    "applicable": false,
+    "passed": true,
+    "checks": []
+  }
+}

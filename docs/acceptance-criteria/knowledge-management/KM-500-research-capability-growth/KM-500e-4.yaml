@@ -1,0 +1,205 @@
+id: KM-500e-4
+title: Separate a missing query from missing fields mappings and source facts
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+work_status: in_progress
+readiness: approved
+priority: medium
+parent: KM-500e
+criteria: 'Given a research question requires Test identities reached through declared component membership and
+  test coverage
+
+  When the offered query descriptions and available source evidence are checked against that question
+
+  Then an absent matching operation over supported source kinds, relationships and required fields is identified
+  as a query-capability gap eligible for the existing governed build process
+
+  And an operation that exists but cannot expose a required canonical field is identified as a field availability
+  gap rather than a complete answer or a query-only repair
+
+  And a missing source-kind or relationship mapping is identified as an unsupported mapping before query creation
+  is requested
+
+  And a required fact absent from the canonical source is distinguished from a fact present in the source but omitted
+  by projection or disclosure when attributable diagnostics establish that distinction
+
+  And when those diagnostics are unavailable the cause remains unknown rather than being guessed
+
+  And completed zero matches, missing input, unavailable services, denied access, stale evidence and exhausted limits
+  retain their existing distinct outcomes
+
+  And none of those outcomes independently authorizes query creation, canonical data changes or broader access.
+
+  '
+depends_on:
+- KM-500e
+- KM-500a-3
+- KM-500e-1
+- KM-500e-2
+doc_links:
+- path: docs/analysis/2026-10-01-repository-query-catalog.md
+  relationship: context
+  status: exists
+  relevance: Twenty-five role questions consolidated into eight answer families; desired answers are not current
+    tool guarantees.
+- path: docs/analysis/2026-10-01-repository-query-evaluation-cases.json
+  relationship: context
+  status: exists
+  relevance: Twelve planned source-anchored cases and controls; not executed acceptance proof.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Retain immutable source provenance, registered bounded execution and existing ownership.
+- path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+  relationship: context
+  status: exists
+  relevance: Inherited coverage and denominator contract; no duplicate enforcement rule.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Existing public boundaries, canonical projection ownership and bounded research integration.
+- path: docs/testing/test-angles.md
+  relationship: context
+  status: exists
+  relevance: Public reachability, producer-consumer seams and discriminating proof expectations; these descriptors
+    are planned.
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+- ac_id: KM-500e-5
+  agent: documentation-expert
+  contract: 'Capability assessment: answer_requirements, operation identity/version, generation-supported kinds/relations/fields,
+    availability evidence, classified gap, query_build_eligible with reason, unresolved facts and existing authorization
+    prerequisites; no side effect in classification.'
+- ac_id: KM-500g-2
+  agent: python-coder
+  contract: 'Capability assessment: answer_requirements, operation identity/version, generation-supported kinds/relations/fields,
+    availability evidence, classified gap, query_build_eligible with reason, unresolved facts and existing authorization
+    prerequisites; no side effect in classification.'
+- ac_id: KM-500d-3
+  agent: python-coder
+  contract: 'Capability assessment: answer_requirements, operation identity/version, generation-supported kinds/relations/fields,
+    availability evidence, classified gap, query_build_eligible with reason, unresolved facts and existing authorization
+    prerequisites; no side effect in classification.'
+expects_from:
+- ac_id: KM-500e-1
+  contract: 'Answer requirements: original_question, required_fields with meanings, repository_id, requested_source_sha,
+    population/root_id, levels, root_excluded versus terminal_leaf_only inclusion rule, completeness_required, unresolved_scope
+    and clarification state, preserved across run/resume.'
+- ac_id: KM-500e-2
+  contract: 'Attributed field evidence: canonical_id, repository_id, source_sha, source_locator, disclosed_values
+    keyed by canonical field, field_availability (present, source_absent, projection_absent, disclosure_omitted,
+    truncated, unknown), exact_clause completeness and limitations; lifecycle status, req_status, work_status and
+    readiness remain separate.'
+origin_agent: business-analyst
+created: '2026-10-01'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500e.yaml
+amended_by:
+- '2026-10-01: User explicitly approved the new ACs and directed implementation with agents and an independent evaluator.
+  Approval records authorization, not implementation or execution proof.'
+superseded_by: null
+covered_by:
+- tests/knowledge/test_query_answer_contract_acceptance_kernel.py
+- tests/knowledge/query_answer_contract_acceptance_corpus.py
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RepositoryResearchAnswers/TICKET-20261001-KM-500e-4.md
+change_target: code
+risk_surface: contract_boundary
+notes: RQ7; ITPO-03 and RQE-05. Extend existing kind-level gap classification to required fields and source availability;
+  preserve existing query admission and no arbitrary execution boundary. Authored using the business-analyst template
+  under explicit user authorization to draft ACs; not approval or implementation proof.
+it_requirements:
+- Retain immutable repository/source SHA provenance, bounded registered read-only queries and existing kernel authorization,
+  budgets and retries. This contract adds no arbitrary Cypher, new network endpoint, source-write permission or
+  automatic query activation.
+- The named fields below describe the planned observable semantic contract; preserve compatible existing envelope
+  fields and version any incompatible extension. Required unavailable values stay explicit and are never inferred
+  from an evaluation oracle.
+- Assess both catalog operation support and published generation kinds, directed relations, fields and disclosure
+  availability against answer requirements. Capability metadata alone cannot prove the current generation can answer.
+- Query-build eligibility is limited to a missing bounded registered operation over already supported canonical
+  kinds/relations/fields under the existing recipe/compiler contract. Missing mappings or required source facts
+  are not repaired by generating arbitrary Cypher.
+- Classify missing query, unsupported mapping, missing required projection/disclosure field, evidenced absent canonical
+  fact and unverified availability separately. Retain no-match, invalid input, permission denied, stale scope, budget
+  exhaustion and retrieval outage as distinct outcomes.
+- Classification has no registration, database mutation or external-provider side effect. Any eligible build follows
+  existing authorization, verification, atomic catalog activation and resume controls.
+test_required: true
+test_rationale: Planned criterion and public reachability proof includes real producer/consumer boundaries and named
+  plausible wrong outcomes. No descriptor is executed coverage; no provider, database or deployment result is asserted.
+test_spec:
+- name: test_public_research_routes_supported_missing_query_to_governed_handoff
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Run RQE-05-P through public research with the operation withheld but required kinds, edges and fields
+    explicitly supported; assert an attributable missing-query handoff and existing authorization gates, without
+    immediate activation.
+  must_catch:
+  - Calling a query builder without checking field support or activating its result without permission.
+  covers:
+  - KM-500e-4
+  requires_db: false
+  surface_invoked: Existing kernel research run/resume entry point using retrieve.repository
+- name: test_unsupported_mapping_cannot_become_query_build_eligibility
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Run RQE-05-N with Test/covered_by support absent and assert the unsupported mapping is identified
+    and no builder or database-write action occurs.
+  must_catch:
+  - Treating a missing Test mapping as a missing registered operation that raw Cypher can fix.
+  covers:
+  - KM-500e-4
+  requires_db: false
+- name: test_query_fitness_retains_required_field_availability
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Feed actual requirements and operation/generation descriptors into the real capability assessment
+    consumer for missing projection, omitted disclosure, evidenced source absence and unknown source state.
+  must_catch:
+  - Claiming canonical data does not exist merely because the projection or response lacks a field.
+  covers:
+  - KM-500e-4
+  requires_db: false
+- name: test_query_fitness_keeps_failure_classes_and_side_effect_boundaries
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Exercise no-match, denial, invalid request, stale source, exhausted budget and backend outage at
+    the public dispatch boundary; assert distinct outcomes and no implicit catalog registration, source write or
+    wider query permissions.
+  must_catch:
+  - Collapsing denied or unavailable retrieval into an empty successful answer or authorization to create a query.
+  covers:
+  - KM-500e-4
+  requires_db: false
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: data-gap
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: fit
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'

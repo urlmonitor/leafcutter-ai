@@ -1,0 +1,486 @@
+schema_version: '1.0'
+kind: decision
+id: dec-93c1c730463c1f3c
+repository_id: leafcutter-ai
+title: Category records (SKOS-style labels) that hold membership as (decision id, criterion id) ...
+description: Decide the storage format for reusable decision criteria (the decision basis the kernel ...
+decision_type: design
+question: 'Decide the storage format for reusable decision criteria (the decision basis the kernel reuses across decisions).
+  Today each run''s criteria are generated per decision and stored only inside docs/decisions/dec-*.yaml records. Options:
+  a) one YAML file per criterion in a new docs/criteria/ folder (same style as the decision records, ADR-059 ''YAML now, graph
+  later''); b) one catalog YAML of criterion categories, each listing its member criteria; c) keep criteria inside decision
+  records and generate a criteria index from them; d) another option grounded in the repository. The format must be Git-reviewable,
+  projectable into Neo4j, and carry what clustering and reuse need (category, decision_type, components, usage and outcome
+  counts).'
+components: []
+change_target: []
+risk_surface: []
+roadmap_phase: []
+file_globs: []
+repository_wide: true
+selected_option_id: opt.category_records_membership_refs
+supersedes: []
+superseded_by: []
+related: []
+task_context:
+  goal: 'Decide the storage format for reusable decision criteria (the decision basis the kernel reuses across decisions).
+    Today each run''s criteria are generated per decision and stored only inside docs/decisions/dec-*.yaml records. Options:
+    a) one YAML file per criterion in a new docs/criteria/ folder (same style as the decision records, ADR-059 ''YAML now,
+    graph later''); b) one catalog YAML of criterion categories, each listing its member criteria; c) keep criteria inside
+    decision records and generate a criteria index from them; d) another option grounded in the repository. The format must
+    be Git-reviewable, projectable into Neo4j, and carry what clustering and reuse need (category, decision_type, components,
+    usage and outcome counts).'
+  component_ids: []
+  technologies: []
+  constraints: []
+rationale:
+  text: 'Design decision settled by a human. Kernel ranking (Jev''s per-criterion judgement, evidence not authority; stopped
+    researching because design_judgement after 1 research round(s)): 1. [opt.category_records_membership_refs] Category records
+    (SKOS-style labels) that hold membership as (decision id, criterion id) references (required mean 0.65, 3/6 passed); 2.
+    [opt.category_files_with_refs] One YAML record per criterion category, decisions reference categories, counts generated
+    (required mean 0.34, 0/6 passed); 3. [opt.per_criterion_files] one YAML file per criterion in a new docs/criteria/ folder
+    (required mean 0.34, 0/6 passed); 4. [opt.criterion_kind_in_decision_store] A new ''criterion'' record kind inside the
+    existing decision store (required mean 0.27, 0/6 passed); 5. [opt.index_from_records] keep criteria inside decision records
+    and generate a criteria index from them (required mean 0.27, 0/6 passed); 6. [opt.category_catalog] one catalog YAML of
+    criterion categories, each listing its member criteria (required mean 0.23, 0/6 passed). human:user chose option [opt.category_records_membership_refs]
+    Category records (SKOS-style labels) that hold membership as (decision id, criterion id) references (kernel rank 1 of
+    6).'
+  origin: template
+assumptions: []
+unresolved_risks: []
+assessment:
+  basis: kernel_ranking
+  design_reason: design_judgement
+  confidence: 0.6467
+  selected_rank: 1
+  ranking:
+    - option_id: opt.category_records_membership_refs
+      rank: 1
+      required_passed: 3
+      required_total: 6
+      required_mean: 0.6467
+      scores:
+        crit.approval_unit_and_path: 0.88
+        crit.cheap_candidate_lookup: 0.3
+        crit.existing_consumers_unchanged: 0.85
+        crit.filters_from_declared_vocabularies: 0.31
+        crit.no_new_package_surface: 0.78
+        crit.outcomes_left_to_colony_store: 0.93
+        crit.projectable_as_native_kind: 0.34
+        crit.regroup_without_rewrites: 0.92
+        crit.stable_identity: 0.5
+        crit.usage_generated_not_written: 0.91
+    - option_id: opt.category_files_with_refs
+      rank: 2
+      required_passed: 0
+      required_total: 6
+      required_mean: 0.345
+      scores:
+        crit.approval_unit_and_path: 0.2
+        crit.cheap_candidate_lookup: 0.36
+        crit.existing_consumers_unchanged: 0.44
+        crit.filters_from_declared_vocabularies: 0.47
+        crit.no_new_package_surface: 0.56
+        crit.outcomes_left_to_colony_store: 0.61
+        crit.projectable_as_native_kind: 0.24
+        crit.regroup_without_rewrites: 0.29
+        crit.stable_identity: 0.26
+        crit.usage_generated_not_written: 0.73
+    - option_id: opt.per_criterion_files
+      rank: 3
+      required_passed: 0
+      required_total: 6
+      required_mean: 0.34
+      scores:
+        crit.approval_unit_and_path: 0.22
+        crit.cheap_candidate_lookup: 0.51
+        crit.existing_consumers_unchanged: 0.27
+        crit.filters_from_declared_vocabularies: 0.42
+        crit.no_new_package_surface: 0.66
+        crit.outcomes_left_to_colony_store: 0.48
+        crit.projectable_as_native_kind: 0.15
+        crit.regroup_without_rewrites: 0.19
+        crit.stable_identity: 0.58
+        crit.usage_generated_not_written: 0.47
+    - option_id: opt.criterion_kind_in_decision_store
+      rank: 4
+      required_passed: 0
+      required_total: 6
+      required_mean: 0.27
+      scores:
+        crit.approval_unit_and_path: 0.16
+        crit.cheap_candidate_lookup: 0.29
+        crit.existing_consumers_unchanged: 0.09
+        crit.filters_from_declared_vocabularies: 0.38
+        crit.no_new_package_surface: 0.69
+        crit.outcomes_left_to_colony_store: 0.52
+        crit.projectable_as_native_kind: 0.11
+        crit.regroup_without_rewrites: 0.16
+        crit.stable_identity: 0.29
+        crit.usage_generated_not_written: 0.46
+    - option_id: opt.index_from_records
+      rank: 5
+      required_passed: 0
+      required_total: 6
+      required_mean: 0.2667
+      scores:
+        crit.approval_unit_and_path: 0.1
+        crit.cheap_candidate_lookup: 0.29
+        crit.existing_consumers_unchanged: 0.78
+        crit.filters_from_declared_vocabularies: 0.28
+        crit.no_new_package_surface: 0.88
+        crit.outcomes_left_to_colony_store: 0.55
+        crit.projectable_as_native_kind: 0.47
+        crit.regroup_without_rewrites: 0.13
+        crit.stable_identity: 0.07
+        crit.usage_generated_not_written: 0.72
+    - option_id: opt.category_catalog
+      rank: 6
+      required_passed: 0
+      required_total: 6
+      required_mean: 0.2267
+      scores:
+        crit.approval_unit_and_path: 0.19
+        crit.cheap_candidate_lookup: 0.33
+        crit.existing_consumers_unchanged: 0.23
+        crit.filters_from_declared_vocabularies: 0.29
+        crit.no_new_package_surface: 0.57
+        crit.outcomes_left_to_colony_store: 0.33
+        crit.projectable_as_native_kind: 0.16
+        crit.regroup_without_rewrites: 0.21
+        crit.stable_identity: 0.18
+        crit.usage_generated_not_written: 0.27
+final_outcome:
+  status: pending
+  observed_at: null
+  note: ''
+options:
+  - id: opt.per_criterion_files
+    title: one YAML file per criterion in a new docs/criteria/ folder
+    description: 'Each reusable criterion gets its own reviewable YAML record in docs/criteria/ (same style as the decision
+      records): id, question, priority, kind and flat filters (category, decision_type, components). Decision records reference
+      criterion ids. A generated index lists the records.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: null
+    approved_by: null
+  - id: opt.category_catalog
+    title: one catalog YAML of criterion categories, each listing its member criteria
+    description: A single catalog file holds every category; each category nests its member criteria. Regrouping is an edit
+      inside one file. Decision records reference criteria by id.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: null
+    approved_by: null
+  - id: opt.index_from_records
+    title: keep criteria inside decision records and generate a criteria index from them
+    description: 'No new hand-written file type: criteria stay nested in docs/decisions/dec-*.yaml; a generator writes a criteria
+      index with the decisions, decision_type and components each criterion appeared in, derived counts and a category field.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: null
+    approved_by: null
+  - id: opt.category_files_with_refs
+    title: One YAML record per criterion category, decisions reference categories, counts generated
+    description: 'One YAML record per category (a cluster of similar criteria): canonical question, decision_type/components
+      filters, block list of member wordings. Each criterion nested in a decision record gains an additive category reference.
+      Usage and outcome counts are generated into an index, never hand-edited.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code
+    approved_by: human:user
+  - id: opt.criterion_kind_in_decision_store
+    title: A new 'criterion' record kind inside the existing decision store
+    description: 'Reusable criteria become records of a second kind (kind: criterion) inside docs/decisions/, validated by
+      the same `python -m kernel decisions validate` and listed by the same generated index; no new folder or config/paths.json
+      surface.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code
+    approved_by: human:user
+  - id: opt.category_records_membership_refs
+    title: Category records (SKOS-style labels) that hold membership as (decision id, criterion id) references
+    description: 'One reviewed YAML record per category with a stable id and declared kind (ADR-061 key): canonical question
+      as preferred label, other wordings as alternative labels, an optional broader category, and a replaced-by link when
+      categories merge or split. Membership lives only in the category record as (decision id, criterion id) pairs, so published
+      decision records stay unchanged. Category records are staged in the run root and enter Git only through a human-run
+      publish. Usage counts are generated from published records; outcome statistics are Neo4j aggregates keyed by category
+      id (ADR-065), never in Git.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:basis_review_prototype
+    approved_by: human:user
+criteria:
+  - id: crit.approval_unit_and_path
+    question: 'Does the option name the unit a human approves (a category, a criterion, or a criterion''s membership in a
+      category) and give it a path like decision records have: staged in the run root, entered into Git only by a human-run
+      publish command, and never created directly from Langfuse or from a mined candidate (ADR-060, ADR-058)?'
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-18a5b9e23f10db73
+      - ev-fdebbb68d094b1e0
+      - ev-d55eebec654804e3
+      - ev-e15d88acbc485ae9
+      - ev-6979351886456aee
+  - id: crit.filters_from_declared_vocabularies
+    question: Are category, decision_type and components top-level plain-YAML fields whose values come from declared vocabularies
+      that validation enforces, with the category list itself a reviewed vocabulary (ADR-061 section 4)?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-fdebbb68d094b1e0
+      - ev-c7f5671559baafaf
+      - ev-55f84bcf06ebea43
+      - ev-d55eebec654804e3
+      - ev-6979351886456aee
+  - id: crit.projectable_as_native_kind
+    question: Can the ADR-062 projector read the store as one reviewed native kind with canonical ids, without changing how
+      the existing Decision kind is read (its filename rule and pinned schema)?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-c7f5671559baafaf
+      - ev-0fdd05eee9d94dfa
+      - ev-55f84bcf06ebea43
+      - ev-6979351886456aee
+      - ev-e15d88acbc485ae9
+  - id: crit.regroup_without_rewrites
+    question: Is category membership kept in one place outside the published decision records, so that merging, splitting
+      or moving a criterion edits only category data, and retired ids stay resolvable through a recorded replaced-by link?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-c3d6f4f3813b9bb9
+      - ev-6979351886456aee
+      - ev-e15d88acbc485ae9
+      - ev-55f84bcf06ebea43
+      - ev-3bd757a9bb29d915
+  - id: crit.outcomes_left_to_colony_store
+    question: Does the format keep outcome and success statistics out of Git and expose only stable criterion or category
+      ids that ADR-065's derived Neo4j aggregates can key on?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-fdebbb68d094b1e0
+      - ev-6979351886456aee
+      - ev-e15d88acbc485ae9
+      - ev-55f84bcf06ebea43
+      - ev-0fdd05eee9d94dfa
+  - id: crit.stable_identity
+    question: Does every stored criterion or category get a repository-unique, stable id with a declared kind under ADR-061's
+      (repository_id, kind, id) key, with validation that rejects duplicate ids and dangling references, given that decision-local
+      criterion ids already collide today?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-55f84bcf06ebea43
+      - ev-0fdd05eee9d94dfa
+      - ev-3bd757a9bb29d915
+      - ev-e15d88acbc485ae9
+      - ev-b7fc7cba343d593c
+  - id: crit.usage_generated_not_written
+    question: Are usage counts (how many published decisions used a criterion or category) produced only by a generator from
+      published records and checked for freshness like docs/decisions/index.json?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-56259058d60581e8
+      - ev-fdebbb68d094b1e0
+      - ev-d55eebec654804e3
+      - ev-18a5b9e23f10db73
+      - ev-55f84bcf06ebea43
+  - id: crit.existing_consumers_unchanged
+    question: Do the existing readers of docs/decisions (validate and index in kernel/memory, the file precedent backend,
+      the knowledge-map docs surface and the ADR-062 Decision projector) keep working without a change?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-56259058d60581e8
+      - ev-18a5b9e23f10db73
+      - ev-0fdd05eee9d94dfa
+      - ev-d55eebec654804e3
+      - ev-55f84bcf06ebea43
+  - id: crit.cheap_candidate_lookup
+    question: Can a later run find candidate criteria or categories by filter and by criterion wording, not only by a decision's
+      question and title, without opening every file?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-0fdd05eee9d94dfa
+      - ev-56259058d60581e8
+      - ev-d55eebec654804e3
+      - ev-18a5b9e23f10db73
+      - ev-c3d6f4f3813b9bb9
+  - id: crit.no_new_package_surface
+    question: 'Can the format ship without a new config/paths.json surface or pre-commit hook, which would need an acceptance
+      criterion with package_surface: true?'
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-56259058d60581e8
+      - ev-0fdd05eee9d94dfa
+      - ev-eb8ec95cb3030bb5
+      - ev-d55eebec654804e3
+      - ev-3bd757a9bb29d915
+evidence:
+  - id: ev-6979351886456aee
+    locator: docs/architecture/adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md#L118-L136
+    category: prior_decisions
+    content_hash: e2e51dc8d3f15d123921ee3984c967f6fc268458c907586c9eaed5d745714713
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-e15d88acbc485ae9
+    locator: docs/architecture/adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md#L226-L241,L254-L257
+    category: prior_decisions
+    content_hash: e3074acf3d50e910ae9f07a470bc7c3be1f0d80d4c4f9a7ec8d572aaecfd2246
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-55f84bcf06ebea43
+    locator: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md#L65-L78
+    category: prior_decisions
+    content_hash: c6eb27644222d1ae5a5a85e4e3aa904d24c0618281bcf0acb1a09e86a0a63410
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-c7f5671559baafaf
+    locator: feature/knowledge-retrieval-v01:knowledge/native_types/decision.py#L206-L252 (unmerged branch)
+    category: existing_patterns
+    content_hash: 519fa66ec445efc2e6c23863f4853b1741dd6da91377649ddb0ace24f4398792
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-b7fc7cba343d593c
+    locator: feature/knowledge-retrieval-v01:docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md#L46-L49 (unmerged
+      branch)
+    category: prior_decisions
+    content_hash: f37e54c56a2ff409b7aa253cb2f18c72fb9e5434296db5eda3ebfee50d0d180e
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-3bd757a9bb29d915
+    locator: docs/decisions/dec-4673055ef54113d5.yaml, dec-acdfd972fcaca478.yaml, dec-d53e1c52cd47c832.yaml (criteria)
+    category: existing_patterns
+    content_hash: 5a3c98c61cbceaea9dd9d5ea1ff055180c15c252cea9c045d65bc4d45c1e960d
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-0fdd05eee9d94dfa
+    locator: docs/decisions/dec-ef8ddcb79d668a67.yaml#L192-L226
+    category: prior_decisions
+    content_hash: a653cff4753416909883602c73a4c61f408a33c68dba241f5326f360683b47fa
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-8bc63e2f183d1188
+    locator: kernel/memory/file_store.py#L94-L99
+    category: existing_patterns
+    content_hash: 3f2d439c72e04a55bafae3010ca5d4e659c89043a58bc357c9e91d735efb824c
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-fd9c362b55041d26
+    locator: kernel/memory/validate.py#L194-L200; kernel/memory/models.py#L188
+    category: existing_patterns
+    content_hash: 9ca660175e04524ef0ce0e458bb792ca79f3c7e55d89730bf62cf9b417e2dca8
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-e05f6bfc54b14735
+    locator: kernel/capabilities/decision/state.py#L95-L106
+    category: existing_patterns
+    content_hash: 4347f07ea656c96e2279e8a43763c15fa7b64ef3a5ef333bf9c48e4188df346d
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-77631639dad1de60
+    locator: https://www.w3.org/TR/skos-primer/ (sections 2.1, 2.2.1, 2.3.1)
+    category: external_practices
+    content_hash: 90356cc723a7eeaa990d92898338b71371782d5a8b4b6cc0a150a1a65f682720
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-eb8ec95cb3030bb5
+    locator: config/paths.json#L1-L56
+    category: existing_patterns
+    content_hash: 5663370269e5fd960d2e11d06e7b7a9bec7a8d1c285b7689afaec9c1c6a76290
+    verification: source_verified
+    relevance: null
+    source_version:
+      commit: dd16b4a3201d6992af7f2d99c9cd6dba098df30b
+      dirty: false
+  - id: ev-56259058d60581e8
+    locator: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md#L83-L92 (§Decision >
+      3. Records are findable through a generated index)
+    category: existing_patterns
+    content_hash: b0b078338d0301154c37e07080d520fed78bbab2566f625667f35e0f77f7258d
+    verification: source_verified
+    relevance: 0.74
+    source_version:
+      commit: dd16b4a3201d6992af7f2d99c9cd6dba098df30b
+      dirty: false
+  - id: ev-fdebbb68d094b1e0
+    locator: docs/architecture/components/colony-memory.md#L43-L66 (§Colony Memory — Container Overview)
+    category: existing_patterns
+    content_hash: c08985b880eca4122bbe91a7b9d60ee37e631842c76ccdf0cb602f5d47972296
+    verification: source_verified
+    relevance: 0.67
+    source_version:
+      commit: dd16b4a3201d6992af7f2d99c9cd6dba098df30b
+      dirty: false
+  - id: ev-d55eebec654804e3
+    locator: docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md#L243-L248 (§As built (decision
+      store))
+    category: existing_patterns
+    content_hash: d1ce648be775538ba9456c3bb2048a8216bfd9ac7a9318b15576bda637d82a96
+    verification: source_verified
+    relevance: 0.66
+    source_version:
+      commit: dd16b4a3201d6992af7f2d99c9cd6dba098df30b
+      dirty: false
+  - id: ev-18a5b9e23f10db73
+    locator: kernel/memory/file_store.py#L1-L37 (module level)
+    category: existing_patterns
+    content_hash: 36d6a3f845b8cc1949c1cb8ed4d66c962635d00ddda17db033bdd0782cad62b1
+    verification: source_verified
+    relevance: 0.62
+    source_version:
+      commit: dd16b4a3201d6992af7f2d99c9cd6dba098df30b
+      dirty: false
+  - id: ev-c3d6f4f3813b9bb9
+    locator: docs/architecture/diagrams/c3-017-decision-kernel-context-jev.md#L119-L133 (§Decision Jev calls)
+    category: existing_patterns
+    content_hash: 605c9c871467299bebaec72b54d5f397a5bc9d0915bb10c0c3e8fc7893cdf2d2
+    verification: source_verified
+    relevance: 0.59
+    source_version:
+      commit: dd16b4a3201d6992af7f2d99c9cd6dba098df30b
+      dirty: false
+precedents_considered: []
+approval:
+  approval_status: approved
+  approved_by: human:user
+  approved_at: '2026-10-02T14:18:02Z'
+  note: ''
+provenance:
+  origin: learned
+  created_by_capability: decision
+  created_at: '2026-10-02T14:18:02Z'
+  run_id: run-3bba494c7c9b48ce
+  root_task_id: task-1167919a4eef4043
+  langfuse_trace_id: ddd2a8a36efc7b0afaaf969dc062a882
+  langfuse_trace_url: null
+  repository_revision:
+    commit: null
+    dirty: false
+  policy_version: null
+  template_version: decision.assess@1
+  model_version: jev-latest
+  kernel_version: 0.1.0.dev0
+  decision_versions:
+    options: eb3d2be79b78
+    criteria: bf41bc4c5734
+    templates: decision.assess@1
+corrections: []

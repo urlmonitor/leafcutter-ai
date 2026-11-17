@@ -150,6 +150,49 @@ def _parse_scalar_value(raw: str) -> Any:
 _MAPPING_ITEM_PATTERN = re.compile(r"^[\w][\w_-]*:(\s|$)")
 
 
+class MappingItemText(str):
+    """Flattened ``key: value`` list item that remembers its source key count.
+
+    Equal to (and hashes as) the plain flattened text, so every existing
+    consumer sees the same value; ``key_count`` lets a consumer tell a
+    single-key labelled entry from a multi-key mapping whose continuation
+    lines the reader discards (KM-KGS-100d-3).
+    """
+
+    key_count: int
+
+    def __new__(cls, text: str, key_count: int = 1) -> MappingItemText:
+        """Build the text carrying its source mapping's key count."""
+        obj = super().__new__(cls, text)
+        obj.key_count = key_count
+        return obj
+
+
+def entry_for_resolver(item: Any) -> Any:
+    """Re-shape a loader list item into the form the shared resolver judges.
+
+    The loader flattens a mapping list item to ``label: path`` text
+    (:class:`MappingItemText`); the shared resolver accepts the mapping, not
+    the text. This rebuilds a mapping with the item's original key count so
+    a single-key labelled entry resolves and a multi-key one is refused by
+    arity. Every other item (plain strings, non-strings) passes unchanged.
+
+    Args:
+        item: One element of a list-valued frontmatter field.
+
+    Returns:
+        A ``{label: path}`` mapping (padded with placeholder keys when the
+        source mapping had several) for a flattened mapping item, else *item*.
+    """
+    if not isinstance(item, MappingItemText):
+        return item
+    label, _sep, rest = str(item).partition(":")
+    entry = {label: _strip_matched_quotes(rest.strip())}
+    for n in range(1, item.key_count):
+        entry[f"{label}#{n}"] = ""
+    return entry
+
+
 def _line_indent(line: str) -> int:
     """Return the number of leading space characters on a line.
 
@@ -271,8 +314,13 @@ def _parse_block_children(lines: list[str], start: int, end: int) -> tuple[list[
     children: list[str] = []
     current_value: str | None = None
     current_is_mapping = False
+    current_keys = 0
     item_indent: int | None = None
     j = start
+
+    def _finish(value: str, is_mapping: bool, keys: int) -> str:
+        stripped_value = _strip_matched_quotes(value)
+        return MappingItemText(stripped_value, keys) if is_mapping else stripped_value
 
     while j < end:
         raw_line = lines[j]
@@ -287,10 +335,11 @@ def _parse_block_children(lines: list[str], start: int, end: int) -> tuple[list[
         )
         if is_item_line:
             if current_value is not None:
-                children.append(_strip_matched_quotes(current_value))
+                children.append(_finish(current_value, current_is_mapping, current_keys))
             item_indent = indent
             current_value = _strip_inline_comment(stripped[2:].strip())
             current_is_mapping = _is_mapping_item_text(current_value)
+            current_keys = 1
             j += 1
             continue
 
@@ -298,13 +347,15 @@ def _parse_block_children(lines: list[str], start: int, end: int) -> tuple[list[
             if not current_is_mapping:
                 cont_text = _strip_inline_comment(stripped)
                 current_value = f"{current_value} {cont_text}"
+            elif _is_mapping_item_text(_strip_inline_comment(stripped)):
+                current_keys += 1
             j += 1
             continue
 
         break
 
     if current_value is not None:
-        children.append(_strip_matched_quotes(current_value))
+        children.append(_finish(current_value, current_is_mapping, current_keys))
     return children, j
 
 

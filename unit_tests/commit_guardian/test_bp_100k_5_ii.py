@@ -206,6 +206,10 @@ class TestCommittedClaudeScaffoldGroupClearsTheGate(unittest.TestCase):
     a freshly built, unmodified tree; the 5 identity files must show up as
     grounded EXEMPT entries, not silent passes."""
 
+    _workspace: Path
+    _build_result: subprocess.CompletedProcess[str]
+    _hook: Path
+
     @classmethod
     def setUpClass(cls) -> None:
         tmpdir = tempfile.TemporaryDirectory()
@@ -315,6 +319,7 @@ class TestCommittedClaudeScaffoldGroupClearsTheGate(unittest.TestCase):
         # covers: BP-100k-5
         match = _RESULT_LINE_RE.search(self._combined)
         self.assertIsNotNone(match, f"No RESULT summary line. Output:\n{self._combined}")
+        assert isinstance(match, re.Match)
         gaps = int(match.group(4))
         self.assertEqual(
             0,
@@ -338,6 +343,13 @@ class TestCustomisedRouteAScaffoldIsReleasedNotDrifted(unittest.TestCase):
     a customisation is not a policy breach the way editing a build-generated
     output normally is, for a file explicitly registered as
     still-matches-the-pristine-render only."""
+
+    _workspace: Path
+    _probe_key: str
+    _build_script: Path
+    _first_build: subprocess.CompletedProcess[str]
+    _second_build: subprocess.CompletedProcess[str]
+    _hook: Path
 
     @classmethod
     def setUpClass(cls) -> None:

@@ -1,0 +1,65 @@
+{
+  "outcome": {
+    "diagnostics": [],
+    "errors": [],
+    "limitations": [
+      "operation selection confidence is uncertain; assessment={\"confidence\":0.64,\"minimum_confidence\":0.5,\"minimum_selected_probability\":0.8,\"selected_probability\":0.71,\"selected_value\":\"get_entities\"}",
+      "required need need.question is unavailable"
+    ],
+    "open_questions": [],
+    "output": {
+      "payload": {
+        "assessments": {},
+        "attempted_sources": [
+          "knowledge.graph"
+        ],
+        "contradictions": [],
+        "coverage": {
+          "need.question": "unavailable"
+        },
+        "evidence": [],
+        "evidence_ids": [],
+        "finding_ids": [],
+        "findings": [],
+        "limitations": [
+          "operation selection confidence is uncertain; assessment={\"confidence\":0.64,\"minimum_confidence\":0.5,\"minimum_selected_probability\":0.8,\"selected_probability\":0.71,\"selected_value\":\"get_entities\"}",
+          "required need need.question is unavailable"
+        ],
+        "need_evidence": {},
+        "need_limitations": {},
+        "request_id": null,
+        "schema_version": "1.0",
+        "truncated": false,
+        "unavailable_sources": [],
+        "unknowns": []
+      },
+      "schema_id": "leafcutter.evidence_bundle.v1",
+      "schema_version": "1.0"
+    },
+    "report_ref": null,
+    "schema_version": "1.0",
+    "status": "partial"
+  },
+  "run_id": "run-5f1ecc1f585e413c",
+  "status": "partial",
+  "work_items": [
+    {
+      "binding": "research",
+      "depth": 0,
+      "id": "work-5db1bb8e8dff4156",
+      "status": "partial"
+    },
+    {
+      "binding": "host.retrieval_needs",
+      "depth": 1,
+      "id": "work-990eaa2d8e044080",
+      "status": "completed"
+    },
+    {
+      "binding": "retrieve.repository",
+      "depth": 1,
+      "id": "work-a09f49f6401845dc",
+      "status": "partial"
+    }
+  ]
+}

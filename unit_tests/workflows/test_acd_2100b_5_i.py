@@ -66,6 +66,8 @@ from _plan_feature_gate_harness import (  # noqa: E402
 )
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
+from _workflow_engine_harness import fill_workspace_answer  # noqa: E402
+
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _DEAD_FUNCTION_NAME = "classifyWorkspaceSetupPermission"
 _TIMEOUT = 30  # seconds
@@ -88,7 +90,7 @@ def test_dead_function_is_not_reintroduced_into_plan_feature_js():
     duplicates the relocated interpretation logic under that exact name),
     this test must fail loudly, naming the reintroduced symbol.
     """
-    source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
+    source = fill_workspace_answer(_PLAN_FEATURE_JS.read_text(encoding="utf-8"))
 
     assert _DEAD_FUNCTION_NAME not in source, (
         f"The dead function {_DEAD_FUNCTION_NAME}() has been RE-INTRODUCED "

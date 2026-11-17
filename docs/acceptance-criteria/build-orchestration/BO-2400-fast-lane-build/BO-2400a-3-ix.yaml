@@ -1,0 +1,151 @@
+id: BO-2400a-3-ix
+components:
+  - build_orchestration
+  - testing_quality
+title: "A criterion whose new tests all pass before any change is recognised as a test backfill and sent to a mutation proof, not halted"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a batch containing only UXP-510, whose implementation already exists in the
+    repository, and whose 4 covering tests are all newly-added in this run,
+  And all 4 are classified green at baseline and none is inconclusive,
+  When the red-baseline gate produces its verdict,
+  Then UXP-510 is classified as a test backfill, with proof route mutation instead of
+    red-first,
+  And the run does not halt with all_new_tests_green_at_baseline,
+  And the verdict names UXP-510, its 4 green newly-added tests, and the route mutation,
+  And the run goes no further than the mutation proof of BO-2400a-3-x for UXP-510
+    until that proof has passed.
+
+  Given the same batch,
+  When the gate decides whether UXP-510 is a backfill,
+  Then it decides only from the observed outcomes of UXP-510's newly-added tests. It
+    does not consult the criterion's work_status, its history of being demoted, or any
+    field or flag saying it is a backfill, so a run cannot opt into the mutation route
+    by labelling itself.
+
+  Given a criterion whose newly-added covering tests are 3 green and 1 inconclusive
+    (skipped or errored),
+  When the red-baseline gate produces its verdict,
+  Then the criterion is not classified as a test backfill,
+  And the run halts with no_red_outcome_among_new_tests exactly as BO-2400a-3-i states,
+    because a test that did not run cannot be proven by breaking the code it should
+    exercise.
+depends_on: [BO-2400a-3, BO-2400a-3-v, BO-2400a-3-vi]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Step 3 (verify_red_baseline) and its halt reasons."
+  - path: docs/how-to/prove-ac-done.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_red_baseline_proof_route:
+      type: object
+      description: "The verify_red_baseline JSON verdict gains three fields. proof_routes is an object mapping each batch AC id that has newly-added covering tests to 'red_first' or 'mutation'. mutation_required is a list of {ac_id: str, tests: [pytest node id str]}, empty when no AC is on the mutation route. next_step is 'coder' or 'mutation_proof'. An AC is on the mutation route iff it has at least one newly-added covering test, every one is classed green and none is inconclusive. A batch whose ACs are all red_first or mutation is not a halt."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --validate-only"
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Put the classification in a new module, scripts/build_orchestration/_fl_proof_route.py. fast_lane.py measures 391 lines under the check-file-size rule (_file_size_ratchet.count_content_lines), against a 400-line cap for .py. It may gain only the import and the single call that adds the three fields to the verdict. _fl_red_baseline_support.py (318 measured) gains no new logic."
+    - "The route is decided per AC, only from the outcome classes of BO-2400a-3-vi over the newly-added partition of BO-2400a-3-ii. No AC-store field and no CLI flag or environment setting can select or force the mutation route. That includes work_status, amended_by or demotion history, notes, and any backfill marker."
+    - "If even one of an AC's newly-added covering tests is inconclusive (skipped or errored), the AC is not on the mutation route, and the existing halt no_red_outcome_among_new_tests is returned exactly as it is today."
+    - "Before this is built, BO-2400a-3-i needs a spec amendment: all_new_tests_green_at_baseline stops being a halt reason on its own and becomes a mutation-route classification. Flagged to the store owner. This record does not edit BO-2400a-3-i."
+    - "The heavy lane reads the same reason: scripts/build_orchestration/_fl_heavy_lane_gate.py, around line 356, branches on reason == all_new_tests_green_at_baseline. This record must not change heavy-lane behaviour as a side effect. Keep the heavy-lane gate's verdict for an all-green batch unchanged and lock it with a regression test. Any change to heavy-lane behaviour needs its own AC."
+    - "The run stops after the mutation proof until the proof has passed. The fast-lane-ship workflow enforces this by branching on next_step and on the mutation-proof verdict (BO-2400a-3-xiv). This record must expose those fields so that the workflow never re-derives a route from raw outcomes."
+    - "The verdict is deterministic and idempotent: the same tree and the same outcomes give byte-identical proof_routes, mutation_required and next_step."
+delivers_to:
+  agent: python-coder
+  contract: "verify_red_baseline JSON verdict on stdout carrying proof_routes {<ac_id>: 'red_first' | 'mutation'}, mutation_required [{ac_id: str, tests: [str pytest node id]}] (always present, [] when none) and next_step ('coder' | 'mutation_proof'). Consumed by the mutation_proof subcommand (BO-2400a-3-x), which reads mutation_required, and by the fast-lane-ship workflow branch (BO-2400a-3-xiv), which reads next_step and proof_routes."
+expects_from:
+  ac_id: BO-2400a-3-vi
+  contract: "The red / green / inconclusive class of each newly-added covering test."
+test_spec:
+  - name: test_all_green_newly_added_tests_get_mutation_route
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A UXP-510-shaped batch (existing implementation, 4 newly-added covering tests all green, none inconclusive) yields proof_routes['UXP-510'] == 'mutation'."
+  - name: test_all_green_backfill_batch_does_not_halt
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "The same batch is not a halt, and the verdict's reason is not all_new_tests_green_at_baseline."
+    must_catch:
+      - "all_new_tests_green_at_baseline kept as a halt for a backfill AC"
+  - name: test_verdict_names_backfill_ac_tests_and_route
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "mutation_required holds exactly one entry for UXP-510 listing its 4 green newly-added node ids, and proof_routes names the route mutation."
+  - name: test_next_step_is_mutation_proof_before_any_coder
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "With a mutation-route AC present and the proof not yet run, next_step is 'mutation_proof', never 'coder'."
+  - name: test_route_ignores_store_fields_and_self_labels
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "Identical test outcomes give identical verdicts whether the AC is work_status todo or done, has a demotion entry in amended_by, or carries a hand-added backfill marker. All-red outcomes with a backfill marker still route red_first."
+    must_catch:
+      - "route read from work_status"
+      - "route read from a backfill field on the AC"
+  - name: test_one_inconclusive_test_blocks_mutation_route
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "3 green + 1 skipped, and separately 3 green + 1 errored, both halt with reason no_red_outcome_among_new_tests, and the AC is absent from mutation_required."
+  - name: test_verify_red_baseline_cli_emits_proof_routes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Running fast_lane.py verify_red_baseline as a subprocess against a temp git repo, with real pytest and the AC enforcement plugin loaded, prints a verdict carrying proof_routes, mutation_required and next_step."
+  - name: test_heavy_lane_gate_unchanged_for_all_green_batch
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "The heavy-lane gate (_fl_heavy_lane_gate.py) reaches the same verdict for an all-green batch as it did before the proof-route fields were added."
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Change of intent, requested by the user on 2026-10-15. UXP-510 and UXP-511 had code
+  that landed in July and were demoted on 2026-09-07 because they had no covers-tagged
+  proof. On those runs the lane halted with all_new_tests_green_at_baseline, and the user
+  finished them by hand with a mutation check: break the code the tests target, confirm
+  the tests turn red, restore. This record lets the lane recognise that case. The proof
+  itself is BO-2400a-3-x, and the refusals are in BO-2400a-3-xi.

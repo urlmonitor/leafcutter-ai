@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "original_question": "What is the current CPU temperature of the operator's laptop?",
+  "source_scope": {
+    "allow_retrieval": false,
+    "read_roots": [
+      "docs",
+      "kernel",
+      "knowledge",
+      "integrations"
+    ],
+    "repository": "leafcutter",
+    "source_revision": "planning-probe-only"
+  },
+  "selections": {
+    "entity_types": [],
+    "target_ids": [],
+    "required_fields": [],
+    "document_types": [],
+    "relationships": []
+  },
+  "uncertain": {
+    "entity_types": [],
+    "target_ids": [],
+    "required_fields": [],
+    "document_types": [],
+    "relationships": []
+  },
+  "detail_mode": "fields",
+  "completeness": "single_entity",
+  "hierarchy_scope": "not_applicable",
+  "hierarchy_levels": [],
+  "scope_resolution": "unknown",
+  "unresolved": [
+    "needs_outside_catalog",
+    "The catalog has no device telemetry entity, temperature field, or live sensor document type."
+  ],
+  "rationale": "A current laptop CPU temperature is live device telemetry, which the offered repository-oriented catalog does not express. The original source scope remains unchanged.",
+  "engine": "host_llm",
+  "status": "needs_resolution",
+  "model_id": null
+}

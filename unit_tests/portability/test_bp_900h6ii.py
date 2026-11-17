@@ -50,6 +50,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _ge122_build_commit_helpers import strip_environment_confound_hooks  # noqa: E402
+from test_bp_900h6i import _link_dir  # noqa: E402  (shared symlink->junction fallback)
 
 _WORKTREE_ROOT = Path(__file__).resolve().parents[2]
 _SCRIPT_PATH = _WORKTREE_ROOT / "scripts" / "ci" / "check_consumer_install.py"
@@ -574,20 +575,14 @@ class TestBp900h6iiReachability(unittest.TestCase):
         in CI reaches the use-install step, let alone its accounting.
         """
         ci_command = _extract_ci_command()
-
         with tempfile.TemporaryDirectory() as tmp:
             workspace_dir = Path(tmp) / "ci_workspace"
             workspace_dir.mkdir()
-            (workspace_dir / "leafcutter-ai").symlink_to(_WORKTREE_ROOT)
-
+            _link_dir(workspace_dir / "leafcutter-ai", _WORKTREE_ROOT)
             argv = shlex.split(ci_command)
             argv[0] = sys.executable  # adapt the interpreter binary only; arguments unchanged
-            result = subprocess.run(
-                argv, cwd=str(workspace_dir), capture_output=True, text=True, timeout=180,
-                check=False,
-            )
+            result = subprocess.run(argv, cwd=str(workspace_dir), capture_output=True, text=True, timeout=180, check=False)
             combined = result.stdout + result.stderr
-
             self.assertIn(
                 "DEPLOYED GUARDS",
                 combined,
@@ -609,6 +604,7 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [test-writer/test-env-fixes]: WinError 1314 on the CI-workspace link; _link_dir (900h6i) falls back to a junction.
 # - 2026-08-31 [test-writer/BP-900h-6-ii]: Initial RED test-first stubs for
 #   all four test_spec descriptors. All four are expected to fail today —
 #   see the red_baseline in this ticket's sign-off comment. The "full run"

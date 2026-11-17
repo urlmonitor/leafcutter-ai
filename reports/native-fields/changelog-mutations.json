@@ -1,0 +1,92 @@
+[
+  {
+    "mutation": "drop_extension",
+    "test": "test_changelog_preserves_every_field_body_and_authored_types",
+    "failures": 1,
+    "errors": 0,
+    "exit_code": 1,
+    "receipt": "reports/native-fields/changelog-mutation-drop_extension.xml",
+    "implementation_file": "knowledge/native_types/changelog_entry.py"
+  },
+  {
+    "mutation": "inject_default",
+    "test": "test_changelog_legacy_identity_absence_and_presentation_fallbacks",
+    "failures": 1,
+    "errors": 0,
+    "exit_code": 1,
+    "receipt": "reports/native-fields/changelog-mutation-inject_default.xml",
+    "implementation_file": "knowledge/native_types/changelog_entry.py"
+  },
+  {
+    "mutation": "duplicate_store",
+    "test": "test_changelog_absent_stores_and_overlapping_configuration",
+    "failures": 1,
+    "errors": 0,
+    "exit_code": 1,
+    "receipt": "reports/native-fields/changelog-mutation-duplicate_store.xml",
+    "implementation_file": "knowledge/native_types/changelog_entry.py"
+  },
+  {
+    "mutation": "ignore_configuration",
+    "test": "test_changelog_configured_store_and_guidance_exclusions",
+    "failures": 2,
+    "errors": 0,
+    "exit_code": 1,
+    "receipt": "reports/native-fields/changelog-mutation-ignore_configuration.xml",
+    "implementation_file": "knowledge/native_types/changelog_entry.py"
+  },
+  {
+    "mutation": "ignore_bad_store",
+    "test": "test_changelog_rejects_unsafe_or_invalid_store",
+    "failures": 4,
+    "errors": 0,
+    "exit_code": 1,
+    "receipt": "reports/native-fields/changelog-mutation-ignore_bad_store.xml",
+    "implementation_file": "knowledge/native_types/changelog_entry.py"
+  },
+  {
+    "mutation": "strip_backslashes",
+    "test": "test_changelog_recovers_only_failing_literal_description",
+    "failures": 1,
+    "errors": 0,
+    "exit_code": 1,
+    "receipt": "reports/native-fields/changelog-mutation-strip_backslashes.xml",
+    "implementation_file": "knowledge/native_types/changelog_entry.py"
+  },
+  {
+    "mutation": "coerce_valid_map",
+    "test": "test_changelog_recovers_failing_literal_list_but_retains_valid_maps",
+    "failures": 1,
+    "errors": 0,
+    "exit_code": 1,
+    "receipt": "reports/native-fields/changelog-mutation-coerce_valid_map.xml",
+    "implementation_file": "knowledge/native_types/changelog_entry.py"
+  },
+  {
+    "mutation": "swallow_malformed",
+    "test": "test_changelog_rejects_ambiguous_or_unrelated_malformations",
+    "failures": 7,
+    "errors": 0,
+    "exit_code": 1,
+    "receipt": "reports/native-fields/changelog-mutation-swallow_malformed.xml",
+    "implementation_file": "knowledge/native_types/changelog_entry.py"
+  },
+  {
+    "mutation": "drop_recovery_error",
+    "test": "test_changelog_recovers_only_failing_literal_description",
+    "failures": 1,
+    "errors": 0,
+    "exit_code": 1,
+    "receipt": "reports/native-fields/changelog-mutation-drop_recovery_error.xml",
+    "implementation_file": "knowledge/native_types/changelog_entry.py"
+  },
+  {
+    "mutation": "leak_checkout_path",
+    "test": "test_changelog_recovery_payload_is_independent_of_checkout_path",
+    "failures": 1,
+    "errors": 0,
+    "exit_code": 1,
+    "receipt": "reports/native-fields/changelog-mutation-leak_checkout_path.xml",
+    "implementation_file": "knowledge/native_types/changelog_entry.py"
+  }
+]

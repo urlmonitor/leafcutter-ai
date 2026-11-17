@@ -1,0 +1,285 @@
+id: INF-500d-4-ix
+components:
+  - infrastructure
+  - agent_telemetry
+  - knowledge_system
+title: "Every copy of the usable-stream and stale-root rule gives the canonical verdict, and a copy that drifts fails a check"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the rule "is this declared log stream usable, and is the enduring root that
+    holds it still live" exists once as the canonical rule and five more times as
+    copies of it:
+      - the canonical rule in the shared sink-resolution module,
+      - the inline copy carried by the agent-telemetry event writer,
+      - the inline copy carried by the inline-work guard hook,
+      - the telemetry command the plan-feature workflow dispatches for its
+        product-truth events,
+      - the pre-drive reachability probe in the epic-building runbook,
+      - the same probe in the epic supervisor's pre-flight checklist,
+  And each copy is taken from a deployed install, in the form an agent, hook or
+    workflow actually runs it,
+  And for a copy that keeps a log file of its own rather than reading a declared
+    stream, the canonical verdict it is compared against is the verdict the rule
+    gives for that file placed directly under the declared root,
+  And a table of installs with one declaration and filesystem layout per row:
+      - no declaration file,
+      - a declaration that is an empty object, which is what a build with no log
+        root records,
+      - a declaration that cannot be parsed,
+      - a declaration with no operational log root,
+      - a declaration whose operational log root is a relative path,
+      - a declaration whose stream is missing, or is a relative path,
+      - a declaration whose stream sits outside the operational log root,
+      - a declaration whose stream sits two levels under the operational log root,
+      - a valid declaration whose log directory exists,
+      - a valid declaration whose log directory is missing under a live enduring
+        root (a fresh install), once in the conventional project/debugging/logs
+        layout and once with a log root that is not under a debugging directory,
+      - a valid declaration whose enduring root has vanished, in both of those
+        layouts,
+  When the parity check feeds every row to every copy,
+  Then every copy returns the same usable-or-unusable verdict as the canonical rule
+    on every row,
+  And on every row the canonical rule finds usable, every copy that reports a
+    location reports the same absolute location the canonical rule returns,
+  And exactly the valid rows whose enduring root is live are usable, so a table on
+    which every copy agrees that everything is unusable, or that everything is
+    usable, fails the check instead of passing it,
+  And on every unusable row no copy brings the log directory or the enduring root
+    into existence, and no copy leaves any new file behind.
+
+  Given the plan-feature telemetry command and the two pre-drive probes are workflow
+    and prompt text rather than importable code,
+  When the parity check compares them,
+  Then each one is executed in a shell exactly as the deployed text states it,
+    against the same row layouts as every other copy,
+  And its verdict is read from what it observably does: the probe's
+    reachable-or-unreachable outcome, and the telemetry command's exit status
+    together with whether the declared stream gained exactly one line,
+  And a check that only searches the text for expected words or fragments does not
+    satisfy this criterion.
+
+  Given the canonical rule is changed so its verdict flips on one row, for example
+    a stream two levels under the root becomes usable, or a missing log directory
+    under a live enduring root is treated as stale,
+  And one of the five copies is left as it was,
+  When the parity check runs in the test suite that guards a merge,
+  Then the check fails,
+  And the failure names the copy that disagrees, the row it disagrees on, and the
+    two verdicts,
+  So that the drift is caught before the change merges, not discovered later when a
+    drive's logs are lost or its writers refuse.
+
+  Given one of the five copies can no longer be found in the deployed install, or
+    its command can no longer be extracted and run as written,
+  When the parity check runs,
+  Then the check fails and names the copy it could not find or run,
+  And every run reports how many copies and how many rows it compared, so a run that
+    compared nothing cannot report agreement.
+depends_on:
+  - INF-500d-4
+  - INF-500d-4-iv
+  - INF-500d-4-vi
+doc_links:
+  - path: docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
+    relationship: constrains
+    status: exists
+    relevance: "Implementation record: the usable-stream rule (read_usable_stream), the stale rule (enduring_root_exists / enduring_holder), and the statement that --print-location tests shape but not staleness."
+  - path: scripts/knowledge/sink_resolution.py
+    relationship: describes
+    status: exists
+    relevance: "The canonical rule: read_usable_stream, enduring_holder, enduring_root_exists."
+  - path: templates/skills/agent-telemetry/scripts/emit_event.py
+    relationship: describes
+    status: exists
+    relevance: "Inline copy 1 (_declared_stream). Standard library only by design."
+  - path: templates/hooks/inline_work_guard.py
+    relationship: describes
+    status: exists
+    relevance: "Inline copy 2 (_resolve_audit_path). Standard library only by design. Keeps a file of its own (inline_work_guard.jsonl) rather than reading a declared stream."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: describes
+    status: exists
+    relevance: "Shell copy 1: the command emitPtTelemetry dispatches (location query, then the holder check and mkdir -p only under a live root)."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Shell copy 2: the pre-drive-reachability-check snippet in section 1.0."
+  - path: templates/agents/epic-supervisor.md
+    relationship: describes
+    status: exists
+    relevance: "Shell copy 3: the pre-drive-reachability-check snippet in pre-flight check 7."
+  - path: unit_tests/feedback/test_inf_500d_4_iv_usable_stream_parity.py
+    relationship: related
+    status: exists
+    relevance: "The existing parity test. It pins only emit_event against sink_resolution (11 declaration shapes, 5 staleness layouts). This AC extends the same comparison to the other four copies. The row table in the criteria is a superset of its rows."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-4-iv.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the writers and plan-feature.js whose copies this AC pins."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-4-vi.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the prompt surfaces that carry the two probe snippets."
+assigned_agent: python-coder
+estimated_complexity: L
+test_required: true
+test_spec:
+  - name: test_every_copy_gives_the_canonical_verdict_on_every_row
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    surface_invoked: "all six copies taken from the shared_reference_layout fixture (@pytest.mark.shared_layout_reader): the deployed sink_resolution.py (read_usable_stream / enduring_holder / enduring_root_exists, the canonical rule), the deployed emit_event.py (_declared_stream), the deployed inline_work_guard.py (_resolve_audit_path), the command emitPtTelemetry in the deployed plan-feature.js dispatches, the pre-drive-reachability-check snippet in the deployed building-epics SKILL.md section 1.0, and the same snippet in the deployed epic-supervisor.md check 7"
+    description: "Extend unit_tests/feedback/test_inf_500d_4_iv_usable_stream_parity.py. Build the full row table from the criteria as cheap temp installs (one declaration plus filesystem layout per row): no declaration file; {} (the --no-log-root shape); unparseable JSON; no operational_log_root; relative operational_log_root; stream missing; stream relative; stream outside the root; stream two levels under the root; valid with log dir present; valid with log dir missing under a live enduring root, once in the <project>/debugging/logs layout and once in a flat layout whose log root is not under debugging/; valid with the enduring root vanished, in both layouts. Feed every row to every copy. Load the two Python inline copies from their deployed files and call them. Extract the three shell copies from the deployed text and execute them with a real shell against the row, never matching words in the text. Read each shell copy's verdict from what it does: the probe's reachable-or-unreachable outcome, and the telemetry command's exit status plus whether the declared stream gained exactly one line. Assert every copy's usable/unusable verdict equals the canonical verdict on every row. Compare the inline-work guard against the canonical verdict for <operational_log_root>/inline_work_guard.jsonl under that row's declared root (option A), not against the telemetry stream's verdict. On every row the canonical rule finds usable, assert each copy that reports a location reports the same absolute path the canonical rule returns."
+    must_catch:
+      - "a shell copy whose holder computation hard-codes the debugging/logs layout (agrees on every conventional row, wrong on the flat vanished-root row)"
+      - "a shell copy that drops the holder check and treats a vanished enduring root as usable"
+      - "an inline copy that accepts a stream two levels under the root"
+      - "the inline-work guard compared against the telemetry stream's verdict, which falsely reports it as drifted on the outside/nested/relative stream rows"
+      - "a shell copy verified by grepping its text instead of executing it"
+  - name: test_parity_table_is_not_vacuous
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Assert the canonical rule finds exactly the valid rows whose enduring root is live usable (log dir present, and log dir missing under a live root in both layouts) and every other row unusable. Then feed the check a stand-in copy that always answers unusable, and separately one that always answers usable, and assert the check fails on each instead of passing."
+    must_catch:
+      - "a table where every copy and the canonical rule agree that everything is unusable"
+      - "a table where every copy and the canonical rule agree that everything is usable"
+  - name: test_no_copy_creates_anything_on_an_unusable_row
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "For every unusable row, snapshot the row's whole temp tree before and after running each copy (including the executed shell copies and the dispatched plan-feature telemetry command). Assert neither the log directory nor the enduring root was brought into existence and no new file appeared anywhere in the tree."
+    must_catch:
+      - "a shell copy that runs mkdir -p before the holder check, recreating a vanished root"
+      - "an inline copy that creates the log directory on an unusable declaration"
+  - name: test_check_names_copy_row_and_verdicts_when_the_canonical_rule_flips
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Run the parity check with a mutated canonical rule, never by editing the shared layout: load a private copy of the deployed sink_resolution.py into a temp dir (or substitute the canonical callable in-process) and flip one row. Case 1: a stream two levels under the root becomes usable. Case 2: a missing log directory under a live enduring root is treated as stale. Leave all five copies as deployed. Assert the check fails, and the failure message names the disagreeing copy, the row, and both verdicts (canonical vs copy). Assert the shared layout is byte-identical after the test."
+    must_catch:
+      - "a check that compares copies only to each other and so passes when the canonical rule alone changes"
+      - "a failure message that says 'mismatch' without naming the copy, row and verdicts"
+  - name: test_check_fails_and_names_a_copy_it_cannot_find_or_run
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Point the check at a private temp copy of the deployed files needed (never the shared layout) where, in turn, one copy is absent: emit_event.py removed; inline_work_guard.py removed; the plan-feature.js telemetry command made unextractable; the building-epics section 1.0 snippet removed; the epic-supervisor check 7 snippet removed. Assert each run fails and names the copy it could not find or run, and that the check does not silently skip it."
+    must_catch:
+      - "an extractor that returns an empty command, which the shell runs successfully and reports as agreement"
+      - "a missing copy that is skipped and the run still reports agreement"
+  - name: test_check_reports_how_many_copies_and_rows_it_compared
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Assert every run of the check reports the number of copies compared against the canonical rule (five on the deployed layout) and the number of rows, and that a run whose compared copy or row count is zero fails rather than reporting agreement."
+    must_catch:
+      - "a run that compared nothing and reports agreement"
+test_rationale: "Five of the six copies exist to restate one rule, and three of them are prompt or workflow text, so the only proof of agreement is to run every copy as it is deployed against the same rows and read what it does. Per CLAUDE.md, a grep of the text passes on dead or drifted snippets. The copies are read from the shared_reference_layout fixture (reader), because the probe snippets carry a build-resolved {{config.output_root}} token and inject_config can rewrite literals at deploy time. The row installs are temp declarations and need no build of their own. The mutation and missing-copy scenarios work on private copies so the shared layout is never changed. The non-vacuity and count assertions stop a table where everything agrees on one answer, or a run that compared nothing, from reporting agreement. These tests must run unskipped and un-xfailed in the CI pytest gate that guards a merge."
+delivers_to: null
+expects_from:
+  - ac_id: INF-500d-4-iv
+    contract: "emit_event.py, inline_work_guard.py and plan-feature.js each applying the usable-stream and stale-root rules, as deployed."
+  - ac_id: INF-500d-4-vi
+    contract: "The pre-drive reachability probe snippets in building-epics section 1.0 and epic-supervisor check 7, as deployed."
+origin_agent: BrainCandy
+created: 2026-10-14
+amended_by:
+  - reason: "BrainCandy approved readiness on 2026-10-14 (relayed via the orchestrating session) with option A: the inline-work guard is compared against the canonical verdict for its own file under the declared root, not against the telemetry stream's verdict. readiness: draft -> approved; criteria and work_status unchanged."
+    by: BrainCandy
+    at: 2026-10-14
+  - reason: "IT PO technical enrichment: added test_required: true, a six-entry behavioral test_spec derived from the four Gherkin scenarios (every copy executed from the deployed shared_reference_layout, never grepped), test_rationale, and estimated_complexity L. criteria, readiness and work_status unchanged."
+    by: it-po
+    at: 2026-10-14
+  - reason: "ac-fulfillment-gate store reconciliation: covered_by set to unit_tests/feedback/test_inf_500d_4_ix.py (tests tagged '# covers: INF-500d-4-ix'); implemented_by set to the five unit_tests/feedback/_usable_stream_parity_*.py modules and the generator's bogus ticket-file entry removed (a ticket is not an implementation); work_status todo -> done via mark_ac_done.py. criteria and readiness unchanged."
+    by: ac-fulfillment-gate
+    at: 2026-10-14
+superseded_by: null
+covered_by:
+  - unit_tests/feedback/test_inf_500d_4_ix.py
+  - unit_tests/feedback/test_inf_500d_4_ix_drift.py
+implemented_by:
+- unit_tests/feedback/_usable_stream_parity_copies.py
+- unit_tests/feedback/_usable_stream_parity_core.py
+- unit_tests/feedback/_usable_stream_parity_rows.py
+- unit_tests/feedback/_usable_stream_parity_report.py
+- unit_tests/feedback/_usable_stream_parity_canonical.py
+change_target:
+  - code
+risk_surface: contract_boundary
+declares_side_effect: false
+notes: |
+  Follow-up asked for by BrainCandy on 2026-10-14, after PR #1169 (merge 818c301c0,
+  ADR-069 accepted). The architect-review on tickets 03 (INF-500d-4-iv) and 05
+  (INF-500d-4-vi) of EPIC-OneDurableLogRootForEveryWorkspace found that only
+  emit_event's inline copy is pinned against sink_resolution. The other four copies
+  can drift without any check noticing. The review recommended a follow-up AC and
+  no new ADR. ADR-069 already decides the rule, and this AC only keeps the copies
+  in step with it.
+
+  PLACEMENT. This is an L3 under INF-500d-4, the composite whose rule the copies
+  restate. It is not an L2 under INF-500d, which already has five L2s (d-1 to d-5)
+  and so is at the 5-L2-per-L1 hard cap in check_ac_limits.py. The store caps only
+  L1s per L0 and L2s per L1, so an L2 can take a ninth L3. Roman suffix -ix follows
+  -viii.
+
+  WHY THE SHELL COPIES ARE EXECUTED, NOT GREPPED. The repo rule (CLAUDE.md, "Gate /
+  Workflow ACs: Verify Behaviorally, Not by Grep") is that a test that only looks
+  for a string passes on dead code. The three shell copies are prompt and workflow
+  text. The only proof that they agree is to run each one as written against the
+  same layouts and read what it does.
+
+  WHAT THE SHELL COPIES ACTUALLY RESTATE. All three get their stream from the
+  location query, sink_resolution.py --print-location telemetry. That query runs
+  the canonical shape rule, so on the shape rows they agree with the canonical rule
+  by construction. Per ADR-069's implementation record, the query does NOT test
+  staleness. Each snippet restates the stale rule itself (HOLDER = the log root's
+  parent, or the project above it when that parent is debugging). So the
+  vanished-root rows, in both layouts, are the rows that catch a drifted shell copy.
+  The shape rows still matter: they catch a change to the query's refusal behaviour
+  that a snippet doesn't follow, such as a query that starts printing a path for an
+  unusable stream.
+
+  WHY BOTH LAYOUTS. enduring_holder has two branches: a log root under debugging/
+  (go up two levels) and one that is not (go up one). The existing parity test
+  covers both (flat_root_live, flat_root_gone). A copy that hard-codes the
+  conventional layout agrees on every conventional row and is wrong on the other
+  layout, so the table carries both.
+
+  THE INLINE-WORK GUARD IS A SPECIAL CASE. It reads only operational_log_root and
+  keeps its own file, <root>/inline_work_guard.jsonl, which sits directly under the
+  root by construction. Rows that vary only where the telemetry stream sits (outside,
+  nested, relative, missing) don't change what the guard sees. The criteria
+  therefore compare the guard against the canonical verdict for its own file under
+  the declared root. They do not compare it against the telemetry stream's verdict,
+  which would wrongly report it as drifted. BrainCandy confirmed this reading on
+  2026-10-14 (option A).
+
+  WRITABILITY IS OUT OF SCOPE. The two probes also test that the nearest existing
+  directory is writable. That is not part of the usable-stream or stale-root rule.
+  Every row's layout is writable, so writability never decides a verdict here.
+
+  DEPLOYED, NOT SOURCE. The probe snippets carry a {{config.output_root}} token that
+  the build resolves, and inject_config can rewrite literals in deployed text.
+  Compare the deployed copies. The shared_reference_layout fixture (reader) is
+  enough for the copies themselves. The row installs are cheap temp declarations,
+  as in the existing parity test, and need no build of their own.
+
+  NOT IN SCOPE. Adding a sixth copy is not covered by these criteria. If one appears,
+  it should join the table under this AC rather than get a parity test of its own.
+  The fourth scenario's copy count makes a missing copy visible. It does not find
+  new ones.

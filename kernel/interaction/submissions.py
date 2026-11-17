@@ -36,6 +36,7 @@ from kernel.contracts import (
     validate_semantics,
 )
 from kernel.contracts.payloads import HumanAnswerPayload
+from kernel.capabilities.host.registry import host_operation
 
 
 class RejectionCode(StrEnum):
@@ -190,10 +191,25 @@ def _content_problem(submission: InteractionSubmission, packet: HostWorkRequest 
         validate_semantics(schema, payload, _semantic_context(packet, state))
     except SemanticValidationError as exc:
         extra = [*extra, *exc.violations]
+    extra.extend(_host_contract_problem(packet, payload, state))
     if extra:
         return reject(RejectionCode.SEMANTIC_INVALID, "; ".join(extra), repairable=True,
                       violations=extra)
     return None
+
+
+def _host_contract_problem(packet: HostWorkRequest | HumanQuestion, payload: Any,
+                           state: Mapping[str, Any]) -> list[str]:
+    """Apply the owning operation's pure checks to the actual pending invocation."""
+    if not isinstance(packet, HostWorkRequest):
+        return []
+    invocation = state.get("invocations", {}).get(packet.invocation_id)
+    if invocation is None:
+        return []
+    operation = host_operation(invocation.capability_id)
+    if operation is None:
+        return []
+    return operation.submission_violations(invocation.input_payload, payload)
 
 
 def check_submission(raw: object, state: Mapping[str, Any]) -> Verdict:
@@ -242,3 +258,4 @@ def check_submission(raw: object, state: Mapping[str, Any]) -> Verdict:
 #   schema into one generic schema error, so routing checks read the raw fields first to give the
 #   precise code. (#KernelBootstrapV0/P6)
 # ====================================================================
+# - 2026-10-03 00:00 [python-coder]: Add typed host-needs support without activating production retrieval. (#TICKETLESS reason=user-requested-isolated-host-experiment)

@@ -1,0 +1,198 @@
+id: BO-4500a
+title: "Your work is saved the same careful way, whichever route did it"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: [code, prompt]
+risk_surface: safety
+criteria: |
+  One saving step for every route -- only your files, your credit kept, never on main.
+
+  Every route saves its work through the same single step: only the files that work
+  touched go in, the author credit you wrote is kept word for word, the project's checks
+  always run and get one honest chance to be fixed, the shared main line is never written
+  to directly, and you always get one clear answer about what happened.
+depends_on: [BO-4500]
+doc_links:
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Cluster C6. Consolidation spec for commit_changes.py, carried into the notes below
+      verbatim in substance. Cite; do not re-derive the inventory.
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-029.md
+    relationship: describes
+    status: exists
+    relevance: "Fast lane stages everything (git add -A) and ships unrelated generated diff."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260928-stage-commit-leaves-the-edited-parent-unstaged.md
+    relationship: describes
+    status: exists
+    relevance: "Exact-name staging leaves the edited parent AC out of the commit."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260901-0920.md
+    relationship: describes
+    status: exists
+    relevance: "No commit lock: N tickets commit concurrently into one index."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20260914-commit-agent-rewrites-co-author-trailer.md
+    relationship: describes
+    status: exists
+    relevance: "The commit agent rewrites the caller's Co-Authored-By trailer."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20260925-commit-agent-pkill-kills-parallel-test-runs.md
+    relationship: describes
+    status: exists
+    relevance: "The commit agent's Step 0 kills every running test process, including parallel runs."
+  - path: templates/agents/command-step-runner.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The chartered executor (BO-2400a-1-i) a workflow uses to run the shared step. Its
+      contract requires target.ac_id, which plan-feature and finalize-feature do not have.
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: "Depth-1 agents cannot spawn; why the commit agent returns a handoff and a depth-0 caller engages the specialist."
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+    relevance: "E2 workflow bodies have no require/import and no process access; the step is a command, shared JS is build-inlined."
+  - path: docs/reference/remedy-declarations.md
+    relationship: describes
+    status: exists
+    relevance: "The three disposition values and the shared declaration loader the hook_failed answer reuses."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "In flight (branch fast-lane/bo-3800a): commit.js and remedy_handoff.py. Same answer shape; commit.js is the ninth route."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: [BO-4500a-1, BO-4500a-2, BO-4500a-3, BO-4500a-4, BO-4500a-5]
+implemented_by: []
+documentation_triggers:
+  - component-diagram
+  - sequence-diagram
+  - reference-doc
+notes: |
+  BUILD ORDER -- NEW PATH FIRST, REWIRE ONLY WHEN IT WORKS (BrainCandy, final gate 2026-10-14:
+  "We need a new path first AND only when that works rewire existing solutions to it"). The
+  shared step (BO-4500a-1..-4) is built and proved on its own before any route moves onto it.
+  No route migration (BO-4500a-5 and its L3s, including the /commit route once BO-3800a lands)
+  starts until those four are done with green tests, and each route keeps its old recipe until
+  its own migration passes. This is enforced structurally by BO-4500a-5's depends_on
+  [BO-4500a-1, -2, -3, -4]; this note records why, so the order is not "optimised" away.
+
+  FINAL-GATE DECISIONS (2026-10-14), recorded here so they are found from the L1:
+    - Census wording made count-independent (BO-4500a-5 amended_by).
+    - Retry ceilings configured, default 3, automated retries only; a specialist is still
+      engaged at most once (BO-4500a-3, -3-ii amended_by; BO-4500a-4 it_requirements).
+    - The answer's vocabulary (reason codes and families, answer keys, answer_version, retry
+      ceilings) lives in config/commit_step.json, not in code, so it can be extended later by
+      a data edit (BO-4500a-4 amended_by).
+    - BO-2400a-1-i carries an amended_by entry for the run-id widening (BO-4500a-5-viii).
+
+  WHAT THE USER ASKED FOR (2026-10-12, BrainCandy, via /plan-feature). Committing becomes one
+  deterministic step that every workflow calls the same way, replacing the 8+ hand-written
+  commit recipes in templates/workflows-js/ (plan-feature x3, quick-fix x2, fast-lane-ship,
+  finalize-feature) and in skill/agent recipes (commit.md, precommit-autofix,
+  building-epics section 5.6).
+
+  CARRIED FROM THE REQUEST FOR THE BA AND IT PO -- this is the analysis's consolidation
+  spec, recorded so it is not re-derived; the PO does not decompose it:
+    - commit_changes.py: an EXPLICIT path set (never git add -A or -u); message read from a
+      file, preserving the caller's Co-Authored-By trailer; a supervised mode; hook probe,
+      then autofix, then EXACTLY ONE retry; never skips hooks; refuses on main/master;
+      answers one JSON object {status: committed | nothing_to_commit | refused |
+      hook_failed, sha, paths, hook_name, failing_files}.
+    - The four statuses are the user-visible "one clear answer". nothing_to_commit and
+      refused are distinct outcomes, never a success.
+
+  KIs THIS L1 SHOULD CLOSE -- each must be verified against current code BEFORE an L2
+  claims it (the PO does not read code; the BA/IT PO must):
+    KI-BO-029, KI-BO-20260928-stage-commit-leaves-the-edited-parent-unstaged,
+    KI-BO-20260901-0920, KI-BO-20260914-commit-agent-rewrites-co-author-trailer,
+    KI-BO-20260925-commit-agent-pkill-kills-parallel-test-runs.
+  Seam on KI-BO-20260928 (edited parent unstaged): "only the files the work touched" must
+  INCLUDE a parent record the work edited (repo CLAUDE.md "AC-store commits -- stage the
+  parent alongside the child"). Explicit-paths must not be read as "only the files the
+  caller happened to name".
+  Seam on KI-BO-20260901-0920 (no commit lock): serialising concurrent commits is BO-1600a's
+  promise (prevention-only by design) and BO-1800 removes the shared store. The shared step
+  is WHERE that serialisation is enforced for every route; the BA should depend on / cite
+  BO-1600a rather than re-specify the lock's semantics.
+
+  CONSTRAINTS FROM THE REQUEST (do not reopen at L2):
+    1. Workflows run on the E2 engine with no require/import, and workflow() throws, so the
+       step is a Python script run through command-step-runner (BO-2400a-1-i). Its contract
+       requires target.ac_id, which plan-feature and finalize lack, so the step must be
+       reachable with a RUN id instead. Generalising command-step-runner itself is out of
+       scope; state it as a dependency (or a narrowly-scoped L2) rather than redesigning it.
+    2. Commit delegation (enforce_commit_delegation, argv-parsing since PR #915): decide
+       explicitly WHO runs the script. Default proposal: the commit agent still receives the
+       dispatch, but its brief shrinks to "run the step and relay its JSON"; message
+       authoring and autofix judgement stay agent work. This is the BA's/IT PO's decision to
+       record at L2, with the user confirming at the gate.
+    3. MIGRATION RULE (BO-4500 standing rule) -- a MANDATORY criterion on EVERY migration
+       L2: the shared step starts from the HARDENED copy of each piece of logic, never a
+       weaker sibling's, and the regression tests behind every KI it replaces run against
+       the shared step. The fast lane is often the fixed copy.
+    4. Framework-neutral: the step and its answer must keep working under a future move to
+       LangGraph or the Claude Agent SDK.
+
+  BOUNDARIES -- cite, do not duplicate:
+    - BO-200 (envelope, atomic, rollback) -- the properties of one delivery. This L1 is the
+      one step all routes call to get them.
+    - BO-1100 (message kind / routing) -- upstream of this step. This step carries the
+      message it is given and never rewrites it (also BO-200c-4's "approved subject line
+      is never rewritten").
+    - BO-210 / BO-3800 -- who fixes a hook failure. This step's single autofix-then-retry
+      must hand off to those rather than re-specify them; the "autofix judgement stays
+      agent work" split in constraint 2 is where they plug in.
+    - BO-1600a / BO-1800 -- concurrent-commit safety and isolation topology (see seam above).
+    - BO-4300 -- this step refuses on main/master; BO-4300 and BO-1800e guarantee a route
+      has its own line of work to begin with. Do not restate either.
+    - BO-3200f (open PR #971, readiness draft) -- routes ~40 workflow command steps to
+      command-step-runner. The commit sites it lists become calls to THIS step; the BA must
+      coordinate so the same site is not decomposed twice.
+    - KI-CG-20260925-commit-delegation-hook-misses-git-dash-c -- a commit-guardian concern;
+      reference only.
+
+  DOCUMENTATION TRIGGERS. component-diagram: a new shared script plus a changed commit-agent
+  role. sequence-diagram: workflow -> executor -> commit agent -> script -> hooks -> autofix
+  -> retry is a multi-actor flow. reference-doc: the one-answer contract every caller reads.
+
+  IT PO ENRICHMENT, 2026-10-14 (technical fields on the 31 leaves; this composite stays without an
+  assigned_agent). Decisions taken:
+    - WHO RUNS THE STEP (constraint 2): the commit agent, its brief shrunk to "author a message if
+      none, run the step, relay the answer" (BO-4500a-5-v). The command-step-runner widening
+      (BO-4500a-5-viii) is kept for BO-3200f but is not on the commit path.
+    - REFUSED vs STEP FAILURE (BrainCandy instruction 1): four statuses kept; a required,
+      enumerated reason_code on every non-committed answer, with disjoint policy_* (stop, do not
+      retry) and step_* (the step could not finish, may retry) families under refused
+      (BO-4500a-4, -4-v). No fifth status.
+    - ONE ANSWER WITH BO-3800a (BrainCandy instruction 2): the hook_failed answer embeds
+      remedy_handoff.py's remedy sub-object and handoff payload; dispositions engage-specialist /
+      author-clears / mechanical-autofix are the incumbent vocabulary. The step's single
+      fix-and-retry is the mechanical class only.
+    - LAYERING: shared step = deterministic staging, checks and answer; commit agent = runs the
+      step and relays; depth-0 caller (commit.js for /commit, each workflow for its own commits,
+      the drive's phase loop for builds) = engages a specialist on a handoff at most once and
+      re-offers. E2 workflows cannot call another workflow (Edge 5), so commit.js is a ROUTE, the
+      ninth consumer, not the centre.
+    - DEPENDENCY: the depth-0 engage-then-re-offer loop must be shared through the reserved
+      shared-code-inliner L1 (BO-4500 notes; generalising BO-4300c-3's build-inlined block), not
+      typed into each workflow. That L1 is not authored here.
+  Further dependencies: BO-1600a-1 (serialisation guard, approved/todo) blocks BO-4500a-4-ii;
+  BO-210c-2's regression tests do not exist yet and must be written against the step; BO-3800a
+  (branch fast-lane/bo-3800a) owns remedy_handoff.py, which must remain the only payload builder.

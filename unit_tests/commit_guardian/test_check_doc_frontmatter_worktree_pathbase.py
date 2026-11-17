@@ -36,6 +36,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout, unlink_checkout
+
 # ---------------------------------------------------------------------------
 # Module-level constants
 # ---------------------------------------------------------------------------
@@ -263,18 +265,17 @@ class TestWorktreePathbaseResolution(unittest.TestCase):
         # Step 1 — primary git repo with initial HEAD commit
         cls._primary = _setup_primary_repo(cls._base)
 
-        # Step 2 — create a REAL linked worktree via git worktree add
+        # Step 2 — create a REAL linked worktree via the linked-checkout add
         # This is the crux of GE-115: the worktree top-level differs from the
         # primary repo root, which in turn differs from find_project_root().
         cls._worktree = cls._base / "worktree"
-        wt_result = _git(
-            ["worktree", "add", str(cls._worktree), "-b", "ge115-test-branch"],
-            cwd=cls._primary,
+        wt_result = link_checkout(
+            cls._primary, [str(cls._worktree), "-b", "ge115-test-branch"], check=False
         )
         if wt_result.returncode != 0:
             shutil.rmtree(cls._tmpdir, ignore_errors=True)
             skip_reason = (  # noqa: TRY003
-                f"git worktree add failed (rc={wt_result.returncode}): "
+                f"the linked-checkout add failed (rc={wt_result.returncode}): "
                 f"{wt_result.stderr.strip()}"
             )
             raise unittest.SkipTest(skip_reason)  # noqa: TRY003
@@ -306,10 +307,7 @@ class TestWorktreePathbaseResolution(unittest.TestCase):
         primary = getattr(cls, "_primary", None)
         tmpdir = getattr(cls, "_tmpdir", None)
         if worktree is not None and primary is not None:
-            _git(
-                ["worktree", "remove", "--force", str(worktree)],
-                cwd=primary,
-            )
+            unlink_checkout(primary, ["--force", str(worktree)], check=False)
         if tmpdir is not None:
             shutil.rmtree(tmpdir, ignore_errors=True)
 

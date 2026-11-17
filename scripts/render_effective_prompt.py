@@ -35,6 +35,15 @@ Options:
 Exit codes:
     0  Rendered successfully.
     1  Bad input (agent template not found, AC id not found, I/O error).
+
+DECISION HISTORY
+- 2026-10-15 [python-coder/AR-400e-1-i]: The briefing's skills section lists
+  only real abilities: ``descriptive_only`` registry entries (behaviour
+  descriptions, not grants) are no longer listed. (#AR-400e-1-i)
+- 2026-10-16 [python-coder/AR-400d-3]: The briefing's abilities section moved to
+  ``render_effective_skills.resolve_agent_skills`` (this module was over its size limit),
+  which now carries each grant's ``provided_by`` marking and points a project-supplied
+  grant at the project's own SKILL.md. (#AR-400d-3)
 """
 
 from __future__ import annotations
@@ -63,6 +72,7 @@ try:
 except ImportError as exc:  # pragma: no cover - import-environment guard
     logger.error("Cannot import derive_parent_id from ac_store.ac_parent_id: %s", exc)
     raise
+from render_effective_skills import resolve_agent_skills  # noqa: E402 - needs the sys.path insert above
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -71,11 +81,9 @@ except ImportError as exc:  # pragma: no cover - import-environment guard
 _DEFAULT_AC_ROOT = "docs/acceptance-criteria"
 _DEFAULT_AGENTS_DEPLOYED = ".claude/agents"
 _DEFAULT_AGENTS_TEMPLATES = "templates/agents"
-_DEFAULT_SKILLS_TEMPLATES = "templates/skills"
 _DEFAULT_MEMORY_DIR = "memory"
 _DEFAULT_GLOSSARY = "docs/glossary.md"
 _DEFAULT_CLAUDE_MD = "CLAUDE.md"
-_DEFAULT_REGISTRY = "config/agent_registry.json"
 
 _MARKER = "> ⚠️ **[NOT REPRODUCIBLE OUTSIDE A LIVE SESSION]**"
 
@@ -379,54 +387,6 @@ def _resolve_agent_template(repo_root: Path, agent: str) -> tuple[str | None, st
     return None, "NOT FOUND"
 
 
-def _resolve_agent_skills(repo_root: Path, agent: str) -> list[dict[str, Any]]:
-    """Read the agent's skills_invoked from the registry and load each SKILL.md.
-
-    Args:
-        repo_root: Repo root.
-        agent: Agent id.
-
-    Returns:
-        A list of {skill, path, present, body} dicts (empty when unknown).
-    """
-    registry_path = repo_root / _DEFAULT_REGISTRY
-    text = _read_text(registry_path)
-    if text is None:
-        return []
-    try:
-        registry = json.loads(text)
-    except json.JSONDecodeError as exc:
-        logger.warning("Could not parse agent registry: %s", exc)
-        return []
-    raw: list[Any] = []
-    for entry in registry.get("agents", []):
-        if entry.get("id") == agent:
-            raw = entry.get("skills_invoked") or []
-            break
-    out: list[dict[str, Any]] = []
-    for item in raw:
-        # skills_invoked entries are dicts ({skill_id, mode, descriptive_only})
-        # or, defensively, bare strings.
-        if isinstance(item, dict):
-            skill = item.get("skill_id") or item.get("skill") or item.get("id")
-            mode = item.get("mode")
-            descriptive_only = bool(item.get("descriptive_only"))
-        else:
-            skill, mode, descriptive_only = str(item), None, False
-        if not skill:
-            continue
-        skill_md = repo_root / _DEFAULT_SKILLS_TEMPLATES / skill / "SKILL.md"
-        out.append({
-            "skill": skill,
-            "mode": mode,
-            "descriptive_only": descriptive_only,
-            "path": str(skill_md.relative_to(repo_root)) if skill_md.exists() else None,
-            "present": skill_md.exists(),
-            "body": _read_text(skill_md) if skill_md.exists() else None,
-        })
-    return out
-
-
 def _resolve_memory(repo_root: Path) -> list[dict[str, str]]:
     """Load auto-memory files from the repo-local memory/ directory.
 
@@ -522,7 +482,7 @@ def assemble(  # noqa: PLR0913 - explicit resolved-channel inputs, no hidden sta
         "agent": {
             "source": agent_source,
             "body": agent_body,
-            "skills_invoked": _resolve_agent_skills(repo_root, agent),
+            "skills_invoked": resolve_agent_skills(repo_root, agent, _read_text),
         },
         "ticket": ticket_block,
         "ac_graph": ac_graph,
@@ -557,12 +517,10 @@ def _fence(text: str | None, lang: str = "") -> str:
 
 
 def _skill_status(sk: dict[str, Any]) -> str:
-    """Format the status label for one invoked skill (present / descriptive / missing)."""
+    """Format the status label for one invoked skill (present / missing)."""
     mode = f" · {sk['mode']}" if sk.get("mode") else ""
     if sk["present"]:
         return f"{sk['path']}{mode}"
-    if sk.get("descriptive_only"):
-        return f"descriptive-only, no SKILL.md{mode}"
     return f"**NOT FOUND**{mode}"
 
 
@@ -808,14 +766,14 @@ def render_markdown(
             lines.append("")
         for dp in doc_paths:
             full = repo_root / dp
-            body = _read_text(full)
+            doc_body = _read_text(full)
             lines.append(f"#### `{dp}`")
-            if body is None:
+            if doc_body is None:
                 lines.append("_[MISSING]_")
             else:
-                excerpt = "\n".join(body.splitlines()[:doc_excerpt])
+                excerpt = "\n".join(doc_body.splitlines()[:doc_excerpt])
                 lines.append(_fence(excerpt, "markdown"))
-                if len(body.splitlines()) > doc_excerpt:
+                if len(doc_body.splitlines()) > doc_excerpt:
                     lines.append(f"_… truncated to {doc_excerpt} lines_")
             lines.append("")
 
@@ -880,9 +838,7 @@ def main(argv: list[str] | None = None) -> int:
     """
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
     args = _parse_args(argv if argv is not None else sys.argv[1:])
-
     repo_root = Path(args.repo_root).resolve() if args.repo_root else _find_repo_root(Path(__file__))
-
     if not args.ac and not args.ticket:
         logger.error("Provide --ac or --ticket (to resolve source_ac).")
         return 1

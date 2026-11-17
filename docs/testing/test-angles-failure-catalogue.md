@@ -3,7 +3,7 @@ title: "Test Angles — Failure Catalogue (the evidence base)"
 type: reference
 status: active
 created: 2026-09-21
-last_updated: 2026-09-21
+last_updated: 2026-10-07
 components:
 - testing_quality
 - build_orchestration
@@ -11,7 +11,7 @@ related_docs:
 - docs/testing/test-angles.md
 - docs/testing/README.md
 - docs/architecture/components/phantom-done-prevention.md
-description: "Per-mechanism catalogue of observed repo incidents — reachability, seam, authenticity, deployment, and negative-control gaps — that justify each core test angle in test-angles.md, plus the two conditional angles' concentrated evidence."
+description: "Per-mechanism catalogue of observed repo incidents — reachability, seam, authenticity, deployment, and negative-control gaps — that justify each core test angle in test-angles.md, plus the concentrated evidence for the `boundary` and `failure` conditional angles. Covers both failure families of the eight-angle taxonomy: wiring-shaped (reachability, seam, authenticity, deployment, negative-control) and discrimination-shaped (incidents 1-4 and 8 from one adopter, plus the `discrimination` angle rule)."
 ---
 > **Parent document:** [test-angles.md](test-angles.md)
 
@@ -19,6 +19,7 @@ description: "Per-mechanism catalogue of observed repo incidents — reachabilit
 
 Grouped by mechanism. Every core angle in [test-angles.md](test-angles.md) is justified by
 incidents observed *in this repository*.
+
 
 ## Reachability gap — never invoked from a production entry point
 
@@ -71,7 +72,66 @@ incidents observed *in this repository*.
 | EPIC-InFlightVisibility FP-5 (2026-07-23) | merging origin/main silently deleted main's H-1/H-2 deploy-parity guards from `finalize-feature.js`; a malformed test run could then merge to main | the guards had no test feeding a failing/contradictory post-merge state, so deleting them broke nothing observable. All 353 tests stayed green |
 | TQ-100 L-4 / BP-1200b (2026-07-08) | the CI pytest job is `continue-on-error: true` — the gate fires and merges proceed anyway | the plugin's own tests pass; nothing asserts the verdict is *consumed* by CI |
 
-## The two conditional angles: real but concentrated evidence
+## Discrimination-shaped failure family
+
+A green test can be useless in two different ways.
+
+- **Wiring-shaped** — the test is right about the unit, but the unit is not connected to
+  anything real. Closed by `reachability`, `seam`, `real_artifact` and `deployed`; the
+  incident evidence is in the catalogue below and in
+  [test-angles-failure-catalogue.md](test-angles-failure-catalogue.md).
+- **Discrimination-shaped** — the test reaches the real code, but its fixture and
+  assertions cannot tell a correct implementation from a wrong one. It passes on the fix
+  and would also pass on the bug. Closed by the `discrimination` angle.
+
+The red baseline does not close the second family: it proves the test fails against one
+wrong program (the implementation is absent), and an `ImportError` already satisfies
+that. See the
+[analysis](../analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md) for
+the full argument; this section is the lookup. The wiring-shaped family is the sections above.
+
+### The `discrimination` angle (summary)
+
+| Property | Value |
+|---|---|
+| Kind | Eighth angle; the third conditional angle (after `boundary` and `failure`) |
+| Fires when | The work fixes a bug; **or** adds or changes a condition of a gate or guard; **or** a `test_spec` entry carries `must_catch` |
+| Question | Would this test go red under a named plausible wrong version, not only when the code is absent? |
+| Slot rule | Never one of the four slots by default. It may share a test with `criterion` — a single test can answer both |
+| Rule | The test is red under **at least one named plausible wrong version** of the code (for example "revert the fix", "drop the second gate condition", "new column is NULL"), not only under absence |
+| Declared via | `angle: discrimination` and/or `must_catch` on a `test_spec` entry — see [ac-schema.md](../reference/ac-schema.md) |
+| Enforced at | The fast lane red-baseline reader refuses an import/name/attribute-error red as evidence for an entry that declares `must_catch` or `discrimination` (`verify_red_baseline` with `--ac-root`, `scripts/build_orchestration/_fl_red_baseline_support.py`) |
+
+### Discrimination-shaped incidents (catalogue)
+
+> **Provenance.** These incidents come from **one adopter's written record** (the
+> bybit-trader `CLAUDE.md` § Testing, its test READMEs and maintainer memory). They were
+> **not re-verified** against that adopter's git history. The mechanism and cost columns
+> restate what its write-ups record; the "would have caught it" column is this page's
+> reading against the three questions and checklist items in the analysis (Q1 smallest
+> change that keeps the test green but brings the bug back; Q2 what result shows this
+> assertion can fail; Q3 does the control row pass for the same reason the negative row
+> fails; checklist: exact-count assertions, a control row, new inputs seeded distinct from
+> old, a call-count on the collaborator the branch must reach, a sweep of every consumer
+> test, capped loops tested under continuous inflow).
+
+| # | Incident | Mechanism | Cost | Would have caught it |
+|---|---|---|---|---|
+| 1 | ConfigCache DB-outage retry storm (PR #612) | Gate changed from `if refresh_due:` to `if refresh_due and retry_due:`; two of three tests were updated to satisfy both conditions, the third reset only the old variable, so the branch under test ran **0 times** | The branch the ticket existed to fix could be deleted with the suite still green | Q1, Q2; call-count on the collaborator the branch must reach |
+| 2 | EPIC-CvdWindowDeltaNormalisation (six occurrences) | Gate input moved from `cvd` to `cvd_delta_30`; fixtures still seeded only `cvd`, so the control row was excluded for the same reason as the negative row; shadow tables omitted the new column; one consumer suite missed; a fix-probe used `buy_volume >= 0`, which drops NULLs and passes best when the pipeline is dead | Correct code turned suites red, and the natural response was to "fix" working code | Q3; a control row; new inputs seeded distinct from old; consumer-test sweep |
+| 3 | MacroAvwaps anchor starvation (`b8f47a12f` to PR #605) | `ORDER BY` added to a loop with a per-call cap of 5 and no resume cursor; every test used a fixed population | The same 5 anchors won every call; the rest starved in production for 8 weeks | Q1; capped loops tested under continuous inflow |
+| 4 | EPIC-UnblockResurrection/03 | The coverage test for the starvation fix used a pool that emptied under any ordering, so fixed and reverted code both passed | Caught only because `pr-reviewer` re-derived the guarantee by hand | Q1 (run the reverted code); exact-count assertions |
+| 8 | Context parity check at "live = 100%" | Measured that values were present, not that they were correct | False confidence in production data | Q2; exact-count / denominator assertions |
+
+**Incidents 5, 6 and 7 belong elsewhere** and are deliberately not catalogued here:
+5 (a production-covering integration test later `@unittest.skip`-ped) is **skip
+hygiene**; 6 (about 395-468 stale SQL-suite failures from unreconciled column drops) is a
+**process** failure — see "What this taxonomy does NOT fix" in [test-angles.md](test-angles.md); 7 (DB tests
+hardcoded to a developer's local address) is a question of **where the test database
+address comes from** (it belongs in the project's testing configuration, not in a test
+template).
+
+## The `boundary` and `failure` conditional angles: real but concentrated evidence
 
 Evidence for `boundary` and `failure` exists, but it comes from **two sources only** —
 GenReviewFixes (PR #372) and EPIC-PhantomDoneFilesTouched rounds 1-2. Five other

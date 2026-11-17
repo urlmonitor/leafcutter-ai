@@ -1,5 +1,5 @@
 id: GE-117e-2
-readiness: draft
+readiness: approved
 priority: medium
 title: "A deliberate per-item opt-out with a reason clears the block and stays visible in the diff"
 component: guardrail-engine
@@ -34,23 +34,68 @@ doc_links:
   - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117e.yaml"
     relationship: parent
     status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
 it_requirements:
   - "Opt-out WIRE-FORMAT (user-confirmed): an inline sentinel `AC-EXEMPT: <reason>` placed in the item's OWN docstring (module or symbol) or in the decision-history entry itself, so the marker and its reason land in the staged diff and are visible to a reviewer. The reason is the text after the colon and must be non-empty."
-  - "The marker is PER-ITEM and scoped to the item whose docstring/entry carries it: recognizing it removes ONLY that item from the block set; every other in-scope item is still evaluated and can still block (second criteria scenario)."
+  - "The marker is PER-ITEM and scoped to the item whose docstring/entry carries it: recognizing it removes ONLY that item from the block set; every other in-scope item is still evaluated and can still block (second criteria scenario). A marker in the module docstring exempts only the module-component surface, never the file's symbols or entries."
   - "It is NEVER global: there is no file-level, config-level, or repo-level form of this marker; a global disable is not an accepted substitute (that boundary is GE-117e-2-i)."
-  - "Detect the marker from the same ast/staged-blob parse of the item's docstring/entry used by the declaration surfaces (no MCP); recognizing an AC-EXEMPT marker converts that item's verdict from missing/invalid to opted-out (not blocking) while leaving the marker text in the committed source."
-  - "Fail-open on INTERNAL error; edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+  - "Detect the marker from the same ast/staged-blob parse of the item's docstring/entry used by the declaration surfaces (no MCP); recognizing an AC-EXEMPT marker converts that item's verdict from missing/invalid to opted-out (not blocking) while leaving the marker text in the committed source. The hook never removes or rewrites the marker."
+  - "Fail-open on INTERNAL error; edit only templates/scripts/commit_guardian/ (ADR-001); verify via the deployed hook after a build.py round-trip."
 delivers_to:
   agent: python-coder
   contract: "The per-item opt-out recognition (a reason-bearing inline `AC-EXEMPT: <reason>` marker on the specific item) that removes only that item from the block set"
 expects_from:
   ac_id: GE-117d-1
   contract: "The block decision and per-item verdicts the opt-out selectively clears"
+test_spec:
+  - name: test_ge_117e_2_reasoned_marker_clears_only_that_item_and_survives_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a temp repo with the hook installed, stage a public function whose docstring carries 'AC-EXEMPT: generated shim, no requirement' and no AC, then run a real 'git commit': it succeeds, and 'git show HEAD:<file>' still contains the marker and its reason."
+  - name: test_ge_117e_2_marker_on_one_item_does_not_suppress_another
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Stage one commit with an exempted public function and a second, unexempted AC-less public function in the same file: non-zero exit, and the report names the second function only."
+    must_catch:
+      - "an AC-EXEMPT marker anywhere in the file exempts every item in that file"
+  - name: test_ge_117e_2_module_docstring_marker_does_not_exempt_symbols_or_entries
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Put an AC-EXEMPT marker in the module docstring and stage an AC-less public function and an AC-less new decision-history entry: the module-component item is cleared, while both the symbol and the entry still block."
+    must_catch:
+      - "treats a module-docstring marker as a file-level exemption"
+  - name: test_ge_117e_2_marker_inside_a_decision_history_entry_clears_that_entry
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Stage a new module-level decision-history entry carrying 'AC-EXEMPT: housekeeping rename only': that entry does not block."
+test_rationale: |
+  The opt-out is only safe if it is narrow, so the tests are mostly about scope. The criteria
+  test runs a real commit and reads the marker back from HEAD, which is the only proof that it
+  'remains present in the committed code'. Asserting on the staged text would not prove what
+  the commit keeps. The discrimination and boundary tests attack the two easiest wrong
+  scopings: per-file instead of per-item, and treating the module docstring as covering the
+  whole file. Either one turns a single deliberate exemption into a silent bulk bypass. The
+  decision-history test covers the entry form the criteria name next to docstrings.
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Pinned that a module-docstring marker exempts only the module-component surface and that the hook never rewrites the marker; added change_target, declared_files, test_spec and test_rationale; corrected the source path to templates/scripts/commit_guardian/ (ADR-001). criteria untouched."
 superseded_by: null
 covered_by:
   - GE-117e-2-i

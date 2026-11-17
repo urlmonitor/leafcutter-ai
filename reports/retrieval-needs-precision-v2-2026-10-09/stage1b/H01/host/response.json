@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "original_question": "What is the value of the declared test-reference field in KM-500c-1's canonical AC definition? Return that authored value only.",
+  "source_scope": {
+    "read_roots": [
+      "docs"
+    ],
+    "repository_id": "leafcutter",
+    "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+    "source_ids": [
+      "knowledge.graph"
+    ]
+  },
+  "selections": {
+    "entity_types": [
+      "ac"
+    ],
+    "target_ids": [
+      "KM-500c-1"
+    ],
+    "required_fields": [
+      "covered_by"
+    ],
+    "document_types": [
+      "ac_yaml"
+    ],
+    "relationships": []
+  },
+  "uncertain": {
+    "entity_types": [],
+    "target_ids": [],
+    "required_fields": [],
+    "document_types": [],
+    "relationships": []
+  },
+  "detail_mode": "fields",
+  "completeness": "single_entity",
+  "hierarchy_scope": "not_applicable",
+  "hierarchy_levels": [],
+  "scope_resolution": "sufficient",
+  "unresolved": [],
+  "rationale": "The authored test-reference field value on the named canonical AC definition is the sole requested fact. Resolving related test records is not required.",
+  "engine": "host_llm",
+  "status": "decided",
+  "model_id": null
+}

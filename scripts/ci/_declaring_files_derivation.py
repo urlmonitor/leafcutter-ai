@@ -198,15 +198,20 @@ def find_missing(
     resolve to a real file strictly under *deployed_root* — resolution is
     always ``deployed_root / expected_at``, never a search of any ancestor,
     the package checkout, or the caller's cwd (AC BP-900h-4's resolution
-    rule). An ``external``-owned entry is never checked.
+    rule). An ``external``-owned entry is never checked. A ``_x.py``
+    expectation is also met by a deployed package ``_x/__init__.py``, since
+    ``import _x`` loads either.
     """
     missing: list[dict[str, str]] = []
     for entry in inventory:
         if entry.get("ownership") != "ours_to_ship":
             continue
         candidate = deployed_root / entry["expected_at"]
-        if not candidate.is_file():
-            missing.append(entry)
+        if candidate.is_file():
+            continue
+        if candidate.suffix == ".py" and (candidate.with_suffix("") / "__init__.py").is_file():
+            continue
+        missing.append(entry)
     return missing
 
 
@@ -240,4 +245,9 @@ def find_missing(
 #   _declaring_files_scan.py in the same pass, since the combination pushed
 #   this file to 455 lines (over the 400-line check_file_size limit) — see
 #   that module's own DECISION HISTORY.
+# - 2026-10-23 [GE-127d-3]: find_missing accepts a package _x/__init__.py
+#   for a _x.py expectation. The scan derives every underscore sibling
+#   import as _x.py; GE-127d-3 turned _file_size_measure into a package,
+#   and the consumer-install job reported it missing although it was
+#   deployed.
 # ====================================================================

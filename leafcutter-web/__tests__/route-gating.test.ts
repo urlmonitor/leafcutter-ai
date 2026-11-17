@@ -37,22 +37,14 @@ const ENV_KEYS = [
 ] as const;
 type EnvKey = (typeof ENV_KEYS)[number];
 
-let savedEnv: Partial<Record<EnvKey, string | undefined>> = {};
-
 function applyEnv(env: Partial<Record<EnvKey, string>>) {
-  savedEnv = {};
   for (const k of ENV_KEYS) {
-    savedEnv[k] = process.env[k];
-    if (env[k] !== undefined) process.env[k] = env[k];
-    else delete process.env[k];
+    vi.stubEnv(k, env[k]);
   }
 }
 
 afterEach(() => {
-  for (const k of ENV_KEYS) {
-    if (savedEnv[k] === undefined) delete process.env[k];
-    else process.env[k] = savedEnv[k];
-  }
+  vi.unstubAllEnvs();
   vi.resetModules();
   vi.restoreAllMocks();
 });
@@ -159,18 +151,16 @@ describe("UXP-608-3 — outside production, overrides are honored without an opt
 // completion report.
 // ---------------------------------------------------------------------------
 
-async function callDriftGuardRoute(url: string) {
+async function callDriftGuardRoute() {
   vi.resetModules();
   const mod = await import("@/app/api/drift-guard/route");
-  const request = new NextRequest(url);
-  return mod.GET(request);
+  return mod.GET();
 }
 
-async function callMockToggleCheckRoute(url: string) {
+async function callMockToggleCheckRoute() {
   vi.resetModules();
   const mod = await import("@/app/api/mock-toggle-check/route");
-  const request = new NextRequest(url);
-  return mod.GET(request);
+  return mod.GET();
 }
 
 describe("UXP-610 / UXP-610-1 — CI-only endpoints return a clean not-found in production", () => {
@@ -178,10 +168,8 @@ describe("UXP-610 / UXP-610-1 — CI-only endpoints return a clean not-found in 
     // covers: UXP-610
     // covers: UXP-610-1
     applyEnv({ NODE_ENV: "production" });
-    const driftResponse = await callDriftGuardRoute("http://localhost/api/drift-guard");
-    const toggleResponse = await callMockToggleCheckRoute(
-      "http://localhost/api/mock-toggle-check?mock=1"
-    );
+    const driftResponse = await callDriftGuardRoute();
+    const toggleResponse = await callMockToggleCheckRoute();
 
     expect(driftResponse.status).toBe(404);
     expect(toggleResponse.status).toBe(404);
@@ -199,10 +187,8 @@ describe("UXP-610-2 — CI-only endpoints remain present outside production", ()
   it("ci_build_includes_ci_endpoints", async () => {
     // covers: UXP-610-2
     applyEnv({ NODE_ENV: "test", LEAFCUTTER_MOCK: "1" });
-    const driftResponse = await callDriftGuardRoute("http://localhost/api/drift-guard");
-    const toggleResponse = await callMockToggleCheckRoute(
-      "http://localhost/api/mock-toggle-check?mock=1"
-    );
+    const driftResponse = await callDriftGuardRoute();
+    const toggleResponse = await callMockToggleCheckRoute();
     // Present and responding — never the production not-found.
     expect(driftResponse.status).not.toBe(404);
     expect(toggleResponse.status).not.toBe(404);

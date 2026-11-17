@@ -1,0 +1,5 @@
+# Recorded BAD output: presence is measured, no known value seeded in the fixture is asserted.
+def test_every_symbol_has_a_live_value():
+    # covers: TQ-9303
+    live = {"AAA": 1.5, "BBB": 2.0}
+    assert all(value is not None for value in live.values())

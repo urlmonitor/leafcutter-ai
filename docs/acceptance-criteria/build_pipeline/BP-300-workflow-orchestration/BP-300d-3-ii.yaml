@@ -1,0 +1,60 @@
+id: BP-300d-3-ii
+components:
+  - build_pipeline
+title: "The runtime's version is read correctly from the Claude Code CLI's real output, so an unsupported runtime is actually detected"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+readiness: approved
+priority: medium
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300d-3.yaml"
+criteria: |
+  Given no CLAUDE_CODE_VERSION override is set and the build probes the installed
+    Claude Code CLI with `claude --version`, which prints e.g. "2.1.294 (Claude Code)",
+  When the workflow-script phase decides whether the runtime is supported,
+  Then the version is read from the first dotted version number in that output
+    (2.1.294), not from its last word,
+  And a version at or above the minimum installs the workflow scripts with no
+    "version unknown" warning,
+  And a version below the minimum is detected as unsupported: the scripts are
+    skipped with the minimum-version warning (the BP-300d-3 fallback),
+  And only output that contains no version number at all is treated as unknown
+    (warn and install, fail-open, unchanged),
+  And the bug symptom ("Claude Code version unknown. Installing workflow scripts
+    (fail-open)." on every build with the CLI installed) must not occur.
+depends_on:
+  - BP-300d-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-300-workflow-orchestration/BP-300d-3.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build_phases_workflows.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "BP-300d-3 says to reuse the existing runtime/version gate; this constrains that gate's input parsing only. Observed: build_workflow_scripts() took result.stdout.strip().split()[-1], i.e. 'Code)' for '2.1.294 (Claude Code)', which InvalidVersion turned into 'unknown', so the minimum-version gate never fired with the CLI present."
+  - "scripts/build_phases_workflows.py is over the 400-content-line ratchet; the fix must not grow it."
+  - "Existing tests (unit_tests/test_build_workflow_phase.py) only set CLAUDE_CODE_VERSION and never feed the real `claude --version` stdout format; the new test must mock subprocess output in the real format."
+delivers_to: null
+expects_from: null
+change_target: code
+risk_surface: internal
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/test_build_workflow_phase.py
+implemented_by:
+  - scripts/build_phases_workflows.py
+test_spec:
+  - name: test_cli_version_output_in_real_format_is_parsed
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "With CLAUDE_CODE_VERSION unset and subprocess.run mocked to return the real `claude --version` format: '2.1.294 (Claude Code)\\n' installs with no 'version unknown' warning; '2.1.100 (Claude Code)' (below the minimum) skips with the minimum-version warning; output with no version number warns 'unknown' and installs."

@@ -1,0 +1,259 @@
+id: GE-133a-2
+title: "A set-aside folder is reported as set aside with its stated ground and counted apart from the judged ones, so a run that judged nothing never reads as a clean run"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the configuration declares docs/acceptance-criteria/ as a set-aside
+    location with a stated ground,
+  And a commit stages one file in each of 5 folders: 2 store folders that stand
+    at 19 and 30 countable files after the commit, and 3 folders outside the
+    store, scripts/tools/, unit_tests/tools/ and docs/guides/, each standing at
+    or under 15 after the commit,
+  When the author performs an ordinary commit,
+  Then the commit completes, and its outcome states that 3 folders were judged
+    and 2 were set aside,
+  And it names each of the 2 store folders together with the stated ground its
+    declared location carries,
+  And neither store folder appears among the folders reported as within the
+    limit, nor among the folders reported as already over the limit — a folder
+    that was never judged is reported as set aside and as nothing else.
+
+  And given the same commit with one file also staged in a third store folder,
+  When the author performs an ordinary commit,
+  Then the judged figure the outcome states is 3 and the set-aside figure is 3,
+    and the third store folder is among those it names as set aside — so the
+    set-aside figure moves with its own population and is not a fixed number.
+
+  And given a commit in which every staged file lies in a store folder,
+  When the author performs an ordinary commit,
+  Then the commit completes, and its outcome states that 0 folders were judged
+    and names each store folder as set aside,
+  And it does not state that the folders it checked are all within the limit,
+    because it judged none.
+depends_on:
+  - GE-133a
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-133-directories-stay-findable/GE-133a.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE MODEL, SAME CONSTRUCTION: two counts stated separately, a count that moves with
+      its own population, and a zero-judged run that may not read as clean. A stated count
+      is satisfiable by a literal; a moving count is not.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      BOUNDARY. GE-120h-3 requires folders already over the limit to be reported as they
+      stand and not refused. That report is for JUDGED folders. A set-aside folder is not
+      judged, so it must not appear in that report as well; the first arm's last clause
+      is where the two meet.
+  - path: templates/scripts/commit_guardian/check_folder_density.py
+    relationship: modifies
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "A check that examined nothing must not look like a check that found nothing" is
+      the recorded ground for the third arm.
+  - path: docs/pre-commit-hooks.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Must describe check-folder-density's set-aside (the docs obligation GE-133a's
+      documentation_rationale names, folded into this record's it_requirements). Measured
+      2026-10-12 on origin/main e93eda09a: the file has the check-folder-density section
+      PR #1168 added, naming one shipped location, and stands at 298 of its 300-line
+      doc-length limit.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - "Consume GE-133a-1's per-run declaration result and membership answer; do not re-read
+    configuration or re-derive membership here."
+  - "TWO POPULATIONS, NEVER MERGED. Every folder the commit touches is either judged or set
+    aside, never both. The outcome states the judged count and the set-aside count as two
+    separate figures, both computed from the folders of this run (no literal). Each
+    set-aside folder is named with the ground of the declared location that contains it. A
+    set-aside folder appears in neither the within-limit list nor the already-over
+    (pre-existing density) list, and never contributes to the refusal decision."
+  - "ZERO JUDGED IS NOT CLEAN. When the judged count is 0 the outcome must not contain the
+    all-within-limits pass line (or any wording equivalent to it); it states that 0 folders
+    were judged and names the set-aside folders. The exit status stays 0 in that case: the
+    commit completes."
+  - "The judged/set-aside lines are written to the same stream as the check's existing
+    verdict lines and appear on both completed and refused runs, so a test and a person read
+    them in one place. Wording and placement are the implementer's."
+  - "DOCS (folded in, no separate record). docs/pre-commit-hooks.md carries a
+    check-folder-density entry stating: the per-folder limit and how files are counted; that
+    folders at or below a location declared in folder_density.set_aside_locations are set
+    aside and reported with their ground and counted apart; the two shipped entries,
+    docs/acceptance-criteria/ (the AC store) and docs/decisions/ (the decision kernel's
+    record store), and their grounds as GE-133a-1's first it_requirement words them; and
+    that an absent or malformed declaration judges everything and says so while an empty
+    one simply sets nothing aside. The file must still pass check-doc-length: it stands at
+    298 of 300 lines (origin/main e93eda09a, 2026-10-12; the entry PR #1168 added names one
+    shipped location and no ground), so the update fits in the remaining headroom or
+    tightens existing text; it must not cross 300."
+  - "templates/scripts/commit_guardian/ is the SOURCE; scripts/commit_guardian/ and
+    .leafcutter/ copies are build outputs."
+  - "TESTS. Same harness as GE-133a-1: a real git commit in a scratch repository running the
+    deployed check copied from the shared_reference_layout fixture
+    (@pytest.mark.shared_layout_reader); no build.py spawn; vary configuration only in the
+    scratch copy."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md, rules
+    1-4)."
+  - "POST-WRITE COMMANDS (from the worktree root): ruff check
+    templates/scripts/commit_guardian/; python -m pytest
+    unit_tests/commit_guardian/test_folder_density_set_aside.py -q; pre-commit run
+    check-doc-length --files docs/pre-commit-hooks.md"
+test_spec:
+  - name: test_set_aside_folders_reported_with_ground_and_counted_apart
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: scripts/commit_guardian/check_folder_density.py
+    description: >-
+      Arm 1. RED today. One file staged in each of 2 store folders (19 and 30 after) and in
+      scripts/tools/, unit_tests/tools/, docs/guides/ (each at most 15). Assert exit 0, the
+      output states 3 judged and 2 set aside, names both store folders with the declared
+      ground, and neither store folder appears in the within-limit or already-over lists.
+    must_catch:
+      - "drop set-aside folders from the outcome entirely"
+      - "count set-aside folders among the judged and mark them within limits"
+      - "print the already-over store folder in the pre-existing density list"
+      - "name the set-aside folders but not the ground"
+  - name: test_set_aside_count_moves_with_its_population
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: scripts/commit_guardian/check_folder_density.py
+    description: >-
+      Arm 2. RED today. Same commit plus one file in a third store folder. Assert judged 3,
+      set aside 3, and the third store folder is named as set aside.
+    must_catch:
+      - "print the counts observed at implementation time as literals"
+      - "drop set-aside folders from the outcome entirely"
+  - name: test_store_only_commit_reports_zero_judged_and_no_clean_line
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: scripts/commit_guardian/check_folder_density.py
+    description: >-
+      Arm 3. RED today. Every staged file lies in a store folder. Assert exit 0, the output
+      states 0 judged, names each store folder as set aside, and does not contain the
+      all-within-limits pass line.
+    must_catch:
+      - "count set-aside folders among the judged and mark them within limits"
+      - "print the all-within-limits pass line when nothing was judged"
+      - "drop set-aside folders from the outcome entirely"
+test_rationale: >-
+  The subject is what the outcome says, so every entry reads the real output of a real
+  commit through the deployed check copied from shared_reference_layout
+  (@pytest.mark.shared_layout_reader, no build.py spawn). Arm 2 exists because a literal
+  count satisfies arm 1; arm 3 exists because a success-shaped line from a run that judged
+  nothing is the defect CLAUDE.md names. All three are RED today: the check reports one
+  merged figure and prints a passed line on a store-only commit. The docs obligation is
+  verified by check-doc-length and review, not by a grep test.
+delivers_to: null
+expects_from:
+  ac_id: GE-133a-1
+  contract: >-
+    The per-run declaration result GE-133a-1 delivers: state (absent | malformed | empty |
+    ok), the configuration path and key looked in, offending entries when malformed, and
+    for each touched folder a membership answer (set_aside: bool, ground: str or null).
+declares_side_effect: false
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by:
+  - reason: trimmed-by-user-decision
+    date: '2026-10-12'
+    by: business-analyst
+    entry: >-
+      BrainCandy slimmed GE-133a to two L2s and asked for about three arms here. The
+      former second arm (one more judged folder moves the judged count) was dropped; the
+      set-aside count still moves in the second arm, and the first arm's literal judged
+      count of 3 is checked against a different staged set in the third arm.
+  - reason: second-shipped-set-aside-entry-and-approval-by-user-decision
+    date: '2026-10-12'
+    by: it-po
+    entry: >-
+      BrainCandy's decision dec-e34583d93c00584f (2026-10-12, "Build GE-133, both
+      stores"): GE-133a-1 now ships two set_aside_locations entries,
+      docs/acceptance-criteria/ and docs/decisions/ (the decision kernel's flat record
+      store). The DOCS it_requirement now names both shipped entries and their grounds
+      instead of the one, says the entry already exists ("carries", not "gains"), and
+      restates the headroom as measured on origin/main e93eda09a: 298 of 300 lines. The
+      docs/pre-commit-hooks.md doc_link's relevance is restated to the same measurement.
+      readiness moved draft -> approved by the same decision. work_status moved done ->
+      todo: docs/pre-commit-hooks.md on main names only docs/acceptance-criteria/ and no
+      ground, so the amended DOCS requirement is not met, and the done-proof gate cannot
+      see a docs gap (the requirement is checked by check-doc-length and review, not by a
+      test). The record goes done again when the docs line lands. criteria, title,
+      req_status, depends_on and test_spec are unchanged: the tests use scratch
+      declarations and none names a shipped entry.
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_folder_density_set_aside.py
+  - unit_tests/commit_guardian/test_folder_density_windows_paths.py
+  - unit_tests/commit_guardian/test_folder_density_shipped_declaration.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_folder_density.py
+  - templates/scripts/commit_guardian/_density_set_aside.py
+  - templates/scripts/commit_guardian/commit_guardian.json
+  - docs/pre-commit-hooks.md
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  WHICH ARMS GO RED AGAINST THE CHECK AS IT STANDS (read from its source on 2026-10-09):
+  today the check reports one figure, a count of every folder the commit touched, followed
+  by the list of those folders and their counts. It has no notion of a set-aside folder,
+  and it prints a "pre-existing density" warning for every touched folder already over the
+  limit.
+    - ARM 1: RED. A store folder that grew from 15 or under to 19 is refused today, a store
+      folder already over is printed as pre-existing density, and no outcome states a
+      judged figure and a set-aside figure.
+    - ARM 2: RED. The single figure counts both populations together.
+    - ARM 3: RED. Today a commit touching only store folders that are already over the
+      limit and growing prints the pre-existing warnings and then a passed line saying
+      every folder checked is within limits. After this change that is a success-shaped
+      report from a run that judged nothing.
+
+  WHY BOTH "NOT WITHIN THE LIMIT" AND "NOT ALREADY OVER" IN THE FIRST ARM. The check has
+  two report lists for judged folders, and a set-aside folder could leak into either. The
+  "already over" leak is the likelier one, because most store folders are over 15 and the
+  existing grandfather path would print them there unchanged.
+
+  NAMED MUTATIONS — EXECUTE THEM.
+    (1) THE SILENT SKIP. Drop set-aside folders from the outcome entirely. MUST GO RED:
+        arm 1's naming clause, arms 2 and 3.
+    (2) THE LITERAL COUNT. Print the counts observed at implementation time. MUST GO RED:
+        arm 2. MUST STAY GREEN: arm 1.
+    (3) THE MERGED POPULATION. Count set-aside folders among the judged and mark them
+        within limits. MUST GO RED: arm 1's last clause and arm 3.
+    (4) THE GROUNDLESS REPORT. Name the folders but not the ground. MUST GO RED: arm 1's
+        second clause only.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec and test_rationale (IT PO), and the wording and placement of the report lines.

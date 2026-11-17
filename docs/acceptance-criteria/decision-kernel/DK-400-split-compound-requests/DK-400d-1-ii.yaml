@@ -1,0 +1,221 @@
+id: DK-400d-1-ii
+title: "The /leafcutter and $leafcutter skills show the split gate in full and relay the person's answer unchanged"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the decision-records split waiting at the split gate with parts p1 to p5 offered, and with
+    p6 "Decide how human approval of a record is recorded" and p7 "Decide how later corrections
+    to a record are recorded" listed as not covered (mock record dcp-decision-records-seven-parts),
+  When the /leafcutter skill in Claude Code, or the $leafcutter skill in Codex, receives the run's
+    waiting_human envelope for that gate,
+  Then it shows the person the request as submitted and every offered part with its quote, the
+    parts it waits for and its capability,
+  And it shows every set-aside proposal and every not-covered part read-only, each with its
+    reason, here p6 and p7 with the reason "beyond the five-part cap",
+  And it relays the person's answer unchanged, whether approve, a rewording of a part, parts left
+    out or reject, together with the person's note, with the person as actor human:<name> and the
+    host only as the relayer,
+  And it never answers the gate on the person's behalf,
+  And when the person asks for the run's status, it shows the split's progress block: each part
+    with its outcome and its link.
+depends_on:
+  - DK-400d-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: Flow v5 node(s) split-approve, split-report, with their acceptance scenarios (split-approve is asked
+      through claude_code).
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: 'Screen decision-split-approve: the subject, each part with quote, dependencies and capability, read-only
+      set-aside and not-covered entries, the four answers.'
+  - path: docs/product-truth/mockups/leafcutter/decision-split-progress.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: 'Screen decision-split-progress: what the status view shows for each part.'
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: v5 record dcp-decision-records-seven-parts (parts p1 to p5, not_covered p6 and p7); gate_by human:<name>,
+      never a model.
+  - path: kernel/adapters/claude_code/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: 'The /leafcutter skill for Claude Code: transport only; routes on the envelope status.'
+  - path: kernel/adapters/codex/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: 'The $leafcutter skill for Codex: transport only, explicit-only policy.'
+  - path: docs/how-to/run-the-decision-kernel-from-codex.md
+    relationship: context
+    status: exists
+    relevance: How the Codex skill is installed and used.
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: constrains
+    status: exists
+    relevance: Only a person answers a gate; the skill may relay but never answer.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService resume validation, the RunEnvelope, report.md, tracing and redaction.
+  - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
+    relationship: describes
+    status: exists
+    relevance: 'ADR-067 (Accepted): the kernel splits a bundled request into parts a person approves; binding source
+      for the four schema ids (goal_decomposition_request.v1, goal_decomposition.v1, split_answer.v1, decomposition.v1).'
+  - path: docs/architecture/diagrams/c3-019-decision-kernel-context-host-worker-human.md
+    relationship: describes
+    status: exists
+    relevance: 'What the host LLM and the human receive from the kernel: the HumanQuestion and HostWorkRequest packets.'
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+    relevance: 'Step 7: install-skill renders the /leafcutter skill; reinstall after a template change.'
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-1
+  contract: The split-gate HumanQuestion in the waiting_human envelope (subject_text verbatim; offered parts with
+    id, text, covers, depends_on and child_capability in proposed order; dropped[] and not_covered[] read-only with
+    reasons; the four answers) and leafcutter.split_answer.v1, which the gate declares as its response schema (answer
+    approved | rejected; parts one per offered part on approval, empty on rejection; note | null). The status progress
+    block comes from DK-400f-1.
+change_target: prompt
+risk_surface: contract_boundary
+it_requirements:
+  - 'Edits only the two transport skill templates, kernel/adapters/claude_code/SKILL.md (/leafcutter) and kernel/adapters/codex/SKILL.md
+    ($leafcutter), in one change so they stay in parity. Installed copies are rendered from these templates by python
+    -m kernel install-skill (install.py; --force replaces an existing different file); there is no build.py output,
+    no copy under templates/, and no entry in config/agent_registry.json, config/skill_registry.json or another
+    watched package registry, so this AC declares package_surface: false.'
+  - 'The skills stay transport only (ADR-053, ADR-060): they show what the split-gate interaction holds and relay
+    what the person says. They never answer the gate, never choose a default, and never decide, merge, reorder or
+    reword a part, a note or the answer.'
+  - 'The split gate is presented from the packet alone: the subject verbatim, every offered part with its quote,
+    dependencies and capability, and every set-aside and not-covered entry read-only with its reason. When the host''s
+    question widget cannot hold every part or answer (Claude Code AskUserQuestion has a small option limit), the
+    skill shows all of them in the question text and collects the answer over more than one question; it never drops,
+    merges or summarises a part to fit.'
+  - 'The relayed answer uses leafcutter.split_answer.v1 (ADR-067 §4.4, DK-400d-1) exactly: response_schema_id leafcutter.split_answer.v1;
+    answer approved or rejected; parts with exactly one {id, review kept | edited | left_out, text only when edited,
+    in the person''s own words} per offered part on approval and an empty list on rejection; the note verbatim;
+    no other field; actor {kind: human, id: human:<name>}, relayed_by the host id. Not-covered and set-aside entries
+    are never named in the answer.'
+  - Each skill takes response_schema_id from the pending HumanQuestion's declared response schema (leafcutter.split_answer.v1
+    at the split gate; leafcutter.human_answer.v1, the default, everywhere else) instead of hard-coding leafcutter.human_answer.v1
+    for every human answer.
+  - Each skill carries one complete split-answer submission example (JSON) that a test validates against leafcutter.split_answer.v1,
+    so the prompt and the contract cannot drift apart.
+  - On a kernel refusal of a split answer (exit 3), the skill shows the kernel's message to the person and asks
+    again; it never repairs a human answer on the person's behalf (the one-repair rule is for host work only).
+  - 'For status, the skill shows the envelope''s split progress block (DK-400f-1): each part with its outcome and
+    link, and that a decided part''s record is staged and published by the person with the publish command, which
+    the skill never runs.'
+  - 'Host work for decompose_goal needs no new skill text: the skills follow the packet''s goal, output_requirements
+    and output_json_schema as for every host operation; no operation-specific host instructions are added.'
+  - 'Both skills keep their existing allowed-tools and command scope: no new kernel command is pre-approved (resume
+    and status already are), and the Codex prefix rules are unchanged.'
+package_surface: false
+test_required: true
+test_spec:
+  - name: test_skills_present_split_gate_from_packet
+    target_dir: tests/kernel/adapters/host_skills/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: Both skills rendered through install-skill into a temporary target state that a split gate is shown
+      with the subject verbatim, every offered part with quote, dependencies and capability, and set-aside and not-covered
+      entries read-only with their reasons, and that no part may be dropped or merged.
+  - name: test_skills_relay_split_answer_unchanged_as_the_person
+    target_dir: tests/kernel/adapters/host_skills/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: Both rendered skills state that the split answer is relayed unchanged (approve, per-part edit,
+      left out, reject, note) with actor human:<name> and the host only as relayed_by, and that the skill never
+      answers the gate or chooses a default, and that response_schema_id is taken from the pending question's declared
+      schema.
+  - name: test_skill_split_answer_example_validates_against_kernel_schema
+    target_dir: tests/kernel/adapters/host_skills/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: The split-answer submission example in each rendered skill parses as JSON and validates through
+      leafcutter.split_answer.v1, and an example naming a not-covered entry is refused.
+  - name: test_skills_show_split_progress_on_status
+    target_dir: tests/kernel/adapters/host_skills/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: Both rendered skills state that on status the split progress block is shown per part with outcome
+      and link, and that publishing a staged record is left to the person.
+  - name: test_skills_keep_allowed_tools_and_codex_rules
+    target_dir: tests/kernel/adapters/host_skills/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: The rendered Claude Code allowed-tools line and the Codex prefix rules are unchanged by the split
+      text.
+test_rationale: This is a prompt-only change, so its executable proof is a skill-contract test over the skills as
+  install-skill renders them (the installed artifact, not the template source) plus a seam test that the skill's
+  own example answer validates against leafcutter.split_answer.v1. Whether a live host obeys the text cannot be
+  asserted offline; that stays a manual check with a real /leafcutter run.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Full technical enrichment of the new skills AC: estimated_complexity, it_requirements, contracts,
+      doc_links, package_surface false and a skill-contract test contract; change_target prompt and risk_surface
+      contract_boundary confirmed; readiness and priority untouched.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      named leafcutter.split_answer.v1; skills take response_schema_id from the question''s declared schema; ADR-067
+      doc_link set to exists.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  User approval at the final gate (2026-10-05), from the IT PO's recommended follow-up on
+  DK-400d-1: presenting the split gate and relaying the answer is skill-template work
+  (llm-expert), while DK-400d-1 keeps the kernel side independent of host wording. It is an L3
+  under DK-400d-1, because DK-400d is at its 5-L2 cap.
+  Both skills are transport only: they show what the envelope holds and relay what the person
+  says, never deciding, merging or rewording on the person's behalf (ADR-053, ADR-060). The
+  "split progress block" is the status view the kernel provides for a split (DK-400f-1).
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-approve
+    node_kind: step
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-report
+    node_kind: step
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

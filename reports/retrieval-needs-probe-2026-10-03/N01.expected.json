@@ -1,0 +1,41 @@
+{
+  "expected": {
+    "include": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-2"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ]
+    },
+    "exclude": {
+      "target_ids": [],
+      "relationships": [
+        "parent_direct",
+        "children_direct",
+        "all_descendants"
+      ]
+    },
+    "required_fields_if_fields": [
+      "criteria"
+    ],
+    "detail_mode": [
+      "fields",
+      "full_document",
+      "bounded_context"
+    ],
+    "completeness": [
+      "single_entity"
+    ],
+    "hierarchy_scope": [
+      "not_applicable"
+    ],
+    "status": [
+      "decided"
+    ]
+  },
+  "human_gold": "Retrieve the named criterion's required behavior. Test specification is useful if recorded, not mandatory when criteria are authoritative. No count population or parent/root clarification. Full bounded AC is an acceptable alternative to field projection."
+}

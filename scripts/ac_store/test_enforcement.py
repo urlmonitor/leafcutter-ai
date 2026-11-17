@@ -89,8 +89,19 @@ def build_ac_work_status_cache(ac_store_root: str | Path) -> dict[str, str]:
 
     for yaml_path in sorted(root.rglob("*.yaml")):
         try:
+            # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+            # fix-pass, 2026-10-07): this cache's work_status classification
+            # feeds the pytest_ac_enforcement plugin's enforced-vs-
+            # informational decision, i.e. whether a failing test BLOCKS the
+            # CI run or is merely reported -- a guardrail decision point
+            # (criterion 4), regardless of which direction any one parser
+            # divergence happens to point. Session-scoped (built once per
+            # pytest process, whole-store rglob) so there IS a real,
+            # measured speed case at this volume (same ~10-19x ratio as the
+            # other whole-store sweeps in this audit); kept reverted anyway
+            # because criterion 4 disqualifies it outright.
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=yaml.SafeLoader)
         except yaml.YAMLError as exc:
             print(
                 f"WARNING: test_enforcement: YAML parse error in {yaml_path}: {exc}",

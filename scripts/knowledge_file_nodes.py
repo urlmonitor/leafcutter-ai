@@ -93,6 +93,28 @@ def format_decline_line(decline: DeclineRecord) -> str:
     )
 
 
+def format_entry_decline_line(surface: str, doc: str, field: str, entry: object, reason: str) -> str:
+    """Render one declined relationship entry as a stderr line (KM-KGS-100d-3-i).
+
+    Prefixed ``ENTRY-DECLINED`` so it never reads as a file-path
+    ``DECLINED`` line, whose reasons are a closed pair of strings.
+
+    Args:
+        surface: Surface the entry's document belongs to.
+        doc: Repo-relative POSIX path of the document.
+        field: Field the entry was read from.
+        entry: The entry as read.
+        reason: The resolver's refusal reason.
+
+    Returns:
+        A single pipe-delimited line naming surface, document, field, entry.
+    """
+    return (
+        f"ENTRY-DECLINED | surface={surface} | doc={doc} | field={field} | "
+        f"entry={entry} | reason={reason}"
+    )
+
+
 def _strip_anchor(value: str) -> tuple[str, str | None]:
     """Strip one trailing ``#symbol`` or ``::test`` anchor, keeping it aside.
 

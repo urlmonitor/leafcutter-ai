@@ -1,0 +1,161 @@
+---
+title: Independent repository-answer acceptance report
+type: explanation
+status: active
+created: '2026-10-01'
+last_updated: '2026-10-02'
+components:
+- knowledge_management
+- decision_kernel
+description: Overview of Independent repository-answer acceptance report.
+---
+# Independent repository-answer acceptance report
+
+The retained retrieval implementation passes the measured local acceptance checks. Live Jev decision quality, remote Langfuse ingestion and publication to Aura are not established by this report. The feature-planning prototype and its tests were removed at the user's request; ADR-064 remains policy only.
+
+The actual indexed source is `9d11594782abfb417d0f3a826bfb1f91f3a523ac`, with mapper `6`. The executing implementation is the changed working tree, not that source commit. Historical and final Python files under knowledge/integrations/kernel are fingerprinted separately in the [acceptance matrix](../../reports/knowledge-answer-acceptance-matrix.json).
+
+| Evidence | Result | Boundary |
+|---|---|---|
+| [Unified tests](../../reports/knowledge-answer-tests.xml) | 116 passed, 0 failed; 148.41 s | Real public CLI/service/kernel/checkpoints; controlled storage, scripted Jev and local tracer where stated |
+| [Affected boundaries after final impact repair](../../reports/knowledge-answer-boundary-tests.xml) | 44 passed, 0 failed; 2.43 s | Public neutral service, assessments, evaluator and observer |
+| [Reopened research, comparison and clause controls](../../reports/knowledge-answer-research-tests.xml) | 19 tests plus 2 subcases passed; 30.68 s terminal / 30.599 s JUnit | Actual public kernel research, exact-content persistence and separate-process resume; controlled storage selection and scripted Jev |
+| [Observer hook repair](../../reports/knowledge-answer-observer-hook-tests.xml) | 7 selected cases passed; 1.95 s | Fixed warning privacy, one retrieval, unavailable result and cumulative budgets; narrow replay after the main tests |
+| [Builder kernel compatibility](../../reports/knowledge-answer-kernel-compatibility.json) | 181 tests plus 64 subtests passed; 35.35 s | Builder B terminal receipt, separately attributed; not an independent JUnit run |
+| [Actual Neo4j population canaries](../../reports/knowledge-answer-neo4j.json) | 7 passed | Isolated localhost Neo4j, canonical mapper, immutable Git resolver and public service |
+| [Actual two-revision impact](../../reports/knowledge-answer-impact.json) | 5 passed | Git-derived oracle and actual direct-dependency query outputs at two source revisions |
+| [Original reviewed evaluation corpus](../../reports/knowledge-answer-evaluation.json) | 12 total / 12 executed / 12 passed / 0 failed / 0 not-run | Original stable IDs, actual DB/public consumer, explicit withholding/outage controls |
+
+The 12 cases sample six of eight query families. Additional acceptance tests exercise the conditional readiness/source interpretation contracts. Neither grouping claims that all 25 natural-language examples or a representative real-model benchmark were executed. `pytest` ran with `-o addopts= -p no:cacheprovider`; these are genuine pytest exit results, not a claim that the default strict AC plugin ran.
+
+## AC-by-AC verdict
+
+| AC | Independent verdict | Evidence and limit |
+|---|---|---|
+| KM-500e-1 | local_verified | Natural-language question to finite Jev answer contract, focused ambiguity/no-facts clarification, unchanged research transport, and actual separate-process checkpoint resume. Supplied assessment quotes also survive clarification and a fresh-process resume verbatim. Jev is scripted at the external boundary; real-model decision quality is not established. |
+| KM-500e-2 | local_verified | Actual immutable canonical producer and Git source reader reach CLI disclosure; work_status differs from lifecycle status; exact criteria and /work_status,/priority locators; source absence, projection omission and undisclosed criteria stay distinct. Compared exact attributed clauses retain both source locators and separately labeled non-authoritative inference; similarity never establishes equivalence or authority. Only approved mapped fields and source surfaces are claimed. |
+| KM-500e-3 | local_verified | Actual Neo4j returns 15 descendants (5 done / 10 todo), 11 terminal leaves; tiny/default budgets and all continuation pages retain incomplete totals; contradictory scope fails fulfillment. Page output is not an accumulated inventory; no global topic or code-graph count is inferred. |
+| KM-500e-4 | local_verified | Public LangGraph source fitness suppresses builder on missing work_status mapping and allows true missing-query construction; unavailable exact source is not successful empty retrieval. Manifest/candidate boundaries in kernel tests are controlled and identified; actual mapper manifest is used in the corpus. |
+| KM-500e-5 | documentation_verified | Reference content, all 25 origin IDs/eight families, actual API examples and placeholder scans reviewed under documentation-verifier template. Final staged diff, actual canonical placeholder helper on explicit files, parsed JSON examples and latest public API/receipt claims verified; own verifier signoff recorded. Documentation verification is complete; overall lifecycle and dependency gates are separate. |
+| KM-500f-1 | local_verified | Actual immutable revisions 9f70de80 and 9d115947 through Neo4j establish direct incoming dependencies; partial/missing/foreign-SHA/final-page comparisons cannot fabricate removals. The two inspected revisions have the same 5 declared dependents; no transitive or inferred code-consumer impact is claimed. |
+| KM-500f-2 | local_verified | Actual retrieved 7 canonical test references feed assessment; supplied historical Markdown quotes preserve stored/tested SHA, scripted actor, partial research and live-provider not-run; references alone are unverified. The actual public kernel research result now retains the finalized assessment in output.payload.assessments[need_id], including partial outcomes; outage, foreign scope, clipping and response-budget refusals cannot promote proof. A cited historical report is inspected supplied evidence, not a rerun or independent verification of that historical execution. |
+| KM-500f-3 | local_verified | Actual canonical work_status/priority outrank conflicting candidate packet; explicit supplied policy yields unmet clause and unavailable deployment; no-policy input stays unresolved. The actual public kernel research result now retains the finalized assessment in output.payload.assessments[need_id], including partial outcomes; outage, foreign scope, clipping and response-budget refusals cannot promote proof. Policy is an explicit controlled input; no product prioritization or deployment inference is automated. |
+| KM-500f-4 | local_verified_bounded_contract | Actual immutable service source quote reaches public assessment; unbacked quote rejected; runtime cause remains unknown and full code graph false. The actual public kernel research result now retains the finalized assessment in output.payload.assessments[need_id], including partial outcomes; outage, foreign scope, clipping and response-budget refusals cannot promote proof. Caller-supplied stage interpretation is not automatic repository discovery or proof of a runtime cause. |
+| KM-500f-5 | local_verified_bounded_contract | Actual immutable test/fixture source quote supports a labeled recommendation; missing comparison control remains a design gap; no exhaustive/minimal regression or executed branch proof. The actual public kernel research result now retains the finalized assessment in output.payload.assessments[need_id], including partial outcomes; outage, foreign scope, clipping and response-budget refusals cannot promote proof. No full consumer graph or optimal regression selection is established. |
+| KM-500g-1 | local_verified_remote_not_run | Actual application observer records separate execution/answer/completeness and correlation; fake candidate URLs withheld; explicit disabled/unavailable/unverified states. Real Langfuse ingestion/reference resolution was not authorized or executed; cannot mark live observation proof complete. |
+| KM-500g-1-i | local_verified | Application tracer initialization and shutdown failure retain one retrieval; callback/flush failure never fabricates trace; long metadata obeys cumulative continuation budget. Actual remote outage timing is not exercised; inherited exporter 5 s default was source-inspected only. |
+| KM-500g-2 | local_verified_prerequisite_open | Actual public kernel distinguishes expected/observed foreign source, missing-field unknown cause, contract and bounded next step; unverified trace is not a remote link. Pre-existing KM-500d-2 remains todo; broad canonical-branch synchronization/deployment freshness proof is not closed here. |
+| KM-500g-3 | documentation_verified | How-to follows actual required facts/scope/proof/tracing surfaces with measured level 1 canary, clear source-oracle versus query-output labels, and no planning implementation claim. Final staged diff, actual canonical placeholder helper on explicit files, parsed JSON examples and latest public API/receipt claims verified; own verifier signoff recorded. Documentation verification is complete; overall lifecycle and dependency gates are separate. |
+| KM-500d-3 | local_verified_sample_only | Original 12 source-reviewed cases executed 12/12; actual/expected/not-run kept separate, outage metrics null, changed source/review invalidates comparison, no gates prevents promotion, passing sample remains limited. Sample 6 of 8 families, not a representative real-model benchmark; no autonomous activation or model training. |
+
+## Reproduced defects and repair loop
+
+- Work status and required-answer input initially failed through the public CLI. Exact source clauses, field availability and the additive answer assessment were repaired; the original discriminating tests remain.
+- The first actual Neo4j hierarchy query falsely returned a fulfilled zero. Mapper 4 omitted canonical parent derivation. Mapper 5 introduced attributed structural parents; final mapper 6 also discloses actual priority. Final measured scope is 15 L2/L3 descendants excluding only root (5 done / 10 todo), versus 11 terminal leaves.
+- The original corpus exposed a source-pin assertion that incorrectly failed genuine unavailable output. The evaluator now checks requested revision and preserves unknown response pins on unavailable controls. Two harness defects were separately repaired: canonical_id rather than id, and max_results 4 with adequate candidate budget.
+- Real catalog growth raised KeyError(get_ac_descendants) because new builtin descriptions were absent. Both new operations were added to descriptor discovery; 15 legacy growth/adversarial/boundary tests pass.
+- A two-revision impact packet with a false after SHA incorrectly reported fulfilled deltas. Scope binding was repaired; the exact actual-result control now abstains.
+- Long observation metadata exceeded a 4096-byte cumulative budget (5528 bytes returned). Final envelope accounting was repaired; 2048/4096-byte controls now pass without repeating retrieval.
+- Three actual hierarchy pages of 5 ended with false fulfilled exact_total 5. Continuation slices now remain incomplete. A related consumer defect falsely removed four dependencies from a final 2/2/1 page; impact now rejects that page as a complete population.
+- The generated doc tickets initially named the discovery catalog twice. PO repaired canonical documentation targets and regenerated only the documentation contract sections. Content/API review and all placeholder checks passed. The final staged documentation diff was subsequently verified and the actual verifier phase signed off.
+
+- Clause-by-clause review exposed an unimplemented comparison contract and a missing public kernel handoff for supplied assessments. The retained tests first demonstrated rejection or loss of the assessment; the repaired flow now exposes each finalized assessment on the caller-visible research bundle.
+- A partial root research run originally hid its valid evidence bundle. The narrowly repaired envelope exposes only the validated requested evidence bundle and keeps the run partial.
+- Generic JSON transport stripped whitespace from exact quotations during request/checkpoint serialization. A strict verbatim JSON type now preserves nested opaque evidence across a separate-process resume while normal labels still normalize and non-JSON values are rejected.
+- Kernel-side recomputation restored 60 supplied stages after the neutral result had refused them under its response budget. The finalized kernel response now retains that authoritative unresolved budget refusal.
+- Fixture setup defects were kept separate from product failures: immutable projection preparation moved outside the request deadline, query selection used the actual catalog, inline OutputRef payloads were read correctly, registered retrieval was used where no retrieval root task exists, and the expected priority came from immutable Git rather than a guess.
+
+## Decisions, evidence ownership and remaining limits
+
+The retained retrieval flow uses an actual compiled LangGraph with separate load, resume, answer planning, scope clarification, readiness, target, source fitness, selection, clarification, build and execute nodes. Jev supplies bounded interpretation/readiness/target/selection judgments through the existing budget owner. Deterministic code validates scope, mapped fields, permission and completeness. Ordinary host coding is requested only through the existing governed build boundary; it is not a new feature-planning engine.
+
+Source oracles were derived from immutable Git bytes before grading and never populate returned fields. The historical report is inspected source evidence with its own tested SHA, scripted Jev and partial research outcome; it was not rerun. The impact source pair is 9f70de80ebcafe59ff55cce6732deb92069f9541→9d11594782abfb417d0f3a826bfb1f91f3a523ac, and both independently inspected populations contain the same five direct declarations.
+
+The documentation-verifier stage read its actual template, parsed the corrected ticket contract paths, checked source/API/proof claims, and ran the canonical placeholder helper plus token/stub scans. Both final targets were present in the staged diff. The verifier self-checked and staged its own signoffs; no other lifecycle or deployment completion is inferred.
+
+KM-500d-2 remains a pre-existing todo prerequisite for broad publication freshness. No external provider call, remote trace verification, deployment receipt, actual remote network-timeout experiment, Aura update, commit, push or merge was performed by this evaluation agent. The owned local fixture is separate from the user's LIVE03_DB.
+
+## Clause audit and lifecycle handoff
+
+The [111-clause audit](../../reports/knowledge-answer-clause-audit.json) cites actual implementation functions and exercised test functions for every code clause. All 13 canonical store-alignment checks passed. Canonical covered_by links now identify the actual executed test files, preserving the existing g-1 child link; planned generated test filenames are not claimed as executed.
+
+Local support is established for KM-500e-1, e-2, e-3, e-4, e-5, f-1, f-2, f-3, f-4, f-5, g-1-i and g-3. KM-500d-3 remains sample-qualified (10/17 clauses fully supported), KM-500g-1 lacks authorized remote proof (6/8), and KM-500g-2 retains the KM-500d-2 freshness prerequisite (9/10). These are measured scope limits, not claims that the remaining proof ran.
+
+The actual validator signed the ten fully supported code units and recorded explicit partial verdicts for the three qualified units. All fifteen tickets remain in progress. Code tickets still list architect review, PR review, test-runner, AC fulfillment, documentation phases and commit as required; the matrix records each current role state. Documentation author/dispatcher/verifier stages have their own actual signatures. No unused phase was impersonated and no ungated done transition was used.
+
+The test history contains captured failing feature/seam tests followed by fixes, plus later green controls for existing behavior. It does not satisfy a literal assertion that every new test was initially red, so no universal test-writer phase assertion is invented. Independent testing is nevertheless recorded with concrete nodes and receipts. The latest targeted run and the builder compatibility run apply to the final code fingerprint; the earlier 116-test and 44-test receipts remain historical and were not relabeled as reruns.
+
+After the final test run, builder B removed trailing whitespace on blank lines in four kernel files. The matrix retains the tested pre-format fingerprint and records the final bytes separately; this formatting-only change does not claim another behavioral run.
+
+The first normal commit check additionally required 26 DECISION HISTORY comment tags to use the canonical short form. All changed-file hashes match the repair receipt and independent AST comparison is unchanged. This comment-only byte delta has its own final fingerprint; the tested fingerprint remains intact. Six saved continuation token values were redacted from three actual-response reports, with presence, length and hash preserved. Their original counts, assertions, source identities and measurements remain unchanged; the files explicitly identify themselves as sanitized saved output, not reruns. The normal security check remains enabled.
+
+The exception-handling hook required a diagnostic at the neutral observer failure boundary. The repair adds one fixed sanitized warning and preserves the unavailable response. Independent targeted replay passed seven failure, privacy and budget cases: a controlled exception detail never appears in captured logs or returned JSON, and no traceback is attached. The matrix records this narrow code change and its tested fingerprint separately; the earlier broad suites were not rerun or relabeled.
+
+The normal proof-declaration check required truthful angle tags and scanner-visible wrappers for existing asynchronous scenarios. Support extraction preserves the collected test IDs and assertions. The affected replay passed 23 tests plus 2 subtests; two checks consume saved actual artifacts through public interfaces in fresh processes. The [test-only repair receipt](../../reports/knowledge-answer-proof-metadata-repair.json) records the unchanged product fingerprint and canonical size/complexity checks. A genuine opt-in remote-observation test was authored and default-skipped with consent absent; no remote verification ran. Scanner agreement is declaration alignment and does not change the clause audit, partial obligations or lifecycle verdicts.
+
+## 2026-10-02 closure and continuation handoff
+
+This addendum preserves the earlier evaluation's source/proof boundaries. It records later
+work and a user-authorized status audit; it does not manufacture missing role signoffs.
+
+- Branch: `feature/knowledge-retrieval-v01`; committed HEAD
+  `e056ccd2996293d0b63f4ae081cc3368f244e11c` (retrieval plus kernel v0.1).
+- Pending MERGE_HEAD: `a28b1c247ff01fa80adc7464cad93619ff386edb` (decision store).
+  Its resolved candidate passed [293 tests plus 42 subtests](../../reports/knowledge-answer-decision-store-merge-tests.xml)
+  using controlled Jev/host responses. The merge is not committed.
+- Later [Aura publication](../../reports/knowledge-answer-aura-publication.json) and
+  [six passing direct canaries](../../reports/knowledge-answer-aura-verification.json) used
+  `59269e024e4d0290b68b03d0d382745966e67e29`. They prove hosted reads at that historical
+  revision, not live Jev quality or publication of the current merged candidate.
+
+### Status corrections
+
+Six records changed from todo to in_progress: KM-500d/e/f/g (active child work),
+KM-500d-1 (public interface/documentation work exists; installed discovery proof remains),
+and KM-500d-2 (manual hosted publication exists; canonical-event deployment proof remains).
+GE-122a-1-ii changed from done to in_progress after a reproduced merge-import defect.
+No readiness or acceptance criteria changed. No record was promoted to done.
+KM-400 retains its existing bounded-mechanics completion, not a production semantic-quality claim.
+The 15 answer-contract units retain in_progress: 12 have local/documentation support, while
+formal lifecycle gates remain; d3/g1/g2 also retain explicit partial verdicts.
+
+### Remaining work, in priority order
+
+1. **Finish the requested merge safely.** Direct user approval is still needed for the
+   persistent collision-guard repair rejected by automatic approval review. Preserve
+   GE-122a-1-ii's same-record import allowance and distinct-record collision refusal.
+   [Real Git RED receipt](../../reports/knowledge-answer-adr-merge-guard-red.xml): two failed,
+   seven passed. Guard source/deployment are untouched. After approval: repair, independent
+   GREEN controls, canonical deployment/parity, normal preflight and the one remaining
+   commit retry. No bypass, renumbering or remote-ref exclusion.
+2. **Obtain live quality/observation evidence:** KM-500a-4 real Jev planning/selection quality
+   and KM-500g-1 real Langfuse ingestion/reference verification. Provider transmission consent
+   remains pending; configured credentials and controlled responses are not proof or consent.
+3. **Close capability-growth obligations:** KM-500b-4 actual coding-agent delivery/resume and
+   the recorded bounded-recipe architecture question; KM-500b-5 compatibility revalidation,
+   retirement/rollback and interrupted activation recovery.
+4. **Complete operational acceptance:** KM-500d-1 installed agent discovery; d-2 actual
+   configured canonical-branch event, publication timing, correlation, capacity and deployed
+   privilege proof; g-2's remaining freshness prerequisite. Manual Aura sync is insufficient.
+5. **Finish evaluation and semantic material handling:** KM-500d-3 representative reviewed
+   baseline beyond the 12-case sample; d-4 attributable long-material semantic chunks,
+   versioned cache and entity collapse. Existing native text chunks do not satisfy d-4's
+   embedding/vector contract. Production semantic mappings/model readiness stay explicit.
+6. **Close release/lifecycle records using actual work:** complete remaining applicable review,
+   fulfillment and role gates, retain qualified outcomes, commit the documentation/status
+   changes, and only publish a new graph revision under a separately confirmed rollout scope.
+   Do not copy historical passing receipts onto a new revision or invent prior RED/signoffs.
+
+### Proposed, not built
+
+Optional caller keywords, Haiku's five search terms, Jev method/component selection and
+outcome-driven retrieval learning remain a proposal, not approved completed AC delivery.
+Existing native term scoring/candidate merging/Jev reranking is distinct from that proposal.
+Decision-store precedent reuse is a separate human-approved file-memory route, not automatic
+Neo4j answer-correctness learning. No new feature-planning workflow is included.
+
+The [current standalone walkthrough](../product-truth/flows/leafcutter/retrieve-project-knowledge.html)
+and adjacent canonical flow show these boundaries. Browser rendering was not verified because
+no approved browser surface was available. Preserve the unrelated AC stat residual,
+`config/commit_guardian/`, locked `pytest-of-Hendrik/`, and existing reports. No provider calls,
+Aura republish, guard edits, push or merge commit were performed by this closure audit.

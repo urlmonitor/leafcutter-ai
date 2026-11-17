@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "host_role": "blind_host",
+  "operation": "interpret_retrieval_needs",
+  "interaction_id": "int-cc768901f11b4659",
+  "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A01\\started\\host\\packet.json",
+  "packet_sha256": "70aef7c1ec490b5bf347407034b5f78bc08c71eedb45bf1f29a22f7b17b22c58",
+  "input_artifact_refs": [
+    "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A01\\runtime\\runs\\run-bb966f394da74080\\artifacts\\input-int-cc768901f11b4659.json"
+  ],
+  "archived_inputs": [
+    {
+      "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A01\\started\\host\\inputs\\0.json",
+      "sha256": "abe935ca8779756d78833d6e25689da05e1f3f499468433d1ce2038c01dab55a"
+    }
+  ],
+  "response_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A01\\started\\host\\response.json",
+  "response_sha256": "59248b8bbcef1049b1f4966dd57e9596f3c8134afdbb5e3be3dee850770d9fe0",
+  "model_id": null,
+  "completed_at": "2026-10-09T21:02:26.8702542Z",
+  "scope_statement": "Read only the manifest and its explicitly referenced packets and archived inputs; performed only the named host interpretation. No source inspection, retrieval, external provider calls, graph writes, code changes or Git operations."
+}

@@ -1,0 +1,134 @@
+id: KM-500b-4
+title: Verify an actual coding agent can deliver and resume a missing-query request
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: todo
+parent: KM-500b
+criteria: 'Given a ready research need cannot be answered by the eligible query catalog and the task permits
+  the governed build and catalog activation
+
+  And the actual coding-agent entry point and any external data transfer are authorized
+
+  When the ordinary research run delivers its missing-query work to that coding agent
+
+  Then the agent receives the original question, resolved inputs, expected result, pinned source, current catalog
+  and remaining limits
+
+  And the returned candidate is attributable to that delivery rather than a prewritten candidate substituted
+  for the demonstration
+
+  And the independent verifier executes the candidate tests and evaluation before any permitted registration
+
+  And a failed, unsafe or unrelated candidate leaves the prior catalog usable and the original need unresolved
+  with its reason
+
+  And a matching verified activation resumes the same research need, invokes the new query and assesses the
+  resulting evidence
+
+  And a later independent process can discover and reuse that verified version without rebuilding it
+
+  And denial of activation cannot be bypassed by another host handoff
+
+  And unavailable agent or provider prerequisites are reported as not-run rather than proof of real-agent delivery.'
+depends_on:
+- KM-500b
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500b-1.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500b-2.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500b-3.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-1.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Neutral projection/catalog ownership and existing kernel integration boundaries.
+origin_agent: business-analyst
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'PO/BA/IT PO coverage audit at user request. This is a pending behavioral obligation, not an implementation
+  or execution claim. Existing KM-400 and KM-500 completed mechanics retain their evidence. Authoring this
+  criterion does not authorize external provider data transfer, merge, deployment or implementation during
+  the AC-only audit. IT PO supplies technical constraints and test contracts. IT PO 2026-10-01: technical constraints
+  and planned public proof supplied; todo and empty covered_by/implemented_by are intentional. No implementation,
+  provider call or deployment was performed during this acceptance audit.'
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+- Reuse host.query_build, canonical gap records and typed query_candidate delivery through existing host transport
+  and kernel run/resume. Do not introduce a parallel scheduler or accept host success as admission proof.
+- Bind actual coding-agent delivery identity, interaction revision and authored candidate digest to the original
+  need, immutable source and authorized scope. Preserve the host packet catalog, expected result and shared
+  remaining budget.
+- Trusted QueryAdmission must independently compile and execute verification on the actual scoped backend;
+  only the dedicated catalog activation capability may persist it under write_query_catalog.
+- An authored candidate generated for the issued gap is required for live-agent proof; BA-authored fixtures
+  test mechanics only. Real host/provider unavailability or missing authorization remains not_run. No arbitrary
+  submitted Cypher/Python execution.
+- After matching admission, reopen checkpoints and a separate process catalog and prove same-need evidence
+  plus fresh-run reuse. Denied activation, invalid candidates and replay must not dispatch another bypassing
+  host.
+- 'Before claiming guide-compliant real-agent readiness, explicitly resolve the architecture tension: the original
+  guide prohibits inventing a graph query language, while the implemented bounded recipe compiler is a later
+  selected design. Record the approved authoring boundary and its rationale; neither this AC nor existing fixture
+  proof retroactively establishes original-guide compliance or authorizes arbitrary Cypher.'
+test_required: true
+test_rationale: Planned public-interface and separately labeled real-artifact proof covers the full observable
+  obligation. Existing mechanism tests are reusable but do not establish real-agent, provider or deployment
+  readiness. No planned test is represented as existing coverage.
+expects_from:
+  ac_id: KM-500b-2
+  contract: Reuse the existing bounded implementation and canonical contracts; add only this explicit lifecycle
+    or readiness obligation.
+delivers_to:
+  agent: python-coder
+  contract: Implement and prove KM-500b-4 through the existing knowledge/kernel or operational interface; return
+    measured evidence and preserve explicit not-run prerequisites.
+test_spec:
+- name: test_query_host_delivery_public_transport
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Exercise public host transport and run/resume packet delivery with labeled local doubles; assert
+    attributable candidate, replay protection, denied activation and failed verification preserve prior catalog
+    and unresolved need.
+  covers:
+  - KM-500b-4
+  requires_db: false
+- name: test_authorized_coding_agent_query_delivery
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: With authorized actual coding agent and scoped Neo4j, issue a missing-query request, capture
+    its newly authored candidate, independently verify/admit it, resume the original research and discover
+    the digest in a fresh process. Record actual versus simulated actors.
+  covers:
+  - KM-500b-4
+  requires_db: true

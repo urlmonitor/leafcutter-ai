@@ -1,0 +1,137 @@
+id: GE-108d
+components:
+  - commit_guardian
+title: "The authoring-time exception hook's refusal reaches the agent that is being refused"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The PostToolUse exception-handling hook
+  (templates/hooks/check_exception_handling_hook.py) is the authoring-time
+  sibling of the commit-time guard this L1 otherwise covers. It already builds
+  a full explanation for each of its two refusals, and already exits 2 to
+  block. What it does not do is put that explanation where the blocked party
+  can read it.
+
+  Claude Code surfaces a PostToolUse hook's blocking feedback from the hook's
+  STDERR. Anything the hook writes to STDOUT is discarded. So a refusal
+  written to stdout is a block with no stated reason: the agent is stopped and
+  told nothing, which is the "false confidence / misleading message" failure
+  this L1 exists to remove, in its most complete form — not a message that
+  misleads, but no message at all.
+
+  Scenario: A ruff violation is refused with its reason visible
+    Given a Python file containing a bare `except:` clause (ruff E722),
+    And ruff is available on PATH,
+    When the hook is invoked with a PostToolUse payload naming that file,
+    Then the hook exits 2,
+    And the violation explanation — including the rule code `E722` and the
+      offending file's path — is present on the hook's STDERR,
+    And the hook's STDOUT is empty,
+    Because a blocked edit whose explanation went to a discarded stream is
+      indistinguishable, to the agent being blocked, from a block with no
+      reason at all.
+
+  Scenario: A missing ruff is refused with its install instruction visible
+    Given ruff is not present on PATH,
+    When the hook is invoked with a PostToolUse payload naming a Python file,
+    Then the hook exits 2,
+    And the install instruction is present on the hook's STDERR,
+    And the hook's STDOUT is empty,
+    Because this refusal is the one the reader is least equipped to diagnose
+      unaided: nothing about a silent block suggests "ruff is not installed".
+
+  Scenario: The passing and skipping paths are unchanged
+    Given a clean Python file, and separately a non-Python file,
+    When the hook is invoked with a PostToolUse payload naming each,
+    Then the hook exits 0 in both cases,
+    And writes nothing to STDOUT and nothing to STDERR,
+    Because this criterion moves which stream a refusal is written to; it
+      changes neither what is refused nor what is allowed through silently.
+depends_on:
+  - GE-108
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-108-exception-hook-hardening/GE-108.yaml"
+    relationship: parent
+    status: exists
+  - path: "templates/hooks/check_exception_handling_hook.py"
+    relationship: specifies
+    status: exists
+    relevance: "The subject of this record. Its two blocking exits (the ruff-violation path and the ruff-not-found path) both print to stdout today; the OSError fail-open path on the same function already writes to stderr correctly, so the right channel is established in this very function."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "CANONICAL SOURCE, ADR-001. The edit belongs in templates/hooks/check_exception_handling_hook.py. The deployed copies under .claude/hooks/ and .leafcutter/hooks/ are build.py outputs; a fix applied to a deployed copy alone is reverted by the next build."
+  - "CHANNEL ONLY — DO NOT CHANGE WHAT IS DETECTED OR WHAT IS REFUSED. The RUFF_SELECT rule set, the exit codes, the message TEXT, and the skip conditions (non-.py, missing path, absent file, malformed payload) must all be byte-for-byte unchanged. The only behavioural difference is which stream the two blocking messages are written to."
+  - "THE DOCSTRING IS PART OF THE DEFECT, NOT A SEPARATE TIDY-UP. The module docstring's 'PostToolUse hook contract' block states 'Exit 2 with text on stdout = block the next step and show the text'. That sentence is the reason the code was written this way, so correcting the code without correcting the sentence leaves the next author a documented instruction to reintroduce the bug. Fix both in the same change."
+  - "TESTS MUST EXECUTE THE HOOK AS A PROCESS. Assert on the CompletedProcess's .stdout and .stderr separately, from a real subprocess invocation with a JSON payload on stdin — the existing _run_hook helper in unit_tests/commit_guardian/test_exception_hook.py already does exactly this. A test that greps the hook source for 'file=sys.stderr' passes on dead code and cannot tell a routed message from an unrouted one."
+  - "TWO EXISTING TESTS ENCODE THE DEFECT AND MUST BE CORRECTED IN THE SAME CHANGE: test_bare_except_triggers_block asserts 'E722' in result.stdout, and test_ruff_not_found_produces_install_message asserts the install text in result.stdout.lower(). Both must move to result.stderr. They are not collateral damage — they are why the defect survived, and leaving them would make the fix fail its own suite."
+  - "ASSERT THE EMPTY STDOUT, not only the populated stderr. An implementation that writes the message to BOTH streams satisfies a stderr-only assertion while leaving the discarded duplicate in place; the stdout assertion is what forbids it."
+  - "Error-handling policy per CLAUDE.md applies: the existing OSError fail-open branch must keep its specific exception type and must continue to exit 0, not 2."
+delivers_to: null
+expects_from:
+  ac_id: GE-108
+  contract: "The two sys.exit(2) branches of main() in templates/hooks/check_exception_handling_hook.py — the FileNotFoundError (ruff absent) branch and the returncode != 0 (violations found) branch — each of which currently calls bare print() for its message."
+test_spec:
+  - name: test_violation_block_message_goes_to_stderr_not_stdout
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A temp .py file holding a bare `except:` is named in a PostToolUse payload and the hook runs as a subprocess with ruff available. Asserts exit code 2, 'E722' present in result.stderr, and result.stdout empty. RED today — the message is on stdout."
+  - name: test_ruff_not_found_install_message_goes_to_stderr_not_stdout
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The hook runs as a subprocess with PATH emptied so ruff cannot be found. Asserts exit code 2, the install instruction present in result.stderr, and result.stdout empty. RED today — the instruction is on stdout."
+  - name: test_clean_and_skipped_files_stay_silent_on_both_streams
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A clean .py file and a .md file each produce exit 0 with both stdout AND stderr empty. GREEN ON ARRIVAL — a regression guard proving the channel change did not start emitting noise on the silent paths, not evidence the fix landed."
+test_rationale: |
+  Every arm runs the hook as a real subprocess and reads the two streams
+  separately, because the whole content of this record is WHICH STREAM a
+  message lands on — a distinction that is invisible to any test asserting on
+  combined output, and invisible to any test that reads the hook's source.
+
+  Each refusal arm asserts BOTH that stderr carries the message AND that
+  stdout is empty. The second half is not redundant: writing to both streams
+  would satisfy a stderr-only assertion while leaving the discarded copy in
+  place, which is a plausible and wrong implementation of "route it to
+  stderr".
+
+  RED-VS-GREEN HONESTY. The two refusal arms are RED today. The
+  silence arm is GREEN on arrival and is a regression guard by design — a
+  red-baseline gate for this record must be satisfied by one of the two
+  refusal arms, never by the silence arm.
+origin_agent: BrainCandy
+created: 2026-10-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_exception_hook.py
+implemented_by:
+  - templates/hooks/check_exception_handling_hook.py
+change_target: code
+risk_surface: internal
+notes: |
+  Reported as upstream Finding 12 (drafted). The observable symptom in daily
+  use is a blocking error with no stderr on every Edit of a .py file, while
+  the edit itself succeeds — which reads as harness noise rather than as a
+  guard doing its job, so the guard's findings were being dismissed.
+
+  SCOPE NOTE ON THIS L1. GE-108's own doc_links point at the commit-time
+  guard, templates/scripts/commit_guardian/check_exception_handling.py. This
+  record is the first under GE-108 to address the authoring-time PostToolUse
+  sibling, templates/hooks/check_exception_handling_hook.py, which no record
+  in the store referenced before now. The two files enforce the same Error
+  Handling Policy at two different moments; they are not the same file and a
+  change to one does not touch the other.

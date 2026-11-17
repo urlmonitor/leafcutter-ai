@@ -1,0 +1,31 @@
+{
+  "$defs": {
+    "JsonValue": {}
+  },
+  "$id": "leafcutter.query_candidate.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Untrusted authored recipe; only the native verifier can admit it.",
+  "properties": {
+    "candidate": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "description": "The authored query recipe; untrusted until the native verifier admits it.",
+      "title": "Candidate",
+      "type": "object"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "candidate"
+  ],
+  "title": "QueryCandidate",
+  "type": "object"
+}

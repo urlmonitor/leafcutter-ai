@@ -1,0 +1,97 @@
+id: BO-4400b-2
+title: "A full workspace lifetime leaves the machine as it found it, measured rather than listed"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a record is taken of every entry present in these places on a test machine:
+    the folder where workspaces are created, the shared project's version control data,
+    the shared project's branch list and registration list, the user's cache folder,
+    and the system temporary folder,
+  And a workspace is then made through the one workspace maker, set up, used for the
+    build of a single ticket that pushes its work and opens its pull request, and
+    cleared at the end of that route,
+  When the same places are recorded again,
+  Then the second record contains no entry that was absent from the first,
+  And when an extra step is added to the build that writes one new file into the
+    user's cache folder on the workspace's behalf without declaring it, the second
+    record differs from the first by exactly that one file, and the comparison names it
+    by path.
+depends_on: [BO-4400b, BO-4400b-1, BO-4400a-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400b.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: The varying-population clause is the discrimination angle for this record.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400b-1
+  contract: "Outside-artifact removal driven by one declared inventory."
+package_surface: false
+it_requirements:
+  - >-
+    The deliverable is a reusable footprint recorder (snapshot of top-level entries plus the
+    branch and registration lists, and a diff naming added entries by path) and the end-to-end
+    lifetime test that uses it; the recorder lives with the test helpers under unit_tests/, not in
+    the shipped package.
+  - >-
+    Measured places are redirected into the test's temp directory: HOME, XDG_CACHE_HOME, TMPDIR /
+    TEMP / TMP and the workspace landing folder; the developer's real cache and temp folder are
+    never read or written.
+  - >-
+    The single-ticket route runs under unit_tests/_workflow_engine_harness.py on the deployed
+    workflow with the maker executed for real; the undeclared-artifact variant injects one scripted
+    step that writes one file into the temporary cache folder.
+  - >-
+    Download caches that already existed before the record are allowed to grow inside; any NEW
+    top-level entry counts as a difference (per the record's notes).
+test_required: true
+test_spec:
+  - name: test_full_workspace_lifetime_leaves_no_new_entry
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Before and after records of the five places are identical after make, set up, build, PR and route-end clear."
+  - name: test_undeclared_cache_write_is_the_only_difference_and_is_named
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "With one injected undeclared cache write, the comparison differs by exactly that file and names it by path."
+    must_catch:
+      - "a comparison hard-wired to report nothing new"
+test_rationale: >-
+  A declared list proves only what it declares. Before/after measurement of the real places, plus
+  one deliberately undeclared write, is what shows the inventory is complete and the comparison
+  can see.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  BO-4400b's notes ask for "one list, so a new artifact cannot be forgotten". A declared list
+  proves only what it declares; this record proves completeness by before/after measurement,
+  and the second clause (an undeclared extra artifact) is the varying-population check that
+  stops a hard-coded "nothing new" answer from passing (BA memory: BP-1600a-2 house style).
+  Shared download caches that are reused across workspaces by design (a package manager's
+  download cache) are outside this record when they existed before the workspace was made;
+  any NEW top-level entry still counts. All of this runs against a temporary HOME so the
+  developer's real cache is never touched.

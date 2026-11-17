@@ -1,0 +1,160 @@
+id: INF-100c-5-ii
+components:
+  - feedback_collector
+  - build_pipeline
+readiness: approved
+priority: high
+title: "The hook sentinel is neither reported as an unknown writer nor credited to any agent, and no unimplemented sentinel is documented"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: done
+created_by: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-5.yaml
+criteria: |
+  Given the process-finding category's allowed_writers is [hook],
+  When the package build runs the consistency check,
+  Then "hook" is not reported as a writer that names no registered agent,
+  And no signing-off agent is counted as a registered writer through "hook".
+
+  Given both copies of the feedback categories file (source and template),
+    from which the comment offering [all_agents] as a sentinel has been removed,
+  When either copy is read,
+  Then it documents no writer sentinel that submission does not implement.
+depends_on:
+  - INF-100c-5
+doc_links:
+  - path: config/feedback_categories.yaml
+    relationship: modifies
+    status: exists
+  - path: templates/config/feedback_categories.yaml
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+declared_files:
+  - path: scripts/build_phases_feedback_writers.py
+    state: to_be_created
+  - path: templates/scripts/feedback/feedback_validation.py
+    state: existing
+  - path: config/feedback_categories.yaml
+    state: existing
+  - path: templates/config/feedback_categories.yaml
+    state: existing
+  - path: unit_tests/feedback/test_inf_100c_5_ii.py
+    state: to_be_created
+it_requirements:
+  - "Sentinel handling is taken from submission's own writer rule (validate_writer in templates/scripts/feedback/feedback_validation.py). The check keeps no list of sentinel names of its own, so a change to submission's rule reaches the check with no edit."
+  - "A sentinel never credits a signing-off agent for the required-writer check; the check may never credit an agent that submission would reject."
+  - "Removing the [all_agents] comment changes no category's allowed_writers and no submission behaviour: no category uses all_agents today and submission never expanded it."
+test_intent:
+  - clause: '"hook" is not reported as a writer that names no registered agent'
+    needs_test: true
+    reason: The shipped process-finding list is exactly [hook], so a wrong sentinel rule flags it on every build.
+  - clause: no signing-off agent is counted as a registered writer through "hook"
+    needs_test: true
+    reason: Crediting agents through a sentinel would silently pass an agent that submission rejects.
+  - clause: it documents no writer sentinel that submission does not implement
+    needs_test: true
+    reason: A documented sentinel that submission ignores is how an author registers a writer that is then silently refused.
+test_spec:
+  - name: test_hook_in_process_finding_is_not_reported_as_unknown_by_the_build
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Copies scripts/, templates/ and config/ into a tmp package root, keeps process-finding as [hook], runs that copy's scripts/build.py --validate-only as a subprocess and asserts the output has no unknown-writer report naming hook; a variant file with a misspelt name beside hook proves the report is live and still omits hook.
+    proves_clause: '"hook" is not reported as a writer that names no registered agent'
+    code_file: scripts/build.py
+    must_catch:
+      - a check that treats every writer not in the registry as unknown and so flags hook on every build
+      - a check with its own hard-coded sentinel list that is not taken from submission's rule
+  - name: test_hook_credits_no_signing_off_agent
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Runs the check with process-finding as [hook] and a signing-off agent listed in no other category, and asserts that agent is in missing_writers.
+    proves_clause: no signing-off agent is counted as a registered writer through "hook"
+    code_file: scripts/build_phases_feedback_writers.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_submit_feedback_unknown_agent.py
+    must_catch:
+      - a check that treats hook as a wildcard crediting every signing-off agent
+      - a check that credits an agent through a sentinel that submission would reject
+  - name: test_neither_copy_of_the_categories_file_documents_all_agents
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Reads config/feedback_categories.yaml and templates/config/feedback_categories.yaml as they ship and asserts neither contains the all_agents sentinel text, the [hook] note is still present, and the parsed allowed_writers of every category are unchanged from the pre-edit lists.
+    proves_clause: it documents no writer sentinel that submission does not implement
+    code_file: config/feedback_categories.yaml
+    must_catch:
+      - the all_agents comment removed from one copy but left in the other
+      - the comment reworded so it still offers a sentinel submission does not honour
+      - the comment removal also dropping an allowed_writers entry
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build.py
+  - config/feedback_categories.yaml
+  - templates/config/feedback_categories.yaml
+  - templates/scripts/feedback/feedback_validation.py
+  - templates/scripts/feedback/submit_feedback.py
+  - unit_tests/feedback/test_submit_feedback_unknown_agent.py
+file_findings:
+  - file: templates/scripts/feedback/feedback_validation.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds submission's writer rule, but validate_writer is plain literal membership with no sentinel handling, so the record's premise that sentinel handling is taken from it means hook is only a literal list entry (and submit_feedback skips the rule entirely for source hook).
+    decision: null
+  - file: config/feedback_categories.yaml
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its header comment at lines 10-14 is the all_agents text to remove while process-finding stays [hook] and every allowed_writers list stays unchanged.
+    decision: null
+  - file: templates/config/feedback_categories.yaml
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It carries the same all_agents header comment at lines 10-14 and the same lists, so both copies must change identically for ADR-001 parity.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/feedback/feedback_validation.py
+  - config/feedback_categories.yaml
+  - templates/config/feedback_categories.yaml
+delivers_to: null
+expects_from:
+  ac_id: INF-100c-5
+  contract: "The build-time consistency check from INF-100c-5 (missing_writers: list[str]; unknown_writers: list of {writer: str, categories: list[str]}), which this record constrains to treat hook exactly as submit_feedback.py does: hook never appears in unknown_writers and credits no agent in missing_writers."
+origin_agent: business-analyst
+created: 2026-10-21
+amended_by:
+- BrainCandy
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Two wrong versions this record exists to catch: (1) treating every sentinel as an
+  unknown agent, which makes the build fail on the shipped [hook] list on day one;
+  (2) crediting agents through a sentinel, which silently passes an agent that
+  submission would actually reject.
+
+  2026-10-21 amendment (BrainCandy decision): the original draft also specified an
+  [all_agents] sentinel resolving to ticket-phase agents. The code shows it was never
+  implemented: it appears only in a comment in feedback_categories.yaml, no category
+  uses it, and validate_writer only checks literal membership. Rather than build an
+  unused sentinel, the all_agents scenario is dropped and the misleading comment is
+  removed, so the file documents only sentinels submission really honours.

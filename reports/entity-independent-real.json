@@ -1,0 +1,279 @@
+[
+  {
+    "name": "original",
+    "goal_chars": 68,
+    "wall_seconds": 1.6890474999672733,
+    "verbatim_goal": true,
+    "status": "recognized",
+    "entities": [
+      {
+        "schema_version": "1.0",
+        "family": "symbol",
+        "identity": "kernel.entity_cli.run",
+        "native_kind": null,
+        "meaning": "Prepare metadata and report its identity, reader coverage and destination.",
+        "signature": "def run(args) -> tuple[int, dict]",
+        "resolution": "ambiguous",
+        "matches": [
+          {
+            "schema_version": "1.0",
+            "channel": "goal",
+            "record_index": null,
+            "start": 35,
+            "end": 38,
+            "surface": "run"
+          }
+        ],
+        "provenance": {
+          "schema_version": "1.0",
+          "source_id": "repo.patterns",
+          "locator": "kernel/entity_cli.py::run",
+          "snapshot": "9cc1907dae58ff121dd62c522e7cc140db39b3e505a4e306da1e07e276024735",
+          "source_hash": "22683166b749733fd8dadb717524cf1c0085465b70e28c37bf149088b5627bef",
+          "projection_hash": "e83936c108f6ef087717a60cca560c72cdf5ab5c4975ed3bf7d14caa7b39a606"
+        }
+      },
+      {
+        "schema_version": "1.0",
+        "family": "symbol",
+        "identity": "kernel.scheduler.nodes_route._Router.run",
+        "native_kind": null,
+        "meaning": "Route the whole agenda and return the state update.",
+        "signature": "async def run(self) -> dict[str, Any]",
+        "resolution": "ambiguous",
+        "matches": [
+          {
+            "schema_version": "1.0",
+            "channel": "goal",
+            "record_index": null,
+            "start": 35,
+            "end": 38,
+            "surface": "run"
+          }
+        ],
+        "provenance": {
+          "schema_version": "1.0",
+          "source_id": "repo.patterns",
+          "locator": "kernel/scheduler/nodes_route.py::_Router.run",
+          "snapshot": "9cc1907dae58ff121dd62c522e7cc140db39b3e505a4e306da1e07e276024735",
+          "source_hash": "e73c74b2666161ba2e24fd333c7140a6c4d446b2e7e00c96e47191bf6491714b",
+          "projection_hash": "98ae8b375066b722c455b3886a01e9ad141f271224d5130a175a8ef60d3a668a"
+        }
+      },
+      {
+        "schema_version": "1.0",
+        "family": "symbol",
+        "identity": "scripts.ac_store.epic_pipeline.run",
+        "native_kind": null,
+        "meaning": "Full orchestration: traverse → generate tickets → assemble EPIC folder.",
+        "signature": "def run(ac_id: str, ac_store_root: Path, inbox_dir: Path, dry_run: bool=False, worktree_root: Path | None=None, yes: bool=False, approved_only: bool=False) -> Path",
+        "resolution": "ambiguous",
+        "matches": [
+          {
+            "schema_version": "1.0",
+            "channel": "goal",
+            "record_index": null,
+            "start": 35,
+            "end": 38,
+            "surface": "run"
+          }
+        ],
+        "provenance": {
+          "schema_version": "1.0",
+          "source_id": "repo.patterns",
+          "locator": "scripts/ac_store/epic_pipeline.py::run",
+          "snapshot": "9cc1907dae58ff121dd62c522e7cc140db39b3e505a4e306da1e07e276024735",
+          "source_hash": "a486169479071f5282388125e4c7e6773a0f413275c1fcffead7b2446c92afe2",
+          "projection_hash": "c231b7457c4622753603b2531f01d747bc384f62a6fbd77bfdc6aec4098ba44c"
+        }
+      }
+    ],
+    "unresolved": [
+      {
+        "schema_version": "1.0",
+        "family": "symbol",
+        "reference": "run",
+        "state": "ambiguous",
+        "matches": [
+          {
+            "schema_version": "1.0",
+            "channel": "goal",
+            "record_index": null,
+            "start": 35,
+            "end": 38,
+            "surface": "run"
+          }
+        ],
+        "candidates": [
+          "kernel.entity_cli.run",
+          "kernel.scheduler.nodes_route._Router.run",
+          "scripts.ac_store.epic_pipeline.run"
+        ]
+      }
+    ],
+    "coverage": {
+      "schema_version": "1.0",
+      "scan_complete": true,
+      "index_status": "current",
+      "index_fingerprint": "9cc1907dae58ff121dd62c522e7cc140db39b3e505a4e306da1e07e276024735",
+      "families": {
+        "symbol": "current",
+        "doc_type": "current",
+        "native_kind": "current",
+        "entry_kind": "current",
+        "glossary": "current",
+        "artifact_id": "current"
+      },
+      "counts": {
+        "schema_version": "1.0",
+        "detected": 1,
+        "resolved": 3,
+        "returned": 3,
+        "omitted": 0,
+        "unknown": 0,
+        "ambiguous": 1
+      },
+      "by_family": {
+        "symbol": {
+          "schema_version": "1.0",
+          "detected": 1,
+          "resolved": 3,
+          "returned": 3,
+          "omitted": 0,
+          "unknown": 0,
+          "ambiguous": 1
+        }
+      }
+    },
+    "budgets": {
+      "schema_version": "1.0",
+      "lookups": 1,
+      "serialized_chars": 3657,
+      "elapsed_ms": 1686.38,
+      "jev_calls": 0
+    },
+    "limitations": []
+  },
+  {
+    "name": "late_id",
+    "goal_chars": 8998,
+    "wall_seconds": 1.685451400000602,
+    "verbatim_goal": true,
+    "status": "recognized",
+    "entities": [
+      {
+        "schema_version": "1.0",
+        "family": "artifact_id",
+        "identity": "DK-300a-1",
+        "native_kind": "AcceptanceCriterion",
+        "meaning": "Canonical owners supply glossary and typed category meanings",
+        "signature": null,
+        "resolution": "resolved",
+        "matches": [
+          {
+            "schema_version": "1.0",
+            "channel": "goal",
+            "record_index": null,
+            "start": 8982,
+            "end": 8991,
+            "surface": "DK-300a-1"
+          }
+        ],
+        "provenance": {
+          "schema_version": "1.0",
+          "source_id": "repo.acceptance_criteria",
+          "locator": "docs/acceptance-criteria/decision-kernel/DK-300-entity-context/DK-300a-1.yaml#/criteria",
+          "snapshot": "9cc1907dae58ff121dd62c522e7cc140db39b3e505a4e306da1e07e276024735",
+          "source_hash": "98c3b106ec67cf6014d7d7f057026f9dc24f867f41f882810f408695515c05bf",
+          "projection_hash": "d1a8ac943cb6feda26daed5a21031c88a4c9cebeaedb578bc110f5f45cd35dca"
+        }
+      }
+    ],
+    "unresolved": [],
+    "coverage": {
+      "schema_version": "1.0",
+      "scan_complete": true,
+      "index_status": "current",
+      "index_fingerprint": "9cc1907dae58ff121dd62c522e7cc140db39b3e505a4e306da1e07e276024735",
+      "families": {
+        "symbol": "current",
+        "doc_type": "current",
+        "native_kind": "current",
+        "entry_kind": "current",
+        "glossary": "current",
+        "artifact_id": "current"
+      },
+      "counts": {
+        "schema_version": "1.0",
+        "detected": 1,
+        "resolved": 1,
+        "returned": 1,
+        "omitted": 0,
+        "unknown": 0,
+        "ambiguous": 0
+      },
+      "by_family": {
+        "artifact_id": {
+          "schema_version": "1.0",
+          "detected": 1,
+          "resolved": 1,
+          "returned": 1,
+          "omitted": 0,
+          "unknown": 0,
+          "ambiguous": 0
+        }
+      }
+    },
+    "budgets": {
+      "schema_version": "1.0",
+      "lookups": 1,
+      "serialized_chars": 1736,
+      "elapsed_ms": 1682.158,
+      "jev_calls": 0
+    },
+    "limitations": []
+  },
+  {
+    "name": "known",
+    "goal_chars": 87,
+    "wall_seconds": 2.014273000007961,
+    "verbatim_goal": true,
+    "status": "partial",
+    "entities": [],
+    "unresolved": [],
+    "coverage": {
+      "schema_version": "1.0",
+      "scan_complete": false,
+      "index_status": "current",
+      "index_fingerprint": "9cc1907dae58ff121dd62c522e7cc140db39b3e505a4e306da1e07e276024735",
+      "families": {
+        "symbol": "current",
+        "doc_type": "current",
+        "native_kind": "current",
+        "entry_kind": "current",
+        "glossary": "current",
+        "artifact_id": "current"
+      },
+      "counts": {
+        "schema_version": "1.0",
+        "detected": 0,
+        "resolved": 0,
+        "returned": 0,
+        "omitted": 0,
+        "unknown": 0,
+        "ambiguous": 0
+      },
+      "by_family": {}
+    },
+    "budgets": {
+      "schema_version": "1.0",
+      "lookups": 0,
+      "serialized_chars": 873,
+      "elapsed_ms": 2010.113,
+      "jev_calls": 0
+    },
+    "limitations": [
+      "recognition scan deadline exhausted"
+    ]
+  }
+]

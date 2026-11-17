@@ -1,0 +1,1039 @@
+{
+  "evaluation_version": "2",
+  "reviewed_by": "independent QA; original Git-derived oracle + explicit boundary controls",
+  "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+  "cases": [
+    {
+      "id": "RQE-01-P",
+      "family": "RQ1",
+      "state": "runnable",
+      "request": {
+        "request_id": "RQE-01-P",
+        "repository_id": "leafcutter",
+        "revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "operation": "get_ac_descendants",
+        "mode": "graph",
+        "arguments": {
+          "root_id": "TQ-500f"
+        },
+        "disclosure_level": 1,
+        "budget": {
+          "max_results": 100,
+          "max_candidates": 100,
+          "max_content_bytes": 131072,
+          "max_estimated_tokens": 16000
+        },
+        "answer_requirements": {
+          "original_question": "At the pinned source revision, how many ACs are reachable through TQ-500f covered_by links, excluding only TQ-500f itself, including both L2 and L3 descendants, grouped by work_status?",
+          "required_fields": [
+            "work_status",
+            "level"
+          ],
+          "require_complete": true,
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "root_excluded"
+          }
+        }
+      },
+      "assertions": [
+        {
+          "path": "source_sha",
+          "equals": "9d11594782abfb417d0f3a826bfb1f91f3a523ac"
+        },
+        {
+          "path": "answer.completeness.exact_total",
+          "equals": 15
+        },
+        {
+          "path": "answer.status",
+          "equals": "fulfilled"
+        },
+        {
+          "path": "answer.work_status_counts.done",
+          "equals": 5
+        },
+        {
+          "path": "answer.work_status_counts.todo",
+          "equals": 10
+        }
+      ],
+      "relevant_ids": [
+        "TQ-500f-1",
+        "TQ-500f-1-i",
+        "TQ-500f-2",
+        "TQ-500f-2-i",
+        "TQ-500f-2-ii",
+        "TQ-500f-3",
+        "TQ-500f-3-i",
+        "TQ-500f-3-ii",
+        "TQ-500f-3-iii",
+        "TQ-500f-3-iv",
+        "TQ-500f-4",
+        "TQ-500f-4-i",
+        "TQ-500f-4-ii",
+        "TQ-500f-5",
+        "TQ-500f-6"
+      ]
+    },
+    {
+      "id": "RQE-01-N",
+      "family": "RQ1",
+      "state": "runnable",
+      "request": {
+        "request_id": "RQE-01-N",
+        "repository_id": "leafcutter",
+        "revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "operation": "get_ac_descendants",
+        "mode": "graph",
+        "arguments": {
+          "root_id": "TQ-500f"
+        },
+        "disclosure_level": 1,
+        "budget": {
+          "max_results": 100,
+          "max_candidates": 100,
+          "max_content_bytes": 131072,
+          "max_estimated_tokens": 16000
+        },
+        "answer_requirements": {
+          "original_question": "At the pinned source revision, how many ACs are reachable through TQ-500f covered_by links, excluding only TQ-500f itself, including both L2 and L3 descendants, grouped by work_status?",
+          "required_fields": [
+            "work_status",
+            "level"
+          ],
+          "require_complete": true,
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "root_excluded"
+          }
+        }
+      },
+      "assertions": [
+        {
+          "path": "source_sha",
+          "equals": "9d11594782abfb417d0f3a826bfb1f91f3a523ac"
+        },
+        {
+          "path": "answer.completeness.exact_total",
+          "equals": 15
+        },
+        {
+          "path": "answer.status",
+          "equals": "partial"
+        },
+        {
+          "path": "answer.work_status_counts",
+          "equals": null
+        },
+        {
+          "path": "answer.known_work_status_counts.unknown",
+          "equals": 15
+        },
+        {
+          "path": "answer.missing_fields.0.field",
+          "equals": "work_status"
+        }
+      ],
+      "relevant_ids": [
+        "TQ-500f-1",
+        "TQ-500f-1-i",
+        "TQ-500f-2",
+        "TQ-500f-2-i",
+        "TQ-500f-2-ii",
+        "TQ-500f-3",
+        "TQ-500f-3-i",
+        "TQ-500f-3-ii",
+        "TQ-500f-3-iii",
+        "TQ-500f-3-iv",
+        "TQ-500f-4",
+        "TQ-500f-4-i",
+        "TQ-500f-4-ii",
+        "TQ-500f-5",
+        "TQ-500f-6"
+      ]
+    },
+    {
+      "id": "RQE-02-P",
+      "family": "RQ2",
+      "state": "runnable",
+      "request": {
+        "request_id": "RQE-02-P",
+        "repository_id": "leafcutter",
+        "revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "operation": "get_entities",
+        "mode": "exact",
+        "arguments": {
+          "entity_ids": [
+            "KM-500c-2"
+          ]
+        },
+        "disclosure_level": 3,
+        "budget": {
+          "max_results": 100,
+          "max_candidates": 100,
+          "max_content_bytes": 131072,
+          "max_estimated_tokens": 16000
+        },
+        "answer_requirements": {
+          "original_question": "Which exact obligations in KM-500c-2 prevent us from treating successful query execution as a successfully answered research question? Return the canonical criterion and its source.",
+          "required_fields": [
+            "criteria"
+          ],
+          "require_complete": true,
+          "scope": {
+            "population": "returned_entities"
+          }
+        }
+      },
+      "assertions": [
+        {
+          "path": "answer.status",
+          "equals": "fulfilled"
+        },
+        {
+          "path": "evidence.0.content",
+          "equals": "Given the original research has obtained results from an existing or newly verified query\nWhen its existing evidence evaluation decides whether the question can be answered\nThen the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied\nAnd a successful build, successful query execution and successful answer assessment remain separate recorded outcomes\nAnd zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact\nAnd any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.\n"
+        }
+      ],
+      "relevant_ids": [
+        "KM-500c-2"
+      ]
+    },
+    {
+      "id": "RQE-02-N",
+      "family": "RQ2",
+      "state": "runnable",
+      "request": {
+        "request_id": "RQE-02-N",
+        "repository_id": "leafcutter",
+        "revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "operation": "get_entities",
+        "mode": "exact",
+        "arguments": {
+          "entity_ids": [
+            "KM-500c-2"
+          ]
+        },
+        "disclosure_level": 3,
+        "budget": {
+          "max_results": 100,
+          "max_candidates": 100,
+          "max_content_bytes": 131072,
+          "max_estimated_tokens": 16000
+        },
+        "answer_requirements": {
+          "original_question": "Which exact obligations in KM-500c-2 prevent us from treating successful query execution as a successfully answered research question? Return the canonical criterion and its source.",
+          "required_fields": [
+            "criteria"
+          ],
+          "require_complete": true,
+          "scope": {
+            "population": "returned_entities"
+          }
+        }
+      },
+      "assertions": [
+        {
+          "path": "answer.status",
+          "equals": "partial"
+        },
+        {
+          "path": "truncated",
+          "equals": true
+        },
+        {
+          "path": "answer.completeness.exact_total",
+          "equals": null
+        },
+        {
+          "path": "answer.missing_fields.0.reason",
+          "equals": "truncated"
+        }
+      ],
+      "relevant_ids": [
+        "KM-500c-2"
+      ]
+    },
+    {
+      "id": "RQE-03-P",
+      "family": "RQ4",
+      "state": "runnable",
+      "request": {
+        "request_id": "RQE-03-P",
+        "repository_id": "leafcutter",
+        "revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "operation": "get_declared_dependents",
+        "mode": "graph",
+        "arguments": {
+          "entity_ids": [
+            "TQ-500f-2"
+          ]
+        },
+        "disclosure_level": 1,
+        "budget": {
+          "max_results": 100,
+          "max_candidates": 100,
+          "max_content_bytes": 131072,
+          "max_estimated_tokens": 16000
+        },
+        "answer_requirements": {
+          "original_question": "Which canonical AC records at this revision directly declare depends_on: TQ-500f-2? Give only one-hop incoming declared dependencies, not all potentially affected code.",
+          "required_fields": [
+            "canonical_id"
+          ],
+          "require_complete": true,
+          "scope": {
+            "population": "declared_dependents",
+            "root_id": "TQ-500f-2"
+          }
+        }
+      },
+      "assertions": [
+        {
+          "path": "answer.status",
+          "equals": "fulfilled"
+        },
+        {
+          "path": "answer.completeness.exact_total",
+          "equals": 5
+        },
+        {
+          "path": "evidence.0.entity.canonical_id",
+          "equals": "TQ-500f-2-i"
+        },
+        {
+          "path": "evidence.1.entity.canonical_id",
+          "equals": "TQ-500f-2-ii"
+        },
+        {
+          "path": "evidence.2.entity.canonical_id",
+          "equals": "TQ-500f-3-i"
+        },
+        {
+          "path": "evidence.3.entity.canonical_id",
+          "equals": "TQ-500f-5"
+        },
+        {
+          "path": "evidence.4.entity.canonical_id",
+          "equals": "TQ-500f-6"
+        }
+      ],
+      "relevant_ids": [
+        "TQ-500f-2-i",
+        "TQ-500f-2-ii",
+        "TQ-500f-3-i",
+        "TQ-500f-5",
+        "TQ-500f-6"
+      ]
+    },
+    {
+      "id": "RQE-03-N",
+      "family": "RQ4",
+      "state": "runnable",
+      "request": {
+        "request_id": "RQE-03-N",
+        "repository_id": "leafcutter",
+        "revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "operation": "get_declared_dependents",
+        "mode": "graph",
+        "arguments": {
+          "entity_ids": [
+            "TQ-500f-2"
+          ]
+        },
+        "disclosure_level": 1,
+        "budget": {
+          "max_results": 4,
+          "max_candidates": 100,
+          "max_content_bytes": 131072,
+          "max_estimated_tokens": 16000
+        },
+        "answer_requirements": {
+          "original_question": "Which canonical AC records at this revision directly declare depends_on: TQ-500f-2? Give only one-hop incoming declared dependencies, not all potentially affected code.",
+          "required_fields": [
+            "canonical_id"
+          ],
+          "require_complete": true,
+          "scope": {
+            "population": "declared_dependents",
+            "root_id": "TQ-500f-2"
+          }
+        }
+      },
+      "assertions": [
+        {
+          "path": "answer.status",
+          "equals": "partial"
+        },
+        {
+          "path": "answer.completeness.exact_total",
+          "equals": null
+        },
+        {
+          "path": "answer.completeness.known_count",
+          "equals": 4
+        },
+        {
+          "path": "evidence.0.entity.canonical_id",
+          "equals": "TQ-500f-2-i"
+        },
+        {
+          "path": "evidence.1.entity.canonical_id",
+          "equals": "TQ-500f-2-ii"
+        },
+        {
+          "path": "evidence.2.entity.canonical_id",
+          "equals": "TQ-500f-3-i"
+        },
+        {
+          "path": "evidence.3.entity.canonical_id",
+          "equals": "TQ-500f-5"
+        }
+      ],
+      "relevant_ids": [
+        "TQ-500f-2-i",
+        "TQ-500f-2-ii",
+        "TQ-500f-3-i",
+        "TQ-500f-5",
+        "TQ-500f-6"
+      ]
+    },
+    {
+      "id": "RQE-04-P",
+      "family": "RQ6",
+      "state": "runnable",
+      "request": {
+        "request_id": "RQE-04-P",
+        "repository_id": "leafcutter",
+        "revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "operation": "get_entities",
+        "mode": "exact",
+        "arguments": {
+          "entity_ids": [
+            "KM-500c-2"
+          ]
+        },
+        "disclosure_level": 1,
+        "budget": {
+          "max_results": 100,
+          "max_candidates": 100,
+          "max_content_bytes": 131072,
+          "max_estimated_tokens": 16000
+        },
+        "answer_requirements": {
+          "original_question": "Which tests are declared for KM-500c-2, and what does the recorded acceptance evidence actually establish about real Neo4j, Aura and live Jev execution?",
+          "required_fields": [
+            "covered_by"
+          ],
+          "require_complete": true,
+          "scope": {
+            "population": "returned_entities"
+          }
+        },
+        "assessment": {
+          "kind": "verification",
+          "repository_id": "leafcutter",
+          "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+          "declarations": [
+            "untrusted-packet-reference-must-not-be-used"
+          ],
+          "evidence": [
+            {
+              "evidence_id": "acceptance-report",
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+                "path": "docs/analysis/2026-10-01-query-growth-acceptance.md",
+                "locator": "",
+                "content_hash": "869adf3d04e3692933f829d3d493d0b842f522d1f56ad80a12ce9fd9229b6a2b"
+              },
+              "kind": "execution_receipt",
+              "content": "---\ntitle: Query growth acceptance reconciliation\ndescription: Final per-criterion evidence and limits for KM-500 research capability growth.\ntype: explanation\nstatus: active\ncreated: '2026-10-01'\nlast_updated: '2026-10-01'\ncomponents: [knowledge_management, decision_kernel]\n---\n# Query-growth acceptance - 2026-10-01\n\nThe nine KM-500 implementation leaves are accepted for the bounded implemented behavior and marked `done`. Ticket delivery remains separate until commit/release gates finish. KM-400 behavior and parent product criteria are unchanged. Live external Jev validation remains **not run**, pending explicit approval for the provider request; it is not represented as passing.\n\n## Measured evidence\n\n- **15 passed in 10.33s**: `test_query_growth_kernel.py`, `test_query_growth_adversarial.py`, `test_query_growth_boundaries.py`, explicit `-o addopts= -p no:cacheprovider`. Real KernelService/SQLite scheduling, human/host continuation and durable catalog work are exercised. Jev, candidate creation and the database execution seam are scripted in these tests.\n- **333 passed, 153 subtests passed in 18.79s**: integration lead final broad run covering the three growth test files plus kernel config, contracts, registry, capabilities and bootstrap. Its focused growth rerun also passed 15 tests in 9.93s.\n- **67 passed, 6 subtests passed in 53.61s**: independently rerun existing `test_research_graph.py`, `test_restart_resume.py`, `test_fixb_ledger.py`, `test_guards.py` and `test_gap_no_fallback.py`. Exact inherited test nodes are linked in the relevant ACs. These establish research contradiction/insufficiency handling, bounded synthesis, shared budgets, replay/crash recovery and denial/outage distinctions.\n- **2 passed in 1.20s**: implementation lead's actual local Neo4j 5.26 checks in `tests/knowledge_live/query_catalog_checks.py`. Synthetic scoped graph fixtures exercise compiled two-hop Cypher, independent admission, catalog reopening, public retrieval, eleven-neighbor saturation returning `partial`, and genuinely completed empty results returning `ok`.\n- **1 passed in 8.27s**: `test_aura_query_growth_public_proof`, actual Aura and committed source `9f70de80ebcafe59ff55cce6732deb92069f9541`. Report: `reports/knowledge-query-growth-aura.json`. A fresh isolated persistent catalog verifies build and activation on every proof run. The same research resumes after verified admission; reopened checkpoints and a fresh run reuse the persistent catalog. Every selected source SHA, original goal, need coverage and explicit partial-result limitations are asserted. Jev is scripted and the candidate is BA-authored. The report records three evidence items, both runs `partial`, zero provider/embedding calls and no database writes. Local catalog persistence is intentional.\n- Neutral catalog tests separately prove malformed candidates, tamper rejection, timeout/cancellation, atomic version admission and subprocess catalog discovery. Their database double does not prove Cypher correctness; actual Neo4j checks above provide that evidence.\n\nIndependent review first captured regressions for an unmapped memory relationship appearing empty and human arguments escaping component scope. Both were corrected before final checks. Alternate verified versions cannot substitute for the submitted candidate at resume.\n\n## Per-leaf verdict\n\n| AC | Accepted observable behavior and evidence |\n|---|---|\n| KM-500a-1 | Focused missing-input clarification; same continuation resumes without query/build before the answer; scalar clarification preserves original/effective questions, source and query digest. Existing provider-error and bounded judgment handling are reused. |\n| KM-500a-2 | Catalog exposes input/purpose/question metadata; explicit typed requests retain deterministic validation; semantic selection is bounded to catalog choices and records selection provenance. Missing scalar inputs return to clarification. Actual fresh-run catalog reuse is demonstrated. |\n| KM-500a-3 | Unsupported requested source kind stops before query selection/build; kindless unsupported memory edges are rejected; empty, partial, unavailable, denied and exhausted outcomes remain distinct. Actual Neo4j verifies partial versus completed-empty behavior. |\n| KM-500b-1 | Canonical gap and coding-host child retain original need/source; packet includes catalog, expected result and bounded budget metadata. Existing scheduler reserves shared host budget before dispatch rather than inventing a remaining balance. Source-kind positive/negative tests verify eligibility before packet creation. |\n| KM-500b-2 | A genuinely new two-hop recipe compiles to parameterized scoped Cypher; strict language, expected-result cases, injection/isolation, limits and cancellation are checked. Real Neo4j and Aura execute the authored query. The independent source judgments are distinct from candidate-authored expected outputs. |\n| KM-500b-3 | Atomic local catalog activation, retained digests, reopen integrity and fresh-process discovery work. Actual scheduler permission denial leaves catalog unchanged and cannot trigger another host fallback. Reverification retains source binding; tampering and stale versions fail closed. |\n| KM-500c-1 | Original research/checkpoints resume after matching verification; source/need/query digest survive. Wrong same-operation versions are rejected. Aura demonstrates actual retrieval and fresh-run reuse; inherited ledger/crash tests establish at-most-once delivery. |\n| KM-500c-2 | Evidence retains actual source revision; registration does not itself answer the question. Actual Aura runs remain honestly partial. Existing public research tests preserve contradictions, unsatisfied needs, failed-source limitations and bounded synthesis without replanning. |\n| KM-500c-3 | Repeated failed delivery remains failed; exhausted build/clarification emits no new child. Existing public scheduler tests establish shared budgets, bounded repair through restart and recovery only with new evidence. |\n\n## Evaluation limits\n\n`reports/knowledge-query-growth-source-judgments.json` independently reads canonical YAML at the committed source: `git_vcs_operations` has eight ACs and four directly declared test files; `release_manager` has one AC and no direct test reference. The stored candidate uses these positive/empty judgments. This query answers which test files are directly declared for component ACs. It does not prove those tests pass, infer undeclared coverage, or establish general semantic usefulness. No fabricated semantic scores are reported.\n\nThe recipe language remains bounded. Unsupported grammar is an explicit code-build limitation. The live provider test is separately pending authorization; scripted Jev exercises control flow, not real model decision quality. Final commit hooks and release state are separate from this behavioral acceptance.\n",
+              "reviewed_by": "independent QA source inspection at pinned revision",
+              "claims": {
+                "tested_sha": {
+                  "value": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+                  "quote": "- **1 passed in 8.27s**: `test_aura_query_growth_public_proof`, actual Aura and committed source `9f70de80ebcafe59ff55cce6732deb92069f9541`. Report: `reports/knowledge-query-growth-aura.json`. A fresh isolated persistent catalog verifies build and activation on every proof run. The same research resumes after verified admission; reopened checkpoints and a fresh run reuse the persistent catalog. Every selected source SHA, original goal, need coverage and explicit partial-result limitations are asserted. Jev is scripted and the candidate is BA-authored. The report records three evidence items, both runs `partial`, zero provider/embedding calls and no database writes. Local catalog persistence is intentional."
+                },
+                "environment": {
+                  "value": "actual Aura",
+                  "quote": "- **1 passed in 8.27s**: `test_aura_query_growth_public_proof`, actual Aura and committed source `9f70de80ebcafe59ff55cce6732deb92069f9541`. Report: `reports/knowledge-query-growth-aura.json`. A fresh isolated persistent catalog verifies build and activation on every proof run. The same research resumes after verified admission; reopened checkpoints and a fresh run reuse the persistent catalog. Every selected source SHA, original goal, need coverage and explicit partial-result limitations are asserted. Jev is scripted and the candidate is BA-authored. The report records three evidence items, both runs `partial`, zero provider/embedding calls and no database writes. Local catalog persistence is intentional."
+                },
+                "actor": {
+                  "value": "Jev is scripted and the candidate is BA-authored",
+                  "quote": "- **1 passed in 8.27s**: `test_aura_query_growth_public_proof`, actual Aura and committed source `9f70de80ebcafe59ff55cce6732deb92069f9541`. Report: `reports/knowledge-query-growth-aura.json`. A fresh isolated persistent catalog verifies build and activation on every proof run. The same research resumes after verified admission; reopened checkpoints and a fresh run reuse the persistent catalog. Every selected source SHA, original goal, need coverage and explicit partial-result limitations are asserted. Jev is scripted and the candidate is BA-authored. The report records three evidence items, both runs `partial`, zero provider/embedding calls and no database writes. Local catalog persistence is intentional."
+                },
+                "execution_status": {
+                  "value": "passed",
+                  "quote": "- **1 passed in 8.27s**: `test_aura_query_growth_public_proof`, actual Aura and committed source `9f70de80ebcafe59ff55cce6732deb92069f9541`. Report: `reports/knowledge-query-growth-aura.json`. A fresh isolated persistent catalog verifies build and activation on every proof run. The same research resumes after verified admission; reopened checkpoints and a fresh run reuse the persistent catalog. Every selected source SHA, original goal, need coverage and explicit partial-result limitations are asserted. Jev is scripted and the candidate is BA-authored. The report records three evidence items, both runs `partial`, zero provider/embedding calls and no database writes. Local catalog persistence is intentional."
+                },
+                "research_fulfillment": {
+                  "value": "partial",
+                  "quote": "- **1 passed in 8.27s**: `test_aura_query_growth_public_proof`, actual Aura and committed source `9f70de80ebcafe59ff55cce6732deb92069f9541`. Report: `reports/knowledge-query-growth-aura.json`. A fresh isolated persistent catalog verifies build and activation on every proof run. The same research resumes after verified admission; reopened checkpoints and a fresh run reuse the persistent catalog. Every selected source SHA, original goal, need coverage and explicit partial-result limitations are asserted. Jev is scripted and the candidate is BA-authored. The report records three evidence items, both runs `partial`, zero provider/embedding calls and no database writes. Local catalog persistence is intentional."
+                },
+                "test_ids": {
+                  "value": [
+                    "test_aura_query_growth_public_proof"
+                  ],
+                  "quote": "- **1 passed in 8.27s**: `test_aura_query_growth_public_proof`, actual Aura and committed source `9f70de80ebcafe59ff55cce6732deb92069f9541`. Report: `reports/knowledge-query-growth-aura.json`. A fresh isolated persistent catalog verifies build and activation on every proof run. The same research resumes after verified admission; reopened checkpoints and a fresh run reuse the persistent catalog. Every selected source SHA, original goal, need coverage and explicit partial-result limitations are asserted. Jev is scripted and the candidate is BA-authored. The report records three evidence items, both runs `partial`, zero provider/embedding calls and no database writes. Local catalog persistence is intentional."
+                },
+                "artifact_locator": {
+                  "value": "reports/knowledge-query-growth-aura.json",
+                  "quote": "- **1 passed in 8.27s**: `test_aura_query_growth_public_proof`, actual Aura and committed source `9f70de80ebcafe59ff55cce6732deb92069f9541`. Report: `reports/knowledge-query-growth-aura.json`. A fresh isolated persistent catalog verifies build and activation on every proof run. The same research resumes after verified admission; reopened checkpoints and a fresh run reuse the persistent catalog. Every selected source SHA, original goal, need coverage and explicit partial-result limitations are asserted. Jev is scripted and the candidate is BA-authored. The report records three evidence items, both runs `partial`, zero provider/embedding calls and no database writes. Local catalog persistence is intentional."
+                },
+                "provider_execution": {
+                  "value": "not run",
+                  "quote": "The nine KM-500 implementation leaves are accepted for the bounded implemented behavior and marked `done`. Ticket delivery remains separate until commit/release gates finish. KM-400 behavior and parent product criteria are unchanged. Live external Jev validation remains **not run**, pending explicit approval for the provider request; it is not represented as passing."
+                }
+              }
+            }
+          ]
+        }
+      },
+      "assertions": [
+        {
+          "path": "assessment.declared_references",
+          "set_equals": [
+            "tests/knowledge/test_query_growth_kernel.py::TestQueryGrowthRun::test_verified_build_resumes_same_research_and_fresh_run_reuses_catalog",
+            "tests/knowledge_live/query_catalog_checks.py::test_real_high_fanout_and_completed_empty_are_distinct",
+            "tests/kernel/capabilities/test_research_graph.py::TestCollect::test_conflict_recorded",
+            "tests/kernel/capabilities/test_research_graph.py::TestCollect::test_unsatisfied_required_need_makes_the_bundle_partial",
+            "tests/kernel/capabilities/test_research_graph.py::TestCollect::test_failed_child_is_a_limitation_never_an_empty_result",
+            "tests/kernel/capabilities/test_research_graph.py::TestSynthesisAndStop::test_synthesis_resume_finishes_without_replanning_or_more_jev_calls",
+            "tests/knowledge_live/query_growth_checks.py::test_aura_query_growth_public_proof"
+          ]
+        },
+        {
+          "path": "assessment.executed_proof",
+          "equals": "reported"
+        },
+        {
+          "path": "assessment.receipts.0.source.source_sha",
+          "equals": "9d11594782abfb417d0f3a826bfb1f91f3a523ac"
+        },
+        {
+          "path": "assessment.receipts.0.tested_sha",
+          "equals": "9f70de80ebcafe59ff55cce6732deb92069f9541"
+        },
+        {
+          "path": "assessment.receipts.0.research_fulfillment",
+          "equals": "partial"
+        },
+        {
+          "path": "assessment.receipts.0.provider_execution",
+          "equals": "not run"
+        }
+      ],
+      "relevant_ids": [
+        "KM-500c-2"
+      ]
+    },
+    {
+      "id": "RQE-04-N",
+      "family": "RQ6",
+      "state": "runnable",
+      "request": {
+        "request_id": "RQE-04-N",
+        "repository_id": "leafcutter",
+        "revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "operation": "get_entities",
+        "mode": "exact",
+        "arguments": {
+          "entity_ids": [
+            "KM-500c-2"
+          ]
+        },
+        "disclosure_level": 1,
+        "budget": {
+          "max_results": 100,
+          "max_candidates": 100,
+          "max_content_bytes": 131072,
+          "max_estimated_tokens": 16000
+        },
+        "answer_requirements": {
+          "original_question": "Which tests are declared for KM-500c-2, and what does the recorded acceptance evidence actually establish about real Neo4j, Aura and live Jev execution?",
+          "required_fields": [
+            "covered_by"
+          ],
+          "require_complete": true,
+          "scope": {
+            "population": "returned_entities"
+          }
+        },
+        "assessment": {
+          "kind": "verification",
+          "repository_id": "leafcutter",
+          "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+          "declarations": [
+            "untrusted-packet-reference-must-not-be-used"
+          ],
+          "evidence": []
+        }
+      },
+      "assertions": [
+        {
+          "path": "assessment.declared_references",
+          "set_equals": [
+            "tests/knowledge/test_query_growth_kernel.py::TestQueryGrowthRun::test_verified_build_resumes_same_research_and_fresh_run_reuses_catalog",
+            "tests/knowledge_live/query_catalog_checks.py::test_real_high_fanout_and_completed_empty_are_distinct",
+            "tests/kernel/capabilities/test_research_graph.py::TestCollect::test_conflict_recorded",
+            "tests/kernel/capabilities/test_research_graph.py::TestCollect::test_unsatisfied_required_need_makes_the_bundle_partial",
+            "tests/kernel/capabilities/test_research_graph.py::TestCollect::test_failed_child_is_a_limitation_never_an_empty_result",
+            "tests/kernel/capabilities/test_research_graph.py::TestSynthesisAndStop::test_synthesis_resume_finishes_without_replanning_or_more_jev_calls",
+            "tests/knowledge_live/query_growth_checks.py::test_aura_query_growth_public_proof"
+          ]
+        },
+        {
+          "path": "assessment.executed_proof",
+          "equals": "unverified"
+        },
+        {
+          "path": "assessment.receipts",
+          "equals": []
+        }
+      ],
+      "relevant_ids": [
+        "KM-500c-2"
+      ]
+    },
+    {
+      "id": "RQE-05-P",
+      "family": "RQ7",
+      "state": "runnable",
+      "assessment": {
+        "kind": "capability_fit",
+        "repository_id": "leafcutter",
+        "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "evidence": [],
+        "manifest": {
+          "repository_id": "leafcutter",
+          "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+          "generation_id": "763ef2c72f13330c002212ad3c1b1b41fb9e53683fbe440569fa260227d29e45",
+          "mapper_version": "3",
+          "diagnostics": [
+            "excluded_surface:agents",
+            "excluded_surface:docs",
+            "excluded_surface:glossary",
+            "excluded_surface:roadmap",
+            "excluded_surface:skills",
+            "excluded_surface:tickets",
+            "projection_scope:acs,adrs,components",
+            "excluded_noncanonical_ac_documents:7",
+            "optional_declined_references:33",
+            "optional_unresolved:ADR-004-consolidated-output-root:related_docs:docs/how-to/output-layout/adopt-consolidated-output-root.md",
+            "optional_unresolved:ADR-007-contract-driven-acs:related_docs:tickets/00_inbox/epics/EPIC-ContractDrivenACs/01_adr_contract_driven_acs.md",
+            "optional_unresolved:ADR-010-ac-store-as-authoritative-backlog:related_docs:docs/architecture/diagrams/c2-001-ac-driven-pipeline.md",
+            "optional_unresolved:ADR-010-ac-store-as-authoritative-backlog:related_docs:tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/01_ac_scanner_and_ticket_generator.md",
+            "optional_unresolved:ADR-011-learning-emission-sink:related_docs:tickets/99_done/EPIC-AgentLearningLoop/01_harvester_agent_and_adr.md",
+            "optional_unresolved:ADR-012-retire-create-ticket-js:related_docs:templates/workflows-js/create-ticket.js",
+            "optional_unresolved:ADR-013-portable-skill-script-deployment-boundary:related_docs:tickets/00_inbox/epics/EPIC-AcPipelineDeployGaps/03_reconcile_ac_scanner_portability.md",
+            "optional_unresolved:ADR-014-exception-guard-enforcement-scope:related_docs:docs/acceptance-criteria/guardrail-engine/GE-108-exception-hook-hardening/",
+            "optional_unresolved:ADR-020-live-surface-tester:related_docs:tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/01_adr_live_surface_testing.md",
+            "optional_unresolved:ADR-022-mockups-are-the-real-app-in-mock-mode:related_docs:docs/how-to/product-truth-schema-reference.md",
+            "optional_unresolved:ADR-023-product-truth-flow-first-upstream-layer:related_docs:docs/how-to/product-truth-schema-reference.md",
+            "optional_unresolved:ADR-024-interactive-pause-resume:related_docs:docs/reference/workflow-constraints.md",
+            "optional_unresolved:ADR-024-interactive-pause-resume:related_docs:docs/reference/workflow-authoring-contract.md",
+            "optional_unresolved:ADR-024-interactive-pause-resume:related_docs:docs/acceptance-criteria/build-orchestration/BO-2300-interactive-pause-resume/",
+            "optional_unresolved:ADR-024-interactive-pause-resume:related_docs:docs/how-to/resume-a-paused-plan-feature-run.md",
+            "optional_unresolved:ADR-026-ac-driven-build-v2-phased-migration:related_docs:docs/architecture/agent_knowledge_plane.md",
+            "optional_unresolved:ADR-026-ac-driven-build-v2-phased-migration:related_docs:docs/roadmap.json",
+            "optional_unresolved:ADR-027-tdd-workflow-enforcement:related_docs:docs/explanation/tdd-workflow.md",
+            "optional_unresolved:ADR-027-tdd-workflow-enforcement:related_docs:docs/how-to/writing-a-tdd-ticket.md",
+            "optional_unresolved:ADR-028-test-fixture-convention:related_docs:docs/testing/README.md",
+            "optional_unresolved:ADR-029-adr-number-collision-prevention:related_docs:docs/conventions/adr-numbering.md",
+            "optional_unresolved:ADR-030-dual-engine-workflow-support:related_docs:docs/reference/workflow-authoring-contract.md",
+            "optional_unresolved:ADR-030-dual-engine-workflow-support:related_docs:docs/architecture/diagrams/df-001-dual-engine-workflow-build-transform.md",
+            "optional_unresolved:ADR-031-worktree-quality-gate-guard:related_docs:docs/retrospectives/EPIC-AcPipelineDeployGaps.md",
+            "optional_unresolved:ADR-032-tiered-parallel-code-smell-review:related_docs:docs/acceptance-criteria/code-review/",
+            "optional_unresolved:ADR-033-agent-model-tiers:related_docs:docs/agents/conventions.md",
+            "optional_unresolved:ADR-034-knowledge-write-ownership:related_docs:docs/known-issues/build-pipeline.md",
+            "optional_unresolved:ADR-035-fast-lane-closed-producer-roster:related_docs:docs/known-issues/build-orchestration.md",
+            "optional_unresolved:ADR-036-documentation-dispatch-caller-boundary:related_docs:docs/known-issues/supervisor-system.md",
+            "optional_unresolved:ADR-037-whole-collection-uniqueness-pass:related_docs:docs/conventions/adr-numbering.md",
+            "optional_unresolved:ADR-039-fast-lane-occupied-workspace-refusal:related_docs:docs/known-issues/build-orchestration.md",
+            "optional_unresolved:ADR-041-recomputed-attribution-at-item-granularity:related_docs:docs/known-issues/build-pipeline.md",
+            "optional_unresolved:ADR-046-completion-demanded-set-is-record-only:related_docs:docs/known-issues/build-orchestration.md",
+            "optional_unresolved:ADR-047-single-writer-ticket-close-path:related_docs:docs/known-issues/build-orchestration.md",
+            "optional_unresolved:ADR-048-order-independent-per-ticket-completion:related_docs:docs/known-issues/build-orchestration.md",
+            "optional_unresolved:ADR-049-record-checker-trigger-scope:related_docs:docs/how-to/managing-pre-commit-hooks.md",
+            "optional_unresolved:ADR-050-runtime-reachability-guard-refuses-not-warns:related_docs:docs/architecture/diagrams/c3-010-reachability-guard-data-flow.md",
+            "optional_unresolved:ADR-050-runtime-reachability-guard-refuses-not-warns:related_docs:docs/how-to/resolve-a-reachability-guard-finding.md",
+            "optional_unresolved:ADR-052-capabilities-replace-agents-prompts-are-compiled:related_docs:docs/analysis/2026-09-30-decision-kernel-design.md",
+            "optional_unresolved:ADR-052-capabilities-replace-agents-prompts-are-compiled:related_docs:docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md",
+            "optional_unresolved:ADR-052-capabilities-replace-agents-prompts-are-compiled:related_docs:docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md",
+            "optional_unresolved:ADR-052-capabilities-replace-agents-prompts-are-compiled:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-4-scheduler-jev-capabilities.md",
+            "optional_unresolved:ADR-053-intelligence-selection-deterministic-jev-llm-human:related_docs:docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md",
+            "optional_unresolved:ADR-053-intelligence-selection-deterministic-jev-llm-human:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-3-contracts.md",
+            "optional_unresolved:ADR-053-intelligence-selection-deterministic-jev-llm-human:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-4-scheduler-jev-capabilities.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-decision-kernel-design.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-2-runtime-and-registry.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-3-contracts.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-6-gaps-build-verification.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-7-later-stages.md",
+            "optional_unresolved:ADR-055-capability-registry-starts-empty:related_docs:docs/analysis/2026-09-30-decision-kernel-design.md",
+            "optional_unresolved:ADR-055-capability-registry-starts-empty:related_docs:docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md",
+            "optional_unresolved:ADR-055-capability-registry-starts-empty:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md",
+            "optional_unresolved:ADR-055-capability-registry-starts-empty:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-2-runtime-and-registry.md",
+            "optional_unresolved:ADR-055-capability-registry-starts-empty:related_docs:tickets/00_inbox/TICKET-20260930-KernelBootstrapV0.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/vision.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-5-client-observability-safeguards.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-6-gaps-build-verification.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-7-later-stages.md",
+            "optional_unresolved:ADR-062-standalone-knowledge-retrieval:related_docs:docs/analysis/2026-10-01-knowledge-retrieval-stage0.md",
+            "optional_unresolved:commit-guardian:related_docs:docs/architecture/diagrams/c3-006-whole-collection-uniqueness-pass.md",
+            "optional_unresolved:commit-guardian:related_docs:docs/how-to/managing-pre-commit-hooks.md",
+            "optional_unresolved:commit-guardian:related_docs:docs/reference/commit-guardian-negative-control-liveness.md",
+            "optional_unresolved:decision-kernel:related_docs:docs/analysis/2026-09-30-decision-kernel-design.md",
+            "optional_unresolved:decision-kernel:related_docs:docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md",
+            "optional_unresolved:decision-kernel:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md",
+            "optional_unresolved:decision-kernel:related_docs:docs/how-to/run-the-decision-kernel.md",
+            "optional_unresolved:decision-kernel:related_docs:docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md",
+            "optional_unresolved:decision-kernel:related_docs:docs/analysis/2026-10-01-decision-kernel-v0-demo-report.md",
+            "optional_unresolved:interactive-pause-resume-substrate:related_docs:docs/how-to/resume-a-paused-plan-feature-run.md",
+            "optional_unresolved:knowledge-retrieval:related_docs:docs/how-to/run-knowledge-retrieval.md",
+            "optional_unresolved:phantom-done-prevention:related_docs:docs/architecture/diagrams/c2-006-feature-to-merged-pr.md",
+            "optional_unresolved:phantom-done-prevention:related_docs:docs/how-to/done-proof-reachability-gates.md",
+            "optional_unresolved:phantom-done-prevention:related_docs:docs/architecture/diagrams/c3-011-done-proof-reachability-gates-sequence.md"
+          ],
+          "status": "ready",
+          "node_count": 6040,
+          "edge_count": 19518,
+          "supported_kinds": [
+            "ADR",
+            "AcceptanceCriterion",
+            "Component",
+            "SourceFile",
+            "Test"
+          ],
+          "supported_fields": {},
+          "supported_relationships": [],
+          "semantic_ready": false,
+          "embedding_model": null,
+          "embedding_dimensions": null
+        },
+        "requirements": {
+          "required_kinds": [
+            "AcceptanceCriterion",
+            "Test"
+          ],
+          "required_relationships": [
+            "covered_by"
+          ],
+          "required_fields": {
+            "AcceptanceCriterion": [
+              "covered_by"
+            ],
+            "Test": [
+              "canonical_id"
+            ]
+          }
+        },
+        "matching_operation": null,
+        "catalog_complete": true
+      },
+      "assertions": [
+        {
+          "path": "status",
+          "equals": "missing_query"
+        },
+        {
+          "path": "query_build_eligible",
+          "equals": true
+        }
+      ]
+    },
+    {
+      "id": "RQE-05-N",
+      "family": "RQ7",
+      "state": "runnable",
+      "assessment": {
+        "kind": "capability_fit",
+        "repository_id": "leafcutter",
+        "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "evidence": [],
+        "manifest": {
+          "repository_id": "leafcutter",
+          "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+          "generation_id": "763ef2c72f13330c002212ad3c1b1b41fb9e53683fbe440569fa260227d29e45",
+          "mapper_version": "3",
+          "diagnostics": [
+            "excluded_surface:agents",
+            "excluded_surface:docs",
+            "excluded_surface:glossary",
+            "excluded_surface:roadmap",
+            "excluded_surface:skills",
+            "excluded_surface:tickets",
+            "projection_scope:acs,adrs,components",
+            "excluded_noncanonical_ac_documents:7",
+            "optional_declined_references:33",
+            "optional_unresolved:ADR-004-consolidated-output-root:related_docs:docs/how-to/output-layout/adopt-consolidated-output-root.md",
+            "optional_unresolved:ADR-007-contract-driven-acs:related_docs:tickets/00_inbox/epics/EPIC-ContractDrivenACs/01_adr_contract_driven_acs.md",
+            "optional_unresolved:ADR-010-ac-store-as-authoritative-backlog:related_docs:docs/architecture/diagrams/c2-001-ac-driven-pipeline.md",
+            "optional_unresolved:ADR-010-ac-store-as-authoritative-backlog:related_docs:tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/01_ac_scanner_and_ticket_generator.md",
+            "optional_unresolved:ADR-011-learning-emission-sink:related_docs:tickets/99_done/EPIC-AgentLearningLoop/01_harvester_agent_and_adr.md",
+            "optional_unresolved:ADR-012-retire-create-ticket-js:related_docs:templates/workflows-js/create-ticket.js",
+            "optional_unresolved:ADR-013-portable-skill-script-deployment-boundary:related_docs:tickets/00_inbox/epics/EPIC-AcPipelineDeployGaps/03_reconcile_ac_scanner_portability.md",
+            "optional_unresolved:ADR-014-exception-guard-enforcement-scope:related_docs:docs/acceptance-criteria/guardrail-engine/GE-108-exception-hook-hardening/",
+            "optional_unresolved:ADR-020-live-surface-tester:related_docs:tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/01_adr_live_surface_testing.md",
+            "optional_unresolved:ADR-022-mockups-are-the-real-app-in-mock-mode:related_docs:docs/how-to/product-truth-schema-reference.md",
+            "optional_unresolved:ADR-023-product-truth-flow-first-upstream-layer:related_docs:docs/how-to/product-truth-schema-reference.md",
+            "optional_unresolved:ADR-024-interactive-pause-resume:related_docs:docs/reference/workflow-constraints.md",
+            "optional_unresolved:ADR-024-interactive-pause-resume:related_docs:docs/reference/workflow-authoring-contract.md",
+            "optional_unresolved:ADR-024-interactive-pause-resume:related_docs:docs/acceptance-criteria/build-orchestration/BO-2300-interactive-pause-resume/",
+            "optional_unresolved:ADR-024-interactive-pause-resume:related_docs:docs/how-to/resume-a-paused-plan-feature-run.md",
+            "optional_unresolved:ADR-026-ac-driven-build-v2-phased-migration:related_docs:docs/architecture/agent_knowledge_plane.md",
+            "optional_unresolved:ADR-026-ac-driven-build-v2-phased-migration:related_docs:docs/roadmap.json",
+            "optional_unresolved:ADR-027-tdd-workflow-enforcement:related_docs:docs/explanation/tdd-workflow.md",
+            "optional_unresolved:ADR-027-tdd-workflow-enforcement:related_docs:docs/how-to/writing-a-tdd-ticket.md",
+            "optional_unresolved:ADR-028-test-fixture-convention:related_docs:docs/testing/README.md",
+            "optional_unresolved:ADR-029-adr-number-collision-prevention:related_docs:docs/conventions/adr-numbering.md",
+            "optional_unresolved:ADR-030-dual-engine-workflow-support:related_docs:docs/reference/workflow-authoring-contract.md",
+            "optional_unresolved:ADR-030-dual-engine-workflow-support:related_docs:docs/architecture/diagrams/df-001-dual-engine-workflow-build-transform.md",
+            "optional_unresolved:ADR-031-worktree-quality-gate-guard:related_docs:docs/retrospectives/EPIC-AcPipelineDeployGaps.md",
+            "optional_unresolved:ADR-032-tiered-parallel-code-smell-review:related_docs:docs/acceptance-criteria/code-review/",
+            "optional_unresolved:ADR-033-agent-model-tiers:related_docs:docs/agents/conventions.md",
+            "optional_unresolved:ADR-034-knowledge-write-ownership:related_docs:docs/known-issues/build-pipeline.md",
+            "optional_unresolved:ADR-035-fast-lane-closed-producer-roster:related_docs:docs/known-issues/build-orchestration.md",
+            "optional_unresolved:ADR-036-documentation-dispatch-caller-boundary:related_docs:docs/known-issues/supervisor-system.md",
+            "optional_unresolved:ADR-037-whole-collection-uniqueness-pass:related_docs:docs/conventions/adr-numbering.md",
+            "optional_unresolved:ADR-039-fast-lane-occupied-workspace-refusal:related_docs:docs/known-issues/build-orchestration.md",
+            "optional_unresolved:ADR-041-recomputed-attribution-at-item-granularity:related_docs:docs/known-issues/build-pipeline.md",
+            "optional_unresolved:ADR-046-completion-demanded-set-is-record-only:related_docs:docs/known-issues/build-orchestration.md",
+            "optional_unresolved:ADR-047-single-writer-ticket-close-path:related_docs:docs/known-issues/build-orchestration.md",
+            "optional_unresolved:ADR-048-order-independent-per-ticket-completion:related_docs:docs/known-issues/build-orchestration.md",
+            "optional_unresolved:ADR-049-record-checker-trigger-scope:related_docs:docs/how-to/managing-pre-commit-hooks.md",
+            "optional_unresolved:ADR-050-runtime-reachability-guard-refuses-not-warns:related_docs:docs/architecture/diagrams/c3-010-reachability-guard-data-flow.md",
+            "optional_unresolved:ADR-050-runtime-reachability-guard-refuses-not-warns:related_docs:docs/how-to/resolve-a-reachability-guard-finding.md",
+            "optional_unresolved:ADR-052-capabilities-replace-agents-prompts-are-compiled:related_docs:docs/analysis/2026-09-30-decision-kernel-design.md",
+            "optional_unresolved:ADR-052-capabilities-replace-agents-prompts-are-compiled:related_docs:docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md",
+            "optional_unresolved:ADR-052-capabilities-replace-agents-prompts-are-compiled:related_docs:docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md",
+            "optional_unresolved:ADR-052-capabilities-replace-agents-prompts-are-compiled:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-4-scheduler-jev-capabilities.md",
+            "optional_unresolved:ADR-053-intelligence-selection-deterministic-jev-llm-human:related_docs:docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md",
+            "optional_unresolved:ADR-053-intelligence-selection-deterministic-jev-llm-human:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-3-contracts.md",
+            "optional_unresolved:ADR-053-intelligence-selection-deterministic-jev-llm-human:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-4-scheduler-jev-capabilities.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-decision-kernel-design.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-2-runtime-and-registry.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-3-contracts.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-6-gaps-build-verification.md",
+            "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-7-later-stages.md",
+            "optional_unresolved:ADR-055-capability-registry-starts-empty:related_docs:docs/analysis/2026-09-30-decision-kernel-design.md",
+            "optional_unresolved:ADR-055-capability-registry-starts-empty:related_docs:docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md",
+            "optional_unresolved:ADR-055-capability-registry-starts-empty:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md",
+            "optional_unresolved:ADR-055-capability-registry-starts-empty:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-2-runtime-and-registry.md",
+            "optional_unresolved:ADR-055-capability-registry-starts-empty:related_docs:tickets/00_inbox/TICKET-20260930-KernelBootstrapV0.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/vision.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-5-client-observability-safeguards.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-6-gaps-build-verification.md",
+            "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-7-later-stages.md",
+            "optional_unresolved:ADR-062-standalone-knowledge-retrieval:related_docs:docs/analysis/2026-10-01-knowledge-retrieval-stage0.md",
+            "optional_unresolved:commit-guardian:related_docs:docs/architecture/diagrams/c3-006-whole-collection-uniqueness-pass.md",
+            "optional_unresolved:commit-guardian:related_docs:docs/how-to/managing-pre-commit-hooks.md",
+            "optional_unresolved:commit-guardian:related_docs:docs/reference/commit-guardian-negative-control-liveness.md",
+            "optional_unresolved:decision-kernel:related_docs:docs/analysis/2026-09-30-decision-kernel-design.md",
+            "optional_unresolved:decision-kernel:related_docs:docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md",
+            "optional_unresolved:decision-kernel:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md",
+            "optional_unresolved:decision-kernel:related_docs:docs/how-to/run-the-decision-kernel.md",
+            "optional_unresolved:decision-kernel:related_docs:docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md",
+            "optional_unresolved:decision-kernel:related_docs:docs/analysis/2026-10-01-decision-kernel-v0-demo-report.md",
+            "optional_unresolved:interactive-pause-resume-substrate:related_docs:docs/how-to/resume-a-paused-plan-feature-run.md",
+            "optional_unresolved:knowledge-retrieval:related_docs:docs/how-to/run-knowledge-retrieval.md",
+            "optional_unresolved:phantom-done-prevention:related_docs:docs/architecture/diagrams/c2-006-feature-to-merged-pr.md",
+            "optional_unresolved:phantom-done-prevention:related_docs:docs/how-to/done-proof-reachability-gates.md",
+            "optional_unresolved:phantom-done-prevention:related_docs:docs/architecture/diagrams/c3-011-done-proof-reachability-gates-sequence.md"
+          ],
+          "status": "ready",
+          "node_count": 6040,
+          "edge_count": 19518,
+          "supported_kinds": [
+            "ADR",
+            "AcceptanceCriterion",
+            "Component",
+            "SourceFile"
+          ],
+          "supported_fields": {},
+          "supported_relationships": [],
+          "semantic_ready": false,
+          "embedding_model": null,
+          "embedding_dimensions": null
+        },
+        "requirements": {
+          "required_kinds": [
+            "AcceptanceCriterion",
+            "Test"
+          ],
+          "required_relationships": [
+            "covered_by"
+          ],
+          "required_fields": {
+            "AcceptanceCriterion": [
+              "covered_by"
+            ],
+            "Test": [
+              "canonical_id"
+            ]
+          }
+        },
+        "matching_operation": null,
+        "catalog_complete": true
+      },
+      "assertions": [
+        {
+          "path": "status",
+          "equals": "unsupported_mapping"
+        },
+        {
+          "path": "query_build_eligible",
+          "equals": false
+        }
+      ]
+    },
+    {
+      "id": "RQE-06-P",
+      "family": "RQ8",
+      "state": "runnable",
+      "request": {
+        "request_id": "RQE-06-P",
+        "repository_id": "leafcutter",
+        "revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "operation": "get_entities",
+        "mode": "exact",
+        "arguments": {
+          "entity_ids": [
+            "TQ-500f-2"
+          ]
+        },
+        "disclosure_level": 1,
+        "budget": {
+          "max_results": 100,
+          "max_candidates": 100,
+          "max_content_bytes": 131072,
+          "max_estimated_tokens": 16000
+        },
+        "answer_requirements": {
+          "original_question": "Why could the standalone TQ-500f retrieval not answer the done/todo breakdown, and what evidence lets me inspect that limitation in Langfuse?",
+          "required_fields": [
+            "work_status"
+          ],
+          "require_complete": true,
+          "scope": {
+            "population": "returned_entities"
+          }
+        }
+      },
+      "assertions": [
+        {
+          "path": "status",
+          "equals": "ok"
+        },
+        {
+          "path": "answer.status",
+          "equals": "partial"
+        },
+        {
+          "path": "answer.work_status_counts",
+          "equals": null
+        },
+        {
+          "path": "observation.state",
+          "equals": "disabled"
+        }
+      ],
+      "relevant_ids": [
+        "TQ-500f-2"
+      ]
+    },
+    {
+      "id": "RQE-06-N",
+      "family": "RQ8",
+      "state": "runnable",
+      "request": {
+        "request_id": "RQE-06-N",
+        "repository_id": "leafcutter",
+        "revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "operation": "get_entities",
+        "mode": "exact",
+        "arguments": {
+          "entity_ids": [
+            "TQ-500f-2"
+          ]
+        },
+        "disclosure_level": 1,
+        "budget": {
+          "max_results": 100,
+          "max_candidates": 100,
+          "max_content_bytes": 131072,
+          "max_estimated_tokens": 16000
+        },
+        "answer_requirements": {
+          "original_question": "Why could the standalone TQ-500f retrieval not answer the done/todo breakdown, and what evidence lets me inspect that limitation in Langfuse?",
+          "required_fields": [
+            "work_status"
+          ],
+          "require_complete": true,
+          "scope": {
+            "population": "returned_entities"
+          }
+        }
+      },
+      "assertions": [
+        {
+          "path": "status",
+          "equals": "unavailable"
+        },
+        {
+          "path": "answer.status",
+          "equals": "unresolved"
+        },
+        {
+          "path": "answer.work_status_counts",
+          "equals": null
+        },
+        {
+          "path": "observation.state",
+          "equals": "disabled"
+        },
+        {
+          "path": "answer.completeness.exact_total",
+          "equals": null
+        }
+      ],
+      "relevant_ids": []
+    }
+  ],
+  "coverage": {
+    "representative": false,
+    "families": 6,
+    "total_families": 8,
+    "original_case_count": 12,
+    "scope": "First reviewed sample, not all25role questions"
+  }
+}

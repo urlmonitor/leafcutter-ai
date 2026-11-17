@@ -63,9 +63,7 @@
             "template_dir": "leafcutter/templates/agents",
             "items": {
                 "adr-author.md":                 "portable",
-                "architect-review-deep.md":      "portable",
                 "architecture-diagram-author.md":"portable",
-                "conflict-resolver-deep.md":     "portable",
                 "database-agent.md":             "project-specific",
                 "explanation-author.md":         "portable",
                 "how-to-author.md":              "portable",

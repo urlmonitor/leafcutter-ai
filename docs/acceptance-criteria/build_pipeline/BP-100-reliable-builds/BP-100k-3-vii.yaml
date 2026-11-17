@@ -1,0 +1,94 @@
+id: BP-100k-3-vii
+components:
+  - build_pipeline
+title: "check-output-drift never reports a git-ignored path or a nested worktree as a coverage gap, while deployed-output dirs stay fully censused"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a git workspace whose build manifest records an output directly under
+    .claude/ (for example .claude/settings.json), so .claude/ is a scanned dir,
+  And .gitignore ignores .claude/.cache/ and .claude/worktrees/,
+  And unrecorded files exist under .claude/.cache/ and inside a nested worktree
+    at .claude/worktrees/<name>/ (a directory holding a .git entry),
+  When check-output-drift runs over that workspace,
+  Then no GAP line names any path under .claude/.cache/ or .claude/worktrees/,
+    and with no other finding the run exits 0,
+  And a subdirectory holding a .git entry is skipped even when git is
+    unavailable or the workspace is not a git repository,
+  And an unrecorded, non-ignored file under .claude/ is still reported as a GAP
+    and blocks the commit,
+  And an ignored directory that contains a recorded manifest key is still
+    walked, so an unrecorded stray beside the recorded key is still a GAP,
+  And drift on a recorded key under an ignored directory is still detected,
+  And a tracked directory symlink under a scanned dir does not crash the gate,
+  And when git cannot list ignored paths the gate logs a WARNING and falls
+    back to the unfiltered census rather than failing,
+  And the bug symptom (tens of thousands of GAP lines for uncommittable
+    gitignored / nested-worktree files blocking every commit) must not occur.
+depends_on:
+  - BP-100k-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-3.yaml"
+    relationship: parent
+    status: exists
+  - path: "templates/scripts/commit_guardian/check_output_drift.py"
+    relationship: modifies
+    status: exists
+  - path: "docs/known-issues/commit-guardian/open-high-ki-cg-20260929-output-drift-scans-gitignored-cache.md"
+    relationship: related
+    status: exists
+    relevance: "The known issue this fixes. It names .claude/.cache only; nested worktrees under .claude/worktrees/ are the larger population (79,338 of 79,365 GAPs in DIAGraph, 2026-10-12)."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+    - "Ask git for ignored paths with ONE directory-level call (git ls-files -z --others --ignored --exclude-standard --directory). Do not use per-file git check-ignore: it exits 128 'beyond a symbolic link' on consumer layouts whose .claude/agents etc. are tracked symlinks."
+    - "Do not switch to a git ls-files allow-list: files reached through tracked symlinks would silently drop out of GAP detection."
+    - "Recorded-key reconciliation (drifted / missing / unreadable) must be unaffected; only the unrecorded-file census narrows."
+    - "Verify behaviorally: run the gate as a subprocess over a synthesized git workspace and read its GAP lines, RESULT line and exit status."
+test_spec:
+  - name: test_bp_100k_3_vii_gitignored_and_nested_worktree_paths_are_not_gaps
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "With .claude/.cache/ and .claude/worktrees/ gitignored and .claude/settings.json recorded, unrecorded files under both produce no GAP line and the run exits 0."
+  - name: test_bp_100k_3_vii_nested_worktree_skipped_without_git
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "In a non-git workspace, a subdirectory holding a .git file is skipped by the census; files inside it produce no GAP."
+  - name: test_bp_100k_3_vii_unignored_stray_still_gaps
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "An unrecorded, non-ignored file under .claude/ is still reported as a GAP and the run exits 2."
+  - name: test_bp_100k_3_vii_ignored_dir_holding_recorded_key_still_censused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "An ignored dir containing a recorded key is still walked: an unrecorded stray beside it is a GAP, and drift on the recorded key is still reported."
+  - name: test_bp_100k_3_vii_tracked_symlink_layout_does_not_crash
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A tracked directory symlink under a scanned dir does not crash the gate (no traceback, exit status is a verdict)."
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_bp_100k_3_vii.py::TestOutputDriftIgnoredScan::test_bp_100k_3_vii_gitignored_and_nested_worktree_paths_are_not_gaps
+  - unit_tests/commit_guardian/test_bp_100k_3_vii.py::TestOutputDriftIgnoredScan::test_bp_100k_3_vii_nested_worktree_skipped_without_git
+  - unit_tests/commit_guardian/test_bp_100k_3_vii.py::TestOutputDriftIgnoredScan::test_bp_100k_3_vii_unignored_stray_still_gaps
+  - unit_tests/commit_guardian/test_bp_100k_3_vii.py::TestOutputDriftIgnoredScan::test_bp_100k_3_vii_ignored_dir_holding_recorded_key_still_censused
+  - unit_tests/commit_guardian/test_bp_100k_3_vii.py::TestOutputDriftIgnoredScan::test_bp_100k_3_vii_tracked_symlink_layout_does_not_crash
+implemented_by:
+  - templates/scripts/commit_guardian/check_output_drift.py
+  - templates/scripts/commit_guardian/_drift_scan_population.py
+change_target: pipeline
+risk_surface: contract_boundary

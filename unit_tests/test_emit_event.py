@@ -16,6 +16,8 @@ ARCHITECTURE: Tests invoke main() directly with an argv list and assert on the f
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import os
 import sys
@@ -89,7 +91,13 @@ class TestEmitEventRecord(unittest.TestCase):
             rec = json.loads(log.read_text(encoding="utf-8").strip())
             self.assertEqual(
                 set(rec), {"event_type", "timestamp", "agent_name", "ticket_path", "payload"})
-            self.assertEqual(set(rec["payload"]), {"phase", "outcome", "retry_count"})
+            # INF-700b-1-i (ADR-034 Amendment 2, A2.2): DELIBERATE contract extension, not a
+            # weakening. Every record of every event type now also carries `missing_target`
+            # (null unless given), so the "every line has the same keys" rule still holds.
+            self.assertEqual(
+                set(rec["payload"]),
+                {"phase", "outcome", "retry_count", "missing_target"})
+            self.assertIsNone(rec["payload"]["missing_target"])
             self.assertEqual(rec["event_type"], "agent_start")
             self.assertEqual(rec["agent_name"], "ticket-supervisor")
             self.assertEqual(rec["ticket_path"], "/path/to/01_schema.md")
@@ -171,6 +179,141 @@ class TestEmitEventNonFatal(unittest.TestCase):
             ok = emit_event.append_record({"bad": object()}, log)
             self.assertFalse(ok)
             self.assertFalse(log.exists(), "nothing should be written for a bad record")
+
+
+class TestCaptureAttemptEvent(unittest.TestCase):
+    """INF-700b-1-i / ADR-034 Amendment 2 (A2.2): the capture-attempt ledger event."""
+
+    _OUTCOMES = ("recorded", "nothing-to-record", "failed")
+
+    def _emit(self, log: Path, *argv: str) -> tuple[int, str]:
+        """Run main() in-process; return (exit code, stderr). An argparse refusal is a failure."""
+        err = io.StringIO()
+        try:
+            with contextlib.redirect_stderr(err):
+                rc = emit_event.main([*argv, "--log", str(log)])
+        except SystemExit as exc:
+            self.fail(f"emit_event refused the call at argument parsing (exit {exc.code}): "
+                      f"{err.getvalue()!r}")
+        return rc, err.getvalue()
+
+    @staticmethod
+    def _records(log: Path) -> list[dict]:
+        if not log.exists():
+            return []
+        return [json.loads(ln) for ln in log.read_text(encoding="utf-8").splitlines()]
+
+    def test_capture_attempt_outcome_set_is_closed_and_payload_keys_stay_uniform(self):
+        # covers: INF-700b-1-i
+        # angle: criterion
+        """capture_attempt accepts exactly {recorded, nothing-to-record, failed}; all else writes nothing.
+
+        Wrong versions this must catch: a validator that accepts any outcome for capture_attempt;
+        one that normalises case or underscores ('Recorded', 'nothing_to_record'); one that
+        validates EVERY event type (the control row `agent_end --outcome ok` would then vanish);
+        and `missing_target` added only to failed records (key sets would differ across lines).
+        """
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / "t.jsonl"
+            for outcome in self._OUTCOMES:
+                extra = ["--missing-target", "/x/missing.py"] if outcome == "failed" else []
+                with self.subTest(accepted=outcome):
+                    before = len(self._records(log))
+                    rc, _ = self._emit(
+                        log, "--agent", "a", "--event", "capture_attempt",
+                        "--phase", "knowledge-capture", "--outcome", outcome, *extra)
+                    self.assertEqual(rc, 0)
+                    records = self._records(log)
+                    self.assertEqual(len(records), before + 1, f"{outcome!r} must append one line")
+                    self.assertEqual(records[-1]["payload"]["outcome"], outcome)
+                    self.assertEqual(records[-1]["event_type"], "capture_attempt")
+            accepted = len(self._records(log))
+            self.assertEqual(accepted, 3)
+            for bad in ("Recorded", "nothing_to_record", "ok", "", "recorded "):
+                with self.subTest(refused=bad):
+                    rc, stderr = self._emit(
+                        log, "--agent", "a", "--event", "capture_attempt",
+                        "--phase", "knowledge-capture", "--outcome", bad)
+                    self.assertEqual(rc, 0, "an unknown outcome still exits 0")
+                    self.assertEqual(len(self._records(log)), accepted,
+                                     f"outcome {bad!r} must write nothing")
+                    self.assertTrue(stderr.strip(), f"outcome {bad!r} must warn on stderr")
+            with self.subTest(refused="(omitted)"):
+                rc, stderr = self._emit(log, "--agent", "a", "--event", "capture_attempt")
+                self.assertEqual(rc, 0)
+                self.assertEqual(len(self._records(log)), accepted, "no outcome writes nothing")
+                self.assertTrue(stderr.strip())
+            # control row: other event types keep free-text outcomes
+            for free in ("ok", "blocked", "anything at all"):
+                with self.subTest(free_text=free):
+                    rc, _ = self._emit(log, "--agent", "a", "--event", "agent_end", "--outcome", free)
+                    self.assertEqual(rc, 0)
+                    self.assertEqual(self._records(log)[-1]["payload"]["outcome"], free)
+            records = self._records(log)
+            self.assertEqual(len(records), accepted + 3)
+            key_sets = {frozenset(r["payload"]) for r in records}
+            self.assertEqual(
+                key_sets, {frozenset({"phase", "outcome", "retry_count", "missing_target"})},
+                "every record, capture_attempt or not, carries the same payload keys")
+            for rec in records:
+                if rec["payload"]["outcome"] != "failed":
+                    self.assertIsNone(rec["payload"]["missing_target"])
+
+    def test_failed_without_missing_target_is_refused_and_with_it_is_recorded(self):
+        # covers: INF-700b-1-i
+        # angle: failure
+        """`failed` needs --missing-target: absent writes nothing, warns, exits 0; given, it is stored."""
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / "t.jsonl"
+            rc, stderr = self._emit(
+                log, "--agent", "a", "--event", "capture_attempt",
+                "--phase", "knowledge-capture", "--outcome", "failed")
+            self.assertEqual(rc, 0)
+            self.assertEqual(self._records(log), [], "failed with no missing_target writes nothing")
+            self.assertTrue(stderr.strip(), "the refusal must be reported on stderr")
+            rc, _ = self._emit(
+                log, "--agent", "a", "--event", "capture_attempt", "--phase", "knowledge-capture",
+                "--outcome", "failed", "--missing-target", "/deployed/emit_knowledge.py")
+            self.assertEqual(rc, 0)
+            records = self._records(log)
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]["payload"]["missing_target"], "/deployed/emit_knowledge.py")
+
+    def test_missing_target_is_refused_on_recorded_and_nothing_to_record(self):
+        # covers: INF-700b-1-i
+        # angle: boundary
+        """`missing_target` must be null unless outcome is `failed` (ADR-034 A2.2).
+
+        recorded / nothing-to-record given a --missing-target write nothing, warn on stderr naming the
+        flag and exit 0 (the unknown-outcome refusal path). Control rows on the SAME log: the same
+        outcomes without it, and `failed` with it, are each recorded.
+        """
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / "t.jsonl"
+            base = ("--agent", "a", "--event", "capture_attempt", "--phase", "knowledge-capture")
+            for outcome in ("recorded", "nothing-to-record"):
+                with self.subTest(refused=outcome):
+                    rc, stderr = self._emit(log, *base, "--outcome", outcome,
+                                            "--missing-target", "/x/missing.py")
+                    self.assertEqual(rc, 0, "the refusal still exits 0")
+                    self.assertEqual(self._records(log), [], f"{outcome!r} + missing_target writes nothing")
+                    self.assertIn("missing-target", stderr, "the warning must name the offending flag")
+            for outcome in ("recorded", "nothing-to-record"):
+                self._emit(log, *base, "--outcome", outcome)
+            self._emit(log, *base, "--outcome", "failed", "--missing-target", "/x/missing.py")
+            targets = [r["payload"]["missing_target"] for r in self._records(log)]
+            self.assertEqual(targets, [None, None, "/x/missing.py"])
+
+    def test_missing_target_is_null_on_every_non_capture_record(self):
+        # covers: INF-700b-1-i
+        # angle: boundary
+        """Even a plain agent_start line carries `missing_target`, and it is null (present, not omitted)."""
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / "t.jsonl"
+            self._emit(log, "--agent", "a", "--event", "agent_start", "--phase", "python-coder")
+            payload = self._records(log)[0]["payload"]
+            self.assertIn("missing_target", payload)
+            self.assertIsNone(payload["missing_target"])
 
 
 if __name__ == "__main__":

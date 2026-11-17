@@ -77,13 +77,17 @@ expects_from:
   contract: "templates/skills/authoring-patterns/SKILL.md, registered in config/skill_registry.json — the single statement of the four pattern-worthiness rules including the recurrence threshold value 3. The steward reads the threshold from the skill; it does not declare one."
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class prompt: test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: [ACS-500g-1-i]
 implemented_by: []
 change_target: prompt
 risk_surface: internal
-test_required: false
+test_required: true
 notes: |
   The steward is a STORE-WIDE analyst, not a per-authoring-run consumer. The
   per-run consumer behavior (detect an EXISTING pattern and link to it) is

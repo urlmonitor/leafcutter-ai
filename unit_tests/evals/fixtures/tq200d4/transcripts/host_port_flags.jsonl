@@ -1,0 +1,6 @@
+{"type": "system", "subtype": "init", "tools": ["Bash", "Read", "Edit"]}
+{"type": "assistant", "message": {"role": "assistant", "content": [{"type": "tool_use", "id": "t0", "name": "Bash", "input": {"command": "python scripts/db_check/checker.py --target-dir ."}}]}}
+{"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "t0", "content": "Exit code 1\n{\"status\": \"invalid\", \"setting\": \"testing_context.db_connection_test\", \"host\": null, \"port\": null, \"database\": null, \"message\": \"not a usable address\"}", "is_error": true}]}}
+{"type": "assistant", "message": {"role": "assistant", "content": [{"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": "pg_isready -h db.example.invalid -p 5432 -d app_test"}}]}}
+{"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "t1", "content": "ok"}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "see report.md"}

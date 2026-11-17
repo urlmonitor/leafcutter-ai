@@ -36,7 +36,9 @@
  *     "record_dir": "/tmp/...",          // the worktree root for this run
  *     "args": { ... },                   // overrides the args global wholesale
  *     "resolve": {...} | null,           // resolve-target stub reply
- *     "worktree_agent": {...} | null,    // worktree-setup stub reply
+ *     "workspace_ensure": {...} | null,  // workspace-ensure stub reply (BO-4300c-3), served verbatim;
+ *                                        // absent = ready at record_dir
+ *     "historical_replies": {...},       // label -> reply for lookups only a historical driver asks
  *     "worktree_check": {...} | null,    // build-ticket.js ambient git check reply
  *     "epic": {
  *        "path": "<abs epic folder>",
@@ -75,6 +77,7 @@
  *            // or an ARRAY of the above, one entry per dispatch attempt
  *          },
  *          "delete_record_after_phase": "<phase>",   // makes the record unreadable
+ *          "unreadable_readback_after_phase": "<phase>", // ONE read-back reports unreadable
  *          "delete_record_before_run": bool,
  *          "plan_reply": { "mode": "...", "value": ... }   // OPT-IN, see below
  *        }
@@ -143,6 +146,16 @@
  * `!== true`) then takes the VERIFIED branch on a reply that verified nothing.
  * Without this mode the flag is always present and always agrees with the
  * outcome, so a fail-open re-check and a fail-closed one are indistinguishable.
+ *
+ * DIRTY-STATE READ (BO-100e-4)   label: "worktree-dirty"
+ *                         reply: the repo-facts envelope { output, exit_code }.
+ *                         Answered from scenario.dirty — an ABSENT key answers
+ *                         CLEAN (so every pre-existing halt fixture keeps its
+ *                         outcome); explicit null answers UNREADABLE (non-zero
+ *                         exit); a string is served as raw (unparseable) output;
+ *                         an object is served verbatim as JSON; an array answers
+ *                         one entry per read, the last repeated. Every read is
+ *                         recorded in the `dirty_reads` output array.
  *
  * Any other label is treated as a phase-agent dispatch — that is what the
  * `dispatched` array measures.
@@ -219,7 +232,23 @@ const recordMode = !!scenario.tickets;
 const ticketConfigs = scenario.tickets || {};
 const ticketPaths = Object.keys(ticketConfigs);
 
-const source = readFileSync(scriptPath, "utf8").replace(
+// BO-4300c-3: a template run straight from templates/workflows-js/ carries an EMPTY WORKSPACE-ANSWER marker
+// pair; the build phase fills it from the single tracked source. Fill it the same way here, and only when the
+// pair is empty (a deployed copy already holds the block and is left untouched).
+function fillWorkspaceAnswer(text) {
+  const startMark = "// WORKSPACE-ANSWER-START";
+  const endMark = "// WORKSPACE-ANSWER-END";
+  const start = text.indexOf(startMark);
+  if (start === -1) return text;
+  const end = text.indexOf(endMark, start);
+  if (end === -1 || text.slice(start + startMark.length, end).trim()) return text;
+  const block = readFileSync(
+    join(REPO_ROOT, "templates", "workflows-js", "_shared", "workspace-answer.js"), "utf8"
+  ).trim();
+  return text.slice(0, start + startMark.length) + "\n" + block + "\n" + text.slice(end);
+}
+
+const source = fillWorkspaceAnswer(readFileSync(scriptPath, "utf8")).replace(
   /^export const meta/m,
   "const meta"
 );
@@ -233,7 +262,19 @@ const readbacks = [];
 const writes = [];
 const enumerations = [];
 const planReplies = [];
+const dirtyReads = [];
+const workspaceEnsureCalls = [];
 const logs = [];
+// BO-3800e-2: every remedy-declaration read the driver made, in order (the shared
+// loader read is not a phase dispatch, so `dispatched` cannot see it). Observation only.
+const declarationReads = [];
+// INF-700a-1-v: the knowledge-routing CLI calls, and ONE ordered timeline of
+// phase dispatches and routing calls together, so a test can see whether a
+// ticket's stage -> commit -> observe ran without another ticket's in between.
+const routingCalls = [];
+const timeline = [];
+const routingCallCounts = {};
+const unreadableOnce = new Set(); // BO-3000a: one-shot unreadable read-backs
 const attemptCounts = {}; // "<ticket>::<phase>" -> n
 
 // ---------------------------------------------------------------------------
@@ -308,6 +349,13 @@ function parseRecord(path) {
       }
       dependsOn.push(value);
     }
+  }
+
+  const filesTouched = [];
+  const filesTouchedBlock = frontmatter.match(/^files_touched:\n((?:^-[^\n]*\n?)*)/m);
+  for (const line of filesTouchedBlock ? filesTouchedBlock[1].split("\n") : []) {
+    const m = line.match(/^-\s*(.+?)\s*$/);
+    if (m) filesTouched.push(m[1].replace(/^(["'])(.*)\1$/, "$2"));
   }
 
   // handoff_target (BO-400e-1-i): an OPTIONAL line in a signoff's own comment
@@ -411,6 +459,7 @@ function parseRecord(path) {
     // because demandedPhasesFromRecord's union has nothing to union in.
     failed_phases: Object.keys(agents).filter((a) => agents[a] === "failed"),
     depends_on: dependsOn,
+    files_touched: filesTouched,
     implementation_task_agents: implementationTaskAgents,
     signoffs,
     signed_off_agents: signoffs.map((s) => s.agent),
@@ -418,12 +467,14 @@ function parseRecord(path) {
 }
 
 /** Append a real sign-off heading, exactly as a phase agent would. */
-function appendSignoff(path, agentName, status) {
+function appendSignoff(path, agentName, status, handoffTarget) {
   if (!existsSync(path)) return false;
   const stamp = "2026-08-18 12:00";
   const block =
     `\n### ${stamp} — ${agentName} (status: ${status})\n` +
-    `harness-simulated phase agent sign-off\n`;
+    `harness-simulated phase agent sign-off\n` +
+    // BO-3000a: opt-in `handoff_target:` line the read-back parser reads per entry.
+    (handoffTarget ? `handoff_target: ${handoffTarget}\n` : "");
   writeFileSync(path, readFileSync(path, "utf8") + block, "utf8");
   return true;
 }
@@ -659,7 +710,7 @@ function epicEnumerationReply(label) {
     ? read.batches
     : buildable.length === 0
       ? []
-      : [{ batch_number: 1, tickets: buildable.map((t) => ({ path: t.path, status: "todo" })) }];
+      : [{ batch_number: 1, tickets: buildable.map((t) => ({ path: t.path, status: "todo", source_ac: t.source_ac })) }];
 
   // What the real planner OMITS from every batch because the ticket's own
   // frontmatter already reads `status: done` — the resume set. DERIVED from
@@ -718,6 +769,10 @@ async function agent(prompt, opts = {}) {
   const label = opts.label || opts.agentType || "unknown";
 
   // --- infrastructure stubs -------------------------------------------------
+  // A driver materialised from git history may ask lookups the current drivers retired; a scenario answers
+  // them verbatim with `historical_replies` (label -> reply). Such a reply is never recorded as a dispatch.
+  const historical = scenario.historical_replies || {};
+  if (Object.prototype.hasOwnProperty.call(historical, label)) return historical[label];
   if (label === "worktree-check") {
     return scenario.worktree_check === undefined
       ? { git_type: "file", branch: "feat/harness" }
@@ -734,49 +789,68 @@ async function agent(prompt, opts = {}) {
     };
   }
 
-  // BO-4000: build-feature.js checks resolve-target's own worktree_path via a
-  // repo-facts call before reusing it, rather than trusting it unconditionally.
-  // Default: reusable ONLY when the queried path (read out of the prompt,
-  // which names it verbatim) equals scenario.record_dir — the harness's own
-  // notion of "the established working copy". This reproduces every
-  // pre-BO-4000 scenario whose "resolve" reports record_dir (the dominant
-  // shape) unchanged, with no worktree-setup dispatch, while still letting a
-  // scenario that deliberately reports something ELSE (e.g. the work-store
-  // epic folder, BO-1900a-4's own observed defect shape) fall through to the
-  // "name a new location" path exactly as BO-4000's second scenario requires.
-  if (label === "worktree-facts-resolved") {
-    if (scenario.worktree_facts_resolved !== undefined) {
-      return { output: JSON.stringify(scenario.worktree_facts_resolved), exit_code: 0 };
-    }
-    const queried = (/facts "([^"]*)"/.exec(String(prompt)) || [])[1] || null;
-    const reusable = queried !== null && queried === scenario.record_dir;
+  // BO-100e-4: the dirty-state read; absent scenario.dirty = clean, null = unreadable.
+  if (label === "worktree-dirty") {
+    const spec = scenario.dirty;
+    const one = Array.isArray(spec) ? spec[Math.min(dirtyReads.length, spec.length - 1)] : spec;
+    dirtyReads.push({ prompt: String(prompt) });
+    if (one === null) return { output: "", exit_code: 128 };
+    if (typeof one === "string") return { output: one, exit_code: 0 };
+    const clean = { readable: true, staged: [], unstaged: [], untracked: [] };
+    return { output: JSON.stringify(one === undefined ? clean : one), exit_code: 0 };
+  }
+
+  // BO-4300a-1-ia: every maker command is absolute, so a workflow first asks the shell-runner for the repository
+  // (git common dir, one `resolve-maker-path` probe). A scenario scripts it with `resolve_maker_path` (served
+  // verbatim); absent, it answers with a repository -- the same default the python engine harness scripts for this
+  // label. Infrastructure, like the workspace step: never recorded as a phase dispatch.
+  // Probes of the maker's location (BO-4300a-1-ia): `read-workspace-marker` (a handed-in workspace names its project,
+  // override `resolve_workspace_marker`) and `resolve-maker-path` (override `resolve_maker_path`); served verbatim,
+  // never recorded as phase dispatches, like the workspace step.
+  if (label === "read-workspace-marker") {
+    const named = JSON.stringify({ project_root: "/tmp/harness-default-repo" });
+    return scenario.resolve_workspace_marker !== undefined ? scenario.resolve_workspace_marker : { command: "cat", exit_status: 0, stdout: named, stderr: "" };
+  }
+  if (label === "resolve-maker-path") {
+    if (scenario.resolve_maker_path !== undefined) return scenario.resolve_maker_path;
+    return { command: "git rev-parse", exit_status: 0, stdout: "/tmp/harness-default-repo/.git\n", stderr: "" };
+  }
+
+  // BO-4300c-3: the ONE workspace step. A scenario scripts it with `workspace_ensure` (the reply served
+  // verbatim, so a refusal, prose or no answer can be presented); absent, the shell-runner answers ready at
+  // the scenario's own working copy -- the same default the python engine harness scripts for this label.
+  if (label === "workspace-ensure") {
+    workspaceEnsureCalls.push({ prompt: String(prompt) });
+    if (scenario.workspace_ensure !== undefined) return scenario.workspace_ensure;
+    const path = scenario.record_dir || "/fake/worktree";
     return {
-      output: JSON.stringify({
-        exists: reusable, is_git_toplevel: reusable, is_linked_worktree: reusable,
-        is_main_checkout: false, same_repository: reusable, branch: reusable ? "harness-default" : null,
+      command: "python3 worktree.py ensure (harness default)",
+      exit_status: 0,
+      stdout: JSON.stringify({
+        schema_version: 1, status: "ok", code: "OK", verb: "ensure",
+        workspace_path: path, worktree_path: path, branch: "harness-default", created: false,
+        message: "workspace ready (harness default)",
       }),
-      exit_code: 0,
+      stderr: "",
     };
   }
 
-  // BO-4000: the "name a new location" branch's own repo-facts checks. Every
-  // pre-existing scenario is indifferent to these (none asserts on them), so
-  // generic, always-succeeding defaults let the run proceed to the SAME
-  // "worktree-setup" dispatch it always reached — the one label every
-  // existing scenario already controls via scenario.worktree_agent.
-  if (label === "worktree-base") {
-    return { output: JSON.stringify({ main_checkout: "/fake/repo", worktree_base: "/fake/worktrees", layout: "dev" }), exit_code: 0 };
-  }
-  if (label === "worktree-facts-location") {
-    return { output: JSON.stringify({ exists: false }), exit_code: 0 };
-  }
-  if (label === "branch-standing") {
-    return { output: JSON.stringify({ exists: false, fetch_ok: true, behind: null, ahead: null }), exit_code: 0 };
-  }
-
-  if (label === "worktree-setup") {
-    if (scenario.worktree_agent !== undefined) return scenario.worktree_agent;
-    return { worktree_path: scenario.record_dir || "/fake/worktree", status: "reused" };
+  // BO-4300c-4-i: a location handed in (args.worktree_path / args.workspace_path) is confirmed by ONE verify
+  // request. A scenario scripts it with `workspace_verify` (served verbatim); absent, the maker answers ready
+  // for exactly the location the request names.
+  if (label === "workspace-verify") {
+    if (scenario.workspace_verify !== undefined) return scenario.workspace_verify;
+    const named = /--path "([^"]+)"/.exec(String(prompt));
+    const path = named ? named[1] : (scenario.record_dir || "/fake/worktree");
+    return {
+      command: "python3 worktree.py verify (harness default)",
+      exit_status: 0,
+      stdout: JSON.stringify({
+        schema_version: 1, status: "ok", code: "OK", verb: "verify",
+        workspace_path: path, worktree_path: path, message: "workspace ready (harness default)",
+      }),
+      stderr: "",
+    };
   }
 
   if (RE_EPIC_ENUM.test(label)) {
@@ -857,7 +931,10 @@ async function agent(prompt, opts = {}) {
   // --- record read-back -----------------------------------------------------
   if (RE_READBACK.test(label)) {
     const ticketPath = ticketFromPrompt(prompt) || opts.ticket_path || null;
-    const record = ticketPath
+    const forcedUnreadable = ticketPath && unreadableOnce.delete(ticketPath);
+    const record = forcedUnreadable
+      ? { readable: false, error: "harness: one-shot unreadable read-back" }
+      : ticketPath
       ? parseRecord(ticketPath)
       : { readable: false, error: "harness: read-back named no known ticket record" };
     readbacks.push({
@@ -969,10 +1046,62 @@ async function agent(prompt, opts = {}) {
     return { classification, reason: "harness classification" };
   }
 
+  // --- knowledge-routing CLI (INF-700a-1-v) ---------------------------------
+  // Labels "knowledge-routing-step" (stage) and "knowledge-routing-observe".
+  // Answered from scenario.knowledge_routing[label] as the repo-facts
+  // envelope: an object is served as its JSON, a string as raw (unparseable)
+  // output, an array one entry per call (the last repeated). An ABSENT entry
+  // answers a failed command, so a scenario that does not mention routing
+  // sees the step not run and every pre-existing outcome is unchanged.
+  if (label === "knowledge-routing-step" || label === "knowledge-routing-observe") {
+    const index = routingCallCounts[label] || 0;
+    routingCallCounts[label] = index + 1;
+    let spec = (scenario.knowledge_routing || {})[label];
+    if (Array.isArray(spec)) spec = spec[Math.min(index, spec.length - 1)];
+    routingCalls.push({ label, prompt: String(prompt) });
+    timeline.push({ kind: "routing", label, ticket_path: null });
+    if (spec === undefined || spec === null) return { output: "", exit_code: 1 };
+    return { output: typeof spec === "string" ? spec : JSON.stringify(spec), exit_code: 0 };
+  }
+
+  /* --- scratch item (BO-4400f-1) ---------------------------------------------
+   * Label "scratch-item": the shell step that creates the run's labelled
+   * scratch folder. Not a phase agent. Answered from scenario.scratch_item; an
+   * ABSENT entry answers {item: null} (the workflow's fail-open path: no
+   * scratch note), so every pre-existing scenario is unchanged. */
+  if (label === "scratch-item") {
+    return { item: scenario.scratch_item === undefined ? null : scenario.scratch_item };
+  }
+
+  // --- remedy-declaration read (BO-3800b) -------------------------------------
+  // A label matching /remedy|declaration/ is the driver reading a check's
+  // remedy declaration (the shared GE-132a-1 loader) -- not a phase agent. It is
+  // answered from scenario.remedy_declarations[hook_id] (hook_id found in the
+  // prompt) and is NOT recorded as an engaged party. An ABSENT entry answers
+  // {status: "error"} so an unreadable declaration is a visible stop.
+  if (/remedy|declaration/i.test(label)) {
+    const table = scenario.remedy_declarations || {};
+    const hookId = Object.keys(table).find((h) => String(prompt).includes(h));
+    declarationReads.push({ label, hook_id: hookId || null });
+    return hookId
+      ? Object.assign({ status: "ok" }, table[hookId])
+      : { status: "error", error: "harness: no remedy declaration for this prompt" };
+  }
+
+  /* --- wrong-version command steps (TQ-500g-1-vi) -----------------------------
+   * Labels bf-wv-* / bt-wv-* (recover, list, finish): executor replies, not phase
+   * agents. Answer with the passing report each real script prints, as
+   * {stdout: <JSON>}; scenario.wrong_version[label] replaces it per label. */
+  if (/^b[ft]-wv-(recover|list|finish)$/.test(label)) {
+    const passing = { recover: { ok: true, restored: [] }, list: { owed: [], error: null }, finish: { gate_passed: true, verdict: null } };
+    return { stdout: JSON.stringify((scenario.wrong_version || {})[label] || passing[label.slice(6)]) };
+  }
+
   // --- everything else is a phase-agent dispatch ----------------------------
   dispatched.push(label);
 
   const ticketPath = recordMode ? ticketFromPrompt(prompt) : null;
+  timeline.push({ kind: "phase", label, ticket_path: ticketPath });
   const key = `${ticketPath}::${label}`;
   attemptCounts[key] = (attemptCounts[key] || 0) + 1;
   const attempt = attemptCounts[key];
@@ -987,6 +1116,9 @@ async function agent(prompt, opts = {}) {
     // whatever the agent template can key on has to be in here.
     prompt: typeof prompt === "string" ? prompt : String(prompt),
     opts_keys: Object.keys(opts || {}),
+    // BO-3800b/c: the machine-readable brief a refusal-originated engagement
+    // carries as an `opts.brief` field (null when the dispatch sent none).
+    opts_brief: opts && opts.brief !== undefined ? opts.brief : null,
     opts_ticket_path:
       opts && typeof opts.ticket_path === "string" ? opts.ticket_path : null,
   });
@@ -1009,13 +1141,14 @@ async function agent(prompt, opts = {}) {
   // A phase that records leaves a real sign-off in the real record. A phase
   // with record:false reports success and leaves nothing — BUG-23.
   if (spec.record !== false && ticketPath) {
-    appendSignoff(ticketPath, label, status);
+    appendSignoff(ticketPath, label, status, spec.record_handoff_target);
     // BO-400e-3 fixture repair: a genuine success also flips the agent's OWN
     // frontmatter entry to signed_off, mirroring the real signoff skill's
     // atomic recipe (see flipAgentSignedOff() above). Gated on status === "ok"
     // so a blocker/failed/handoff report never marks the record's own agents
     // map as satisfied.
-    if (status === "ok") flipAgentSignedOff(ticketPath, label);
+    // BO-3000a: opt-in `flips_signed_off` lets a handoff entry flip its own agent too.
+    if (status === "ok" || spec.flips_signed_off === true) flipAgentSignedOff(ticketPath, label);
   }
 
   // BO-3700: a running phase promoting another agent to `needed` in the real
@@ -1036,6 +1169,12 @@ async function agent(prompt, opts = {}) {
     deleteRecord(ticketPath);
   }
 
+  // BO-3000a (review M-2): opt-in. The record stays on disk but the NEXT single
+  // read-back of it reports `readable: false`; every later read-back is normal.
+  if (cfg.unreadable_readback_after_phase === label && ticketPath) {
+    unreadableOnce.add(ticketPath);
+  }
+
   const reply = { status };
   if (spec.tests_written !== undefined) reply.tests_written = spec.tests_written;
   if (spec.red_baseline_verified !== undefined) {
@@ -1045,6 +1184,9 @@ async function agent(prompt, opts = {}) {
   // Passed through only when the scenario sets it, so a handoff spec that omits
   // it reproduces the real defect shape: `status: handoff` with no target field.
   if (spec.handoff_target !== undefined) reply.handoff_target = spec.handoff_target;
+  // BO-3800a-2: the refusal's machine-readable remedy record, passed through
+  // verbatim only when the scenario sets it.
+  if (spec.remedy !== undefined) reply.remedy = spec.remedy;
   return reply;
 }
 
@@ -1129,7 +1271,12 @@ console.log(
     readbacks,
     writes,
     enumerations,
+    declaration_reads: declarationReads,
     plan_replies: planReplies,
+    dirty_reads: dirtyReads,
+    workspace_ensure_calls: workspaceEnsureCalls,
+    routing_calls: routingCalls,
+    timeline,
     logs,
     records,
     result,

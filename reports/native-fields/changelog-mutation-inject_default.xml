@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="18.400" timestamp="2026-10-02T09:12:55.200139+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_legacy_identity_absence_and_presentation_fallbacks" time="0.014"><failure message="AssertionError: assert {'type': 'fix...its': [], ...} == {'type': 'fix...'commits': []}&#10;  &#10;  Omitting 4 identical items, use -vv to show&#10;  Left contains 1 more item:&#10;  {'description': ''}&#10;  Use -v to get more diff">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3062/test_changelog_legacy_identity0')
+
+    def test_changelog_legacy_identity_absence_and_presentation_fallbacks(tmp_path):
+        # covers: KM-400a-3-i
+        # angle: boundary
+        raw = "type: fix\nsummary: Historical summary\npr: null\ncommits: []\n"
+        _write(tmp_path, "changelogs/same.md", raw)
+        _write(tmp_path, "docs/changelog/same.md", "type: ac_authoring\n")
+        records = {r.native_id: r for r in _extract(tmp_path)}
+        assert set(records) == {"changelogs/same.md", "docs/changelog/same.md"}
+        current = records["changelogs/same.md"]
+        assert current.title == "same"
+        assert current.description == "Historical summary"
+&gt;       assert current.metadata == {
+            "type": "fix",
+            "summary": "Historical summary",
+            "pr": None,
+            "commits": [],
+        }
+E       AssertionError: assert {'type': 'fix...its': [], ...} == {'type': 'fix...'commits': []}
+E         
+E         Omitting 4 identical items, use -vv to show
+E         Left contains 1 more item:
+E         {'description': ''}
+E         Use -v to get more diff
+
+tests\knowledge\test_native_changelog_entry.py:82: AssertionError</failure></testcase></testsuite></testsuites>

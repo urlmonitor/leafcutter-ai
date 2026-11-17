@@ -6,15 +6,18 @@
       "properties": {
         "consequences": {
           "default": "",
+          "description": "What happens if this choice is picked, so the human can weigh it.",
           "title": "Consequences",
           "type": "string"
         },
         "id": {
+          "description": "Id the human's answer cites to pick this choice.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
           "title": "Id",
           "type": "string"
         },
         "label": {
+          "description": "The wording shown to the human.",
           "minLength": 1,
           "title": "Label",
           "type": "string"
@@ -22,6 +25,7 @@
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         }
@@ -40,6 +44,7 @@
   "description": "leafcutter.human_question_request.v1.",
   "properties": {
     "choices": {
+      "description": "Answers offered to the human, each with its consequences.",
       "items": {
         "$ref": "#/$defs/Choice"
       },
@@ -56,9 +61,11 @@
         }
       ],
       "default": null,
+      "description": "The decision the question belongs to, so the answer returns to it.",
       "title": "Decision Id"
     },
     "evidence_ids": {
+      "description": "Evidence the question rests on (shown to the human as relevant evidence).",
       "items": {
         "type": "string"
       },
@@ -67,10 +74,12 @@
     },
     "free_text_allowed": {
       "default": false,
+      "description": "Whether the human may answer in their own words.",
       "title": "Free Text Allowed",
       "type": "boolean"
     },
     "question": {
+      "description": "What to ask the human.",
       "minLength": 1,
       "title": "Question",
       "type": "string"
@@ -78,15 +87,18 @@
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     },
     "structured_allowed": {
       "default": false,
+      "description": "Whether the human may answer with an approve-or-edit answer about proposed criteria and options.",
       "title": "Structured Allowed",
       "type": "boolean"
     },
     "subject_ids": {
+      "description": "Ids of the options or criteria the question is about; a structured answer may cite only these.",
       "items": {
         "type": "string"
       },
@@ -95,6 +107,7 @@
     },
     "why_research_cannot_settle": {
       "default": "",
+      "description": "Why evidence cannot settle this, shown so the human understands why they are asked.",
       "title": "Why Research Cannot Settle",
       "type": "string"
     }

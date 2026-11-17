@@ -1,0 +1,99 @@
+id: BO-100d-1a-ii
+components:
+  - build_orchestration
+readiness: approved
+priority: high
+title: "Only a genuine write failure after remediation hard-blocks the drive"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given /build-feature is invoked for an epic with at least one ready ticket,
+  And the install's telemetry location query has printed an absolute stream path
+    (for example /home/dev/proj/debugging/logs/agent_telemetry.jsonl),
+  And the pre-drive feedback-sink reachability probe has already attempted its
+    directory-creation remediation for that path's log directory,
+  When a retried append to the printed path still fails for a reason other than
+    the directory being absent (for example the path exists but is not writable,
+    or is a directory, or the filesystem is read-only),
+  Then the drive is hard-blocked at the pre-dispatch stage,
+  And no ticket-supervisor is dispatched,
+  And the operator message names the absolute path the location query printed
+    and describes the genuine write failure that remediation could not resolve.
+depends_on: [BO-100d-1a]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "After the mkdir-and-reprobe remediation, a still-failing append for any non-directory-absent cause (not-writable / path-is-a-directory / read-only filesystem) must hard-block the drive at the pre-dispatch stage with no dispatch."
+  - "The genuine-failure classification distinguishes these causes from directory-absence; only directory-absence is auto-remediated (BO-100d-1a-i) — everything else hard-blocks here. This classification lives in the single shared probe helper (BO-100d-1a), not duplicated per surface."
+  - "The operator message must name the absolute stream path printed by the telemetry location query and describe the specific genuine failure remediation could not resolve, so the operator can fix it before re-running."
+  - "Handle the probe I/O gracefully per the project error handling policy (CLAUDE.md Rules 1-3): catch the specific OS/IO exceptions, log at WARNING, surface the operator message rather than swallowing — do not let the hard-block path mask the underlying cause."
+  - "Dual-surface parity (the KI-3 lesson): the genuine-write-failure hard-block must fire identically whether the drive enters via build-epic.js or via the build-feature.md prose gate."
+delivers_to: null
+expects_from:
+  ac_id: BO-100d-1a
+  contract: "The shared pre-drive sink probe helper exposing the post-remediation re-probe and its genuine-write-failure classification (not-writable / is-a-directory / read-only FS, distinct from directory-absent), returning the typed blocked result with sink_path + remediation. This L3 specifies the genuine-failure hard-block branch of that helper."
+origin_agent: BrainCandy
+created: 2026-10-16
+amended_by:
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Created as the replacement for BO-100d-1-ii, whose id-derived parent BO-100d-1 is retired, so done-proof skipped its subtree and its work never counted toward BO-100d. Its real home is BO-100d-1a (its depends_on and expects_from already named it), so it is re-homed here by id. criteria, it_requirements, delivers_to, expects_from, doc_links, assigned_agent and estimated_complexity are copied verbatim from BO-100d-1-ii as of 2026-10-16 (the old record had no test fields). The it_requirements bullet still names the old sibling id BO-100d-1-i verbatim; its replacement is BO-100d-1a-i. BO-100d-1-ii is retired with superseded_by [BO-100d-1a-ii]. work_status carried over unchanged; readiness draft pending IT PO review and the user's approval."
+  - by: it-po
+    at: "2026-10-16"
+    reason: "IT PO review. Fixed the stale sibling reference in it_requirements: 'auto-remediated (BO-100d-1-i)' now reads 'auto-remediated (BO-100d-1a-i)' (BO-100d-1-i is retired, superseded_by BO-100d-1a-i). Added test_required: true and a 4-entry behavioral test_spec plus test_rationale: each test runs the real location query against a real temp declaration and drives build-epic.js under the E2 harness, covering a non-writable stream, a stream path that is a directory, a non-writable log directory (the unprivileged stand-in for a read-only filesystem), and that a genuine failure is reported as such and not remediated as directory absence. No KI doc_link was present to re-point. assigned_agent python-coder, estimated_complexity S and expects_from kept. criteria and work_status unchanged."
+  - by: BrainCandy
+    at: "2026-10-16"
+    reason: "BrainCandy approved readiness on 2026-10-16 (relayed via the orchestrating session): 'approve all 13 ACs'. readiness: draft -> approved; criteria and work_status unchanged. Approval given for BO-100d-1-ii, carried to this replacement."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+test_required: true
+test_spec:
+  - name: test_unwritable_stream_hard_blocks_after_remediation
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A temp install whose real declaration's stream file exists in an existing log directory and is made non-writable; the real location query (sink_resolution.py --print-location telemetry) prints its path. build-epic.js runs under the E2 harness; asserts a blocked terminal payload, zero ticket-supervisor / phase dispatches, and an operator message naming the printed absolute path and stating it is not writable. Skips when run as root."
+    must_catch:
+      - "warn-only on a genuine write failure"
+  - name: test_stream_path_that_is_a_directory_hard_blocks
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "The printed stream path is a directory, not a file. The gate blocks with zero dispatches and the message names the printed path and says it is a directory."
+  - name: test_unwritable_log_directory_hard_blocks_as_a_genuine_failure
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "The log directory exists but is mode 0555 and the stream file is absent, the unprivileged stand-in for a read-only filesystem (a test cannot mount one). The gate blocks with zero dispatches and the message describes a write failure on the printed path, not a missing directory. Skips when run as root."
+  - name: test_genuine_failure_is_not_treated_as_directory_absence
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "For each of the three genuine causes above, the shared probe helper run as a real process returns the genuine-failure classification (not the directory-absent one), creates no directory (snapshot of the enduring root unchanged), and its result's sink_path equals the path the location query printed."
+    must_catch:
+      - "classify every append failure as directory-absent and mkdir-retry"
+      - "report the remediation as 'create the log directory' for a permission failure"
+test_rationale: >-
+  The hard block is only proven by a real append failure against the real printed
+  path, observed through build-epic.js's real dispatch behaviour under the E2
+  harness. Permission-based cases skip under root because chmod cannot deny root;
+  a read-only filesystem cannot be mounted by an unprivileged test, so a
+  non-writable log directory stands in for it and exercises the same
+  "exists but cannot be written" classification. The helper-level discrimination
+  test exists because a helper that treats every failure as a missing directory
+  passes the block tests (the retry also fails) while misreporting the cause,
+  which is exactly what the operator message must not do.

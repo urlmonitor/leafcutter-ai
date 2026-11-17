@@ -88,9 +88,7 @@ flowchart TD
 
 ## Skills Used
 
-| Skill | Mode | Condition |
-|-------|------|-----------|
-| `webapp-testing` | conditional | — |
+*No skills declared.*
 ---
 
 ## Configuration

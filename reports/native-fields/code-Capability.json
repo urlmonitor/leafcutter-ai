@@ -1,0 +1,48 @@
+{
+  "kind": "Capability",
+  "status": "reader_implemented_and_verified",
+  "review": "reports/native-fields/review-Capability.json",
+  "module": "knowledge/native_types/capability.py",
+  "test_file": "tests/knowledge/test_native_capability.py",
+  "contract": "extract(root: pathlib.Path) -> list[NativeRecord]",
+  "source": "config/capability_registry.json#/capabilities",
+  "implemented": [
+    "One record for each actual capability entry, preserving source array order and /capabilities/index provenance.",
+    "Exact authored id, name, description, all twenty known schema fields, and unknown nested extension fields are preserved without runtime defaults.",
+    "Disabled, unavailable, fixed, host-handoff and legacy-admitted capabilities remain authored records; runtime routing eligibility never filters extraction.",
+    "Root registry identity, version, comment, schema reference and extensions are independently copied under derived.registry_context; the capabilities array is not duplicated.",
+    "Nested source maps, lists, explicit null, empty containers, authored string dates and pointer-special keys round-trip through the common property serializer.",
+    "Trusted committed Draft7 schema validates all known envelope/entry/admission fields; additional keys are accepted and retained for forward-compatible field exposure.",
+    "Missing historical store returns []; present empty array is valid; malformed JSON, malformed present records, invalid registry identity, duplicate ids and source paths outside the snapshot fail explicitly.",
+    "No snapshot Python, runtime adapter, schema URL, execution binding, decision reference, permission string or legacy registry is executed or followed.",
+    "Components are preserved only when explicitly authored; no inferred component association or runtime registry_origin is added."
+  ],
+  "validation_dependency": "Uses jsonschema already declared in knowledge/requirements-neo4j.txt and config/capability_registry.schema.json resolved from the trusted reader installation, not from the source snapshot.",
+  "verification": {
+    "red": {
+      "tests_failed": 30,
+      "exit_code": 1,
+      "reason": "ModuleNotFoundError before capability.py was created",
+      "receipt": "reports/native-fields/capability-red.xml"
+    },
+    "green": {
+      "tests_passed": 30,
+      "tests_failed": 0,
+      "exit_code": 0,
+      "receipt": "reports/native-fields/capability-green.xml"
+    },
+    "strict_mode": "AC_ENFORCE_STRICT=1",
+    "real_registry_entries_compared": 9,
+    "all_twenty_schema_fields_fixture": true,
+    "lint": "ruff format and ruff check --no-cache passed for both owned Python implementation/test files",
+    "mutation_proofs": {
+      "per_test_alteration_pairs": 32,
+      "all_mutants_caught": true,
+      "all_original_tests_rerun_green_after_restoration": true,
+      "method": "Process-local mutations of the actually imported knowledge.native_types.capability module; no source files changed by the mutation runner.",
+      "receipt": "reports/native-fields/capability-mutations.json",
+      "reproducer": "reports/native-fields/capability_mutation_check.py"
+    }
+  },
+  "integration_boundary": "Shared graph mapping, complete loader reachability, live Neo4j publication and Aura UI verification remain coordinator responsibilities. This report makes no deployed database claim."
+}

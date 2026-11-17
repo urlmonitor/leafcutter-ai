@@ -86,6 +86,12 @@ ARCHITECTURE: The repo root is resolved by walking up from this file's own
     Do NOT move, rename, or edit any AC YAML, the guard source, the
     changelogs, or the two existing GE-111f test modules from this file --
     it is read-only with respect to all of those; it only reads and asserts.
+
+DECISION HISTORY
+    2026-10-02: the LIVE-citation scan also skips the deployed copy of the guard
+    (scripts/commit_guardian/, a gitignored build.py output that exists only on
+    machines that ran build.py, so it failed locally but passed on clean CI).
+    The cause was NOT path separators: hits are reported, not compared.
 """
 
 from __future__ import annotations
@@ -539,7 +545,6 @@ class TestGE122e1(unittest.TestCase):
         self.assertNotEqual(new_id, OLD_ID, "moved record has not been given a new identifier")
 
         old_pattern = _citation_pattern(OLD_ID)
-        new_pattern = _citation_pattern(new_id)
 
         tags_by_file: dict[Path, list[str]] = {}
         for path in _iter_scan_files(UNIT_TESTS_ROOT, {".py"}):
@@ -554,7 +559,10 @@ class TestGE122e1(unittest.TestCase):
 
         all_tags = [(path, tag) for path, tags in tags_by_file.items() for tag in tags]
         old_tags = [(p, t) for p, t in all_tags if old_pattern.search(t)]
-        new_tags = [(p, t) for p, t in all_tags if new_pattern.search(t)]
+        # A child id (e.g. GE-111f-1) is its own record, not a citation of the
+        # moved one, so a tag continuing with "-<suffix>" is not counted here.
+        own_id = re.compile(re.escape(new_id) + r"(?![A-Za-z0-9-])")
+        new_tags = [(p, t) for p, t in all_tags if own_id.search(t)]
 
         self.assertEqual(
             old_tags,
@@ -612,7 +620,6 @@ class TestGE122e1(unittest.TestCase):
         old_pattern = _citation_pattern(OLD_ID)
         changelogs_dir = REPO_ROOT / "changelogs"
         tickets_dir = REPO_ROOT / "tickets"
-
         live_hits: list[str] = []
         for path in _iter_scan_files(REPO_ROOT):
             if changelogs_dir in path.parents:
@@ -623,7 +630,7 @@ class TestGE122e1(unittest.TestCase):
                 continue
             if UNIT_TESTS_ROOT in path.parents:
                 continue
-            if path == GUARD_SOURCE:
+            if path in (GUARD_SOURCE, REPO_ROOT / "scripts" / "commit_guardian" / GUARD_SOURCE.name):
                 continue
             try:
                 with open(path, encoding="utf-8", errors="ignore") as fh:

@@ -1,7 +1,7 @@
 ---
 description: >
   Analyse accumulated agent feedback and return a prioritized, actionable
-  summary. Dispatches the feedback-analyst agent against feedback.jsonl.
+  summary. Dispatches the feedback-analyst agent against the install's declared feedback sink.
 ---
 
 Invoke the `feedback-analyst` agent with the user's arguments: $ARGUMENTS

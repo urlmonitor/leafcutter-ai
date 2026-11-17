@@ -1,0 +1,54 @@
+id: DK-100
+title: "Each new run gathers context before intent classification"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: superseded_by
+superseded_by: [DK-200a-1, DK-200a-1-i, DK-200a-2, DK-200a-4]
+amended_by:
+  - reason: "2026-10-02 BA decomposition: replaced the broad preliminary requirement with focused L2/L3 successors under DK-200; historical criteria and evidence links are retained."
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a newly started kernel task, with or without an explicit output contract,
+  When the kernel begins intake,
+  Then one bounded read-only context enrichment pass completes before intent classification,
+  And its context and honest outcome are checkpointed and traced before intent.assessed,
+  And the classifier consumes the enrichment alongside the original request,
+  And native capability judgments, later repository query hints and host input artifacts retain the context with its provenance and trust boundaries,
+  And an explicit contract still controls output routing,
+  And resuming a human or host interaction reuses that run's context instead of gathering again.
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: specified-by
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+origin_agent: Codex (user-requested context enrichment)
+created: 2026-10-02
+covered_by:
+  - tests/kernel/intent/test_context_enrichment_wiring.py
+implemented_by:
+  - kernel/scheduler/nodes_enrichment.py
+  - kernel/scheduler/graph.py
+  - kernel/intent/classify.py
+  - kernel/intent/step.py
+  - kernel/capabilities/base.py
+  - kernel/capabilities/decision/jev_support.py
+  - kernel/capabilities/research/planning.py
+  - kernel/interaction/packets.py
+change_target: code
+risk_surface: internal
+notes: |
+  Requirements captured before implementation for the user's 2026-10-02 request.
+  Draft records preserve review truth; the user has authorized implementation and evaluation.
+  This scope is one initial pass, not recursive research or a new human approval gate.
+  Implementation verified: 1478 kernel tests and 382 subtests passed (7 skipped),
+  plus 24 focused enrichment tests and 31 subtests, 5 scheduler wiring tests,
+  isolated eval 10/10, paired live enriched labels 5/5 and mutation checks 8/8.
+  Readiness remains draft; execution evidence does not claim persona approval.

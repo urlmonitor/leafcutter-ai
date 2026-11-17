@@ -91,7 +91,20 @@ def _check_derived_indexes(
             stored_cmp = stored
             expected_cmp = expected
         if stored_cmp != expected_cmp:
-            errors.append(f"[index] {key} does not match a fresh rebuild — run generate_product_truth.py")
+            named = _differing_entries(stored_cmp, expected_cmp)
+            detail = f" (differing entries: {', '.join(repr(name) for name in named)})" if named else ""
+            errors.append(f"[index] {key} does not match a fresh rebuild{detail} — run generate_product_truth.py")
+
+
+def _differing_entries(stored: object, expected: object) -> list[str]:
+    """Return the sorted entry keys whose stored value differs from the rebuild (UXP-514-3).
+
+    Names missing and extra entries too, so a triager sees which entries to
+    regenerate rather than a bare "lookup differs". Non-mapping inputs name nothing.
+    """
+    if not isinstance(stored, dict) or not isinstance(expected, dict):
+        return []
+    return sorted(str(k) for k in set(stored) | set(expected) if stored.get(k) != expected.get(k))
 
 
 def _check_index(index: dict, flows: dict, mocks: dict, mockups: dict, errors: list[str]) -> None:

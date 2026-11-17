@@ -6,9 +6,9 @@ priority: high
 title: "The fresh-worktree fallback is idempotent — a re-run creates a distinct recovered worktree, never a collision"
 component: build-orchestration
 level: L3
-status: active
+status: superseded_by
 req_status: draft
-work_status: done
+work_status: todo
 created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
 criteria: |
   Given a fresh-worktree fallback has already created a recovered worktree for the
@@ -35,10 +35,18 @@ expects_from:
   contract: "The fresh-worktree fallback whose re-run idempotency this edge case pins."
 origin_agent: BrainCandy
 created: 2026-07-07
-amended_by: []
-superseded_by: null
-covered_by:
-  - "tests/test_git_recovery.py::TestGitRecoveryRealRepoBehavioral::test_fresh_worktree_fallback_is_idempotent_on_rerun"
+amended_by:
+- reason: superseded-retired-by-bo-4300
+  by: human:user
+  at: 2026-10-21
+  note: >-
+    Retired under the user's decision "re-prove, else retire" (2026-10-21). The fresh-worktree
+    fallback whose re-run idempotency this record pins was removed from
+    templates/scripts/git_recovery.py by BO-4300f-2, together with
+    test_fresh_worktree_fallback_is_idempotent_on_rerun; recovery no longer re-adds a workspace.
+superseded_by:
+- BO-4300f-2
+covered_by: []
 implemented_by:
   - "templates/scripts/git_recovery.py"
 notes: |

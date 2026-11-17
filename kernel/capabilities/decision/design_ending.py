@@ -19,7 +19,9 @@ from kernel.capabilities.decision.assess import Assessment
 from kernel.capabilities.decision.ranking import (
     BUDGET_RESERVE,
     DESIGN_JUDGEMENT,
+    DESIGN_ROUND_DONE,
     NO_PROGRESS,
+    NO_RESEARCH_TARGETS,
     RESEARCH_CAP,
     research_rounds,
 )
@@ -49,6 +51,11 @@ _WHY = {
                  "is not converging, so a human decides.",
     RESEARCH_CAP: "The research-round limit for this decision was reached without a settled "
                   "answer, so a human decides.",
+    NO_RESEARCH_TARGETS: "No research round is due: the options name no open question, cited "
+                         "file or added claim left to look up, so a human decides.",
+    DESIGN_ROUND_DONE: "The one targeted research round on the options' claims already ran and "
+                       "some questions may remain open; further research is not planned, so a "
+                       "human decides.",
     BUDGET_RESERVE: "The Jev call budget (limits.max_jev_calls) cannot fund another research "
                     "round beside the assessment kept in reserve, so this ranking rests on the "
                     "evidence gathered so far and a human decides.",
@@ -165,10 +172,21 @@ def ranking_text(work: Working, ranking: list[OptionRanking]) -> str:
                      f"{r.required_total} passed)" for r in ranking)
 
 
+def condition_suffix(conditions: list[str]) -> str:
+    """Return the rationale suffix naming each condition a human stated, in order ("" if none)."""
+    return "".join(f" Condition stated by the human: {c}" for c in conditions)
+
+
 def choice_rationale(work: Working) -> str:
     """Return the rationale that records the kernel ranking and the human's choice."""
     cont = work.cont
     ranking = cont.design_ranking
+    condition = condition_suffix(cont.conditions)
+    if cont.design_reason == "human_ruling":
+        title = next(o.title for o in work.options if o.id == cont.design_choice_id)
+        return (f"Human ruling: {cont.approved_by or 'human'} chose option "
+                f"[{cont.design_choice_id}] {title} when the kernel could not settle the "
+                f"decision itself.{condition}")
     rank = next((r.rank for r in ranking if r.option_id == cont.design_choice_id), None)
     title = next(o.title for o in work.options if o.id == cont.design_choice_id)
     where = f"kernel rank {rank} of {len(ranking)}" if rank else "not in the kernel ranking"
@@ -176,7 +194,7 @@ def choice_rationale(work: Working) -> str:
             f"judgement, evidence not authority; stopped researching because "
             f"{cont.design_reason or DESIGN_JUDGEMENT} after {research_rounds(work)} research "
             f"round(s)): {ranking_text(work, ranking)}. {cont.approved_by or 'human'} chose "
-            f"option [{cont.design_choice_id}] {title} ({where}).")
+            f"option [{cont.design_choice_id}] {title} ({where}).{condition}")
 
 
 def ranking_assessments(work: Working, cfg: DecisionConfig) -> list[CriterionAssessment]:
@@ -201,6 +219,8 @@ def ranking_assessments(work: Working, cfg: DecisionConfig) -> list[CriterionAss
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-06 [python-coder]: The condition suffix is one helper, `condition_suffix`, shared by
+#   every rationale written after a human stated a condition. (#KernelChoiceWithCondition)
 # - 2026-10-01 [python-coder]: The recorded per-option assessments cite the evidence relevant to
 #   each criterion and option instead of all evidence (round 8 defect e). (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: Criteria are classified only once the decision has evidence beyond

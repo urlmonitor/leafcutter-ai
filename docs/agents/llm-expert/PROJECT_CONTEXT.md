@@ -3,7 +3,7 @@ title: Project Context — llm-expert
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-07-15
+last_updated: 2026-10-15
 components:
 - infrastructure
 related_docs:
@@ -167,7 +167,7 @@ Every file at `templates/skills/<name>/SKILL.md` opens with a YAML frontmatter b
 
 | Field | Type | Purpose |
 |---|---|---|
-| `name` | string | The skill's identifier. Must match the directory name (`templates/skills/<name>/`). Used in agent `skills_used` lists and in `add-skill-to-package` invocations. |
+| `name` | string | The skill's identifier. Must match the directory name (`templates/skills/<name>/`). Used in agent frontmatter `skills:` declarations and in `add-skill-to-package` invocations. |
 | `description` | string | Human-readable summary of when to invoke this skill. Written in imperative voice: "Use when an agent needs to …". Also used by Claude Code to auto-load the skill on matching intent. |
 | `allowed-tools` | comma-separated list | Whitelist of tools the skill code may call when loaded. This is a **capability declaration**, not an enforcement fence — the Claude Code harness does not mechanically block tool calls, but the llm-expert agent must ensure the skill body only calls tools in this list. |
 

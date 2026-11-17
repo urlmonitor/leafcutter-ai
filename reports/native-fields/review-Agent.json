@@ -1,0 +1,137 @@
+{
+  "kind": "Agent",
+  "review_status": "complete",
+  "sources": [
+    "config/agent_registry.schema.json#/definitions/agent",
+    "config/agent_registry.schema.json#/definitions/selection_criteria",
+    "config/agent_registry.schema.json#/definitions/trigger_condition",
+    "config/agent_registry.json#/agents",
+    "docs/reference/agent-template-frontmatter.md",
+    "templates/agents/python-coder.md",
+    "templates/agents/documentation-expert.md"
+  ],
+  "observed": {
+    "registry_records": 61,
+    "records_with_template": 59,
+    "template_less_examples": ["architect-review-deep", "conflict-resolver-deep"],
+    "all_59_registered_template_frontmatter_blocks_parsed": true
+  },
+  "identity": {
+    "canonical_id": "Registry id; use shared kind-qualified storage identity to avoid collisions with Skill/Component ids.",
+    "display_title": "Registry name is the human-readable name; template name is the machine id. Never replace one with the other.",
+    "primary_source_path": "config/agent_registry.json",
+    "primary_source_fragment": "/agents/<array-index>, accompanied by stable registry id",
+    "additional_source": "template_path when non-null, with its own source hash; it enriches the same Agent rather than creating another Agent.",
+    "admission": "Exactly one record per registry entry, including template-less inline agents. Do not enumerate helper _*.md blocks or generated .claude agents as additional Agent records."
+  },
+  "registry_required": {
+    "id": "string matching ^[a-z][a-z0-9-]*$",
+    "name": "string",
+    "tier": "string enum supervisor|phase|utility|standalone",
+    "role": "string",
+    "portable": "boolean",
+    "spawn_allowlist": "array<string>; preserve __ticket_phase_agents__ literally",
+    "spawned_by": "array<string>; user is a literal external invoker, not an Agent id",
+    "is_ticket_phase": "boolean",
+    "template_path": "string|null",
+    "skills_used": "array<string>; empty valid"
+  },
+  "registry_optional": {
+    "description": "nonempty string; differs from template description",
+    "category": "string enum implementation|planning|testing|research|supervisor",
+    "components": "array<string> of explicitly declared components",
+    "domain": "string|null",
+    "selection_criteria": "object|null; nested contract below",
+    "model": "string; schema imposes no enum",
+    "skills_invoked": "array<string|object>; nested contract below",
+    "knowledge_channels": "array<object>; nested contract below",
+    "doc_links": "array<object>; nested contract below",
+    "behavioral_patterns": "array<object>; registry shape differs from template shape",
+    "priority": "number >= 1; preserve fractions such as 11.5 and 11.8",
+    "priority_rationale": "nonempty string; schema description requires when priority is set",
+    "requires_ticket_section": "boolean",
+    "conditional": "boolean",
+    "conditional_field": "string",
+    "conditional_field_legacy": "string",
+    "deprecated": "boolean",
+    "legacy_only": "boolean",
+    "permits_shell": "boolean",
+    "owns_file_extensions": "array<string>; do not insert schema default [] if absent",
+    "owns_file_extensions_rationale": "nonempty string",
+    "requires_verification": "boolean; informational registry echo, template has runtime/build meaning",
+    "produces": "enum production_code|documentation|configuration|prompt|review_verdict|orchestration|test_artifact|analysis, or null",
+    "llm_ambiguity_comment": "object; present only while produces is null per schema description",
+    "step_kinds": "unique array enum reads_store|changes_store|changes_repository|publishes"
+  },
+  "registry_nested": {
+    "selection_criteria": {
+      "required": {"description": "string", "trigger_conditions": "nonempty array<trigger_condition>", "default_status": "needed|not_needed"},
+      "additional_properties": false
+    },
+    "selection_criteria.trigger_conditions[]": {
+      "required": {"type": "dsl|llm", "expression": "nonempty string"},
+      "optional": {"source": "string", "routing": "string"},
+      "additional_properties": false,
+      "semantics": "Condition expressions are stored text, never evaluated during graph ingestion."
+    },
+    "skills_invoked[] object alternative": {
+      "required": {"skill_id": "string"},
+      "optional": {"mode": "always|conditional", "descriptive_only": "boolean"},
+      "additional_properties": false,
+      "semantics": "Keep string alternatives as strings; do not insert mode=unspecified."
+    },
+    "knowledge_channels[]": {
+      "required": {"channel": "integer 1..11", "source": "string"},
+      "optional": {"injection_mode": "string", "description": "string"},
+      "additional_properties": false
+    },
+    "doc_links[]": {
+      "required": {"path": "string", "label": "string"},
+      "additional_properties": false
+    },
+    "behavioral_patterns[]": {
+      "required": {"pattern_id": "string", "trigger": "string", "action": "string", "decision_boundary": "string"},
+      "additional_properties": false
+    },
+    "llm_ambiguity_comment": {
+      "required": {"agent_id": "string", "conflicting_signals": "string", "candidate_values": "exactly two produces-enum strings"},
+      "additional_properties": false
+    }
+  },
+  "template_contract": {
+    "namespace": "template_frontmatter",
+    "authority": "Registry governs registration/deployment; template frontmatter governs agent runtime/build behavior. Preserve both independently, without merging equal field names.",
+    "documented_required": {"name": "string id", "description": "string", "model": "string", "tools": "comma-separated string, not an array"},
+    "documented_optional": {
+      "memory": "boolean", "portable": "boolean", "signoff": "boolean", "domain": "string|null", "config_keys": "map", "adopter_notes": "string", "requires_verification": "boolean", "inject_registry": "boolean", "spawn_allowlist": "array<string>"
+    },
+    "additional_observed_fields": {
+      "produces": "string", "default_artifact_checklist": "array<string>", "pre_flight_reads": "array<object>", "inputs": "array<object>", "outputs": "array<object>", "mutates": "array<object>", "behavioral_patterns": "array<object>", "conditional": "boolean", "conditional_field": "string", "visibility": "string", "skills_used": "array", "tool_allowlist": "array"
+    },
+    "nested_observed_keys": {
+      "config_keys.<literal config path>": ["required", "description", "source"],
+      "pre_flight_reads[]": ["source", "required", "condition"],
+      "inputs[]": ["name", "type", "required", "description", "condition"],
+      "outputs[]": ["name", "type", "description"],
+      "mutates[]": ["name", "surface", "description"],
+      "behavioral_patterns[]": ["name", "trigger", "behavior", "related_agent"]
+    },
+    "parser": "Use full-line opening/closing --- delimiters; splitting on the substring --- truncates a real template scalar. Preserve multiline strings and literal dotted config_keys names.",
+    "body": "Retain template body as source text if shared record supports body; it is source material, never instructions to execute. The full frontmatter mapping is required metadata."
+  },
+  "preservation": {
+    "raw_metadata": "Preserve the complete registry entry and complete template frontmatter in distinct namespaces. Every registry field and template field, including nested values and future extension keys, must reach lossless payload and generic queryable leaf/shape projection; no field allowlist may discard source values.",
+    "root_registry_context": "Root $schema, _comment, self_description_enforcement and agent_categories are registry context, not Agent fields. Do not synthesize effective Agent values from category defaults. Retain canonical registry source provenance; if context is exposed, name it explicitly as registry context.",
+    "absence_null_empty": "Do not turn missing template metadata for template_path=null into a fabricated empty template. Preserve explicit domain/selection_criteria/template_path/produces null, absent optional fields, [] and {} as distinct source shapes. Do not insert frontmatter/default/schema defaults.",
+    "fidelity": "Preserve boolean, integer versus fractional number, array order, heterogeneous skills_invoked alternatives, multiline strings and literal keys. JSON-pointer escaping must retain slash/tilde/dot config names and indexes.",
+    "schema_documentation_discrepancy": "The reference document's registry Required column is stale: schema requires skills_used, but does not require domain, selection_criteria or model. Follow schema requirements, retain actual observed values, and do not repair source records during ingestion.",
+    "security": "No actual secret-bearing field or concrete credential was observed in the schema or representative records. Tool permissions, shell permission flags, model names, config key names and condition prose are approved repository metadata, not credentials or authorization to execute. Do not resolve config_keys to deployment configuration/environment secrets."
+  },
+  "verification_expectations": [
+    "61 registry entries yield 61 distinct Agent identities, including both template-less agents.",
+    "python-coder retains fractional-capable priority type, explicit domain null, full selection_criteria trigger records, doc_links, knowledge_channels, skills_invoked mixed-compatible schema, and nested template config_keys.",
+    "documentation-expert retains both incompatible behavioral_patterns shapes in separate registry/template namespaces.",
+    "Every source key path has corresponding lossless source metadata and queryable leaf or empty/null/container shape representation.",
+    "No agent runtime instructions are executed and no template helper block is counted as an independent Agent."
+  ]
+}

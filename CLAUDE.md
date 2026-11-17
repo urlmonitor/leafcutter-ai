@@ -88,7 +88,7 @@ Consult it for project-specific terms when reading code or docs.
 - **To populate from scratch**: run `/glossary-bootstrap` (once after initial install
   or after a major codebase merge).
 - **Ongoing additions**: the `check-glossary-coverage` pre-commit hook detects novel
-  terms in staged files and dispatches the `glossary-triage` agent automatically.
+  terms in staged files and reports them (it cannot dispatch agents); triage via `glossary-triage` + `glossary_bootstrap.py --apply-decisions`.
 - **Do NOT hand-edit to add entries** — always use the triage flow so the blacklist
   stays consistent. Manual edits are only for correcting existing entries.
 
@@ -145,6 +145,7 @@ Current outcome: Stable MVP that installs into any project and helps the user bu
 | Agent Knowledge Plane | [docs/architecture/agent_knowledge_plane.md](docs/architecture/agent_knowledge_plane.md) | All 11 channels through which agents receive context at invocation time (pre-execution knowledge injection). |
 | Agent Knowledge System | [docs/architecture/agent_knowledge_system.md](docs/architecture/agent_knowledge_system.md) | How agents classify, route, and persist learnings after task completion (post-execution knowledge capture). |
 | Agent Delivery Workflows | [docs/architecture/agent_delivery_workflows.md](docs/architecture/agent_delivery_workflows.md) | Supervisor dispatch topology, ticket batching, and blocker adjudication flows. |
+| Persona discovery before feature planning | [ADR-064](docs/architecture/adrs/ADR-064-persona-discovery-before-feature-planning.md) | Required consumer-role interviews and traceable usage evidence before new or materially changed agent-facing AC design; distinguishes accepted policy from pending Jev enforcement. |
 | Knowledge Query | [templates/skills/knowledge-query/SKILL.md](templates/skills/knowledge-query/SKILL.md) | Cross-surface knowledge graph query skill. Invokes `scripts/knowledge_query.py` to search nodes across all paths.json surfaces (agents, tickets, docs, skills, ADRs, hooks) with keyword filter, surface filter, JSON export, and edge list output. |
 | Knowledge Graph Visualization | [scripts/visualise_knowledge_graph.py](scripts/visualise_knowledge_graph.py) | Generates a self-contained D3.js force-directed HTML graph from all knowledge surfaces. Run `python scripts/visualise_knowledge_graph.py --no-open` to write to `/tmp/leafcutter_knowledge_graph.html`; omit `--no-open` to open in the default browser. |
 
@@ -290,13 +291,44 @@ not whether it was red.
 
 ### New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest
 
-When a commit-guardian hook or a CI gate imports a module, that module MUST be added to
-the build deploy list (`build_ac_store` `deploy_map` in `scripts/build_phases.py`, or the
-equivalent phase for its directory). The hook runs from the **deployed** layout, not the
-source tree, so a dependency that is not deployed raises `ModuleNotFoundError` at hook
-runtime. Once the gate is a **required** status check, that crash blocks **every** merge.
-Verify by running the deployed hook (or `build.py` then the hook) — not just the unit tests,
-which import from the source tree and mask the gap.
+A dependency of a commit-guardian hook or a CI gate is any file the guardrail reads in
+order to do its job, not only the modules it imports. Schemas, type vocabularies,
+registries and data tables count exactly as imported modules do. Every such file MUST be
+added to the build deploy list (`build_ac_store` `deploy_map` in `scripts/build_phases.py`,
+or the equivalent phase for its directory). Do not decide scope by asking whether a missing
+file would raise an import error: a configuration JSON never does.
+
+The hook runs from the **deployed** layout, not the source tree, and a dependency that is
+not deployed fails there in one of two ways:
+
+- **A missing module** raises `ModuleNotFoundError` at hook runtime.
+- **A missing data file** raises `FileNotFoundError` naming a path that the reader resolved
+  to and that does not exist, or, worse, the reader falls back silently to a narrower
+  built-in default and the guardrail enforces less than it claims, with no error at all.
+
+Once the gate is a **required** status check, that crash blocks **every** merge, and the
+silent fallback weakens it unnoticed.
+
+Verify by running the guardrail from an install that does not contain the package's own
+source tree, such as a consumer layout produced by `build.py --target-dir <consumer root>`.
+Running it from the package workspace cannot show the gap, because the workspace source
+tree contains every module and every config file by construction, so the same check
+passes there whether or not the file ships. The unit tests import from the source tree and
+mask the gap for the same reason.
+
+Worked example, a non-code file: `config/doc_types.json` is the type vocabulary read by the
+document-frontmatter guardrail, and `config/ac_store_schema.json` is the schema read by the
+AC-schema guardrail. Neither is a module, and both were absent from a deployed output root
+on 2026-08-18 while the build stayed green.
+
+The mechanism that enforces this is the closure guard, not memory of this rule. Per
+BP-900g-8 and BP-900g-8-ii, `compute_intra_package_closure` in
+`scripts/build_referential_integrity.py` derives from the code the modules a deployed
+script imports and the non-code files it reads, and `_check_intra_package_closure_guard`
+in `scripts/build.py` fails the build, naming the file, the script that needs it and the
+deploy phase that would have to carry it, when that set is not in the deploy manifest. Still
+declare the dependency in the deploy list: the guard checks the declaration, it does not
+replace it.
 
 **Why this matters:** `done_proof.py` (backing the `check_done_proof` hook and the required
 CI done-proof gate) was created in `scripts/ac_store/` but omitted from `build_ac_store`'s
@@ -547,20 +579,50 @@ User, you cannot access this content (createPullRequest)".
 
 ### Feedback sink reachable
 
-**What to check:** Verify that `debugging/logs/agent_telemetry.jsonl` (or the configured
-remote endpoint, if any) is writable before the drive begins.
+**What to check:** Before the drive begins, check that the install declares a telemetry
+stream and a feedback sink, and that they can be written. Both live directly under one
+durable `operational_log_root` recorded at build time in
+`.leafcutter/config/knowledge_sink.json`, which outlives the worktree (ADR-069;
+[feedback-lifecycle.md](docs/architecture/feedback-lifecycle.md#where-every-log-is-kept--one-declared-log-root-adr-069)).
+The check is **read-only**: it appends nothing and creates nothing.
 
 ```bash
-# Quick writability probe — should exit 0 and append one line
-echo '{"probe":"pre-drive-check"}' >> debugging/logs/agent_telemetry.jsonl
+# Each prints one absolute path, or nothing on stdout plus an ERROR on stderr (exit 1)
+python3 <worktree-root>/.leafcutter/scripts/knowledge/sink_resolution.py --print-location telemetry
+python3 <worktree-root>/.leafcutter/scripts/knowledge/sink_resolution.py --print-location feedback
+
+# Then check the nearest existing directory on the way to the printed file (exit 0 = writable)
+test -w <nearest-existing-directory>
 ```
 
-If the command exits non-zero, the sink is unreachable — fix before invoking `/build-feature`.
+Find `<nearest-existing-directory>` the way the probe in `building-epics` §1.0 and
+`epic-supervisor` check 7 does. Start at the printed file's directory (the log directory). If
+it does not exist yet, step up one directory at a time, stopping at the enduring root: the log
+directory's parent, or the project above it when that parent is `debugging`. A missing log
+directory under a live enduring root is fine. It is a fresh install, and the first write
+creates it. The enduring root itself must exist. If it does not, the declaration is stale and
+the check fails.
 
-**If the check fails:** Do not start the drive. The most common causes are:
-- The `debugging/logs/` directory does not exist yet (`mkdir -p debugging/logs/`).
-- A remote endpoint (future) is down — wait for it to recover or disable remote logging.
-- A permissions issue on WSL2 NTFS mounts — remount or use a native Linux path.
+Treat empty output as a failure, even with exit 0. A deployed `sink_resolution.py` that is
+older than INF-500d-4-iii has no `--print-location` and prints nothing.
+
+**If the check fails:** Do not start the drive. The causes:
+- **No usable declaration.** The file is absent, a key is missing, or a stream is not
+  directly under an absolute `operational_log_root`. A `--no-log-root` build records an empty
+  declaration, so it lands here too. Writers refuse rather than write into the worktree.
+  `submit_feedback.py` prints `destination could not be written`, exits 1, and agents record
+  `(submit-failed)`. `emit_event.py` warns and drops the event. Fix: ask the workspace maker to (re)build the workspace, see
+  docs/how-to/get-a-workspace.md. The maker passes the project install's recorded root as
+  `--log-root` (or `--no-log-root` with a warning). A bare `build.py --target-dir <worktree>` without `--log-root` declares the
+  worktree's own, disposable root.
+- **The enduring root is gone** (the project was moved or deleted after the build). Writers
+  refuse as stale and create nothing. Fix: rebuild at the install's current location.
+- **A permissions issue on WSL2 NTFS mounts.** Remount, or use a native Linux path.
+
+Since PR #1262, the BO-100d probe ACs probe the location printed by the location query
+above, not a relative path. They are not built yet, so no pre-drive gate runs this check today
+(resolved
+[KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path](docs/known-issues/build-orchestration/resolved/resolved-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md)).
 
 **Why this matters:** During a past epic drive, the sink was unreachable for the entire
 run. 23 `submit-failed` events occurred without detection — the drive completed but zero
@@ -577,67 +639,39 @@ ls <worktree-root>/.leafcutter/config/feedback_categories.yaml
 
 If the command fails (`No such file or directory`), the file is missing.
 
-Fix: **do not** reach for `python scripts/build.py --target-dir <workspace-root>` here. That
-command is the subject of KI-BP-016 (severity high, filed the same day this line was added):
-when `docs_root` points into a subdirectory — as it does in this workspace, where
-`.claude/skills_config.json` sets `docs_root: "leafcutter-ai/docs/"` — the doc-index phase
-scans `<target_root>/docs`, finds nothing, and overwrites the tracked `docs/INDEX.md` with a
-nine-section `No docs found.` stub. It also deploys a worktree's unmerged templates over the
-shared `.leafcutter` install tree, which is a second and quieter way to lose work.
+Fix: rebuild through the workspace maker (see the section below). When a worktree's
+`.leafcutter` is a symlink, a build deploys the worktree's unmerged templates over the
+shared install tree. After any build, run `git status` and check `docs/INDEX.md` before
+staging. KI-BP-016, now resolved, used to overwrite that file.
 
-Prefer the symlink instead — point the worktree's `.leafcutter` at the main tree's, alongside
-the `.pre-commit-config.yaml` fix in the section below. If you do run the build, run
+Do not link it by hand. Ask the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) for the workspace again; it rebuilds the workspace's own install
+with an explicit `--target-dir`. If you do run the build, run
 `git status` immediately afterwards and look at `docs/INDEX.md` before staging anything: a
 `git add -A` after an affected build silently commits a ~175-line deletion of the very index
 this file points agents at for doc discovery.
 
-Caveat on the symlink, so it is chosen with eyes open: a symlinked `scripts/feedback` makes
-`submit_feedback.py` resolve `__file__` through the link, so its walk-up for `.claude/` lands
-in the **install tree** and feedback is written to the install tree's
-`debugging/logs/feedback.jsonl` rather than the worktree's. See KI-BP-017 and KI-FC-001 — the
-sink still works, it is just not where you will look for it.
+The old symlink caveat no longer applies. It said that through a symlinked `.leafcutter`,
+feedback landed in the install tree's own sink. `submit_feedback.py` no longer walks up for
+`.claude/`. Through the symlink it reads the main install's declaration, which names the
+same durable root. INF-500d-4 removed the cause, and KI-FC-001 was resolved by PR #1169.
 
 **The path above was wrong in this file until 2026-08-25** — it read `.leafcutter/feedback_categories.yaml`, one directory too high. That path has never existed, so the documented check reported a missing file on every worktree including correctly-provisioned ones, and a real absence was indistinguishable from the check's own error. Confirmed during the GE-120 epic drive: the deployed copy was present at `.leafcutter/config/feedback_categories.yaml` and feedback entries were landing in `debugging/logs/feedback.jsonl` while the documented check said the file was absent. A `(submit-failed)` seen in that drive had a different cause and is tracked separately in the known-issues registers.
 (Source: EPIC-ComputedQualityGates FP-5, 2026-07-07; path corrected 2026-08-25.)
 
-### Worktree pre-commit config (MANDATORY for worktree-based drives)
+### Workspace pre-commit config (run the maker)
 
-Worktrees do not inherit `.pre-commit-config.yaml` from the main working tree.
-It is a `.leafcutter` symlink created by `install_shims` in the project root only —
-a fresh worktree created from `origin/main` has neither the symlink nor a populated
-`.leafcutter/`. If the worktree root lacks it, ALL package hooks are silently skipped
-for the entire drive (`git commit` runs with `PRE_COMMIT_ALLOW_NO_CONFIG=1`).
-
-**Check:**
-```bash
-ls <worktree-root>/.pre-commit-config.yaml 2>/dev/null || ls <worktree-root>/.leafcutter 2>/dev/null
-```
-
-**Fix (if absent):**
-```bash
-# Option A — symlink (preferred, requires native Linux FS):
-ln -s <main-tree-root>/.leafcutter <worktree-root>/.leafcutter
-
-# Option B — copy (for NTFS/WSL2 where symlinks are restricted):
-cp <main-tree-root>/.pre-commit-config.yaml <worktree-root>/.pre-commit-config.yaml
-```
+A workspace has its own install and its own `.pre-commit-config.yaml`. The workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`)
+makes the workspace and builds both. If hooks look inactive in a workspace
+(all package hooks silently skipped, commits running with `PRE_COMMIT_ALLOW_NO_CONFIG=1`),
+run the maker again for the same work and read its answer; asking again is always safe and
+finishes a half-made workspace in place. Never link, copy or install config into a workspace
+by hand.
 
 **Why this matters:** During EPIC-AcPipelineDeployGaps (2026-06-17), all nine package
 hooks were silently skipped for the entire drive. A post-drive diagnostic found 14
 would-have-blocked findings (7 `check-feedback-id` + 7 `check-description-field`) that
 required a dedicated fix commit after merge. If you cannot establish the config, run the
 package hooks manually against the branch diff before merge.
-(Permanent fix tracked in TICKET-20260617-Worktree_Precommit_Bootstrap.md)
-
-**Latent hazard — `.security-allowlist` resolves via the symlink target, not the worktree
-root.** The `check-secrets` hook computes its project root from `__file__` of the *resolved*
-`.leafcutter` symlink target (under the workspace parent, e.g.
-`/home/henzeh/projects/leafcutter/.leafcutter/`), so it reads the allowlist from the
-**workspace-root** `.security-allowlist`, not the worktree's own copy. When you add a
-suppression for a worktree-local false positive, add it to the workspace-root
-`.security-allowlist` (or duplicate it to both) — a suppression placed only in the
-worktree's `.security-allowlist` is silently ignored when the hook runs via the symlink path.
-(Observed in EPIC-AcPatternEnforcementIsMechanically, 2026-06-18.)
 
 ### Security Allowlist — Use Glob Patterns for Test Files
 
@@ -649,15 +683,15 @@ Instead, use a single glob entry:
 ENTROPY_HIGH:<path>:*
 ```
 
-This is supported by `scan_secrets.py _is_suppressed` (checks `lineno == "*"`). Add the glob to **BOTH** the worktree-root and workspace-root `.security-allowlist` per the dual-update rule (the `check-secrets` hook resolves the allowlist from the workspace-root symlink target, not the worktree's own copy — a suppression placed only in the worktree's `.security-allowlist` is silently ignored).
+This is supported by `scan_secrets.py _is_suppressed` (checks `lineno == "*"`). Add the glob to the `.security-allowlist` of the workspace you are working in; the `check-secrets` hook reads that workspace's own copy.
 
 (Source: EPIC-ComputedQualityGates ticket 10 AC-5, 2026-07-07.)
 
-### Land the scaffold commit on origin/main before creating the epic worktree
+### Land the scaffold commit on origin/main before asking for the epic workspace
 
 After running `/create-epic`, confirm the scaffold commit (Master_Plan.md + sub-ticket
-stubs) is reachable from `origin/main` before calling `worktree-agent` to create the epic
-worktree.
+stubs) is reachable from `origin/main` before asking the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) for the epic
+workspace.
 
 ```bash
 # The scaffold files must be reachable from origin/main (empty output = nothing missing):
@@ -678,12 +712,13 @@ gh pr create --repo <org>/<repo> --base main --head scaffold/EPIC-<name> \
   --title "chore: scaffold EPIC-<name>" --body "..."
 gh pr merge <N> --squash --delete-branch
 
-# 3. Verify the scaffold is on origin/main before creating the epic worktree:
+# 3. Verify the scaffold is on origin/main before asking the workspace maker
+#    (scripts/worktree.py, see docs/how-to/get-a-workspace.md) for the epic workspace:
 git -C <repo> fetch origin
 git -C <repo> ls-tree -r origin/main --name-only tickets/00_inbox/epics/EPIC-<name>/
 ```
 
-**If you skip this:** the epic worktree (created from `origin/main`) diverges at a stale
+**If you skip this:** the epic workspace (based on `origin/main`) diverges at a stale
 point — the scaffold files are unreachable inside it and ticket agents cannot read them
 until the scaffold commit is cherry-picked onto the epic branch. Worse, when the scaffold
 later reaches `origin/main` independently, the epic PR hits an add/add merge conflict on

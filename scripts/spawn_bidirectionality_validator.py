@@ -145,6 +145,13 @@ def _check_spawned_by_has_matching_allowlist(
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-21 [python-coder/AR-400f-1]: Deleted warn_redundant_phase_agents() (it printed
+#   a [WARNING] over the de-duplicated registry copy). The check is now
+#   agent_spawn_declaration.redundancy_findings(), a returned error over the RAW frontmatter
+#   list, called from check_skill_refs._own_declarations. (#TICKETLESS reason=ar-400f-1)
+# - 2026-10-09 [python-coder/AR-200b-2]: Moved _warn_redundant_phase_agents()
+#   here from registry_validator.py (pure move, renamed warn_redundant_phase_agents)
+#   to offset the skill-tool-grant wiring added there; the file may not grow.
 # - 2026-09-28 15:00 [python-coder]: Initial creation. Pure move (no
 #   behaviour change) of _check_spawn_bidirectionality(),
 #   _check_allowlist_has_matching_spawned_by(), and

@@ -1,0 +1,168 @@
+id: GE-128a-2
+title: "Adding one more undeclared test to a file that already has some is refused; editing that file any other way is allowed"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - testing_quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Scenario 1 - the count grows by one: refused
+  Given a tracked test file that, before the change, holds 12 test functions of
+    which 7 declare no requirement,
+  And the test-declaration check is in error mode,
+  And a change is staged that adds one new test function to that file, test_new,
+    which declares no requirement, and changes nothing else in the file,
+  When the author performs an ordinary commit,
+  Then the commit does not complete,
+  And the outcome names the file, states that it held 7 undeclared tests before
+    the change and holds 8 after it,
+  And the outcome names test_new as the test that has no declaration.
+
+  Scenario 2 - the same file, edited without adding an undeclared test: allowed
+  Given the same file as it stood before the change in Scenario 1 (12 test
+    functions, 7 undeclared),
+  And the test-declaration check is in error mode,
+  And a change is staged that edits the body of one of the 7 undeclared tests and
+    adds a helper function that is not a test, leaving 7 undeclared tests,
+  When the author performs an ordinary commit,
+  Then the commit completes,
+  And the file is not refused for the 7 undeclared tests it still holds.
+
+  Scenario 3 - both arms in one run
+  Given the changes from Scenario 1 and Scenario 2 are evaluated by the same
+    check build in the same run, each against the file as it stood before it,
+  When both verdicts are read,
+  Then the Scenario 1 change is refused and the Scenario 2 change is allowed,
+  So that a check that refuses everything, and a check that allows everything,
+    each fail this criterion.
+depends_on:
+  - GE-128a
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-128-tests-declare-what-they-prove/GE-128a.yaml
+    relationship: parent
+    status: exists
+    relevance: >-
+      Parent L1. Its notes name this pair as the MANDATORY NEGATIVE ARM: one
+      further undeclared test refused, paired in the same run with the same file
+      edited any other way, allowed. Either arm alone passes on a stuck answer.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The same per-file before/after ratchet for file length, already built with a
+      shared helper. Reuse candidate for the comparison; the counted quantity here
+      is undeclared test functions, not lines.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2200-adoption-floor/ACD-2200b.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      The generic grandfather-and-refuse-new policy this is one instance of. Not
+      restated here.
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-5.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      Owns what counts as a declaration. The count here consumes that recogniser
+      and does not define recognition.
+  - path: templates/scripts/commit_guardian/check_test_ac_tags.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The 'before' count is the undeclared count of the same file at the commit's parent (HEAD), computed by the SAME recogniser that computes the 'after' count from the staged content; both counts must come from one code path so a recogniser change cannot manufacture an apparent increase (TQ-100b-5 owns recognition; consume it, do not redefine it)."
+  - "Reuse the per-file before/after scalar ratchet helper that GE-127b shipped for file length rather than growing a second comparison implementation; the counted quantity here is undeclared test functions per file."
+  - "The refusal output must name the file, the before count, the after count and every test function that is undeclared in the staged content but not undeclared at HEAD, so the author can act without re-running anything."
+  - "A file with no version at HEAD is out of scope for this AC: it must not be judged as 'previous count zero' (GE-128b decides that case)."
+  - "The verdict must be computed per file; one file's decrease must not offset another file's increase in the same commit."
+  - "Read the staged blob and the HEAD blob through git; handle the git subprocess I/O per the project error handling policy (CLAUDE.md Rules 1-3) and fail closed with a clear message when the HEAD version cannot be read for a file that is tracked."
+  - "Edit the tracked template under templates/scripts/commit_guardian/ only; the deployed .leafcutter/ copy is a build output verified via build.py."
+delivers_to:
+  agent: python-coder
+  contract: "Per-file ratchet verdict consumed by GE-128a-4's mode handling: for each staged tracked test file, { path: str, before: int, after: int, new_undeclared: list[str], verdict: 'refuse' | 'allow' }. In error mode a 'refuse' fails the hook (non-zero exit); in warning mode it is reported and the hook exits 0."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-16
+amended_by:
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Authored as a live child of GE-128a, whose only child GE-128a-1 is retired (superseded_by TQ-100b-4-iii), which left the L1 with nothing to derive done from (KI-ACS-016 resolution, 'Not done here'). Specifies the growth arm of the per-file ratchet and the mandatory paired negative arm from GE-128a's notes. origin_agent BrainCandy per the requesting user's instruction."
+  - by: it-po
+    at: "2026-10-16"
+    reason: "IT PO enrichment. Set estimated_complexity M; added seven it_requirements (one recogniser for before and after, reuse the GE-127b per-file ratchet helper, refusal names file, counts and new tests, no-previous-version left to GE-128b, per-file verdict with no cross-file offset, git I/O per the error policy, template-only edit); added delivers_to (per-file verdict shape consumed by GE-128a-4's mode handling); added test_required: true and a 5-entry behavioral test_spec plus test_rationale. Every test runs the real hook over a real temp git repository, and one drives a real git commit. assigned_agent python-coder kept. criteria and work_status unchanged."
+  - by: BrainCandy
+    at: "2026-10-16"
+    reason: "BrainCandy approved readiness on 2026-10-16 (relayed via the orchestrating session): 'approve all 13 ACs'. readiness: draft -> approved; criteria and work_status unchanged."
+superseded_by: null
+covered_by:
+  - GE-128a-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_one_more_undeclared_test_is_refused_with_counts_and_name
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Scenario 1. A temp git repo commits a test file with 12 test functions, 7 undeclared; the change adds undeclared test_new and is staged. The real hook CLI (templates/scripts/commit_guardian/check_test_ac_tags.py) runs over the staged file with the mode forced to error; asserts non-zero exit and output naming the file path, the before count 7, the after count 8 and test_new."
+    must_catch:
+      - "gate disabled or allowing everything"
+      - "compare the after count against zero instead of the file's previous count"
+  - name: test_same_file_edited_without_new_undeclared_test_is_allowed
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Scenario 2. Same committed file; the staged change edits the body of one undeclared test and adds a non-test helper, leaving 7 undeclared. The real hook in error mode exits 0 and its output does not list any of the 7 existing undeclared tests as a violation."
+    must_catch:
+      - "flat rule that refuses any file still holding an undeclared test"
+  - name: test_both_arms_in_one_run_refuse_growth_and_allow_the_edit
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Scenario 3. In one test process, the Scenario 1 and Scenario 2 changes are each staged in their own copy of the same committed repo and judged by the same hook build: asserts exactly one refusal (Scenario 1) and one allow (Scenario 2). A refuse-everything or allow-everything hook fails this test."
+    must_catch:
+      - "refuse everything"
+      - "allow everything"
+  - name: test_real_git_commit_is_refused_and_head_is_unchanged
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "The temp repo wires the hook as its pre-commit hook in error mode, the Scenario 1 change is staged and a real `git commit` is run: asserts the commit fails and HEAD still points at the pre-change commit; then the Scenario 2 change is committed and HEAD advances."
+  - name: test_one_files_decrease_does_not_offset_another_files_increase
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "One commit stages file A going 5 -> 6 undeclared and file B going 5 -> 3. The real hook in error mode refuses and names A only; B is not reported."
+    must_catch:
+      - "sum the undeclared count across all staged files"
+test_rationale: >-
+  The ratchet compares a file against its own previous version, which only exists
+  in a real git history, so every test builds a real temp repository and runs the
+  real hook CLI over the real staged file, with the mode forced to error so a
+  refusal is visible as an exit code. The parent L1's notes make the paired
+  negative arm mandatory and say to prove it by mutation, not by grep: the
+  both-arms test fails a hook stuck on either answer, and the must_catch entries
+  name the wrong versions that each positive test alone would let through. One
+  test drives a real git commit to prove the verdict is reached through the commit
+  path, not only through a direct CLI call. The illustrative counts (12 and 7) are
+  fixture values; the per-file offset test pins the per-file grain the L1
+  specifies.
+notes: |
+  The counts (12 functions, 7 undeclared) are illustrative fixture values; any file
+  with at least one undeclared test before the change exercises the same rule.
+  Whether a file with NO previous version is judged at all, and against what, is
+  GE-128b's subject and is deliberately not decided here: a scenario that treats
+  "no previous version" as "previous count of zero" would make GE-128b's decision
+  by accident.

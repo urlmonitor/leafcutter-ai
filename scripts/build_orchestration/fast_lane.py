@@ -87,7 +87,7 @@ ARCHITECTURE: select_batch reuses scan_ac_store filter/sort helpers so readiness
     would still "pass" against the real implementation, not the intended
     stub). Every OTHER name each of these two functions calls as a bare
     global (_build_id_index, _drain_cycles, _is_leaf, _walk_ac_yamls,
-    derive_parent_id, _topo_order_build_set, _scan_test_root_for_covers_tags,
+    _is_structural_parent, _topo_order_build_set, _scan_test_root_for_covers_tags,
     _resolve_git_baseline_context, _partition_newly_added,
     _classify_newly_added, _report_preexisting, _red_baseline_verdict,
     _RedBaselineGitError) is NOT patched via "fast_lane.<name>" anywhere in
@@ -115,7 +115,6 @@ from _fl_common import (
     _run_pytest_and_parse_with_kind,
     _scan_test_root_for_covers_tags,
     _walk_ac_yamls,
-    derive_parent_id,
     traverse_ac_tree,
     verify_done_eligible,
 )
@@ -134,14 +133,16 @@ from _fl_red_baseline_support import (
     _classify_declared_reds,
     _classify_newly_added,
     _declared_names_preflight,
-    _detect_ambiguous_tag_identities,
+    _find_ambiguous_tags,
     _partition_newly_added,
     _red_baseline_verdict,
+    _interpreter_unusable_verdict,
     _report_preexisting,
     _resolve_git_baseline_context,
 )
 from _fl_heavy_lane_gate import heavy_lane_gate  # noqa: F401 — re-exported, used by main()
-from _fl_selection import _topo_order_build_set, select_batch
+from project_python import project_import_refusal, resolve_project_python  # TQ-500f-3-vi
+from _fl_selection import _is_structural_parent, _topo_order_build_set, select_batch
 
 # ---------------------------------------------------------------------------
 # Public API — resolve_connected_build_set and verify_red_baseline remain
@@ -182,9 +183,12 @@ def resolve_connected_build_set(
         ac_id: The target AC id to resolve the connected set for.
         ac_root: Root directory of the AC YAML store.
         exclude_structural_parent: When ``True``, any ``depends_on`` entry that
-            equals ``derive_parent_id(node)`` (i.e. the structural parent of the
-            node being expanded) is skipped and NOT added to the build set during
-            the transitive closure walk.  Genuine (non-structural-parent)
+            is the structural parent of the node being expanded is skipped and
+            NOT added to the build set during the transitive closure walk. A dep
+            is the structural parent when it equals ``derive_parent_id(node)``
+            (the id shape shows the link) or when its own ``covered_by`` lists
+            the node (the recorded edge, for ids whose shape does not show it;
+            BO-2600b-4). The rule applies at every node the walk reaches.  Genuine (non-structural-parent)
             dependencies are still walked normally.  The subtree union step
             (``traverse_ac_tree``) is unaffected — the AC's own children always
             enter the set via the subtree, independent of this flag.  Defaults to
@@ -240,9 +244,9 @@ def resolve_connected_build_set(
         if rec is None:
             continue
         for dep in rec.get("depends_on") or []:
-            if exclude_structural_parent and dep == derive_parent_id(node):
-                continue  # skip structural parent dep — not expanded into build set
             dep_rec = id_index.get(dep)
+            if exclude_structural_parent and _is_structural_parent(dep, dep_rec, node):
+                continue  # skip structural parent dep — not expanded into build set
             if dep_rec is None or dep_rec.get("work_status", "") == "done":
                 continue  # unknown or already-met prerequisite
             if _is_leaf(dep_rec):
@@ -318,7 +322,8 @@ def verify_red_baseline(
             ``"no_new_covering_tests"``, ``"all_new_tests_green_at_baseline"``,
             ``"no_red_outcome_among_new_tests"``,
             ``"baseline_partition_unavailable"`` (BO-2400a-3-i, -vii), or
-            ``"declared_test_refused_absence_only_red"`` (TQ-500f-3-i).
+            ``"declared_test_refused_absence_only_red"`` (TQ-500f-3-i), or
+            ``"test_interpreter_unusable"`` (pytest not importable).
 
         ``red``, ``green_at_baseline``, ``inconclusive`` (list[dict])
             Newly-added tests classified per BO-2400a-3-vi, each entry
@@ -333,7 +338,24 @@ def verify_red_baseline(
             TQ-500f-3-i — additive. Declared covering tests refused as
             absence-only red, each ``{"nodeid", "ac_id", "kind": "absence",
             "message"}``. Always ``[]`` when *ac_root* is omitted.
+
+        ``interpreter`` (str)
+            TQ-500f-3-vi — the PROJECT interpreter that judged the tests
+            (``project_python.resolve_project_python``: configured command,
+            else the worktree ``.venv``, else ``uv run``, else
+            ``sys.executable``). When it cannot import the project's own
+            package, the reason is ``"project_package_not_importable"`` and an
+            additive ``refusal`` names the interpreter and the package --
+            never ``"no_red_outcome_among_new_tests"``.
     """
+    judge = resolve_project_python(test_root)
+    verdict = _interpreter_unusable_verdict(judge) or _judge_red_baseline(ac_ids, test_root, base_ref, ac_root, judge)
+    verdict["interpreter"] = judge.display
+    return verdict
+
+
+def _judge_red_baseline(ac_ids, test_root, base_ref, ac_root, judge) -> dict:
+    """verify_red_baseline's reader, run with the project interpreter *judge*."""
     batch_set = set(ac_ids)
     all_tags = _scan_test_root_for_covers_tags(test_root)
     linked_tags = [t for t in all_tags if t["ac_id"] in batch_set]
@@ -352,8 +374,6 @@ def verify_red_baseline(
     # H-2/H-4: pre-pytest fail-closed checks (never depend on a run outcome).
     declared_names: set[str] = set()
     if ac_root is not None:
-        if _detect_ambiguous_tag_identities(newly_added_tags):
-            return _red_baseline_verdict(gate_passed=False, reason="ambiguous_test_identity")
         declared_names, preflight_reason = _declared_names_preflight(
             ac_ids, ac_root, newly_added_tags
         )
@@ -368,10 +388,17 @@ def verify_red_baseline(
         pytest_results = _run_pytest_and_parse(test_files)
         kind_by_nodeid = {}
 
+    if ac_root is not None and _find_ambiguous_tags(newly_added_tags, pytest_results):
+        # TQ-500f-3-iii: safety net kept -- a tag not tied to exactly one test is refused, never guessed.
+        return _red_baseline_verdict(gate_passed=False, reason="ambiguous_test_identity")
+
     red, green_at_baseline, inconclusive = _classify_newly_added(
         newly_added_tags, pytest_results
     )
     preexisting = _report_preexisting(preexisting_tags, pytest_results)
+    refusal = None if red or green_at_baseline else project_import_refusal(test_root, pytest_results, judge)
+    if inconclusive and refusal is not None:
+        return _red_baseline_verdict(gate_passed=False, reason="project_package_not_importable", inconclusive=inconclusive, preexisting=preexisting, refusal=refusal)
 
     if ac_root is not None:
         red, _refused, early_verdict = _classify_declared_reds(
@@ -402,11 +429,7 @@ def verify_red_baseline(
             preexisting=preexisting,
         )
 
-    reason = (
-        "all_new_tests_green_at_baseline"
-        if not inconclusive
-        else "no_red_outcome_among_new_tests"
-    )
+    reason = "no_red_outcome_among_new_tests" if inconclusive else "all_new_tests_green_at_baseline"
     return _red_baseline_verdict(
         gate_passed=False,
         reason=reason,
@@ -488,6 +511,8 @@ def main(argv: list[str] | None = None) -> int:
             source_ac_ids=source_ac_ids,
             test_root=Path(args.test_root),
             ac_root=Path(args.ac_root),
+            ticket=Path(args.ticket) if args.ticket else None,
+            record=args.record,
         )
         print(json.dumps(gate_verdict))
         return 0 if gate_verdict["gate_passed"] else 1
@@ -618,4 +643,7 @@ if __name__ == "__main__":
 #   the test suite (_load_ac, traverse_ac_tree, _run_pytest_and_parse)
 #   still resolves through this module's own namespace exactly as before.
 #   (#TICKETLESS reason=fast-lane-file-size-split)
+# - 2026-10-22 [python-coder/TQ-500f-3-vi]: verify_red_baseline judges with the
+#   project interpreter (project_python) and refuses an un-importable project
+#   package as project_package_not_importable; body moved to _judge_red_baseline.
 # ====================================================================

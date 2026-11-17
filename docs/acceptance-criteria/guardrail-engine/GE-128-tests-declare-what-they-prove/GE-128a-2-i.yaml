@@ -1,0 +1,129 @@
+id: GE-128a-2-i
+title: "A bulk or mechanical change that raises a file's undeclared count gets no implicit exemption"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - testing_quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Scenario 1 - a generated block of undeclared tests
+  Given a tracked test file that, before the change, holds 3 undeclared test
+    functions,
+  And the test-declaration check is in error mode,
+  And a change is staged that adds 30 undeclared test functions to that file in
+    one mechanical edit (for example a generated block of near-identical tests),
+  When the author performs an ordinary commit,
+  Then the commit does not complete,
+  And the outcome states the file held 3 undeclared tests before the change and
+    holds 33 after it, exactly as a one-test increase would be reported.
+
+  Scenario 2 - a merge whose result raises a file's count
+  Given a tracked test file holding 3 undeclared test functions on the branch
+    being merged into,
+  And the test-declaration check is in error mode,
+  And a merge is staged whose result leaves that file holding 5 undeclared test
+    functions,
+  When the author completes the merge commit,
+  Then the merge commit does not complete,
+  And the outcome names the file and states 3 before and 5 after.
+
+  Scenario 3 - no exemption exists unless one is recorded
+  Given no exemption for bulk, generated or merge changes has been explicitly
+    configured for the test-declaration check,
+  When either change above is evaluated,
+  Then the size of the change, its mechanical nature, or its being a merge does
+    not alter the verdict.
+depends_on:
+  - GE-128a-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-128-tests-declare-what-they-prove/GE-128a.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Its notes: an implementation permitting the undeclared population to grow
+      under any routine condition (a generated block, a large mechanical edit, a
+      merge) breaks the promise even if every hand-written scenario passes; any
+      exception must be decided explicitly and recorded, never defaulted.
+  - path: templates/scripts/commit_guardian/check_test_ac_tags.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The verdict must not depend on the size of the change, the number of tests added, whether the content looks generated, or whether a merge is in progress (MERGE_HEAD present); no such condition may short-circuit the comparison unless an exemption is explicitly configured and recorded."
+  - "For a merge commit the 'before' count is the file's undeclared count at HEAD (the branch being merged into), the same baseline an ordinary commit uses."
+  - "The check must actually run on merge commits. As registered today (stages: [pre-commit] only, pass_filenames: true, change set handed by the commit path) it is likely never invoked on a merge made by `git merge`, which runs the pre-merge-commit hook rather than pre-commit, and even when invoked the pre-commit framework hands a clean, conflict-free merge few or no filenames. The implementer must verify this on a real merge and, if it holds, close the gap (for example by having the hook derive the merge's changed test files itself); a merge path that skips the check is the defect this record forbids, not an accepted limitation."
+  - "The refusal output for a bulk or merge increase must use the same format as a one-test increase (file, before, after, new undeclared names)."
+delivers_to: null
+expects_from:
+  ac_id: GE-128a-2
+  contract: "The per-file ratchet verdict { path: str, before: int, after: int, new_undeclared: list[str], verdict: 'refuse' | 'allow' } computed against the file's HEAD version; this record requires the same verdict for bulk, generated and merge changes."
+origin_agent: BrainCandy
+created: 2026-10-16
+amended_by:
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Authored as the edge-case child of GE-128a-2 while giving GE-128a live children (its only child GE-128a-1 is retired). Captures GE-128a's 'shrinking backlog is part of the promise' note as a testable refusal for bulk, generated and merge changes. origin_agent BrainCandy per the requesting user's instruction."
+  - by: it-po
+    at: "2026-10-16"
+    reason: "IT PO enrichment. Set estimated_complexity M; added four it_requirements (no size, generated or merge short-circuit without a recorded exemption; HEAD is the merge baseline; the check must really run on merge commits; same refusal format). Recorded the finding the notes ask for: as registered (stages [pre-commit] only, pass_filenames: true) the hook is likely not invoked by `git merge` (which runs pre-merge-commit) and handed no filenames on a clean merge even when it is, so Scenario 2 may not be reachable today; the third it_requirement makes closing that gap part of the work. Added expects_from GE-128a-2 (the verdict shape) and test_required: true with a 4-entry behavioral test_spec plus test_rationale, run over real temp git repos including a real merge. assigned_agent python-coder kept. criteria and work_status unchanged."
+  - by: BrainCandy
+    at: "2026-10-16"
+    reason: "BrainCandy approved readiness on 2026-10-16 (relayed via the orchestrating session): 'approve all 13 ACs'. readiness: draft -> approved; criteria and work_status unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_generated_block_of_thirty_undeclared_tests_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Scenario 1. A temp git repo commits a test file with 3 undeclared tests; a generated block of 30 near-identical undeclared tests is staged. The real hook CLI in error mode exits non-zero and reports the file with before 3 and after 33, in the same line format the one-test increase test asserts."
+    must_catch:
+      - "skip the check when the diff exceeds a size threshold"
+  - name: test_merge_result_that_raises_the_count_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Scenario 2. A temp repo whose hooks are installed from the shipped hook registration (the same stages the built install registers, not a hand-written hook) with the check in error mode: main holds the file with 3 undeclared tests, a side branch adds 2 more, and `git merge --no-ff side` is run so the merge commit goes through the real commit path. Asserts the merge commit does not complete (HEAD unchanged, MERGE_HEAD still present) and the output names the file with before 3 and after 5."
+    must_catch:
+      - "skip the check when MERGE_HEAD exists"
+      - "hook registered so it receives no filenames on a clean merge"
+  - name: test_no_exemption_means_size_and_merge_do_not_alter_the_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Scenario 3. With no exemption configured, the 30-test bulk change, the merge change and a single-test increase on otherwise identical repos all receive the same refuse verdict from the real hook; a hook that exempts any one of them fails."
+  - name: test_merge_baseline_is_the_branch_being_merged_into
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "A merge whose side branch already had 5 undeclared tests in the file, merged into a main that had 3, is judged against main's 3 (refused, 3 -> 5), not against the side branch's 5."
+    must_catch:
+      - "use the merged-in branch's version as the baseline"
+test_rationale: >-
+  The promise this record protects is that the undeclared population never grows
+  under a routine condition, and the routine conditions are real git events, so
+  each test builds a real temp repository and runs the real hook; the merge test
+  drives a real merge through the real commit path because the likeliest defect is
+  that the hook is never invoked on a clean merge, which a direct CLI call would
+  hide. The discrimination test runs all three shapes side by side so an exemption
+  for any one of them fails a single assertion, and the baseline test pins which
+  parent a merge is compared against.
+notes: |
+  Scenario 2 assumes the check runs on merge commits. If it does not today, that
+  is an IT PO finding to record against this AC (the gap is the defect GE-128a's
+  notes warn about), not a reason to weaken the scenario.

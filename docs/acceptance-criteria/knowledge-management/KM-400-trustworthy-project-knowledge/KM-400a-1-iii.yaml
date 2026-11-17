@@ -1,0 +1,191 @@
+id: KM-400a-1-iii
+title: Component metadata comes from its registry entry without document overlays
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+priority: medium
+work_status: done
+parent: KM-400a-1
+criteria: |
+  Given the component registry contains knowledge_management and a component with no incoming membership links
+  And entries declare id, name, type, description, status and primary_code together with any authored detail_ref, agent_affinity, exposed_interfaces and depends_on
+  When Component records are exposed as graph metadata from the selected source revision
+  Then each registry entry has one record identified by its exact registry key, including entries without incoming memberships
+  And every authored entry field is retained, including each exposed interface's name, type, path, shape and extension values
+  And architecture-document fields cannot overwrite the registry entry's type, status or other source values
+  And an absent agent_affinity differs from an empty list, and an absent detail_ref differs from explicit null
+  And legacy empty primary_code and future nested fields remain as authored without inserting current admission-rule defaults
+  And authored order, duplicate references and scalar types are unchanged
+
+  Given the component registry is absent, malformed or contains a key that conflicts with an entry's id
+  When component metadata is prepared
+  Then an absent registry produces no invented Component records from architecture documents
+  And malformed or conflicting registry data produces an explicit failure without rewriting the source
+depends_on: [KM-400a-1]
+doc_links:
+- path: docs/reference/artifact-knowledge-graph-data-map.md
+  relationship: context
+  status: exists
+- path: reports/native-fields/review-Component.json
+  relationship: context
+  status: exists
+- path: reports/native-fields/code-Component.json
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+- path: reports/native-fields/ac-linked-strict.xml
+  relationship: verifies
+  status: exists
+  relevance: 'Fresh strict execution after criterion-specific test tags: 388 passed and one Windows symlink-privilege
+    skip across 19 focused modules. Per-type cases resolve through the test catalog; no live database rerun is implied.'
+- path: docs/reference/artifact-knowledge-graph-data-map.md
+  relationship: context
+  status: exists
+- path: reports/native-fields/review-Component.json
+  relationship: context
+  status: exists
+- path: reports/native-fields/code-Component.json
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-02'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_native_component.py::test_component_preserves_every_field_and_registry_identity
+- tests/knowledge/test_native_component.py::test_component_real_registry_fields_match_exact_entries
+- tests/knowledge/test_native_component.py::test_component_absent_registry_ignores_architecture_documents
+- tests/knowledge/test_native_component.py::test_component_malformed_registry_fails_explicitly
+- tests/knowledge/test_native_component.py::test_component_identity_conflict_fails_without_rewriting
+- tests/knowledge/test_native_component.py::test_component_reference_cannot_escape_snapshot
+- tests/knowledge/test_native_component.py::test_component_nonstring_presentation_fields_remain_authored
+implemented_by:
+  - knowledge/native_types/component.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Retrospective refinement of KM-400a-3-i for registry-backed Component records.
+  Compatibility component hubs without an authored registry record are not evidence
+  of a complete native Component entry. New-component admission requirements are not
+  permission to synthesize missing fields on legacy entries. Receipt evidence covers
+  source fidelity and mutation checks; IT PO review and criterion-specific test links are now recorded; fresh execution remains separately evidenced.
+  Final bidirectional traceability and strict test evidence: reports/native-fields/ac-traceability.json.
+  Work status reflects linked test outcomes; reviewed readiness does not assert user approval.
+estimated_complexity: M
+it_requirements:
+- Registry keys remain the canonical component identity; registry-entry validation and snapshot containment must
+  reject conflicting identities or escaping references without source rewrites.
+- The complete-native-record contract applies to registry-backed components; compatibility hubs retain their existing
+  identity without acquiring fabricated registry fields.
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+- name: test_component_preserves_every_field_and_registry_identity
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Component preserves every field and registry identity.
+  covers:
+  - KM-400a-1-iii
+- name: test_component_real_registry_fields_match_exact_entries
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: Component real registry fields match exact entries.
+  covers:
+  - KM-400a-1-iii
+- name: test_component_absent_registry_ignores_architecture_documents
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Component absent registry ignores architecture documents.
+  covers:
+  - KM-400a-1-iii
+- name: test_component_malformed_registry_fails_explicitly
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Component malformed registry fails explicitly.
+  covers:
+  - KM-400a-1-iii
+- name: test_component_identity_conflict_fails_without_rewriting
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Component identity conflict fails without rewriting.
+  covers:
+  - KM-400a-1-iii
+- name: test_component_reference_cannot_escape_snapshot
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Component reference cannot escape snapshot.
+  covers:
+  - KM-400a-1-iii
+- name: test_component_nonstring_presentation_fields_remain_authored
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Component nonstring presentation fields remain authored.
+  covers:
+  - KM-400a-1-iii
+test_rationale: The verified catalog supplies exact existing reader-function anchors, including source-fixture,
+  boundary and failure checks. Only catalog-confirmed type-specific integration links are added. Shared lossless
+  property encoding, physical Neo4j publication, readback and retained-generation behavior remain covered by KM-400a-3-i;
+  these focused tests do not claim 17 independent live database journeys. This is retrospective traceability over
+  dated implementation receipts, not a newly performed TDD sequence. Subsequent strict execution is separately recorded
+  in reports/native-fields/ac-linked-strict.xml (388 passed, one skipped); no database test was rerun for these
+  annotation-only changes.

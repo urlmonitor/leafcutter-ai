@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -58,58 +58,199 @@ expects_from:
   contract: 'Protections ingredient, per stage: checks.hooks_pre_commit_fired, checks.hooks_commit_msg_fired,
     checks.hooks_post_merge_fired (each true|false|''n/a''), their conjunction checks.hooks_canary_rejected,
     hooks_stages_declared [stage], and inactive_stages [stage] on HOOKS_INACTIVE (BO-4300c-2).'
-package_surface: false
+package_surface: true
 it_requirements:
-- 'STAGE SET FROM THE PROJECT''S OWN DECLARATION (KI-CG-20260914-post-merge-stage-registers-but-installs-no-shim):
-  ensure installs a shim into the clone''s own .git/hooks for EVERY stage the workspace''s own hook declaration
-  names -- in practice the union of `stages:` in the workspace''s generated .pre-commit-config.yaml, the
-  same source commit_guardian''s install_pre_commit_shims.collect_stages reads (today pre-commit, commit-msg
-  and post-merge). The stage list is never hard-coded in the maker, and no new copy of the stage-derivation
-  logic is written: the maker uses the install''s own shim installer (run as a separate process from the
-  workspace''s install, so the maker stays stdlib-only) or an equivalent single shared source. Clones have
-  their own hooks directory, unlike worktrees.'
-- 'ONE CANARY PER DECLARED STAGE, each a real operation the stage rejects: pre-commit -- a commit of a
-  known-bad file is rejected; commit-msg -- a commit with a known-bad message is rejected; post-merge
-  -- a merge that brings in a known-bad change is reported as failing by the post-merge hook (non-zero
-  exit; a post-merge hook cannot undo the merge). Each canary''s known-bad input is taken from the install''s
-  own declaration, never hard-coded to one hook; a declared stage with no declared canary input cannot
-  be shown to fire and counts as not firing.'
-- 'Canaries leave nothing behind: commit canaries never land in the branch, the index or the working
-  tree; the after-merge canary runs against a disposable ref, and afterwards the line of work''s branch
-  tip, index and working tree are exactly as before and the disposable ref is gone -- confirmed by the
-  tree_clean ingredient (BO-4300c-1-iii) evaluated after the canaries.'
-- 'ANSWER FIELDS (aligned with BO-4300c-1 and BO-4300c-2): checks.hooks_pre_commit_fired, checks.hooks_commit_msg_fired,
-  checks.hooks_post_merge_fired, each true|false|''n/a''; checks.hooks_canary_rejected is their conjunction
-  (true only when every declared stage fired); hooks_stages_declared lists the stages the declaration
-  names. When any declared stage does not fire, the answer is refused with code HOOKS_INACTIVE, its message
-  names the stage(s), and inactive_stages lists them; no workspace_path.'
-- '''n/a'' RULE: for kind scratch ALL three stage checks and the conjunction are ''n/a'' (BO-4300e-4 --
-  nothing is committed or merged in a comparison copy). For every other kind the pre-commit check is never
-  ''n/a'' (a project that declares no commit-time stage gives HOOKS_INACTIVE naming pre-commit), and the
-  commit-msg and post-merge checks are ''n/a'' only when the project''s declaration does not name that
-  stage -- never because a declared stage was skipped.'
-- Presence of .pre-commit-config.yaml (or any .leafcutter copy), or of a shim file for a stage, is recorded
-  (precommit_config_present) but never on its own produces ok. The fail-open OR-probe (setup_ticket_worktree.py
-  AC-5, CLAUDE.md's ls ... || ls ... check, verify_precommit_active.py's check_b_config fallback) is not
-  reproduced.
-- 'Git spelling (KI-CG-20260925-commit-delegation-hook-misses-git-dash-c): canary commits and the canary
-  merge run with git''s working directory set to the workspace, never as `git -C <path> commit`; the
-  same holds in the tests and fixtures.'
-- 'The real install must declare a canary input for each stage it declares; commit_guardian''s declaration
-  carries only a manual-stage precommit-canary today (verified 2026-09-25), so adding per-stage canary
-  declarations to the install is in scope of this record''s ticket (flagged to the user as a cross-component
-  touch on commit_guardian).'
-- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
-  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
-  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
-  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
-- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
-  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
-  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
-  must mutate the package and build its own copy says so and justifies it in its ticket.'
-- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
-  isolated global and system config; afterwards the developer's own repository's branches, registered
-  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+  config_schema_fragment:
+    type: object
+    description: >-
+      The four package-registry entries ticket 05 adds to templates/scripts/commit_guardian/commit_guardian.json,
+      as staged on 2026-10-09 (read with `git show :templates/scripts/commit_guardian/commit_guardian.json`):
+      one new top-level key, stage_canaries, and three new members of the existing hooks_manifest.hooks
+      array, one per git stage the install declares. _package_surface_registry.WATCHED_REGISTRIES watches
+      this file through both ("hooks_manifest.hooks", "list_ids") and ("", "mapping_keys"), so each of
+      the four is a new package-surface entry. No other key or member is added, and the pre-existing
+      manual-stage precommit-canary member is unchanged.
+    required: [stage_canaries, hooks_manifest]
+    properties:
+      stage_canaries:
+        type: object
+        description: >-
+          Path-keyed reserved inputs: the known-bad input the workspace maker feeds each declared stage
+          to show that stage's protections fire. Keyed on reserved paths and one exact first message
+          line, never on file or message contents, so ordinary work that merely mentions them is never
+          rejected. precommit_canary.py --stage <stage> is the hook that rejects it; a declared stage
+          with no entry here cannot be shown to fire and counts as not firing.
+        required: [pre-commit, commit-msg, post-merge]
+        properties:
+          _comment:
+            type: string
+          pre-commit:
+            type: object
+            description: A commit that stages this reserved path is rejected.
+            required: [path]
+            properties:
+              path:
+                const: leafcutter-stage-canary/pre-commit
+            additionalProperties: false
+          commit-msg:
+            type: object
+            description: A commit whose first message line equals this reserved line is rejected.
+            required: [message]
+            properties:
+              message:
+                const: 'leafcutter-stage-canary: reserved commit-msg line'
+            additionalProperties: false
+          post-merge:
+            type: object
+            description: A merge that adds this reserved path is reported as failing by the post-merge hook.
+            required: [path]
+            properties:
+              path:
+                const: leafcutter-stage-canary/post-merge
+            additionalProperties: false
+        additionalProperties: false
+      hooks_manifest:
+        type: object
+        properties:
+          hooks:
+            type: array
+            description: >-
+              Three new members, each running precommit_canary.py --stage <stage> and inert (exit 0)
+              for every ordinary commit or merge; each also carries a _comment string. Manifest order:
+              precommit-canary-pre-commit is member 0 and precommit-canary-commit-msg member 1;
+              precommit-canary-post-merge sits directly after the manual-stage precommit-canary member
+              and before check-ac-done-on-merge. Each canary is therefore the first hook of its stage.
+            allOf:
+            - contains:
+                type: object
+                required: [id, tier, name, entry, language, stages, always_run, pass_filenames, change_set_source]
+                properties:
+                  id:
+                    const: precommit-canary-pre-commit
+                  tier:
+                    const: judgment
+                  name:
+                    const: 'Stage canary (pre-commit) - rejects only the declared known-bad input'
+                  entry:
+                    const: 'python {{config.output_root}}/scripts/commit_guardian/precommit_canary.py --stage pre-commit'
+                  language:
+                    const: system
+                  stages:
+                    const: [pre-commit]
+                  always_run:
+                    const: true
+                  pass_filenames:
+                    const: false
+                  change_set_source:
+                    const: handed_by_commit_path
+            - contains:
+                type: object
+                required: [id, tier, name, entry, language, stages, always_run, pass_filenames, change_set_source]
+                properties:
+                  id:
+                    const: precommit-canary-commit-msg
+                  tier:
+                    const: judgment
+                  name:
+                    const: 'Stage canary (commit-msg) - rejects only the declared known-bad input'
+                  entry:
+                    const: 'python {{config.output_root}}/scripts/commit_guardian/precommit_canary.py --stage commit-msg'
+                  language:
+                    const: system
+                  stages:
+                    const: [commit-msg]
+                  always_run:
+                    const: true
+                  pass_filenames:
+                    const: true
+                  change_set_source:
+                    const: handed_by_commit_path
+            - contains:
+                type: object
+                required: [id, tier, name, entry, language, stages, always_run, pass_filenames, change_set_source]
+                properties:
+                  id:
+                    const: precommit-canary-post-merge
+                  tier:
+                    const: judgment
+                  name:
+                    const: 'Stage canary (post-merge) - rejects only the declared known-bad input'
+                  entry:
+                    const: 'python {{config.output_root}}/scripts/commit_guardian/precommit_canary.py --stage post-merge'
+                  language:
+                    const: system
+                  stages:
+                    const: [post-merge]
+                  always_run:
+                    const: true
+                  pass_filenames:
+                    const: false
+                  change_set_source:
+                    const: handed_by_commit_path
+  reference_file_path: templates/scripts/commit_guardian/commit_guardian.json
+  n_location_rule: '4 -- one new top-level key (stage_canaries) and three new members of the single
+    hooks_manifest.hooks array (precommit-canary-pre-commit, precommit-canary-commit-msg, precommit-canary-post-merge),
+    all inside the one reference file. A declared stage registered without both its stage_canaries input
+    and its hooks_manifest member cannot be shown to fire, so a partial registration makes a real ensure
+    refuse HOOKS_INACTIVE naming that stage. The pre-existing manual-stage precommit-canary member is not
+    modified.'
+  required_skills:
+  - python-coder
+  - create-hook
+  post_write_commands:
+  - python scripts/build.py --target-dir . --force
+  - python scripts/build.py --validate-only
+  constraints:
+  - 'STAGE SET FROM THE PROJECT''S OWN DECLARATION (KI-CG-20260914-post-merge-stage-registers-but-installs-no-shim):
+    ensure installs a shim into the clone''s own .git/hooks for EVERY stage the workspace''s own hook declaration
+    names -- in practice the union of `stages:` in the workspace''s generated .pre-commit-config.yaml, the
+    same source commit_guardian''s install_pre_commit_shims.collect_stages reads (today pre-commit, commit-msg
+    and post-merge). The stage list is never hard-coded in the maker, and no new copy of the stage-derivation
+    logic is written: the maker uses the install''s own shim installer (run as a separate process from the
+    workspace''s install, so the maker stays stdlib-only) or an equivalent single shared source. Clones have
+    their own hooks directory, unlike worktrees.'
+  - 'ONE CANARY PER DECLARED STAGE, each a real operation the stage rejects: pre-commit -- a commit of a
+    known-bad file is rejected; commit-msg -- a commit with a known-bad message is rejected; post-merge
+    -- a merge that brings in a known-bad change is reported as failing by the post-merge hook (non-zero
+    exit; a post-merge hook cannot undo the merge). Each canary''s known-bad input is taken from the install''s
+    own declaration, never hard-coded to one hook; a declared stage with no declared canary input cannot
+    be shown to fire and counts as not firing.'
+  - 'Canaries leave nothing behind: commit canaries never land in the branch, the index or the working
+    tree; the after-merge canary runs against a disposable ref, and afterwards the line of work''s branch
+    tip, index and working tree are exactly as before and the disposable ref is gone -- confirmed by the
+    tree_clean ingredient (BO-4300c-1-iii) evaluated after the canaries.'
+  - 'ANSWER FIELDS (aligned with BO-4300c-1 and BO-4300c-2): checks.hooks_pre_commit_fired, checks.hooks_commit_msg_fired,
+    checks.hooks_post_merge_fired, each true|false|''n/a''; checks.hooks_canary_rejected is their conjunction
+    (true only when every declared stage fired); hooks_stages_declared lists the stages the declaration
+    names. When any declared stage does not fire, the answer is refused with code HOOKS_INACTIVE, its message
+    names the stage(s), and inactive_stages lists them; no workspace_path.'
+  - '''n/a'' RULE: for kind scratch ALL three stage checks and the conjunction are ''n/a'' (BO-4300e-4 --
+    nothing is committed or merged in a comparison copy). For every other kind the pre-commit check is never
+    ''n/a'' (a project that declares no commit-time stage gives HOOKS_INACTIVE naming pre-commit), and the
+    commit-msg and post-merge checks are ''n/a'' only when the project''s declaration does not name that
+    stage -- never because a declared stage was skipped.'
+  - Presence of .pre-commit-config.yaml (or any .leafcutter copy), or of a shim file for a stage, is recorded
+    (precommit_config_present) but never on its own produces ok. The fail-open OR-probe (setup_ticket_worktree.py
+    AC-5, CLAUDE.md's ls ... || ls ... check, verify_precommit_active.py's check_b_config fallback) is not
+    reproduced.
+  - 'Git spelling (KI-CG-20260925-commit-delegation-hook-misses-git-dash-c): canary commits and the canary
+    merge run with git''s working directory set to the workspace, never as `git -C <path> commit`; the
+    same holds in the tests and fixtures.'
+  - 'The real install must declare a canary input for each stage it declares; commit_guardian''s declaration
+    carries only a manual-stage precommit-canary today (verified 2026-09-25), so adding per-stage canary
+    declarations to the install is in scope of this record''s ticket (flagged to the user as a cross-component
+    touch on commit_guardian).'
+  - Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+    delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+    bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+    ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+  - 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+    build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+    minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+    must mutate the package and build its own copy says so and justifies it in its ticket.'
+  - All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+    isolated global and system config; afterwards the developer's own repository's branches, registered
+    worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
 test_required: true
 test_spec:
 - name: test_all_three_declared_stages_fire_gives_ok
@@ -205,12 +346,49 @@ amended_by:
     scratch and for undeclared stages; no `git -C <path> commit`. test_spec rewritten: one refusal
     test per stage, a missing-shim test, an ok arm and a leaves-nothing test. Complexity S -> M.
     Criteria unchanged; readiness reviewed.
+- reason: package-surface-declared-for-canary-registration
+  by: it-po
+  at: 2026-10-09
+  note: >-
+    package_surface false -> true. Ticket 05 registers the per-stage canaries in the watched package
+    registry templates/scripts/commit_guardian/commit_guardian.json (user decision 2026-10-09,
+    resolving pr-reviewer H-1): the new top-level stage_canaries key and the hooks_manifest members
+    precommit-canary-pre-commit, precommit-canary-commit-msg and precommit-canary-post-merge. This
+    record owns "every declared protection stage fires" and so owns that registration; undeclared,
+    the check-package-surface-declaration commit-msg hook (ACS-100i-8) refuses the commit.
+    it_requirements converted to the structured implementation spec ACS-100i-6 requires
+    (config_schema_fragment describing the four entries as staged, reference_file_path,
+    n_location_rule, required_skills, post_write_commands); all eleven previous it_requirements
+    strings carried over verbatim under constraints. Criteria, test_spec, contracts, readiness
+    and work_status unchanged.
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300c_1_ii.py
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300c-1-ii.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05_TICKET-20260928-BO-4300-readiness.md
+- templates/scripts/worktree.py
+- templates/scripts/worktree_git.py
+- templates/scripts/worktree_readiness.py
+- templates/scripts/commit_guardian/commit_guardian.json
+- templates/scripts/commit_guardian/precommit_canary.py
+- scripts/build_helpers.py
 notes: |
   F7 and KI-BP-20260826-worktree-hooks-only-on-one-path: the "hooks are active" check accepted
   a .leafcutter link alone and 51 AC records were nearly committed unchecked. The firing proof
   itself is BO-1700a; this record is that the maker's answer honours it.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 05_TICKET-20260928-BO-4300-readiness.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# - 2026-10-09 19:50 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)
+#   package_surface false -> true so the per-stage canary registration ticket 05
+#   adds to commit_guardian.json (stage_canaries + the three precommit-canary-<stage>
+#   hooks_manifest members) is declared for ACS-100i-8; it_requirements converted
+#   to the ACS-100i-6 structured spec, the eleven previous strings kept verbatim
+#   under constraints. criteria, test_spec, contracts, readiness and work_status unchanged.
+# ====================================================================

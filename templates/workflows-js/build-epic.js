@@ -110,8 +110,13 @@ const PLANNER_SCHEMA = {
             description: "Tickets in this batch (safe for parallel execution).",
             items: {
               type: "object",
-              required: ["path", "status"],
+              required: ["path", "status", "source_ac"],
               properties: {
+                source_ac: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "source_ac ids from ticket frontmatter; [] when the ticket has none (ALWAYS returned).",
+                },
                 path: {
                   type: "string",
                   description:
@@ -153,9 +158,52 @@ const TICKET_RESULT_SCHEMA = {
     },
     message: { type: "string" },
     ticket_path: { type: "string" },
+    knowledge_routing: { type: ["object", "null"] },
+    red_baseline_gate: { type: ["string", "null"] },
+    wrong_version_outcome: { type: ["string", "null"] },
+    gate: { type: "string" },
+    wrong_version_step: { type: "string" },
+    wrong_version_detail: {},
+    marker_step: { type: "string" },
+    marker_detail: {},
   },
   required: ["status"],
 };
+
+/**
+ * Knowledge routing (ADR-040 §3, INF-700a-1-iv). This workflow makes no commit,
+ * so it runs no routing step: each ticket-supervisor runs stage -> commit-by-name
+ * -> observe around its own commit (building-epics SKILL.md §5.9) and returns the
+ * observation as `knowledge_routing`. The drive consumes it here. Only a
+ * recognised `case` is trusted (anything else is "did_not_run" with zero
+ * figures), and nothing here can change the drive's own outcome (fail-open).
+ * "completed_with_waiting" (INF-700a-5-ii) is a completed, trusted run whose
+ * commit left a late-emitted record waiting for the next run: kept as its own
+ * case, with the waiting count, and totalled apart as `waiting_tickets`.
+ * Pure; never throws.
+ */
+var TRUSTED_ROUTING_CASES = ["completed", "completed_with_waiting", "could_not_complete"];
+function classifyTicketRouting(ticketPath, reply) {
+  var ran = Boolean(reply) && TRUSTED_ROUTING_CASES.includes(reply.case);
+  var asInt = function (v) { return ran && typeof v === "number" && Number.isFinite(v) ? v : 0; };
+  return {
+    ticket_path: ticketPath,
+    case: ran ? reply.case : "did_not_run",
+    read: asInt(reply && reply.read),
+    written: asInt(reply && reply.written),
+    unwritten: asInt(reply && reply.unwritten),
+    already_on_branch: asInt(reply && reply.already_on_branch),
+    waiting: asInt(reply && reply.waiting && reply.waiting.difference),
+    detail: ran && typeof reply.detail === "string" ? reply.detail : null,
+  };
+}
+
+function summariseRouting(ticketResults) {
+  var tickets = ticketResults.map((r) => r.knowledge_routing);
+  var sum = (key) => tickets.reduce((total, t) => total + t[key], 0);
+  return { tickets: tickets, written: sum("written"), unwritten: sum("unwritten"), already_on_branch: sum("already_on_branch"),
+    waiting_tickets: tickets.filter((t) => t.case === "completed_with_waiting").length };
+}
 
 const WORKTREE_SCHEMA = {
   type: "object",
@@ -166,60 +214,6 @@ const WORKTREE_SCHEMA = {
   },
   required: ["git_type", "branch"],
 };
-
-// The routing dispatch's expected reply shape (INF-700a-1-i). `case` is the
-// only required field — `read`/`written`/`unwritten`/`detail` are read
-// defensively by classifyKnowledgeRouting() below, never trusted as present
-// just because the schema names them.
-const KNOWLEDGE_ROUTING_SCHEMA = {
-  type: "object",
-  required: ["case"],
-  properties: {
-    case: { type: "string", enum: ["completed", "could_not_complete", "did_not_run"] },
-    read: { type: "integer" },
-    written: { type: "integer" },
-    unwritten: { type: "integer" },
-    detail: { type: ["string", "null"] },
-  },
-};
-
-/**
- * classifyKnowledgeRouting — the SINGLE construction site for the
- * `knowledge_routing` figures consumed into this path's terminal payload
- * (same contract as fast-lane-ship.js's and quick-fix.js's own copies of
- * this function — INF-700a-1 / INF-700a-1-i / INF-700a-1-ii). Fails CLOSED:
- * only a reply carrying a RECOGNISED `case` value ("completed" or
- * "could_not_complete") is trusted as having actually run. Anything else —
- * a missing case, an unparseable reply, or the harness's own unlabelled
- * default stub — is reported as the third, distinct "did_not_run" case,
- * never rendered as "completed" with zero figures.
- *
- * A knowledge step never fails, retries, or blocks the unit of work's own
- * outcome (ADR-034's fail-open branch) — this function only classifies the
- * reply; it never throws.
- *
- * Pure function: no agent(), no I/O — safe to extract and execute directly.
- *
- * @param {*} reply - The raw reply from the "knowledge-routing-step" dispatch.
- * @returns {{case: string, read: number, written: number, unwritten: number, detail: (string|null)}}
- */
-function classifyKnowledgeRouting(reply) {
-  const recognisedCase =
-    reply && (reply.case === "completed" || reply.case === "could_not_complete")
-      ? reply.case
-      : "did_not_run";
-  const asInt = (value) => (typeof value === "number" && Number.isFinite(value) ? value : 0);
-  return {
-    case: recognisedCase,
-    read: recognisedCase === "did_not_run" ? 0 : asInt(reply.read),
-    written: recognisedCase === "did_not_run" ? 0 : asInt(reply.written),
-    unwritten: recognisedCase === "did_not_run" ? 0 : asInt(reply.unwritten),
-    detail:
-      recognisedCase === "could_not_complete" && typeof reply.detail === "string"
-        ? reply.detail
-        : null,
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Prose-tolerant reply reader (BP-300e)
@@ -242,9 +236,7 @@ function parseAgentJson(raw, ctx) {
     const code = raw.charCodeAt(i);
     if (code !== 123 && code !== 91) { continue; }
     const closeCode = closeFor[code];
-    let depth = 0;
-    let inString = false;
-    let j = i;
+    let depth = 0, inString = false, j = i;
     while (j < raw.length) {
       const ch = raw.charCodeAt(j);
       if (inString) {
@@ -259,16 +251,13 @@ function parseAgentJson(raw, ctx) {
         else if (ch === closeCode) {
           depth--;
           if (depth === 0) {
-            try {
-              return JSON.parse(raw.slice(i, j + 1));
-            } catch (_) {
-              break;
-            }
+            try { return JSON.parse(raw.slice(i, j + 1)); } catch (_) { i = j; break; }
           }
         }
       }
       j++;
     }
+    if (depth > 0) { break; }
   }
   throw new Error(
     "[" + stage + "] " + agent +
@@ -280,10 +269,9 @@ function parseAgentJson(raw, ctx) {
 // ---------------------------------------------------------------------------
 // Phase 0 — Worktree guard
 // ---------------------------------------------------------------------------
-// Read the worktree path from args if provided. If args.worktree_path is set,
-// the caller already resolved the worktree context — skip the ambient CWD check.
-// This fixes the false-halt that occurred when build-epic was invoked from
-// the session root (where CWD is the main clone, not the worktree).
+// The working copy is the workspace maker's answer (BO-4300c-3): handed in as args.workspace, or obtained
+// by one verbatim dispatch of the maker command below. There is no ambient CWD check; a handed-in args.worktree_path / args.workspace_path is confirmed by the maker (verify)
+// and never trusted, and there is no fallback -- a run started from the main clone or the workspace parent never works there.
 
 phase('Worktree Guard')
 
@@ -301,50 +289,45 @@ if (!epicPath) {
   };
 }
 
-// If the caller already provided worktree_path in args, trust it — no ambient check.
-const callerWorktreePath = args && args.worktree_path;
+// BO-4300c-3 / BO-4300a-1-ia: the epic's working copy is the workspace maker's answer -- handed in as
+// args.workspace, or obtained by exactly ONE verbatim dispatch of the maker command -- and its location is
+// that answer's workspace_path ONLY. A caller-supplied args.worktree_path / args.workspace_path is only a claim: the maker confirms it (verify) before any step runs, and
+// there is no ambient probe of the folder the run was started in and no fall-back to the epic folder:
+// anything but an accepted answer ends the run here, quoting what was received.
 
-let worktreeGitInfo = null;
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
 
-if (!callerWorktreePath) {
-  // Fall back to the git info check when no worktree_path is provided in args.
-  // Use the explicit epic path context rather than session CWD.
-  const worktreeCheck = await agent(
-    `Check the git context for the epic at path "${epicPath}". ` +
-    "Run these two shell commands and report the results as JSON:\n" +
-    "1. `test -f .git && echo file || echo directory` — determines if .git is a file (worktree) or directory (main clone)\n" +
-    "2. `git branch --show-current` — reports the current branch name\n" +
-    "Return ONLY a JSON object: { \"git_type\": \"file\"|\"directory\", \"branch\": \"<name>\", \"worktree_path\": \"<cwd>\" }",
-    { agentType: "status-checker", schema: WORKTREE_SCHEMA, label: 'worktree-check', phase: 'Worktree Guard' }
-  );
+const epicSlug = (epicPath.split(/[\\/]/).filter(Boolean).pop() || "epic")
+  .toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "epic";
+const epicWorkspace = await workspaceEnsure("Worktree Guard", { kind: "epic", slug: epicSlug, outputRoot: "{{config.output_root}}" });
+if (!epicWorkspace.accepted) return workspaceFailure(epicWorkspace);
 
-  worktreeGitInfo = worktreeCheck;
+const worktreePath = epicWorkspace.workspace_path;
 
-  if (
-    worktreeGitInfo &&
-    (worktreeGitInfo.git_type === "directory" ||
-      worktreeGitInfo.branch === "main" ||
-      worktreeGitInfo.branch === "master")
-  ) {
-    return {
-      status: "error",
-      worktree_required: true,
-      message:
-        "build-epic.js must run inside a git worktree, not the main clone. " +
-        "The current working directory has .git as a " + (worktreeGitInfo.git_type || 'unknown') +
-        " (branch: " + (worktreeGitInfo.branch || 'unknown') + "). " +
-        "Create a worktree first:\n" +
-        "  /worktree create <epic-branch-name>\n" +
-        "Then re-run /build-feature from inside the worktree.",
-      action_required: "create_worktree",
-    };
-  }
+// --- Gate verdicts (TQ-500g-1-viii): thin dispatch, fail-closed parses; every rule lives in Python.
+const GV_RUNNER_SCHEMA = { type: "object", properties: { command: { type: "string" }, workspace: { type: "string" }, exit_status: { type: "integer" },
+  stdout: { type: "string" }, stderr: { type: "string" }, declined: { type: "boolean" }, step: { type: "string" }, agent: { type: "string" }, reason: { type: "string" } } };
+const gvRoot = () => String(worktreePath).replace(/\\/g, "/");
+const gvPy = (script, args) => `python "${gvRoot()}"/{{config.output_root}}/scripts/build_orchestration/${script}.py ${args}`;
+async function gvStep(label, command, runId) {
+  try {
+    const reply = await agent(JSON.stringify({ step: label, command, target: { workspace: worktreePath, run_id: runId } }),
+      { agentType: "command-step-runner", schema: GV_RUNNER_SCHEMA, label, phase: "Worktree Guard" });
+    const out = parseStepJson(reply.stdout);
+    return out && typeof out === "object" ? out : null;
+  } catch { return null; }
 }
-
-// Resolve the worktree path: caller-provided wins, then git info, then epic path context.
-const worktreePath = callerWorktreePath ||
-  (worktreeGitInfo && worktreeGitInfo.worktree_path) ||
-  epicPath;
+const gvStem = (p) => (String(p).replace(/\\/g, "/").split("/").filter(Boolean).pop() || "").replace(/\.md$/i, "");
+const gvBad = (...vals) => vals.flat().filter((s) => typeof s !== "string" || /["$`\n\r]/.test(s)).concat(/["$`\n\r]/.test(gvRoot()) ? [gvRoot()] : []);
+{
+  const halt = (step, detail) => ({ status: "blocked", message: `Wrong-version ${step} step did not pass: ${JSON.stringify(detail)}. No ticket was dispatched.`,
+    epic_path: epicPath, gate: "wrong_version_gate", wrong_version_step: step, wrong_version_detail: detail });
+  if (gvBad().length) return halt("input-check", gvBad());
+  const recovered = await gvStep("be-wv-recover", gvPy("wrong_version_runner", "recover"), "drive-head");
+  if (!recovered || recovered.ok !== true) return halt("recover", recovered);
+  await gvStep("be-gate-marker-close-all", gvPy("gate_verdict_records", `close --all --worktree "${gvRoot()}"`), "drive-head");
+}
 
 // -------------------------------------------------------------------------
 // Phase 1 — Planner: read Master_Plan.md + all ticket frontmatter → batches
@@ -353,7 +336,7 @@ const worktreePath = callerWorktreePath ||
 phase('Planner')
 
 const plannerResult = await agent(
-  `Read Master_Plan.md at the epic folder: "${epicPath}". Then read the frontmatter of every NN_*.md sub-ticket in that folder (excluding Master_Plan.md). Compute the dependency-ordered batch list: (1) Build a dependency graph using depends_on (logical edges) and files_touched overlap (physical edges). (2) Compute the maximal antichain of ready tickets (all depends_on met). (3) Split the antichain into batches so no two tickets in a batch share any files_touched entry. (4) Tickets with status 'done' are OMITTED from all batches (resume). Return a JSON object with these top-level keys: epic_path, title, batches. Return ONLY the JSON object, no prose.`,
+  `Read Master_Plan.md at the epic folder: "${epicPath}". Then read the frontmatter of every NN_*.md sub-ticket in that folder (excluding Master_Plan.md). Compute the dependency-ordered batch list: (1) Build a dependency graph using depends_on (logical edges) and files_touched overlap (physical edges). (2) Compute the maximal antichain of ready tickets (all depends_on met). (3) Split the antichain into batches so no two tickets in a batch share any files_touched entry. (4) Tickets with status 'done' are OMITTED from all batches (resume). Return a JSON object with these top-level keys: epic_path, title, batches. For every ticket item also return source_ac, the ticket's source_ac list from its frontmatter ([] when it has none). Return ONLY the JSON object, no prose.`,
   { agentType: "status-checker", schema: PLANNER_SCHEMA, label: 'epic-planner', phase: 'Planner' }
 )
 
@@ -410,6 +393,7 @@ if (batches.length === 0) {
 phase('Batch Dispatch')
 
 const completedBatches = [];
+const routedTickets = [];
 
 // Chunk size: keep parallel fan-out well below the ~16 concurrent cap.
 const BATCH_SIZE = 12;
@@ -432,15 +416,36 @@ for (const batch of batches) {
 
   const batchResults = [];
 
-  for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
-    const chunk = tickets.slice(i, i + BATCH_SIZE);
+  // One ticket per chunk when any ticket owes wrong-version runs or its source_ac cannot be read (fail closed).
+  const owesRuns = (t) => !Array.isArray(t.source_ac) || t.source_ac.length > 0;
+  const chunkSize = tickets.some(owesRuns) ? 1 : BATCH_SIZE;
+
+  for (let i = 0; i < tickets.length; i += chunkSize) {
+    const chunk = tickets.slice(i, i + chunkSize);
 
     const chunkResults = await parallel(
       chunk.map((ticket) => async () => {
-        const result = await agent(
-          `Drive ticket to completion: ${ticket.path}. Worktree: ${worktreePath}. Execute all needed phase agents in order. worktree_path: ${worktreePath}`,
-          { agentType: "ticket-supervisor", schema: TICKET_RESULT_SCHEMA, label: `ticket:${ticket.path}`, phase: 'Batch Dispatch' }
-        );
+        const ticketKey = gvStem(ticket.path);
+        const blockedOn = (step, detail) => {
+          const result = { status: "blocked", gate: "gate_verdict_marker", marker_step: step, marker_detail: detail,
+            message: `Gate-verdict marker ${step} did not pass for ${ticket.path}: ${JSON.stringify(detail)}. The ticket-supervisor was not dispatched.` };
+          return { ticket_path: ticket.path, status: "blocked", result, knowledge_routing: classifyTicketRouting(ticket.path, null) };
+        };
+        const unsafe = [ticketKey].filter((k) => !/^[A-Za-z0-9._-]+$/.test(k)).concat(gvBad(ticket.path));
+        if (unsafe.length) return blockedOn("input-check", unsafe);
+        const marker = await gvStep("be-gate-marker-open", gvPy("gate_verdict_records", `open --worktree "${gvRoot()}" --ticket-key "${ticketKey}" --ticket-path "${ticket.path}"`), ticketKey);
+        if (!marker || marker.opened !== true) return blockedOn("open", marker);
+        let result;
+        try {
+          result = await agent(
+            `Drive ticket to completion: ${ticket.path}. Worktree: ${worktreePath}. Execute all needed phase agents in order. worktree_path: ${worktreePath}. ` +
+            `ticket_key: ${ticketKey}. runs_alone: ${chunk.length === 1}. ` +
+            `Around the commit phase run knowledge routing per building-epics §5.9 and return its observe reply as knowledge_routing.`,
+            { agentType: "ticket-supervisor", schema: TICKET_RESULT_SCHEMA, label: `ticket:${ticket.path}`, phase: 'Batch Dispatch' }
+          );
+        } finally {
+          await gvStep("be-gate-marker-close", gvPy("gate_verdict_records", `close --worktree "${gvRoot()}" --ticket-key "${ticketKey}"`), ticketKey);
+        }
         return {
           ticket_path: ticket.path,
           // Fail CLOSED. This previously defaulted to "ok", which actively
@@ -451,6 +456,7 @@ for (const batch of batches) {
           // epic reported tickets_completed with no work done.
           status: result && result.status ? result.status : "undetermined",
           result,
+          knowledge_routing: classifyTicketRouting(ticket.path, result && result.knowledge_routing),
         };
       })
     );
@@ -469,10 +475,12 @@ for (const batch of batches) {
           ticket_path: chunk[idx] && chunk[idx].path,
           status: "undetermined",
           result: null,
+          knowledge_routing: classifyTicketRouting(chunk[idx] && chunk[idx].path, null),
         });
       }
     }
   }
+  routedTickets.push(...batchResults);
 
   // -----------------------------------------------------------------------
   // Batch-level failure detection
@@ -493,6 +501,8 @@ for (const batch of batches) {
       ticket_path: r.ticket_path,
       status: r.status,
       error: r.error || (r.result && r.result.message) || "unknown error",
+      ...Object.fromEntries(["gate", "wrong_version_step", "wrong_version_detail", "marker_step", "marker_detail"]
+        .filter((k) => r.result && r.result[k] !== undefined).map((k) => [k, r.result[k]])),
     }));
 
     return {
@@ -504,6 +514,7 @@ for (const batch of batches) {
       halted_at_batch: batchNumber,
       halted_tickets: haltSummary,
       completed_batches: completedBatches,
+      knowledge_routing: summariseRouting(routedTickets),
       suggested_action:
         "Review the ## Comments section of each halted ticket for the " +
         "blocker details. Resolve the blocker(s) and re-run /build-feature " +
@@ -539,45 +550,6 @@ const manualTests = [
   `Run /finalize-feature in a clean shell and confirm it completes without errors.`,
 ];
 
-// ---------------------------------------------------------------------------
-// Knowledge Routing — dispatched once every batch has completed and BEFORE
-// this run's own terminal payload is built and returned, so the epic drive
-// (itself one of the five named completion paths, INF-700a-1-i) leaves no
-// unrouted learning behind it. Fail-open (INF-700a-1-ii): whatever this
-// dispatch reports, the run's own outcome and exit status are unaffected.
-// ---------------------------------------------------------------------------
-
-phase("Knowledge Routing");
-
-const knowledgeRoutingReply = await agent(
-  `You are the knowledge-routing phase agent for an epic build. Route any ` +
-  `knowledge records the phases that just ran emitted to the surface each one ` +
-  `names — nobody runs this by hand.\n\n` +
-  `Run this single Bash command from the repository root and read its JSON ` +
-  `summary and exit code:\n` +
-  `   python3 {{config.output_root}}/scripts/knowledge/harvest_learnings.py\n\n` +
-  `Classify the outcome as exactly one of three cases:\n` +
-  `  - "completed": the harvester ran to completion (exit 0 or 3 — some ` +
-  `records left unroutable is still a completed run).\n` +
-  `  - "could_not_complete": the declared sink could not be read, or a ` +
-  `destination file could not be written (exit 1, 2, or 4).\n` +
-  `  - "did_not_run": the command itself could not be run at all.\n\n` +
-  `Return JSON: { "case": "completed"|"could_not_complete"|"did_not_run", ` +
-  `"read": <records read>, "written": <records written to a surface>, ` +
-  `"unwritten": <records left unwritten>, "detail": "<what could not be done, ` +
-  `or null>" }.\n\n` +
-  `This step must never block, retry, or fail the build — always return a ` +
-  `best-effort classification, even on an unreadable sink or a failed write.`,
-  {
-    agentType: "python-coder",
-    schema: KNOWLEDGE_ROUTING_SCHEMA,
-    label: "knowledge-routing-step",
-    phase: "Knowledge Routing",
-  }
-);
-
-const knowledgeRouting = classifyKnowledgeRouting(knowledgeRoutingReply);
-
 // BO-3900 — a name derived from a path must split on BOTH separators, so
 // the result is identical whichever separator the path was written with. A
 // forward-slash-only split leaves a backslash-spelled epicPath un-split,
@@ -612,6 +584,6 @@ return {
   batches_run: completedBatches.length,
   tickets_completed: totalTickets,
   completed_batches: completedBatches,
-  knowledge_routing: knowledgeRouting,
+  knowledge_routing: summariseRouting(routedTickets),
   message: completionMessage,
 };

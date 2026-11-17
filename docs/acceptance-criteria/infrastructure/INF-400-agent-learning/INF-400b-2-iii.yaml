@@ -1,0 +1,97 @@
+id: INF-400b-2-iii
+components:
+  - infrastructure
+  - knowledge_system
+title: "A learning's text is part of its identity, so two learnings captured in the same second are never mistaken for one"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: done
+priority: high
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400b-2.yaml"
+criteria: |
+  Given two records describe genuinely different learnings,
+  And they were captured in the same second by the same agent, in the same
+    component, routed to the same destination, and classified with the same
+    kind,
+  When the component that decides whether a record has already been routed
+    examines them,
+  Then it treats them as two records, because the learning text is part of a
+    record's identity,
+  And routing one never marks the other as routed,
+  And a record routed before this rule, under an identity that did not
+    include the text, is honoured as routed only when no other record in the
+    sink shared that old identity,
+  And a record whose old identity was shared is routed once more, so the
+    worst outcome is a duplicate and never a lost learning,
+  And only identities that include the text are written from now on,
+  And the harvester and the completion-routing path apply this one rule.
+depends_on:
+  - INF-400b-2-i
+  - INF-700a-5-iii
+doc_links:
+  - path: docs/known-issues/knowledge-management.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE DEFECT. harvest_learnings._event_hash (and completion_routing_state.record_hash, its copy) built identity from (timestamp, agent, component, destination, entry_kind) only. In the committed snapshot reports/knowledge-snapshots/knowledge-emissions-2026-10-12.jsonl, 16 distinct records share 3 such hashes; routing one marks every other record of its hash routed without writing it."
+  - "DECISION (BrainCandy, 2026-10-12, option A). Identity now includes the learning text. This SUPERSEDES INF-400b-2-i's 'do not key on the learning body' requirement; that AC's text and its optional-field test were amended to say ticket is ignored and text is identity."
+  - "LEGACY STATE RULE. A record is processed iff its new hash is in state, or its old hash is in state AND no other record currently in the sink shares that old hash. Both paths read the sink to decide ambiguity. Only new hashes are written."
+  - "ONE IMPLEMENTATION. The identity and the legacy rule live in scripts/knowledge/record_identity.py, loaded by both harvest_learnings.py and completion_routing_state.py, and listed in the build deploy list."
+  - "Must handle errors gracefully per the project error handling policy."
+test_spec:
+  - name: test_a_later_colliding_record_is_routed_not_lost
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Against the real harvester in a subprocess, with real colliding snapshot records: a sink that grows with same-second siblings routes each distinct learning exactly once."
+  - name: test_shared_legacy_hash_routes_each_colliding_record_again
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A state file holding an OLD shared hash does not hide the colliding records: each is routed."
+  - name: test_unambiguous_legacy_hash_is_honoured_and_not_rerouted
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A state file holding an OLD hash no other record shares keeps that record from being routed again."
+  - name: test_stage_ids_equal_the_new_identity_and_claim_is_per_record
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "completion_routing stage and claim use the harvester's identity: confirming one record leaves its same-second siblings waiting."
+test_rationale: |
+  The records are copied verbatim from the committed snapshot so the collision
+  is the real one, not one a test author imagined.
+delivers_to: null
+expects_from:
+  ac_id: INF-400b-2-i
+  contract: "The five required digest fields; this AC adds the learning text to them."
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - "tests/knowledge/test_inf_400b_2_iii_identity_includes_text.py"
+implemented_by:
+  - "scripts/knowledge/record_identity.py"
+  - "scripts/knowledge/harvest_learnings.py"
+  - "scripts/knowledge/completion_routing_state.py"
+  - "scripts/knowledge/completion_routing.py"
+notes: |
+  Filed 2026-10-12 from BrainCandy's decision on the harvester identity
+  collision (option A). INF-700a-5-iii and INF-400c-2 require the failure mode
+  to be a duplicate, never a loss.
+change_target: code
+risk_surface: contract_boundary

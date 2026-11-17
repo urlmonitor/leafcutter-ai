@@ -60,6 +60,8 @@ _HOLDBACK_TOKENS = _UNDETERMINED_TOKENS + (
     "without a worktree",
     "no isolated working copy",
     "no working copy",
+    # BO-4300c-3: the workspace step's own failure statement (no accepted answer = no working copy).
+    "workspace step failed",
 )
 
 _WORKING_COPY_KEYS = (
@@ -178,9 +180,9 @@ class _ResolverCase(unittest.TestCase):
                     # standing in for the isolated working copy.
                     "worktree_path": epic_path,
                 },
-                # No isolated working copy has been established for this drive.
-                "worktree_agent": None,
-                "worktree_check": None,
+                # No isolated working copy has been established for this drive: the one workspace step
+                # (BO-4300c-3) comes back with no answer, so the run ends there with the target as resolved.
+                "workspace_ensure": None,
                 "epic": {
                     "path": epic_path,
                     "title": "EPIC-Resolver",

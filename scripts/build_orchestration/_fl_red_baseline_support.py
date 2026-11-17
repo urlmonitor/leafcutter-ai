@@ -50,39 +50,28 @@ ARCHITECTURE: verify_red_baseline itself (and the ``_run_pytest_and_parse``
     closed with their own distinct reason rather than silently degrading to
     "nothing was declared".
 
-    H-4 FIX (pr-reviewer finding; user decision, option A — scope note):
-    ``done_proof._find_nodeid_for_test`` (the covers-tag-to-nodeid resolver
-    every newly-added tag's outcome/kind lookup goes through) matches by
-    ``(file_basename, bare_func_name)`` only, so two genuinely DISTINCT
-    covers tags that share both — two classes in one file with the same
-    method name, or two files sharing a basename in different package
-    directories — collapse onto the SAME resolved nodeid. That collapse
-    itself is PRE-EXISTING in done_proof.py, which already sits over the
-    file-size ratchet; fixing the resolver's own precision is deferred to a
-    separate AC. THIS module's fix is the coarser, batch-wide safety net
-    ``_detect_ambiguous_tag_identities`` provides: whenever two newly-added
-    tags in the batch share ``(function, file_basename)`` — the exact
-    condition that makes ``_find_nodeid_for_test`` unable to tell them apart
-    — the gate fails closed with ``"ambiguous_test_identity"`` before even
-    running pytest, rather than silently reporting a wrong kind, a wrong
-    acceptance, or a wrong refusal for either colliding test. Checked over
-    the WHOLE batch, not scoped to a single AC id or to declared tags only —
-    an unrelated, undeclared collision elsewhere in the same batch still
-    trips it (the ambiguity poisons trust in every resolved nodeid in the
-    batch, not just the colliding pair's own).
+    TQ-500f-3-iii (supersedes the H-4 coarse batch-wide guard): every
+    covers-tag-to-test lookup goes through ``covers_tag_identity.resolve_tag``,
+    the same full-identity matcher done_proof uses, so a given run is
+    attributed to the same tests by both lanes. ``_find_ambiguous_tags`` keeps
+    the fail-closed safety net: a tag that still cannot be tied to exactly one
+    test makes the gate refuse with ``"ambiguous_test_identity"``.
 """
 
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
 
 from _fl_common import (
     _TEST_DEF_RE,
-    _find_nodeid_for_test,
     _load_ac_by_id,
     _nodeid_function_name,
+    aggregate_unit,
+    resolve_tag,
 )
+from project_python import ProjectPython, pytest_unusable  # TQ-500f-3-vi
 
 
 class _RedBaselineGitError(Exception):
@@ -286,30 +275,41 @@ def _classify_outcome_bucket(outcome: str) -> str:
     return "inconclusive"
 
 
-def _resolve_tag_outcome(tag: dict, pytest_results: dict[str, str]) -> tuple[str, str]:
-    """Return ``(nodeid, outcome)`` for *tag*, fail-closed when unresolvable.
+def _resolve_tag_outcomes(tag: dict, pytest_results: dict[str, str]) -> list[tuple[str, str]]:
+    """Return ``(nodeid, outcome)`` for every test *tag* sits on, fail-closed when unresolvable.
+
+    TQ-500f-3-iii: the matching is the shared full-identity matcher
+    (``covers_tag_identity.resolve_tag``) done_proof also uses, so both lanes
+    attribute a given run to the same tests. A test inherited by several
+    collected classes yields one pair per inheriting class.
 
     Args:
-        tag: A covers-tag dict with ``"function"`` and ``"file"`` keys.
+        tag: A covers-tag dict with ``"function"``, ``"file"`` and ``"location"`` keys.
         pytest_results: ``{nodeid: outcome}`` from ``_run_pytest_and_parse``.
 
     Returns:
-        The matched pytest nodeid and its outcome; when no run result can be
-        located for the tag, a synthetic ``"<file>::<function>"`` nodeid is
-        returned paired with outcome ``"ERROR"`` so the test is reported as
-        inconclusive rather than silently omitted.
+        One pair per matched test; when no run result can be located (or the
+        tag is ambiguous, which ``verify_red_baseline`` refuses earlier), a
+        synthetic ``"<file>::<function>"`` nodeid paired with outcome
+        ``"ERROR"`` so the test is reported as inconclusive, never omitted.
     """
-    func_name = tag["function"]
-    file_basename = Path(tag["file"]).name
-    nodeid = _find_nodeid_for_test(func_name, file_basename, pytest_results)
-    if nodeid is None:
-        return f"{tag['file']}::{func_name}", "ERROR"
-    return nodeid, pytest_results.get(nodeid, "ERROR")
+    units, _ambiguous = resolve_tag(tag, pytest_results)
+    if not units:
+        return [(f"{tag['file']}::{tag['function']}", "ERROR")]
+    return [aggregate_unit(cases, pytest_results) for cases in units]
 
 
-def _build_entry(tag: dict, nodeid: str, outcome: str) -> dict:
-    """Build a ``{"nodeid", "ac_id", "outcome"}`` report entry for *tag*."""
-    return {"nodeid": nodeid, "ac_id": tag["ac_id"], "outcome": outcome}
+def _build_entry(tag: dict, nodeid: str, outcome: str, results: dict | None = None) -> dict:
+    """Build a ``{"nodeid", "ac_id", "outcome"}`` report entry for *tag*.
+
+    TQ-500g-4: when *results* (the shared reading) names failed sub-cases for
+    *nodeid*, the entry also carries them under the additive ``"subcases"`` key.
+    """
+    entry = {"nodeid": nodeid, "ac_id": tag["ac_id"], "outcome": outcome}
+    subcases = getattr(results, "subfailed", {}).get(nodeid)
+    if subcases:
+        entry["subcases"] = list(subcases)
+    return entry
 
 
 def _classify_newly_added(
@@ -331,15 +331,15 @@ def _classify_newly_added(
     green_at_baseline: list[dict] = []
     inconclusive: list[dict] = []
     for tag in newly_added_tags:
-        nodeid, outcome = _resolve_tag_outcome(tag, pytest_results)
-        entry = _build_entry(tag, nodeid, outcome)
-        bucket = _classify_outcome_bucket(outcome)
-        if bucket == "red":
-            red.append(entry)
-        elif bucket == "green":
-            green_at_baseline.append(entry)
-        else:
-            inconclusive.append(entry)
+        for nodeid, outcome in _resolve_tag_outcomes(tag, pytest_results):
+            entry = _build_entry(tag, nodeid, outcome, pytest_results)
+            bucket = _classify_outcome_bucket(outcome)
+            if bucket == "red":
+                red.append(entry)
+            elif bucket == "green":
+                green_at_baseline.append(entry)
+            else:
+                inconclusive.append(entry)
     return red, green_at_baseline, inconclusive
 
 
@@ -359,8 +359,9 @@ def _report_preexisting(
         operator can see them.
     """
     return [
-        _build_entry(tag, *_resolve_tag_outcome(tag, pytest_results))
+        _build_entry(tag, nodeid, outcome, pytest_results)
         for tag in preexisting_tags
+        for nodeid, outcome in _resolve_tag_outcomes(tag, pytest_results)
     ]
 
 
@@ -373,6 +374,7 @@ def _red_baseline_verdict(
     inconclusive: list[dict] | None = None,
     preexisting: list[dict] | None = None,
     refused: list[dict] | None = None,
+    refusal: str | None = None,
 ) -> dict:
     """Assemble the pinned verify_red_baseline return shape.
 
@@ -391,20 +393,49 @@ def _red_baseline_verdict(
             each ``{"nodeid", "ac_id", "kind": "absence", "message"}``.
             Additive key; always present (``[]`` when unused or when no
             caller-supplied ``ac_root`` is given). Defaults to ``[]``.
+        refusal: TQ-500f-3-vi — the operator-facing text of a
+            ``project_package_not_importable`` refusal. The ``refusal`` key is
+            present only when this is given.
 
     Returns:
         Dict with exactly the keys ``gate_passed``, ``reason``, ``red``,
-        ``green_at_baseline``, ``inconclusive``, ``preexisting``, ``refused``.
+        ``green_at_baseline``, ``inconclusive``, ``preexisting``, ``refused``,
+        plus ``interpreter`` (``sys.executable`` here; ``verify_red_baseline``
+        replaces it with the project interpreter that judged the tests) and,
+        when given, ``refusal``.
     """
-    return {
+    verdict = {
         "gate_passed": gate_passed,
         "reason": reason,
+        "interpreter": sys.executable,
         "red": red or [],
         "green_at_baseline": green_at_baseline or [],
         "inconclusive": inconclusive or [],
         "preexisting": preexisting or [],
         "refused": refused or [],
     }
+    if refusal is not None:
+        verdict["refusal"] = refusal
+    return verdict
+
+
+def _interpreter_unusable_verdict(judge: ProjectPython) -> dict | None:
+    """Return a refusal verdict when *judge* cannot import pytest.
+
+    Tests run as ``<judge> -m pytest`` (TQ-500f-3-vi: the project's interpreter,
+    see ``project_python``); if that interpreter lacks pytest every test would
+    ERROR and surface as a misleading ``no_red_outcome_among_new_tests``
+    (TQ-500f-3-ii).
+
+    Args:
+        judge: The interpreter the tests will run under.
+
+    Returns:
+        A ``test_interpreter_unusable`` verdict, or ``None`` when pytest imports.
+    """
+    if not pytest_unusable(judge):
+        return None
+    return _red_baseline_verdict(gate_passed=False, reason="test_interpreter_unusable")
 
 
 # ---------------------------------------------------------------------------
@@ -497,27 +528,23 @@ def _any_declared_name_matched(
     return any(tag["function"] in declared_names for tag in newly_added_tags)
 
 
-def _detect_ambiguous_tag_identities(newly_added_tags: list[dict]) -> bool:
-    """Return whether two newly-added tags share ``(function, file_basename)``.
+def _find_ambiguous_tags(newly_added_tags: list[dict], pytest_results: dict[str, str]) -> list[dict]:
+    """Return the newly-added tags that cannot be tied to exactly one test in this run.
 
-    That pair is exactly the key ``done_proof._find_nodeid_for_test`` matches
-    on — two tags sharing it cannot be told apart by the resolver every
-    outcome/kind lookup in this module goes through, so resolving either
-    tag's nodeid is unsafe (see this module's H-4 ARCHITECTURE note).
+    TQ-500f-3-iii: ambiguity is decided from the run's own results by the
+    shared full-identity matcher (a tag matching the same test under two
+    roots, say), never from tags merely sharing a name. Such a tag is refused,
+    not guessed.
 
     Args:
         newly_added_tags: Covers-tag dicts classified newly-added by
             :func:`_partition_newly_added`.
+        pytest_results: ``{nodeid: outcome}`` from the single pytest run.
 
     Returns:
-        True iff at least one ``(function, file_basename)`` pair is shared
-        by two or more tags in *newly_added_tags*.
+        The tags whose identity is ambiguous (empty when every tag resolves).
     """
-    counts: dict[tuple[str, str], int] = {}
-    for tag in newly_added_tags:
-        key = (tag["function"], Path(tag["file"]).name)
-        counts[key] = counts.get(key, 0) + 1
-    return any(count > 1 for count in counts.values())
+    return [tag for tag in newly_added_tags if resolve_tag(tag, pytest_results)[1]]
 
 
 def _declared_names_preflight(
@@ -678,4 +705,8 @@ def _classify_declared_reds(
 #   from fast_lane.py (NO behaviour change) as part of the file-size split —
 #   see fast_lane.py's own DECISION HISTORY for the full record.
 #   (#TICKETLESS reason=fast-lane-file-size-split)
+# - 2026-10-22 [python-coder/TQ-500f-3-vi]: _interpreter_unusable_verdict now
+#   probes the interpreter the tests will actually run under (the project's,
+#   via project_python) instead of this process; _red_baseline_verdict gains
+#   the optional ``refusal`` key for project_package_not_importable.
 # ====================================================================

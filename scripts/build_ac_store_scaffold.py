@@ -80,7 +80,7 @@ def build_ac_store_scaffold(
                     f"{template_path}: {exc}"
                 )
                 continue
-            dest.write_text(content, encoding="utf-8")
+            dest.write_text(content, encoding="utf-8", newline="\n")
             written += 1
 
     if written > 0:

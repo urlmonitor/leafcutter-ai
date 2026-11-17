@@ -41,7 +41,7 @@ WHY A BARE, EMPTY WORKTREE CANNOT PROVE THIS (mirrors test_acd_2100a_3.py's
     file builds a REAL git repository ("the project") holding a REAL, VERBATIM
     copy of this repository's own `scripts/pause_store.py` under its
     untracked `.leafcutter/scripts/` (matching production: build output, never
-    committed), and a REAL `git worktree add` of that repository as a sibling
+    committed), and a REAL the linked-checkout add of that repository as a sibling
     directory holding NO `.leafcutter/` of its own -- verified absent before
     every run that depends on it.
 
@@ -84,32 +84,19 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 from _plan_feature_harness_defaults import worktree_setup_default_responses
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
+from _workflow_engine_harness import _strip_exports  # noqa: E402
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout  # noqa: E402
+from unit_tests.workflows.test_acd_2100c_2 import _init_git_project  # noqa: E402 -- shared fixture helper
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
 _REAL_REGISTRY_PATH = _WORKTREE_ROOT / "config" / "agent_registry.json"
 
-_TIMEOUT = 40  # seconds; includes real `git worktree add` and real subprocess I/O.
+_TIMEOUT = 40  # seconds; includes real the linked-checkout add and real subprocess I/O.
 
 
 # ---------------------------------------------------------------------------
 # Fixture builders
 # ---------------------------------------------------------------------------
-
-
-def _run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        cmd, cwd=str(cwd) if cwd else None, check=True, capture_output=True, text=True
-    )
-
-
-def _init_git_project(path: Path) -> None:
-    path.mkdir(parents=True)
-    _run(["git", "init", "-b", "main", str(path)])
-    _run(["git", "-C", str(path), "config", "user.email", "test@example.com"])
-    _run(["git", "-C", str(path), "config", "user.name", "Test"])
-    (path / "README.md").write_text("seed\n", encoding="utf-8")
-    _run(["git", "-C", str(path), "add", "README.md"])
-    _run(["git", "-C", str(path), "commit", "-m", "seed"])
 
 
 def _install_real_pause_store(project_dir: Path) -> Path:
@@ -150,12 +137,7 @@ def _make_worktree_fixture(tmp_path: Path) -> dict:
     _install_real_pause_store(project_dir)
 
     worktree_path = tmp_path / "ac-authoring-worktree"
-    _run(
-        [
-            "git", "-C", str(project_dir), "worktree", "add",
-            "-b", "ac-authoring/pause-test", str(worktree_path), "main",
-        ]
-    )
+    link_checkout(project_dir, ["-b", "ac-authoring/pause-test", str(worktree_path), "main"])
 
     return {"project_dir": project_dir, "worktree_path": worktree_path}
 
@@ -386,24 +368,6 @@ __SCRIPT_BODY__
 """
 
 
-def _strip_exports(source: str) -> str:
-    """Minimal ESM `export` stripper (self-contained copy; see module docstring)."""
-    lines = source.splitlines()
-    out: list[str] = []
-    for line in lines:
-        stripped = line.lstrip()
-        if stripped.startswith("export default "):
-            out.append("/* export default stripped */")
-        elif stripped.startswith("export {"):
-            out.append("/* export block stripped */")
-        elif stripped.startswith("export "):
-            indent = len(line) - len(stripped)
-            out.append(" " * indent + stripped[len("export "):])
-        else:
-            out.append(line)
-    return "\n".join(out)
-
-
 def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict:
     """Drive the REAL templates/workflows-js/plan-feature.js top-level body,
     with every dispatch whose prompt embeds a `pause_store.py` command line
@@ -411,14 +375,12 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     set to the given directory. Returns the parsed
     {calls: [...], result: ..., error?: ...} payload.
 
-    `label_responses` is merged UNDER `worktree_setup_default_responses()`
-    (BO-1500a-5-i) so a caller that never overrides 'worktree-setup' /
-    'resolve-worktree-setup-script-path' still gets a real, confirming reply
-    for both -- the same real shape `scripts/setup_ticket_worktree.py` itself
-    emits -- and reaches the pause-store dispatches this file actually tests,
-    instead of halting fail-closed at Pre-Stage-0 against the harness's own
-    generic stub (a success-shaped reply naming no worktree). A caller-
-    supplied entry for either label still wins (dict merge order below).
+    `label_responses` is merged OVER the harness defaults and a ready
+    `workspace-ensure` answer naming `cwd` (BO-4300c-3: the pause-store command
+    enters the run's workspace first, so the workspace must exist) so a caller
+    reaches the pause-store dispatches this file actually tests instead of
+    halting at the workspace step. A caller-supplied entry for any label still
+    wins (dict merge order below).
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
     body = _strip_exports(source)
@@ -426,7 +388,7 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     shim = (
         _SHIM_TEMPLATE
         .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
-        .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(), **label_responses}))
+        .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(cwd), **label_responses}))
         .replace("__ARGS_JSON__", json.dumps(args))
         .replace("__SCRIPT_BODY__", body)
     )

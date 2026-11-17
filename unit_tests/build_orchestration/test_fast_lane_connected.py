@@ -90,8 +90,8 @@ _SCRIPT_PATH = _MODULE_DIR / "fast_lane.py"
 
 _FUNC_IMPORT_OK = False
 _FUNC_IMPORT_ERR = ""
-resolve_connected_build_set = None  # type: ignore[assignment]
 
+# On a failed import the name stays unbound; tests reach it only after _require_impl.
 try:
     from fast_lane import resolve_connected_build_set  # noqa: E402
     _FUNC_IMPORT_OK = True

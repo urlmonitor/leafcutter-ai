@@ -5,7 +5,7 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-08-13
-last_updated: 2026-08-13
+last_updated: 2026-10-12
 components:
   - epic_retrospective
 ---
@@ -78,20 +78,21 @@ for the current output:
    richest signal and drives `phase_agent_counts`.
 2. **Ticket comment stream** — scanned for blocker and handoff status markers.
 3. **Git log** (subprocess) — commit count and date range.
-4. **Telemetry sink** (optional JSONL) — `debugging/logs/agent_telemetry.jsonl`,
-   owned by `agent_telemetry`.
+4. **Telemetry stream** (JSONL) — without `--telemetry`, the
+   `operational_telemetry_stream` declared in the install's
+   `config/knowledge_sink.json`, read through `sink_resolution.read_usable_stream`
+   ([ADR-069](../adrs/ADR-069-durable-log-root-for-workspaces.md)). The extractor is a
+   reader: it prints `read N records from <path>` on stderr, and with no usable
+   declaration it prints an ERROR and exits 1 without printing facts. An explicit
+   `--telemetry` is used as given.
 
 ## Known Limitations
 
-- **The telemetry join does not match live records.** `_read_telemetry` filters
-  on an entry-level `ticket` field and buckets by `event_type`. Records actually
-  written to the sink by `agent_telemetry`'s emitter carry neither key — the
-  event name is under `event`, and no ticket path is recorded at all. The filter
-  therefore rejects every real record and `telemetry_events` resolves to `{}` for
-  every epic. The three non-telemetry sources are unaffected, so the facts blob
-  remains useful; only the telemetry dimension is missing. Closing this requires
-  a schema agreement with `agent_telemetry` on a ticket/unit identifier and the
-  event-name key.
+- **The telemetry join matches only supervisor events.** `_read_telemetry` filters
+  on `ticket_path` (what `emit_event.py` writes) or the older `ticket` field, and
+  buckets by `event_type`. Records from `agent_telemetry`'s per-invocation cost
+  emitter carry no ticket path, so they are never counted. Closing that requires a
+  schema agreement with `agent_telemetry` on a ticket/unit identifier.
 
 ## Cross-links
 

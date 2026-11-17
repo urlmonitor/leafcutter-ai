@@ -82,7 +82,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Made the exclusions strictly per-file (with __tests__/ as the single legitimate path-segment case), required three distinct reason codes, and required adopting the repo's existing generated-file marker rather than minting a second one. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/08_TICKET-20261022-GE-124a-3-ii.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -102,3 +103,4 @@ notes: |
   already uses) is a test file by virtue of its own location, not a neighbour's.
   That is not the directory-exclusion shortcut the second scenario forbids, and
   the distinction is stated so an implementer does not have to guess.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

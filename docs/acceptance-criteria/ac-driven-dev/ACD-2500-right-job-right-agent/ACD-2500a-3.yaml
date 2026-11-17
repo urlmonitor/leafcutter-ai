@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given record P is assigned to python-coder and declares the files scripts/x.py and
     web/app/page.tsx,
@@ -129,7 +129,8 @@ superseded_by: null
 covered_by:
   - ACD-2500a-3-i
   - ACD-2500a-3-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/15_TICKET-20261012-ACD-2500a-3.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -158,3 +159,15 @@ notes: |
   surface) is preserved by the second Then clause.
   The mechanical half of ACD-1700b's match belongs here; the judgment half (does the
   intent live in those files) belongs to ACD-2500d.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: ruleCheck
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

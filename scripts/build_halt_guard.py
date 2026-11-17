@@ -78,7 +78,7 @@ def write_lock_file(target_root: Path, sha: str) -> None:
         "sha": sha,
         "date": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
-    lock_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    lock_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 # ---------------------------------------------------------------------------

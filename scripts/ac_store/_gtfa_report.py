@@ -35,6 +35,9 @@ _gtfa_constants = importlib.import_module(
 _gtfa_config = importlib.import_module(
     f"{_PKG}._gtfa_config" if _PKG else "_gtfa_config"
 )
+_gtfa_declared_surface = importlib.import_module(
+    f"{_PKG}._gtfa_declared_surface" if _PKG else "_gtfa_declared_surface"
+)
 
 logger = logging.getLogger(_gtfa_seams.logger_name())
 
@@ -107,6 +110,7 @@ def _check_scope_and_eligibility(
     ac: AcRecord,
     is_code_ac: bool,
     files_touched: list[str],
+    ac_id: str = "",
 ) -> None:
     """Report on implementation constraints, file scope, and scanner eligibility.
 
@@ -114,7 +118,8 @@ def _check_scope_and_eligibility(
         record: The status-recording callback.
         ac: Parsed AC record.
         is_code_ac: Whether the computed map has a production_code producer.
-        files_touched: Local paths extracted from doc_links.
+        files_touched: The ticket's files_touched list.
+        ac_id: The AC id, named in the file-scope provenance lines.
     """
     # 5. Implementation constraints for the coder.
     if is_code_ac:
@@ -123,11 +128,9 @@ def _check_scope_and_eligibility(
         else:
             record("WARN", "no it_requirements — coder has only the criteria to work from")
 
-    # 6. File scope.
-    if files_touched:
-        record("PASS", f"files_touched has {len(files_touched)} path(s) from doc_links")
-    else:
-        record("WARN", "files_touched is empty — coder has no file-scope signal (add doc_links to the AC)")
+    # 6. File scope (TKT-600a-3 / -3-i): per-path provenance, INFO never PASS.
+    for status, message in _gtfa_declared_surface.report_lines(ac, ac_id, files_touched):
+        record(status, message)
 
     # 7. Scanner eligibility.
     if ac.get("readiness") == "approved":
@@ -212,7 +215,7 @@ def _build_verification_report(
             record("FAIL", "generated ## Test Requirements has no test entry — ticket guard would block dispatch")
 
     # 5-7. Implementation constraints, file scope, scanner eligibility.
-    _check_scope_and_eligibility(record, ac, is_code_ac, files_touched)
+    _check_scope_and_eligibility(record, ac, is_code_ac, files_touched, ac_id)
 
     verdict = "BLOCKED" if has_fail else ("READY" if all("[WARN]" not in ln for ln in lines) else "READY (with warnings)")
     header = f"=== Ticket readiness report for {ac_id}: {verdict} ==="

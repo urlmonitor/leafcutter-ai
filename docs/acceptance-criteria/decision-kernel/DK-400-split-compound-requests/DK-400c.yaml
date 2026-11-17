@@ -1,0 +1,101 @@
+id: DK-400c
+title: "A proposed split you can check against your own words"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Each proposed part quotes the words of your request it covers.
+
+  You are offered two to five clearly bounded parts, each quoting the words it
+  covers from what you asked, naming the parts it waits for and saying whether
+  it needs a decision or research. A proposed part that cannot point to your
+  words is set aside and shown to you with its reason, never offered for
+  approval. If fewer than two parts can be found, nothing is split and your
+  request goes ahead or ends exactly as it would today; if more than five are
+  found, you are offered the first five and the rest are listed as not covered,
+  visible but not selectable, and never silently dropped.
+depends_on:
+  - DK-400
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: specified-by
+    status: exists
+    relevance: "Flow v5: step split-propose (host.decompose_goal proposes 2 to 5 parts; the run waits for a human answer with no part run) and branches split-dropped, split-too-few-parts and split-too-many-parts."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Mock v5: invariants on parts (2 to 5, unique ids, covers verbatim, depends_on acyclic), dropped[] and not_covered[] (proposals beyond the five-part cap). Records: dcp-reusable-criteria-proposed (one proposal dropped for a paraphrased quote) and dcp-decision-records-seven-parts (five offered, two not covered)."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Shows each part with its quote, dependencies and capability, and the dropped proposal read-only."
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "Proposing parts is generative work for the host; it is never Jev's."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-10-04
+amended_by:
+  - reason: "2026-10-05 PO, at the coordinator's request after the final gate: replaced the last criteria clause ('not forced into a split: you are told so plainly instead') with the approved behaviour. Fewer than two parts means no split, and the request goes ahead or ends exactly as today, by trigger. More than five means the first five are offered and the rest are listed read-only as not covered, never silently dropped (flow v5 split-too-few-parts and split-too-many-parts)."
+superseded_by: null
+covered_by:
+  - DK-400c-1
+  - DK-400c-2
+  - DK-400c-3
+  - DK-400c-4
+  - DK-400c-5
+implemented_by: []
+documentation_triggers:
+  - component-diagram
+  - sequence-diagram
+notes: |
+  FLOW NODES: split-propose (step), split-dropped (branch).
+
+  SETTLED: the host (Claude Code) proposes, through the new host operation
+  host.decompose_goal (working name, from TICKET-20261002-KernelDecomposeMultiPartGoal).
+  A proposal whose quote is not a verbatim span of the subject is dropped
+  before the gate and shown read-only with its reason. It can never be approved
+  or run, though the person can add its question back by editing (DK-400d).
+  Each part names the parts it depends on, with no cycles.
+
+  ADDED BY THE PO (flow-author open point a): "not forced into a split: you are
+  told so plainly". This is the customer stance. The bounds below were
+  DECIDED on 2026-10-05: the PO recommendation is the default the BA uses (see
+  DK-400 "DECISIONS AT THE PO GATE", Q2, which wins over this note).
+    - Fewer than 2 bounded parts (flow branch split-too-few-parts): the
+      request was one question after all, and no split gate is shown. How it
+      continues:
+      - bundled_accepted or mid-run: it goes ahead as one;
+      - ambiguous: it falls back to today's clarification question, and the
+        run is not blocked (final-gate decision, DK-400 FINAL GATE);
+      - jev_none: it is recorded as a capability gap, and the run ends
+        blocked.
+    - More than 5 parts (flow branch split-too-many-parts; mock not_covered[]):
+      the gate offers the first five parts. The rest are listed read-only as
+      not covered, with their quotes, and can be asked again as a request of
+      their own. Never drop the rest silently. Grouping the request into at
+      most five parts is not one of the chosen defaults.
+    - Fewer than 2 parts left AFTER dropping (for example 3 proposed, 2
+      dropped): the same rule as fewer than 2 applies. split-too-few-parts
+      counts after unquoted parts are set aside.
+  The flow and the mock data cover these cases since v5. One exception: v5
+  still ends an ambiguous too-small split blocked, unlike the final-gate rule
+  (see the follow-up in DK-400d). The IT PO defaults approved at the final gate
+  also apply here: at most 5 parts per run, output schema
+  leafcutter.decomposition.v1, and ADR-067 written by adr-author before
+  DK-400c-1 is built.
+
+  DOCS: host.decompose_goal is a new host operation (component-diagram). The
+  kernel, the host, the person and the child work all take part in a split
+  (sequence-diagram).

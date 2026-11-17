@@ -1,0 +1,231 @@
+id: BO-2400f-4-viii
+components:
+  - build_orchestration
+title: "A push or pull request refused for lack of permission is reported as a credential failure, with the committed branch left ready to push"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run for UXP-514 has committed its green change on branch
+    fast-lane/uxp-514,
+  And the remote refuses the push with "Permission denied" under every credential the
+    lane uses,
+  When the run reports its outcome,
+  Then the outcome is blocked, classified as a credential failure, distinct from a gate
+    failure, a declined step and a refusal to build,
+  And it names the step that was refused (push), the branch, the commit, and the
+    remote's own refusal text,
+  And it states the operator's next action: push that branch and open its pull request
+    with a login that can push — not rebuild,
+  And the outcome never says a pull request was opened.
+
+  Given the push succeeded but opening the pull request is refused for lack of
+    permission,
+  When the run reports its outcome,
+  Then the outcome is the same credential failure, naming the step pull-request
+    creation, and states that the branch is already on the remote.
+
+  Given either credential failure above,
+  When the operator inspects the run's worktree afterwards,
+  Then the worktree still exists, is on fast-lane/uxp-514, holds the run's commit, and
+    has no uncommitted changes, so the branch can be pushed as it stands.
+
+  Given instead the remote refuses the push because the branch has diverged from the
+    remote's copy, or the remote cannot be reached,
+  When the run reports its outcome,
+  Then the outcome is not classified as a credential failure, and names the remote's
+    own refusal text.
+depends_on: [BO-2400f-4, BO-2400f-4-vii, BO-2400f-4-vi]
+doc_links:
+- path: templates/workflows-js/fast-lane-ship.js
+  relationship: modifies
+  status: exists
+  relevance: Builds the terminal outcome; the credential-failure classification belongs at its single
+    construction site (see BO-2400f-4-vi).
+- path: docs/how-to/fast-lane-build.md
+  relationship: describes
+  status: exists
+  relevance: Should tell the operator what a credential failure means and how to finish the delivery by
+    hand.
+- path: docs/known-issues/build-orchestration/open-high-ki-bo-20260925-templates-hardcode-a-personal-gh-account.md
+  relationship: related
+  status: exists
+- path: docs/known-issues/build-orchestration/open-high-ki-bo-20260930-fast-lane-ship-is-649-lines-over-and-cannot-grow.md
+  relationship: related
+  status: exists
+- path: unit_tests/_workflow_engine_harness.py
+  relationship: specifies
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: related
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    delivery_refusal_kind:
+      type: string
+      enum:
+      - credential
+      - diverged
+      - unreachable
+      - other
+      description: Classification of a refused push or PR creation, made from the remote's own text by
+        the BO-2400f-4-vii delivery subcommand and added to each of push / pull_request. Only 'credential'
+        produces the credential-failure outcome.
+    fast_lane_credential_failure_outcome:
+      type: object
+      required:
+      - status
+      - classification
+      - refused_step
+      - branch
+      - commit
+      - remote_refusal_text
+      - branch_on_remote
+      - next_action
+      - worktree_path
+      properties:
+        status:
+          const: blocked
+        classification:
+          const: credential_failure
+        refused_step:
+          enum:
+          - push
+          - pull_request_creation
+        branch:
+          type: string
+        commit:
+          type: string
+        remote_refusal_text:
+          type: string
+        branch_on_remote:
+          type: boolean
+        next_action:
+          type: string
+          description: Push <branch> and open its pull request with a login that can push; do not rebuild.
+        worktree_path:
+          type: string
+        pr_url:
+          description: MUST be absent.
+  reference_file_path: scripts/build_orchestration/_fl_cli.py
+  n_location_rule: '2: (1) the refusal classifier inside the BO-2400f-4-vii delivery subcommand (registered
+    in scripts/build_orchestration/_fl_cli.py); (2) the lane''s terminal-outcome construction in templates/workflows-js/fast-lane-ship.js.
+    That is the PR-failure return at :2106-2120, which today reports status ''error'' for every failure,
+    and buildFastLaneDeliveryOutcome (:438, BO-2400f-4-vi single site).'
+  required_skills:
+  - python-coder
+  post_write_commands:
+  - python scripts/build.py --target-dir .
+  - python -m pytest unit_tests/build_orchestration/ unit_tests/workflows/ unit_tests/setup/ -q
+  constraints:
+  - 'CLASSIFY CONSERVATIVELY FROM THE REMOTE''S OWN TEXT. ''credential'' covers authentication and authorization
+    refusals: HTTP 401/403, ''Permission denied'', ''Authentication failed'', ''could not read Username'',
+    gh''s ''HTTP 403'' / ''Resource not accessible''. ''diverged'' covers non-fast-forward, ''fetch first''
+    and ''rejected'' with no auth marker. ''unreachable'' covers DNS, connection and timeout failures.
+    Anything unrecognised is ''other'' and never ''credential''. Declare the marker sets once, as data,
+    in the delivery module.'
+  - A DISTINCT OUTCOME. credential_failure is its own classification, separate from gate-failure halts,
+    declined-step halts (buildDeclinedStepHalt, :735), and the BO-2400f-13 refusal. Its status is 'blocked',
+    not 'error' and not 'refused'.
+  - 'FACTS ARE READ, NOT RECALLED. commit comes from `git -C <worktree> rev-parse HEAD`. branch_on_remote
+    is decided from the push result: true when the push succeeded and only PR creation was refused. remote_refusal_text
+    is the child''s stderr verbatim. The child already runs without the token (BO-2400f-4-vii), and no
+    environment value is echoed.'
+  - NEVER CLAIM A PULL REQUEST. A credential failure has no pr_url, and the success message ('PR opened',
+    :2141-2143) cannot be reached.
+  - THE WORKTREE IS LEFT AS IT STANDS. No step after a delivery refusal removes, resets, cleans, stashes
+    or reverts the worktree. The existing PR-failure path releases no claims; keep that, and leave the
+    claim-release question to the Product Owner (see notes) instead of deciding it here.
+  - ONE CONSTRUCTION SITE. Build the credential-failure outcome through the BO-2400f-4-vi terminal construction,
+    or one sibling builder called from one place, never inline at a return.
+  - 'JS SIZE: templates/workflows-js/fast-lane-ship.js is over its 1000 counted-line cap (KI-BO-20260930)
+    and the check-file-size ratchet refuses any growth. The change to the lane must be a net shrink in
+    counted lines: put the logic in Python and replace the existing prompt/branch rather than adding beside
+    it.'
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-4-vii
+  contract: 'fast_lane_delivery_attempt: push.ok, push.commit, push.remote_refusal_text, pull_request.attempted,
+    pull_request.ok and pull_request.remote_refusal_text, each refusal annotated with delivery_refusal_kind
+    by the same subcommand.'
+test_required: true
+test_spec:
+- name: test_permission_denied_push_is_a_blocked_credential_failure
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: discrimination
+  description: Under the harness, with delivery stubbed to a push refused with 'Permission denied', the
+    terminal payload is status 'blocked', classification 'credential_failure', and not a declined-step
+    halt, a gate halt or a refusal.
+  must_catch:
+  - Every delivery failure is reported as status 'error' (today's behaviour).
+  - The credential failure is routed through buildDeclinedStepHalt.
+- name: test_credential_failure_names_step_branch_commit_and_remote_text
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The same payload has refused_step 'push', branch fast-lane/uxp-514, the run's commit sha,
+    and the remote's refusal text verbatim.
+- name: test_credential_failure_says_push_by_hand_not_rebuild
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: next_action tells the operator to push that branch and open its PR with a login that can
+    push, and does not tell them to rebuild.
+- name: test_credential_failure_never_reports_a_pull_request
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: discrimination
+  description: The payload has no pr_url, and its message does not say a PR was opened.
+  must_catch:
+  - The success message text is still appended on the blocked path.
+- name: test_pr_refused_after_push_names_pr_creation_and_branch_already_on_remote
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: 'With the push ok and pr-create refused with HTTP 403: refused_step is ''pull_request_creation'',
+    branch_on_remote is true, and the message says the branch is already on the remote.'
+- name: test_worktree_is_intact_clean_and_on_branch_after_credential_failure
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: 'REAL git: a local bare remote whose pre-receive hook rejects with ''Permission denied''.
+    After the delivery subcommand runs, the worktree exists, is on fast-lane/uxp-514, its HEAD sha is
+    unchanged, and `git status --porcelain` is empty.'
+- name: test_diverged_or_unreachable_push_is_not_a_credential_failure
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: The classifier is fed REAL git stderr from a non-fast-forward push to a local bare remote
+    and from a push to an unreachable URL. Each is classified 'diverged' / 'unreachable' rather than 'credential',
+    and the remote's text is carried verbatim.
+  must_catch:
+  - Any non-zero push exit is classified as a credential failure.
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The last scenario guards against a classifier that calls every push refusal a
+  credential failure. Not decided here: whether the run's claim on the built criteria is
+  released (BO-2400f-10) or kept after a credential failure. The work is committed and
+  only delivery is missing, so releasing to todo invites a rebuild that BO-2400f-13 would
+  then refuse on the occupied workspace. Flagged for the Product Owner.

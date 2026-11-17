@@ -60,8 +60,8 @@ def run_adr041_reconciliation(
     output_root: Path,
     config: dict,
     no_shims: bool,
-    shim_map: dict,
-    file_shims: dict,
+    shim_map: list[tuple[str, str]],
+    file_shims: list[tuple[str, str]],
     pre_consolidation_paths: list[str],
 ) -> tuple[int | None, str]:
     """Refuse the build when the removal and claim sets contradict each other.

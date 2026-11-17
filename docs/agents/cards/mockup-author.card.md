@@ -125,10 +125,3 @@ flowchart TD
 | Conditional Behavior | a screen id already exists for the request | extend the existing screen in place rather than create a duplicate | `None` |
 | Conditional Behavior | a store file is missing | absent, unreadable, or oversized | `None` |
 | Conditional Behavior | docs/ui-context.md is absent or unfilled | emit a clearly-labelled unstyled placeholder, flag it, and tell the user to fill docs/ui-context.md via /onboard — never invent a look | `None` |
----
-
-## AC Assignments
-
-### mockup-author
-
-- UXP-541: A mockup agent drafts each screen populated from the mock data

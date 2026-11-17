@@ -1,7 +1,7 @@
 id: BP-600a-2
 components:
   - build_pipeline
-title: "Quick-fix never uses worktree-agent, the feature skill, or a hand-rolled git worktree add"
+title: "Quick-fix never uses worktree-agent, the feature skill, or a hand-rolled workspace of its own"
 component: build-pipeline
 level: L2
 status: active
@@ -94,6 +94,13 @@ amended_by:
       skipped for the whole run — the failure documented in CLAUDE.md under
       "Worktree pre-commit config". Title amended to match. work_status left
       done.
+  - reason: title-wording
+    by: claude_code
+    at: '2026-10-14'
+    note: >-
+      Title reworded from 'a hand-rolled git worktree add' to 'a hand-rolled workspace of its own' (same
+      meaning). The title is mirrored into docs/agents/cards, which BO-4300f-2's repo-wide census scans;
+      the criteria text is unchanged.
 superseded_by: null
 covered_by:
   - "unit_tests/workflows/test_quick_fix_workflow.py"

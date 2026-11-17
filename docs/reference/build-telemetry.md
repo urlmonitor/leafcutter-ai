@@ -14,24 +14,33 @@ description: 'Lookup reference for the build telemetry JSONL record schema, the 
 ---
 # Build Telemetry Record Schema and Lane Report
 
-Lookup reference for every field in a telemetry record written to
-`debugging/logs/agent_telemetry.jsonl`, the lane comparison aggregates
-returned by `build_lane_comparison_report`, and the emitter and counter
-functions that produce and surface them.
+Lookup reference for every field in a telemetry record written by
+`emit_agent_telemetry`, the lane comparison aggregates returned by
+`build_lane_comparison_report`, and the emitter and counter functions that
+produce and surface them.
 
 ---
 
 ## Sink Location
 
-All telemetry records are appended to:
+`emit_agent_telemetry` and `build_lane_comparison_report` have no default path.
+Records are appended to the `sink_path` the caller passes. The examples below
+pass the relative `debugging/logs/agent_telemetry.jsonl`, which resolves against
+the caller's working directory.
+
+The install's own telemetry stream is the `operational_telemetry_stream` recorded
+at build time in `.leafcutter/config/knowledge_sink.json`, directly under the
+durable `operational_log_root`
+([ADR-069](../architecture/adrs/ADR-069-durable-log-root-for-workspaces.md)). Print
+it without creating anything:
 
 ```
-debugging/logs/agent_telemetry.jsonl
+python3 .leafcutter/scripts/knowledge/sink_resolution.py --print-location telemetry
 ```
 
 Each line is a newline-terminated JSON object (JSONL format). The parent
-directory is created automatically by `emit_agent_telemetry` if it does not
-exist. The file is opened in append mode; existing records are never
+directory of `sink_path` is created automatically by `emit_agent_telemetry` if
+it does not exist. The file is opened in append mode; existing records are never
 overwritten.
 
 ---

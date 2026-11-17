@@ -1,0 +1,53 @@
+{
+  "run_id": "run-b9c4fc7909af4bcb",
+  "interaction_id": "int-00248aab43de4339",
+  "expected_state_revision": 1,
+  "actor": {
+    "id": "codex:/root/blind_retrieval_host",
+    "kind": "host"
+  },
+  "relayed_by": "isolated-evaluation-controller",
+  "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+  "response": {
+    "schema_version": "1.0",
+    "original_question": "What was each employee's payroll amount last month?",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "exhaustive_set",
+    "hierarchy_scope": "not_applicable",
+    "hierarchy_levels": [],
+    "scope_resolution": "unknown",
+    "unresolved": [
+      "needs_outside_catalog",
+      "Employee payroll entities and payroll amount fields are absent from the offered catalog."
+    ],
+    "rationale": "The requested per-employee payroll amounts for last month cannot be represented by the offered software requirement, implementation, and report catalog. The supplied source scope is preserved.",
+    "engine": "host_llm",
+    "status": "needs_resolution",
+    "model_id": null
+  }
+}

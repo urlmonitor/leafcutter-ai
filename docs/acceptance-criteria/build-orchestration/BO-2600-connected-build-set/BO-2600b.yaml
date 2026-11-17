@@ -34,12 +34,14 @@ doc_links:
     status: exists
 origin_agent: BrainCandy
 created: 2026-08-18
-amended_by: []
+amended_by:
+- reason: 'split: BO-2600a-6 (recorded-edge structural parent) moved under BO-2600b as BO-2600b-4 to keep BO-2600a within its 5-child cap, 2026-10-13'
 superseded_by: null
 covered_by:
   - BO-2600b-1
   - BO-2600b-2
   - BO-2600b-3
+  - BO-2600b-4
 implemented_by: []
 documentation_triggers: [how-to]
 change_target: pipeline

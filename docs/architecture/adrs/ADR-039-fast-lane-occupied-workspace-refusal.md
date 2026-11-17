@@ -17,10 +17,9 @@ related_docs:
   - docs/known-issues/build-orchestration.md
   - docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
 related_code:
-  - templates/scripts/setup_ticket_worktree.py
-  - scripts/setup_ticket_worktree.py
+  - templates/scripts/worktree.py
   - templates/workflows-js/fast-lane-ship.js
-  - unit_tests/build_orchestration/test_bo2400f_13_occupied_workspace_refusal.py
+  - unit_tests/workflows/test_bo2400f_13_workspace_refusal_workflow.py
 ---
 
 # ADR-039: Fast-Lane Occupied-Workspace Refusal

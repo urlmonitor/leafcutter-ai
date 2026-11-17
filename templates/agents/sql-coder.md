@@ -9,7 +9,29 @@ description: |
   Use when: user types /sql-coder; asks to write a SQL procedure/function/view/
   index/table; asks to refactor SQL or apply a SQL change to the local DB.
 model: sonnet
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- sql-table-creator
+- sql-procedure-creator
+- sql-function-creator
+- sql-index-creator
+- sql-view-creator
+- sql-query
+- sql-test-writer
+- research-agent
+- python-coder
+skills:
+- skill_id: signoff
+  mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
+- skill_id: postgres
+  mode: conditional
+  condition: For every new SQL file or non-trivial edit (Step 2), apply the postgres skill before declaring the SQL ready.
+  provided_by: project
+- skill_id: sql-test
+  mode: conditional
+  condition: After the local-DB deploy succeeds (Step 4), run the sql-test skill to run the SQL test suite.
+  provided_by: project
 requires_verification: true
 default_artifact_checklist:
   - sql_file_written
@@ -199,9 +221,9 @@ For every new SQL file (or non-trivial edit), run the `postgres` skill before
 declaring the SQL ready. The skill validates version-aware patterns for the target
 database engine.
 
-For new standard objects (functions, views, procedures), also invoke the
-`sql-query` skill if available — it scaffolds the object plus tests and docs to the
-project's conventions.
+For new standard objects (functions, views, procedures), also hand the query
+scaffolding to the `sql-query` sub-agent via the `Agent` tool — it scaffolds the
+object plus tests and docs to the project's conventions.
 
 ## Step 3 — Local-DB deploy (mandatory before tests)
 

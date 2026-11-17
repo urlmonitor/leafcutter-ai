@@ -30,6 +30,7 @@ class CliCase(unittest.TestCase):
 
 class TestLifecycle(CliCase):
     def test_run_from_stdin_then_status_then_resume_from_file(self) -> None:
+        # covers: DK-600a-1
         stdin = json.dumps(task_input_json(host_rig()))
         started = self.session.cli("run", "--json", stdin=stdin)  # no flag: stdin
         self.assertEqual(started.code, 0, started.stderr)
@@ -140,6 +141,7 @@ class TestUnknownAndUnsafe(CliCase):
 
 class TestCancel(CliCase):
     def test_cancel_then_resume_is_refused(self) -> None:
+        # covers: DK-600b-2-iii
         envelope = self.session.start()
         run_id = envelope["run_id"]
         cancelled = self.session.cli("cancel", "--run-id", run_id, "--actor", "human:demo")

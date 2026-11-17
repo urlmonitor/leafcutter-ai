@@ -4,7 +4,7 @@ components:
 title: "Build cross-references skills_invoked against actual skill usage in agent template body"
 component: infrastructure
 level: L2
-status: active
+status: superseded_by
 req_status: active
 work_status: done
 readiness: approved
@@ -49,7 +49,7 @@ expects_from:
 origin_agent: BrainCandy
 created: 2026-06-05
 amended_by: []
-superseded_by: null
+superseded_by: [AR-400c-1]
 covered_by: [INF-600g-3-i]
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-INF-600g-3.md

@@ -27,6 +27,9 @@ criteria: |
     return an empty set).
 depends_on: [BO-2400f]
 doc_links: []
+delivers_to:
+  agent: python-coder
+  contract: "Resolved connected build set: dependency-ordered list of leaf (L2/L3) AC ids whose work_status is todo (readiness-agnostic). BO-2400f-7 claims this set."
 origin_agent: BrainCandy
 created: 2026-07-23
 amended_by: []

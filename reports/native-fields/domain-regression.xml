@@ -1,0 +1,1271 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="10" time="27.934" timestamp="2026-10-02T09:12:54.675401+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge_live.domain_graph_checks" name="test_native_labels_membership_and_retrieval" time="9.101"><failure message="knowledge.errors.BackendUnavailable: backend unavailable">cls = &lt;class 'neo4j._sync.io._bolt_socket.BoltSocket'&gt;
+resolved_address = ResolvedIPv4Address(('127.0.0.1', 18087)), timeout = 3.0
+keep_alive = True, ssl_context = None
+
+    @classmethod
+    def _connect_secure(
+        cls, resolved_address, timeout, keep_alive, ssl_context
+    ):
+        """
+        Connect to the address and return the socket.
+    
+        :param resolved_address:
+        :param timeout: seconds
+        :param keep_alive: True or False
+        :returns: socket object
+        """
+        s = None  # The socket
+    
+        try:
+            try:
+                if len(resolved_address) == 2:
+                    s = socket(AF_INET)
+                elif len(resolved_address) == 4:
+                    s = socket(AF_INET6)
+                else:
+                    raise ValueError(
+                        f"Unsupported address {resolved_address!r}"
+                    )
+                try:
+                    s.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
+                except OSError as e:
+                    # option might not be supported on all platforms
+                    if e.errno != errno.ENOPROTOOPT:
+                        raise
+                t = s.gettimeout()
+                if timeout:
+                    s.settimeout(timeout)
+                log.debug("[#0000]  C: &lt;OPEN&gt; %s", resolved_address)
+&gt;               s.connect(resolved_address)
+E               ConnectionRefusedError: [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte
+
+..\..\.venv\Lib\site-packages\neo4j\_async_compat\network\_bolt_socket.py:498: ConnectionRefusedError
+
+The above exception was the direct cause of the following exception:
+
+cls = &lt;class 'neo4j._sync.io._bolt_socket.BoltSocket'&gt;
+address = IPv4Address(('127.0.0.1', 18087)), tcp_timeout = 3.0
+deadline = &lt;neo4j._deadline.Deadline object at 0x000002120AE16FD0&gt;
+custom_resolver = None, ssl_context = None, keep_alive = True
+
+    @classmethod
+    def connect(
+        cls,
+        address: Address,
+        *,
+        tcp_timeout: float | None,
+        deadline: Deadline,
+        custom_resolver: t.Callable | None,
+        ssl_context: SSLContext | None,
+        keep_alive: bool,
+    ) -&gt; tuple[t.Self, BoltProtocolVersion]:
+        """
+        Connect and perform a handshake.
+    
+        Return a valid Connection object, assuming a protocol version can be
+        agreed.
+        """
+        errors = []
+        failed_addresses = []
+        # Establish a connection to the host and port specified
+        # Catches refused connections see:
+        # https://docs.python.org/2/library/errno.html
+    
+        resolved_addresses = NetworkUtil.resolve_address(
+            Address(address), resolver=custom_resolver
+        )
+        for resolved_address in resolved_addresses:
+            deadline_timeout = deadline.to_timeout()
+            if (
+                deadline_timeout is not None
+                and deadline_timeout &lt;= tcp_timeout
+            ):
+                tcp_timeout = deadline_timeout
+            s = None
+            try:
+&gt;               s = cls._connect_secure(
+                    resolved_address, tcp_timeout, keep_alive, ssl_context
+                )
+
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_bolt_socket.py:329: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = &lt;class 'neo4j._sync.io._bolt_socket.BoltSocket'&gt;
+resolved_address = ResolvedIPv4Address(('127.0.0.1', 18087)), timeout = 3.0
+keep_alive = True, ssl_context = None
+
+    @classmethod
+    def _connect_secure(
+        cls, resolved_address, timeout, keep_alive, ssl_context
+    ):
+        """
+        Connect to the address and return the socket.
+    
+        :param resolved_address:
+        :param timeout: seconds
+        :param keep_alive: True or False
+        :returns: socket object
+        """
+        s = None  # The socket
+    
+        try:
+            try:
+                if len(resolved_address) == 2:
+                    s = socket(AF_INET)
+                elif len(resolved_address) == 4:
+                    s = socket(AF_INET6)
+                else:
+                    raise ValueError(
+                        f"Unsupported address {resolved_address!r}"
+                    )
+                try:
+                    s.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
+                except OSError as e:
+                    # option might not be supported on all platforms
+                    if e.errno != errno.ENOPROTOOPT:
+                        raise
+                t = s.gettimeout()
+                if timeout:
+                    s.settimeout(timeout)
+                log.debug("[#0000]  C: &lt;OPEN&gt; %s", resolved_address)
+                s.connect(resolved_address)
+                s.settimeout(t)
+                keep_alive = 1 if keep_alive else 0
+                s.setsockopt(SOL_SOCKET, SO_KEEPALIVE, keep_alive)
+            except TimeoutError:
+                log.debug("[#0000]  S: &lt;TIMEOUT&gt; %s", resolved_address)
+                log.debug("[#0000]  C: &lt;CLOSE&gt; %s", resolved_address)
+                if s:
+                    cls._kill_raw_socket(s)
+                raise ServiceUnavailable(
+                    "Timed out trying to establish connection to "
+                    f"{resolved_address!r}"
+                ) from None
+            except Exception as error:
+                log.debug(
+                    "[#0000]  S: &lt;ERROR&gt; %s %s",
+                    type(error).__name__,
+                    " ".join(map(repr, error.args)),
+                )
+                log.debug("[#0000]  C: &lt;CLOSE&gt; %s", resolved_address)
+                if s:
+                    cls._kill_raw_socket(s)
+                if isinstance(error, OSError):
+&gt;                   raise ServiceUnavailable(
+                        "Failed to establish connection to "
+                        f"{resolved_address!r} (reason {error})"
+                    ) from error
+E                   neo4j.exceptions.ServiceUnavailable: Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 18087)) (reason [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte)
+
+..\..\.venv\Lib\site-packages\neo4j\_async_compat\network\_bolt_socket.py:521: ServiceUnavailable
+
+The above exception was the direct cause of the following exception:
+
+self = &lt;knowledge.adapters.neo4j_backend.Neo4jBackend object at 0x000002120940DA90&gt;
+callback = &lt;function Neo4jBackend._run.&lt;locals&gt;.&lt;lambda&gt; at 0x000002120AEEA400&gt;
+write = True
+
+    async def _transaction(
+        self, callback: Callable[[object], object], write: bool = False
+    ) -&gt; object:
+        """Run idempotent database work in a worker and normalize infrastructure faults.
+    
+        Args:
+            callback: Operation executed inside a bounded managed transaction.
+            write: Whether the managed transaction may mutate projection data.
+    
+        Returns:
+            The callback result after successful managed commit, with bounded retry policy.
+        """
+        from neo4j import unit_of_work
+        from neo4j.exceptions import DriverError, Neo4jError
+        from knowledge.deadlines import remaining_seconds
+    
+        timeout = remaining_seconds(self.query_timeout)
+    
+        def execute():
+            """Own the synchronous session within its worker-thread lifetime."""
+            with self.driver.session(database=self.database) as session:
+                runner = session.execute_write if write else session.execute_read
+                return runner(unit_of_work(timeout=timeout)(callback))
+    
+        try:
+&gt;           return await asyncio.to_thread(execute)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+knowledge\adapters\neo4j_backend.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Python314\Lib\asyncio\threads.py:25: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\concurrent\futures\thread.py:86: in run
+    result = ctx.run(self.task)
+             ^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\concurrent\futures\thread.py:73: in run
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+knowledge\adapters\neo4j_backend.py:119: in execute
+    return runner(unit_of_work(timeout=timeout)(callback))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\session.py:720: in execute_write
+    return self._run_transaction(
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\session.py:584: in _run_transaction
+    raise errors[-1]
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\session.py:532: in _run_transaction
+    self._open_transaction(
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\session.py:398: in _open_transaction
+    self._connect(access_mode=access_mode)
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\session.py:126: in _connect
+    super()._connect(
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\workspace.py:181: in _connect
+    self._connection = self._pool.acquire(**acquire_kwargs_)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_pool.py:678: in acquire
+    return self._acquire(
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_pool.py:418: in _acquire
+    return connection_creator()
+           ^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_pool.py:231: in connection_creator
+    connection = self.opener(
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_pool.py:638: in opener
+    return Bolt.open(
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_bolt.py:367: in open
+    s, protocol_version = BoltSocket.connect(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = &lt;class 'neo4j._sync.io._bolt_socket.BoltSocket'&gt;
+address = IPv4Address(('127.0.0.1', 18087)), tcp_timeout = 3.0
+deadline = &lt;neo4j._deadline.Deadline object at 0x000002120AE16FD0&gt;
+custom_resolver = None, ssl_context = None, keep_alive = True
+
+    @classmethod
+    def connect(
+        cls,
+        address: Address,
+        *,
+        tcp_timeout: float | None,
+        deadline: Deadline,
+        custom_resolver: t.Callable | None,
+        ssl_context: SSLContext | None,
+        keep_alive: bool,
+    ) -&gt; tuple[t.Self, BoltProtocolVersion]:
+        """
+        Connect and perform a handshake.
+    
+        Return a valid Connection object, assuming a protocol version can be
+        agreed.
+        """
+        errors = []
+        failed_addresses = []
+        # Establish a connection to the host and port specified
+        # Catches refused connections see:
+        # https://docs.python.org/2/library/errno.html
+    
+        resolved_addresses = NetworkUtil.resolve_address(
+            Address(address), resolver=custom_resolver
+        )
+        for resolved_address in resolved_addresses:
+            deadline_timeout = deadline.to_timeout()
+            if (
+                deadline_timeout is not None
+                and deadline_timeout &lt;= tcp_timeout
+            ):
+                tcp_timeout = deadline_timeout
+            s = None
+            try:
+                s = cls._connect_secure(
+                    resolved_address, tcp_timeout, keep_alive, ssl_context
+                )
+                agreed_version = s._handshake(resolved_address, deadline)
+                return s, agreed_version
+            except (BoltError, DriverError, OSError) as error:
+                local_port = 0
+                if isinstance(s, cls):
+                    with suppress(OSError, AttributeError, TypeError):
+                        local_port = s.getsockname()[1]
+                err_str = error.__class__.__name__
+                if str(error):
+                    err_str += ": " + str(error)
+                log.debug(
+                    "[#%04X]  S: &lt;CONNECTION FAILED&gt; %s %s",
+                    local_port,
+                    resolved_address,
+                    err_str,
+                )
+                if s:
+                    cls.close_socket(s)
+                errors.append(error)
+                failed_addresses.append(resolved_address)
+            except asyncio.CancelledError:
+                local_port = 0
+                if isinstance(s, cls):
+                    with suppress(OSError, AttributeError, TypeError):
+                        local_port = s.getsockname()[1]
+                log.debug(
+                    "[#%04X]  C: &lt;CANCELED&gt; %s", local_port, resolved_address
+                )
+                if s:
+                    with suppress(OSError):
+                        s.kill()
+                raise
+            except Exception:
+                if s:
+                    cls.close_socket(s)
+                raise
+        address_strs = tuple(map(str, failed_addresses))
+        # TODO: 7.0 - when Python 3.11+ is the minimum, use exception groups
+        if not errors:
+            raise ServiceUnavailable(
+                f"Couldn't connect to {address} (resolved to {address_strs})"
+            )
+        else:
+            error_strs = "\n".join(map(str, errors))
+&gt;           raise ServiceUnavailable(
+                f"Couldn't connect to {address} (resolved to {address_strs}):"
+                f"\n{error_strs}"
+            ) from errors[0]
+E           neo4j.exceptions.ServiceUnavailable: Couldn't connect to 127.0.0.1:18087 (resolved to ('127.0.0.1:18087',)):
+E           Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 18087)) (reason [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte)
+
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_bolt_socket.py:376: ServiceUnavailable
+
+The above exception was the direct cause of the following exception:
+
+    def test_native_labels_membership_and_retrieval():
+        # covers: KM-400a-3-i
+        # angle: real_artifact
+        async def scenario():
+            db, repo = local_backend(), "domain-" + uuid.uuid4().hex
+            try:
+                await db.setup()
+                snap = sample(repo)
+                assert await db.publish(snap)
+                rows = await db._run(
+                    "MATCH (n:AC {repository_id:$repo}) RETURN labels(n) AS labels, "
+                    "n.id AS id, n.name AS name, n.title AS title, n.components AS components, "
+                    "n.current AS current",
+                    {"repo": repo},
+                )
+                assert rows == [
+                    {
+                        "labels": ["AC"],
+                        "id": "FIN-100",
+                        "name": "FIN-100",
+                        "title": "Title FIN-100",
+                        "components": ["finalize", "other"],
+                        "current": True,
+                    }
+                ]
+                rows = await db._run(
+                    "MATCH (n {repository_id:$repo}) WHERE n.current AND 'finalize' IN n.components "
+                    "RETURN n.id AS id ORDER BY id",
+                    {"repo": repo},
+                )
+                assert [r["id"] for r in rows] == ["ADR-001", "FIN-100"]
+                links = await db._run(
+                    "MATCH (a:AC {repository_id:$repo})-[r]-&gt;(b) RETURN type(r) AS type, "
+                    "r.edge_type AS semantic ORDER BY type",
+                    {"repo": repo},
+                )
+                assert links == [
+                    {"type": "COMPONENT_MEMBERSHIP", "semantic": "component_membership"},
+                    {"type": "COMPONENT_MEMBERSHIP", "semantic": "component_membership"},
+                    {"type": "COVERED_BY", "semantic": "covered_by"},
+                ]
+                result = await db.query(
+                    repo, "one", "get_acceptance_criteria", {"component_id": "finalize"}, 20
+                )
+                assert [n.model_dump() for n in result] == [snap.nodes[0].model_dump()]
+                tests = await db.query(
+                    repo, "one", "get_related_tests", {"entity_ids": ["FIN-100"]}, 20
+                )
+                assert [n.canonical_id for n in tests] == ["test.py"]
+                assert await db.publish(snap)
+            finally:
+                await db.close()
+    
+&gt;       asyncio.run(scenario())
+
+tests\knowledge_live\domain_graph_checks.py:99: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Python314\Lib\asyncio\runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\knowledge_live\domain_graph_checks.py:52: in scenario
+    await db.setup()
+knowledge\adapters\neo4j_backend.py:131: in setup
+    await self._run(statement, write=True)
+knowledge\adapters\neo4j_backend.py:78: in _run
+    return await self._transaction(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;knowledge.adapters.neo4j_backend.Neo4jBackend object at 0x000002120940DA90&gt;
+callback = &lt;function Neo4jBackend._run.&lt;locals&gt;.&lt;lambda&gt; at 0x000002120AEEA400&gt;
+write = True
+
+    async def _transaction(
+        self, callback: Callable[[object], object], write: bool = False
+    ) -&gt; object:
+        """Run idempotent database work in a worker and normalize infrastructure faults.
+    
+        Args:
+            callback: Operation executed inside a bounded managed transaction.
+            write: Whether the managed transaction may mutate projection data.
+    
+        Returns:
+            The callback result after successful managed commit, with bounded retry policy.
+        """
+        from neo4j import unit_of_work
+        from neo4j.exceptions import DriverError, Neo4jError
+        from knowledge.deadlines import remaining_seconds
+    
+        timeout = remaining_seconds(self.query_timeout)
+    
+        def execute():
+            """Own the synchronous session within its worker-thread lifetime."""
+            with self.driver.session(database=self.database) as session:
+                runner = session.execute_write if write else session.execute_read
+                return runner(unit_of_work(timeout=timeout)(callback))
+    
+        try:
+            return await asyncio.to_thread(execute)
+        except (OSError, TimeoutError, DriverError, Neo4jError) as error:
+&gt;           raise BackendUnavailable() from error
+E           knowledge.errors.BackendUnavailable: backend unavailable
+
+knowledge\adapters\neo4j_backend.py:124: BackendUnavailable</failure></testcase><testcase classname="tests.knowledge_live.domain_graph_checks" name="test_current_filter_tracks_publication_and_rollback" time="5.271"><failure message="knowledge.errors.BackendUnavailable: backend unavailable">cls = &lt;class 'neo4j._sync.io._bolt_socket.BoltSocket'&gt;
+resolved_address = ResolvedIPv4Address(('127.0.0.1', 18087)), timeout = 3.0
+keep_alive = True, ssl_context = None
+
+    @classmethod
+    def _connect_secure(
+        cls, resolved_address, timeout, keep_alive, ssl_context
+    ):
+        """
+        Connect to the address and return the socket.
+    
+        :param resolved_address:
+        :param timeout: seconds
+        :param keep_alive: True or False
+        :returns: socket object
+        """
+        s = None  # The socket
+    
+        try:
+            try:
+                if len(resolved_address) == 2:
+                    s = socket(AF_INET)
+                elif len(resolved_address) == 4:
+                    s = socket(AF_INET6)
+                else:
+                    raise ValueError(
+                        f"Unsupported address {resolved_address!r}"
+                    )
+                try:
+                    s.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
+                except OSError as e:
+                    # option might not be supported on all platforms
+                    if e.errno != errno.ENOPROTOOPT:
+                        raise
+                t = s.gettimeout()
+                if timeout:
+                    s.settimeout(timeout)
+                log.debug("[#0000]  C: &lt;OPEN&gt; %s", resolved_address)
+&gt;               s.connect(resolved_address)
+E               ConnectionRefusedError: [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte
+
+..\..\.venv\Lib\site-packages\neo4j\_async_compat\network\_bolt_socket.py:498: ConnectionRefusedError
+
+The above exception was the direct cause of the following exception:
+
+cls = &lt;class 'neo4j._sync.io._bolt_socket.BoltSocket'&gt;
+address = IPv4Address(('127.0.0.1', 18087)), tcp_timeout = 3.0
+deadline = &lt;neo4j._deadline.Deadline object at 0x000002120AEAE9E0&gt;
+custom_resolver = None, ssl_context = None, keep_alive = True
+
+    @classmethod
+    def connect(
+        cls,
+        address: Address,
+        *,
+        tcp_timeout: float | None,
+        deadline: Deadline,
+        custom_resolver: t.Callable | None,
+        ssl_context: SSLContext | None,
+        keep_alive: bool,
+    ) -&gt; tuple[t.Self, BoltProtocolVersion]:
+        """
+        Connect and perform a handshake.
+    
+        Return a valid Connection object, assuming a protocol version can be
+        agreed.
+        """
+        errors = []
+        failed_addresses = []
+        # Establish a connection to the host and port specified
+        # Catches refused connections see:
+        # https://docs.python.org/2/library/errno.html
+    
+        resolved_addresses = NetworkUtil.resolve_address(
+            Address(address), resolver=custom_resolver
+        )
+        for resolved_address in resolved_addresses:
+            deadline_timeout = deadline.to_timeout()
+            if (
+                deadline_timeout is not None
+                and deadline_timeout &lt;= tcp_timeout
+            ):
+                tcp_timeout = deadline_timeout
+            s = None
+            try:
+&gt;               s = cls._connect_secure(
+                    resolved_address, tcp_timeout, keep_alive, ssl_context
+                )
+
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_bolt_socket.py:329: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = &lt;class 'neo4j._sync.io._bolt_socket.BoltSocket'&gt;
+resolved_address = ResolvedIPv4Address(('127.0.0.1', 18087)), timeout = 3.0
+keep_alive = True, ssl_context = None
+
+    @classmethod
+    def _connect_secure(
+        cls, resolved_address, timeout, keep_alive, ssl_context
+    ):
+        """
+        Connect to the address and return the socket.
+    
+        :param resolved_address:
+        :param timeout: seconds
+        :param keep_alive: True or False
+        :returns: socket object
+        """
+        s = None  # The socket
+    
+        try:
+            try:
+                if len(resolved_address) == 2:
+                    s = socket(AF_INET)
+                elif len(resolved_address) == 4:
+                    s = socket(AF_INET6)
+                else:
+                    raise ValueError(
+                        f"Unsupported address {resolved_address!r}"
+                    )
+                try:
+                    s.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
+                except OSError as e:
+                    # option might not be supported on all platforms
+                    if e.errno != errno.ENOPROTOOPT:
+                        raise
+                t = s.gettimeout()
+                if timeout:
+                    s.settimeout(timeout)
+                log.debug("[#0000]  C: &lt;OPEN&gt; %s", resolved_address)
+                s.connect(resolved_address)
+                s.settimeout(t)
+                keep_alive = 1 if keep_alive else 0
+                s.setsockopt(SOL_SOCKET, SO_KEEPALIVE, keep_alive)
+            except TimeoutError:
+                log.debug("[#0000]  S: &lt;TIMEOUT&gt; %s", resolved_address)
+                log.debug("[#0000]  C: &lt;CLOSE&gt; %s", resolved_address)
+                if s:
+                    cls._kill_raw_socket(s)
+                raise ServiceUnavailable(
+                    "Timed out trying to establish connection to "
+                    f"{resolved_address!r}"
+                ) from None
+            except Exception as error:
+                log.debug(
+                    "[#0000]  S: &lt;ERROR&gt; %s %s",
+                    type(error).__name__,
+                    " ".join(map(repr, error.args)),
+                )
+                log.debug("[#0000]  C: &lt;CLOSE&gt; %s", resolved_address)
+                if s:
+                    cls._kill_raw_socket(s)
+                if isinstance(error, OSError):
+&gt;                   raise ServiceUnavailable(
+                        "Failed to establish connection to "
+                        f"{resolved_address!r} (reason {error})"
+                    ) from error
+E                   neo4j.exceptions.ServiceUnavailable: Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 18087)) (reason [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte)
+
+..\..\.venv\Lib\site-packages\neo4j\_async_compat\network\_bolt_socket.py:521: ServiceUnavailable
+
+The above exception was the direct cause of the following exception:
+
+self = &lt;knowledge.adapters.neo4j_backend.Neo4jBackend object at 0x00000212091B2FD0&gt;
+callback = &lt;function Neo4jBackend._run.&lt;locals&gt;.&lt;lambda&gt; at 0x0000021209379010&gt;
+write = True
+
+    async def _transaction(
+        self, callback: Callable[[object], object], write: bool = False
+    ) -&gt; object:
+        """Run idempotent database work in a worker and normalize infrastructure faults.
+    
+        Args:
+            callback: Operation executed inside a bounded managed transaction.
+            write: Whether the managed transaction may mutate projection data.
+    
+        Returns:
+            The callback result after successful managed commit, with bounded retry policy.
+        """
+        from neo4j import unit_of_work
+        from neo4j.exceptions import DriverError, Neo4jError
+        from knowledge.deadlines import remaining_seconds
+    
+        timeout = remaining_seconds(self.query_timeout)
+    
+        def execute():
+            """Own the synchronous session within its worker-thread lifetime."""
+            with self.driver.session(database=self.database) as session:
+                runner = session.execute_write if write else session.execute_read
+                return runner(unit_of_work(timeout=timeout)(callback))
+    
+        try:
+&gt;           return await asyncio.to_thread(execute)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+knowledge\adapters\neo4j_backend.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Python314\Lib\asyncio\threads.py:25: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\concurrent\futures\thread.py:86: in run
+    result = ctx.run(self.task)
+             ^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\concurrent\futures\thread.py:73: in run
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+knowledge\adapters\neo4j_backend.py:119: in execute
+    return runner(unit_of_work(timeout=timeout)(callback))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\session.py:720: in execute_write
+    return self._run_transaction(
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\session.py:584: in _run_transaction
+    raise errors[-1]
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\session.py:532: in _run_transaction
+    self._open_transaction(
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\session.py:398: in _open_transaction
+    self._connect(access_mode=access_mode)
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\session.py:126: in _connect
+    super()._connect(
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\workspace.py:181: in _connect
+    self._connection = self._pool.acquire(**acquire_kwargs_)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_pool.py:678: in acquire
+    return self._acquire(
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_pool.py:418: in _acquire
+    return connection_creator()
+           ^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_pool.py:231: in connection_creator
+    connection = self.opener(
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_pool.py:638: in opener
+    return Bolt.open(
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_bolt.py:367: in open
+    s, protocol_version = BoltSocket.connect(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = &lt;class 'neo4j._sync.io._bolt_socket.BoltSocket'&gt;
+address = IPv4Address(('127.0.0.1', 18087)), tcp_timeout = 3.0
+deadline = &lt;neo4j._deadline.Deadline object at 0x000002120AEAE9E0&gt;
+custom_resolver = None, ssl_context = None, keep_alive = True
+
+    @classmethod
+    def connect(
+        cls,
+        address: Address,
+        *,
+        tcp_timeout: float | None,
+        deadline: Deadline,
+        custom_resolver: t.Callable | None,
+        ssl_context: SSLContext | None,
+        keep_alive: bool,
+    ) -&gt; tuple[t.Self, BoltProtocolVersion]:
+        """
+        Connect and perform a handshake.
+    
+        Return a valid Connection object, assuming a protocol version can be
+        agreed.
+        """
+        errors = []
+        failed_addresses = []
+        # Establish a connection to the host and port specified
+        # Catches refused connections see:
+        # https://docs.python.org/2/library/errno.html
+    
+        resolved_addresses = NetworkUtil.resolve_address(
+            Address(address), resolver=custom_resolver
+        )
+        for resolved_address in resolved_addresses:
+            deadline_timeout = deadline.to_timeout()
+            if (
+                deadline_timeout is not None
+                and deadline_timeout &lt;= tcp_timeout
+            ):
+                tcp_timeout = deadline_timeout
+            s = None
+            try:
+                s = cls._connect_secure(
+                    resolved_address, tcp_timeout, keep_alive, ssl_context
+                )
+                agreed_version = s._handshake(resolved_address, deadline)
+                return s, agreed_version
+            except (BoltError, DriverError, OSError) as error:
+                local_port = 0
+                if isinstance(s, cls):
+                    with suppress(OSError, AttributeError, TypeError):
+                        local_port = s.getsockname()[1]
+                err_str = error.__class__.__name__
+                if str(error):
+                    err_str += ": " + str(error)
+                log.debug(
+                    "[#%04X]  S: &lt;CONNECTION FAILED&gt; %s %s",
+                    local_port,
+                    resolved_address,
+                    err_str,
+                )
+                if s:
+                    cls.close_socket(s)
+                errors.append(error)
+                failed_addresses.append(resolved_address)
+            except asyncio.CancelledError:
+                local_port = 0
+                if isinstance(s, cls):
+                    with suppress(OSError, AttributeError, TypeError):
+                        local_port = s.getsockname()[1]
+                log.debug(
+                    "[#%04X]  C: &lt;CANCELED&gt; %s", local_port, resolved_address
+                )
+                if s:
+                    with suppress(OSError):
+                        s.kill()
+                raise
+            except Exception:
+                if s:
+                    cls.close_socket(s)
+                raise
+        address_strs = tuple(map(str, failed_addresses))
+        # TODO: 7.0 - when Python 3.11+ is the minimum, use exception groups
+        if not errors:
+            raise ServiceUnavailable(
+                f"Couldn't connect to {address} (resolved to {address_strs})"
+            )
+        else:
+            error_strs = "\n".join(map(str, errors))
+&gt;           raise ServiceUnavailable(
+                f"Couldn't connect to {address} (resolved to {address_strs}):"
+                f"\n{error_strs}"
+            ) from errors[0]
+E           neo4j.exceptions.ServiceUnavailable: Couldn't connect to 127.0.0.1:18087 (resolved to ('127.0.0.1:18087',)):
+E           Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 18087)) (reason [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte)
+
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_bolt_socket.py:376: ServiceUnavailable
+
+The above exception was the direct cause of the following exception:
+
+    def test_current_filter_tracks_publication_and_rollback():
+        # covers: KM-400a-3-i
+        # angle: boundary
+        async def scenario():
+            db, repo = local_backend(), "domain-" + uuid.uuid4().hex
+            try:
+                await db.setup()
+                assert await db.publish(sample(repo))
+                assert await db.publish(sample(repo, "two"), expected_generation="one")
+                query = "MATCH (n:AC {repository_id:$repo}) WHERE n.current RETURN n.source_revision AS revision"
+                assert await db._run(query, {"repo": repo}) == [{"revision": "b" * 40}]
+                assert await db.rollback(repo, "one", "two")
+                assert await db._run(query, {"repo": repo}) == [{"revision": "a" * 40}]
+                assert (await db.get_generation(repo, "two")).source_sha == "b" * 40
+            finally:
+                await db.close()
+    
+&gt;       asyncio.run(scenario())
+
+tests\knowledge_live\domain_graph_checks.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Python314\Lib\asyncio\runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\knowledge_live\domain_graph_checks.py:108: in scenario
+    await db.setup()
+knowledge\adapters\neo4j_backend.py:131: in setup
+    await self._run(statement, write=True)
+knowledge\adapters\neo4j_backend.py:78: in _run
+    return await self._transaction(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;knowledge.adapters.neo4j_backend.Neo4jBackend object at 0x00000212091B2FD0&gt;
+callback = &lt;function Neo4jBackend._run.&lt;locals&gt;.&lt;lambda&gt; at 0x0000021209379010&gt;
+write = True
+
+    async def _transaction(
+        self, callback: Callable[[object], object], write: bool = False
+    ) -&gt; object:
+        """Run idempotent database work in a worker and normalize infrastructure faults.
+    
+        Args:
+            callback: Operation executed inside a bounded managed transaction.
+            write: Whether the managed transaction may mutate projection data.
+    
+        Returns:
+            The callback result after successful managed commit, with bounded retry policy.
+        """
+        from neo4j import unit_of_work
+        from neo4j.exceptions import DriverError, Neo4jError
+        from knowledge.deadlines import remaining_seconds
+    
+        timeout = remaining_seconds(self.query_timeout)
+    
+        def execute():
+            """Own the synchronous session within its worker-thread lifetime."""
+            with self.driver.session(database=self.database) as session:
+                runner = session.execute_write if write else session.execute_read
+                return runner(unit_of_work(timeout=timeout)(callback))
+    
+        try:
+            return await asyncio.to_thread(execute)
+        except (OSError, TimeoutError, DriverError, Neo4jError) as error:
+&gt;           raise BackendUnavailable() from error
+E           knowledge.errors.BackendUnavailable: backend unavailable
+
+knowledge\adapters\neo4j_backend.py:124: BackendUnavailable</failure></testcase><testcase classname="tests.knowledge_live.domain_graph_checks" name="test_same_generation_publish_cannot_clear_current_markers" time="5.247"><failure message="knowledge.errors.BackendUnavailable: backend unavailable">cls = &lt;class 'neo4j._sync.io._bolt_socket.BoltSocket'&gt;
+resolved_address = ResolvedIPv4Address(('127.0.0.1', 18087)), timeout = 3.0
+keep_alive = True, ssl_context = None
+
+    @classmethod
+    def _connect_secure(
+        cls, resolved_address, timeout, keep_alive, ssl_context
+    ):
+        """
+        Connect to the address and return the socket.
+    
+        :param resolved_address:
+        :param timeout: seconds
+        :param keep_alive: True or False
+        :returns: socket object
+        """
+        s = None  # The socket
+    
+        try:
+            try:
+                if len(resolved_address) == 2:
+                    s = socket(AF_INET)
+                elif len(resolved_address) == 4:
+                    s = socket(AF_INET6)
+                else:
+                    raise ValueError(
+                        f"Unsupported address {resolved_address!r}"
+                    )
+                try:
+                    s.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
+                except OSError as e:
+                    # option might not be supported on all platforms
+                    if e.errno != errno.ENOPROTOOPT:
+                        raise
+                t = s.gettimeout()
+                if timeout:
+                    s.settimeout(timeout)
+                log.debug("[#0000]  C: &lt;OPEN&gt; %s", resolved_address)
+&gt;               s.connect(resolved_address)
+E               ConnectionRefusedError: [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte
+
+..\..\.venv\Lib\site-packages\neo4j\_async_compat\network\_bolt_socket.py:498: ConnectionRefusedError
+
+The above exception was the direct cause of the following exception:
+
+cls = &lt;class 'neo4j._sync.io._bolt_socket.BoltSocket'&gt;
+address = IPv4Address(('127.0.0.1', 18087)), tcp_timeout = 3.0
+deadline = &lt;neo4j._deadline.Deadline object at 0x000002120AE978A0&gt;
+custom_resolver = None, ssl_context = None, keep_alive = True
+
+    @classmethod
+    def connect(
+        cls,
+        address: Address,
+        *,
+        tcp_timeout: float | None,
+        deadline: Deadline,
+        custom_resolver: t.Callable | None,
+        ssl_context: SSLContext | None,
+        keep_alive: bool,
+    ) -&gt; tuple[t.Self, BoltProtocolVersion]:
+        """
+        Connect and perform a handshake.
+    
+        Return a valid Connection object, assuming a protocol version can be
+        agreed.
+        """
+        errors = []
+        failed_addresses = []
+        # Establish a connection to the host and port specified
+        # Catches refused connections see:
+        # https://docs.python.org/2/library/errno.html
+    
+        resolved_addresses = NetworkUtil.resolve_address(
+            Address(address), resolver=custom_resolver
+        )
+        for resolved_address in resolved_addresses:
+            deadline_timeout = deadline.to_timeout()
+            if (
+                deadline_timeout is not None
+                and deadline_timeout &lt;= tcp_timeout
+            ):
+                tcp_timeout = deadline_timeout
+            s = None
+            try:
+&gt;               s = cls._connect_secure(
+                    resolved_address, tcp_timeout, keep_alive, ssl_context
+                )
+
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_bolt_socket.py:329: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = &lt;class 'neo4j._sync.io._bolt_socket.BoltSocket'&gt;
+resolved_address = ResolvedIPv4Address(('127.0.0.1', 18087)), timeout = 3.0
+keep_alive = True, ssl_context = None
+
+    @classmethod
+    def _connect_secure(
+        cls, resolved_address, timeout, keep_alive, ssl_context
+    ):
+        """
+        Connect to the address and return the socket.
+    
+        :param resolved_address:
+        :param timeout: seconds
+        :param keep_alive: True or False
+        :returns: socket object
+        """
+        s = None  # The socket
+    
+        try:
+            try:
+                if len(resolved_address) == 2:
+                    s = socket(AF_INET)
+                elif len(resolved_address) == 4:
+                    s = socket(AF_INET6)
+                else:
+                    raise ValueError(
+                        f"Unsupported address {resolved_address!r}"
+                    )
+                try:
+                    s.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
+                except OSError as e:
+                    # option might not be supported on all platforms
+                    if e.errno != errno.ENOPROTOOPT:
+                        raise
+                t = s.gettimeout()
+                if timeout:
+                    s.settimeout(timeout)
+                log.debug("[#0000]  C: &lt;OPEN&gt; %s", resolved_address)
+                s.connect(resolved_address)
+                s.settimeout(t)
+                keep_alive = 1 if keep_alive else 0
+                s.setsockopt(SOL_SOCKET, SO_KEEPALIVE, keep_alive)
+            except TimeoutError:
+                log.debug("[#0000]  S: &lt;TIMEOUT&gt; %s", resolved_address)
+                log.debug("[#0000]  C: &lt;CLOSE&gt; %s", resolved_address)
+                if s:
+                    cls._kill_raw_socket(s)
+                raise ServiceUnavailable(
+                    "Timed out trying to establish connection to "
+                    f"{resolved_address!r}"
+                ) from None
+            except Exception as error:
+                log.debug(
+                    "[#0000]  S: &lt;ERROR&gt; %s %s",
+                    type(error).__name__,
+                    " ".join(map(repr, error.args)),
+                )
+                log.debug("[#0000]  C: &lt;CLOSE&gt; %s", resolved_address)
+                if s:
+                    cls._kill_raw_socket(s)
+                if isinstance(error, OSError):
+&gt;                   raise ServiceUnavailable(
+                        "Failed to establish connection to "
+                        f"{resolved_address!r} (reason {error})"
+                    ) from error
+E                   neo4j.exceptions.ServiceUnavailable: Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 18087)) (reason [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte)
+
+..\..\.venv\Lib\site-packages\neo4j\_async_compat\network\_bolt_socket.py:521: ServiceUnavailable
+
+The above exception was the direct cause of the following exception:
+
+self = &lt;knowledge.adapters.neo4j_backend.Neo4jBackend object at 0x000002120B03DD10&gt;
+callback = &lt;function Neo4jBackend._run.&lt;locals&gt;.&lt;lambda&gt; at 0x0000021208B7D6F0&gt;
+write = True
+
+    async def _transaction(
+        self, callback: Callable[[object], object], write: bool = False
+    ) -&gt; object:
+        """Run idempotent database work in a worker and normalize infrastructure faults.
+    
+        Args:
+            callback: Operation executed inside a bounded managed transaction.
+            write: Whether the managed transaction may mutate projection data.
+    
+        Returns:
+            The callback result after successful managed commit, with bounded retry policy.
+        """
+        from neo4j import unit_of_work
+        from neo4j.exceptions import DriverError, Neo4jError
+        from knowledge.deadlines import remaining_seconds
+    
+        timeout = remaining_seconds(self.query_timeout)
+    
+        def execute():
+            """Own the synchronous session within its worker-thread lifetime."""
+            with self.driver.session(database=self.database) as session:
+                runner = session.execute_write if write else session.execute_read
+                return runner(unit_of_work(timeout=timeout)(callback))
+    
+        try:
+&gt;           return await asyncio.to_thread(execute)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+knowledge\adapters\neo4j_backend.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Python314\Lib\asyncio\threads.py:25: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\concurrent\futures\thread.py:86: in run
+    result = ctx.run(self.task)
+             ^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\concurrent\futures\thread.py:73: in run
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+knowledge\adapters\neo4j_backend.py:119: in execute
+    return runner(unit_of_work(timeout=timeout)(callback))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\session.py:720: in execute_write
+    return self._run_transaction(
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\session.py:584: in _run_transaction
+    raise errors[-1]
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\session.py:532: in _run_transaction
+    self._open_transaction(
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\session.py:398: in _open_transaction
+    self._connect(access_mode=access_mode)
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\session.py:126: in _connect
+    super()._connect(
+..\..\.venv\Lib\site-packages\neo4j\_sync\work\workspace.py:181: in _connect
+    self._connection = self._pool.acquire(**acquire_kwargs_)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_pool.py:678: in acquire
+    return self._acquire(
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_pool.py:418: in _acquire
+    return connection_creator()
+           ^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_pool.py:231: in connection_creator
+    connection = self.opener(
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_pool.py:638: in opener
+    return Bolt.open(
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_bolt.py:367: in open
+    s, protocol_version = BoltSocket.connect(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = &lt;class 'neo4j._sync.io._bolt_socket.BoltSocket'&gt;
+address = IPv4Address(('127.0.0.1', 18087)), tcp_timeout = 3.0
+deadline = &lt;neo4j._deadline.Deadline object at 0x000002120AE978A0&gt;
+custom_resolver = None, ssl_context = None, keep_alive = True
+
+    @classmethod
+    def connect(
+        cls,
+        address: Address,
+        *,
+        tcp_timeout: float | None,
+        deadline: Deadline,
+        custom_resolver: t.Callable | None,
+        ssl_context: SSLContext | None,
+        keep_alive: bool,
+    ) -&gt; tuple[t.Self, BoltProtocolVersion]:
+        """
+        Connect and perform a handshake.
+    
+        Return a valid Connection object, assuming a protocol version can be
+        agreed.
+        """
+        errors = []
+        failed_addresses = []
+        # Establish a connection to the host and port specified
+        # Catches refused connections see:
+        # https://docs.python.org/2/library/errno.html
+    
+        resolved_addresses = NetworkUtil.resolve_address(
+            Address(address), resolver=custom_resolver
+        )
+        for resolved_address in resolved_addresses:
+            deadline_timeout = deadline.to_timeout()
+            if (
+                deadline_timeout is not None
+                and deadline_timeout &lt;= tcp_timeout
+            ):
+                tcp_timeout = deadline_timeout
+            s = None
+            try:
+                s = cls._connect_secure(
+                    resolved_address, tcp_timeout, keep_alive, ssl_context
+                )
+                agreed_version = s._handshake(resolved_address, deadline)
+                return s, agreed_version
+            except (BoltError, DriverError, OSError) as error:
+                local_port = 0
+                if isinstance(s, cls):
+                    with suppress(OSError, AttributeError, TypeError):
+                        local_port = s.getsockname()[1]
+                err_str = error.__class__.__name__
+                if str(error):
+                    err_str += ": " + str(error)
+                log.debug(
+                    "[#%04X]  S: &lt;CONNECTION FAILED&gt; %s %s",
+                    local_port,
+                    resolved_address,
+                    err_str,
+                )
+                if s:
+                    cls.close_socket(s)
+                errors.append(error)
+                failed_addresses.append(resolved_address)
+            except asyncio.CancelledError:
+                local_port = 0
+                if isinstance(s, cls):
+                    with suppress(OSError, AttributeError, TypeError):
+                        local_port = s.getsockname()[1]
+                log.debug(
+                    "[#%04X]  C: &lt;CANCELED&gt; %s", local_port, resolved_address
+                )
+                if s:
+                    with suppress(OSError):
+                        s.kill()
+                raise
+            except Exception:
+                if s:
+                    cls.close_socket(s)
+                raise
+        address_strs = tuple(map(str, failed_addresses))
+        # TODO: 7.0 - when Python 3.11+ is the minimum, use exception groups
+        if not errors:
+            raise ServiceUnavailable(
+                f"Couldn't connect to {address} (resolved to {address_strs})"
+            )
+        else:
+            error_strs = "\n".join(map(str, errors))
+&gt;           raise ServiceUnavailable(
+                f"Couldn't connect to {address} (resolved to {address_strs}):"
+                f"\n{error_strs}"
+            ) from errors[0]
+E           neo4j.exceptions.ServiceUnavailable: Couldn't connect to 127.0.0.1:18087 (resolved to ('127.0.0.1:18087',)):
+E           Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 18087)) (reason [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte)
+
+..\..\.venv\Lib\site-packages\neo4j\_sync\io\_bolt_socket.py:376: ServiceUnavailable
+
+The above exception was the direct cause of the following exception:
+
+    def test_same_generation_publish_cannot_clear_current_markers():
+        # covers: KM-400a-3-i
+        # angle: boundary
+        async def scenario():
+            first, second, repo = local_backend(), local_backend(), "domain-" + uuid.uuid4().hex
+            paused, resume = asyncio.Event(), asyncio.Event()
+            original = second._run
+    
+            async def delayed(statement, parameters=None, write=False):
+                if "UNWIND $rows AS row MERGE (n:AC " in statement and not paused.is_set():
+                    paused.set()
+                    await resume.wait()
+                return await original(statement, parameters, write)
+    
+            second._run = delayed
+            try:
+                await first.setup()
+                task = asyncio.create_task(second.publish(sample(repo)))
+                await asyncio.wait_for(paused.wait(), 10)
+                assert await first.publish(sample(repo))
+                resume.set()
+                assert await task
+                rows = await first._run(
+                    "MATCH (n:AC {repository_id:$repo}) RETURN n.current AS current", {"repo": repo}
+                )
+                assert rows == [{"current": True}]
+                rows = await first._run(
+                    "MATCH (n:AC {repository_id:$repo})-[r]-&gt;() RETURN DISTINCT r.current AS current",
+                    {"repo": repo},
+                )
+                assert rows == [{"current": True}]
+            finally:
+                resume.set()
+                await first.close()
+                await second.close()
+    
+&gt;       asyncio.run(scenario())
+
+tests\knowledge_live\domain_graph_checks.py:158: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Python314\Lib\asyncio\runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\knowledge_live\domain_graph_checks.py:138: in scenario
+    await first.setup()
+knowledge\adapters\neo4j_backend.py:131: in setup
+    await self._run(statement, write=True)
+knowledge\adapters\neo4j_backend.py:78: in _run
+    return await self._transaction(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;knowledge.adapters.neo4j_backend.Neo4jBackend object at 0x000002120B03DD10&gt;
+callback = &lt;function Neo4jBackend._run.&lt;locals&gt;.&lt;lambda&gt; at 0x0000021208B7D6F0&gt;
+write = True
+
+    async def _transaction(
+        self, callback: Callable[[object], object], write: bool = False
+    ) -&gt; object:
+        """Run idempotent database work in a worker and normalize infrastructure faults.
+    
+        Args:
+            callback: Operation executed inside a bounded managed transaction.
+            write: Whether the managed transaction may mutate projection data.
+    
+        Returns:
+            The callback result after successful managed commit, with bounded retry policy.
+        """
+        from neo4j import unit_of_work
+        from neo4j.exceptions import DriverError, Neo4jError
+        from knowledge.deadlines import remaining_seconds
+    
+        timeout = remaining_seconds(self.query_timeout)
+    
+        def execute():
+            """Own the synchronous session within its worker-thread lifetime."""
+            with self.driver.session(database=self.database) as session:
+                runner = session.execute_write if write else session.execute_read
+                return runner(unit_of_work(timeout=timeout)(callback))
+    
+        try:
+            return await asyncio.to_thread(execute)
+        except (OSError, TimeoutError, DriverError, Neo4jError) as error:
+&gt;           raise BackendUnavailable() from error
+E           knowledge.errors.BackendUnavailable: backend unavailable
+
+knowledge\adapters\neo4j_backend.py:124: BackendUnavailable</failure></testcase><testcase classname="tests.knowledge_live.domain_migration_checks" name="test_legacy_migration_is_idempotent_and_preserves_evidence" time="4.493" /><testcase classname="tests.knowledge_live.domain_migration_checks" name="test_cross_generation_edge_refuses_migration_without_changes" time="0.370" /><testcase classname="tests.knowledge_live.domain_migration_checks" name="test_unowned_node_refuses_migration_without_changes" time="0.289" /><testcase classname="tests.knowledge_live.domain_migration_checks" name="test_retained_catalog_digest_and_result_survive_migration" time="1.885" /><testcase classname="tests.knowledge_live.domain_migration_checks" name="test_corrupt_legacy_data_is_rejected_before_mutation" time="0.191" /><testcase classname="tests.knowledge_live.domain_migration_checks" name="test_legacy_rollback_does_not_create_duplicate_repository" time="0.166" /><testcase classname="tests.knowledge_live.domain_migration_checks" name="test_contradictory_labels_are_rejected" time="0.128" /></testsuite></testsuites>

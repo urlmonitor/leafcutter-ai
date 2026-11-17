@@ -42,6 +42,10 @@ amended_by:
 superseded_by: null
 covered_by:
 - unit_tests/product_truth/test_uxp_300.py
+- UXP-300-1
+- UXP-300-2
+- UXP-300-3
+- UXP-300-4
 implemented_by:
 - docs/product-truth/scripts/validate_product_truth.py
 implemented_by:

@@ -77,7 +77,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Named `state` as a field on the pin record with 'ok'/'malformed', added the valueless-attribute third code path, and required that a malformed pin contribute to no count and to no pinned_by. Test contract asserts record presence and consumer-observable distinguishability rather than an empty id list. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/12_TICKET-20261022-GE-124b-1-ii.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -96,3 +97,4 @@ notes: |
   verdict. The reader's obligation is fixed here; which of the two codes the
   commit tier assigns to a malformed pin (or whether it warrants a third) is
   left to GE-124c and is worth confirming when that AC is built.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

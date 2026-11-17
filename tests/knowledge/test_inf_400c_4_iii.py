@@ -40,6 +40,10 @@ WHAT IS EXPECTED TO BE RED AND WHY: the harvester already never opens the
     an isolated working directory writes to a DIFFERENT file than one
     working from the project root. ``TestTwoStreamsPerRepositoryNot...``
     below is written to be genuinely RED against that real gap.
+    UPDATE (INF-500d-4-iv): the gap is closed by the emitter reading its own
+    deployed workspace's declaration (not by an ancestor-of-cwd search, which
+    is retracted); that test now runs the DEPLOYED emit_event.py in a
+    declared layout.
 
 REACHABILITY / SEAM NOTES (BP-1100g-2 / seam angle): every test below drives
     the REAL CLI entry points via subprocess -- ``scripts/knowledge/
@@ -122,15 +126,18 @@ def _run_emit_event(
     event: str,
     agent: str = "test-agent",
     cwd: Path | None = None,
+    script: Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Invoke the real, self-contained emit_event.py CLI as a subprocess.
 
     When *log_path* is None, the CLI's own default (``--log`` omitted) is
     exercised -- this is deliberate for
     ``TestTwoStreamsPerRepositoryNotTwoStreamsPerWorkingDirectory``, which
-    proves the default is NOT anchored to the project root.
+    proves the default is the one declared stream whatever the caller's cwd.
+    *script* is the emit_event.py to run (the DEPLOYED copy in a declared
+    layout for that test); it defaults to the template source.
     """
-    args = [sys.executable, str(_EMIT_EVENT_PATH), "--agent", agent, "--event", event]
+    args = [sys.executable, str(script or _EMIT_EVENT_PATH), "--agent", agent, "--event", event]
     if log_path is not None:
         args += ["--log", str(log_path)]
     return subprocess.run(
@@ -344,41 +351,46 @@ class TestAKnowledgeRecordAndAnOperationalRecordLandInDifferentFiles(unittest.Te
 
 class TestTwoStreamsPerRepositoryNotTwoStreamsPerWorkingDirectory(unittest.TestCase):
     """AC INF-400c-4-iii, test_spec descriptor 5 (boundary) -- the clause
-    this AC adds on top of INF-400c-4. The knowledge sink is already
-    anchored to the project root regardless of caller cwd (via
-    config/knowledge_sink.json beside a copy of harvest_learnings.py placed
-    at a controlled fake project root). The operational stream's emitter,
-    emit_event.py, has NO such anchor today: its --log default is a bare
-    relative path resolved against the caller's cwd. This test drives both
-    real producers from two different working directories -- the project
-    root and an isolated working directory that is then removed -- and
-    proves the operational stream fragments while the knowledge stream does
-    not, which is the real gap python-coder must close."""
+    this AC adds on top of INF-400c-4. Both streams are anchored to the
+    install by ONE build-time declaration (config/knowledge_sink.json), and
+    each deployed writer reads the declaration of its OWN workspace
+    (INF-500d-4-iv): the harvester via sink_resolution, emit_event.py via its
+    own resolved location -- never by searching the ancestors of the caller's
+    cwd. This test deploys both real writers into a declared layout, drives
+    them from two different working directories -- the project root and an
+    isolated working directory that is then removed -- and proves neither
+    stream fragments into one file per working directory."""
 
     def test_two_streams_per_repository_not_two_streams_per_working_directory(self) -> None:
         # covers: INF-400c-4-iii
         # angle: boundary
+        # INF-500d-4-iv retracted emit_event's ancestor-of-cwd search for
+        # <dir>/config/knowledge_sink.json (it never matched the deployed
+        # <project>/.leafcutter/config/ layout). The one-anchor claim is now
+        # true via the declaration of the deployed workspace, so this test
+        # runs the DEPLOYED emit_event.py / harvester in a declared layout
+        # (real build helper) instead of the source template plus a
+        # hand-written <proj>/config/knowledge_sink.json.
+        sys.path.insert(0, str(_REPO_ROOT))
+        from unit_tests.feedback import _inf_500d_4_helpers as h  # noqa: E402
+
         with tempfile.TemporaryDirectory() as tmpdir:
             proj = Path(tmpdir) / "proj"
             proj.mkdir()
+            out_root = h.deploy_install(proj, git=False)
+            h.declare(out_root)
 
-            fake_harvester_dir = proj / "scripts" / "knowledge"
-            fake_harvester_dir.mkdir(parents=True)
-            fake_harvester = fake_harvester_dir / "harvest_learnings.py"
-            shutil.copy(_HARVEST_PATH, fake_harvester)
-
-            declared_knowledge_sink = proj / "debugging" / "logs" / "knowledge_emissions.jsonl"
-            config_dir = proj / "config"
-            config_dir.mkdir()
-            (config_dir / "knowledge_sink.json").write_text(
-                json.dumps({"knowledge_emission_sink": str(declared_knowledge_sink)}),
-                encoding="utf-8",
+            fake_harvester = out_root / "scripts" / "knowledge" / "harvest_learnings.py"
+            deployed_emit = (
+                out_root / "skills" / "agent-telemetry" / "scripts" / "emit_event.py"
             )
+            declaration = h.read_declaration(out_root)
+            declared_knowledge_sink = Path(declaration["knowledge_emission_sink"])
+            operational_stream = Path(declaration["operational_telemetry_stream"])
+            self.assertNotEqual(declared_knowledge_sink, operational_stream)
 
             isolated_dir = proj / "isolated_worktree"
             isolated_dir.mkdir()
-
-            operational_stream = proj / "debugging" / "logs" / "agent_telemetry.jsonl"
 
             root_query = subprocess.run(
                 [sys.executable, str(fake_harvester), "--print-sink"],
@@ -417,8 +429,10 @@ class TestTwoStreamsPerRepositoryNotTwoStreamsPerWorkingDirectory(unittest.TestC
                 fh.write(json.dumps(knowledge_event_root) + "\n")
                 fh.write(json.dumps(knowledge_event_isolated) + "\n")
 
-            root_emit = _run_emit_event(None, event="agent_start", cwd=proj)
-            isolated_emit = _run_emit_event(None, event="agent_end", cwd=isolated_dir)
+            root_emit = _run_emit_event(None, event="agent_start", cwd=proj, script=deployed_emit)
+            isolated_emit = _run_emit_event(
+                None, event="agent_end", cwd=isolated_dir, script=deployed_emit
+            )
             self.assertEqual(0, root_emit.returncode)
             self.assertEqual(0, isolated_emit.returncode)
 

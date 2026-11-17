@@ -1,0 +1,297 @@
+id: TQ-500g-1-xvii
+components:
+  - testing_quality
+  - build_orchestration
+  - ac_store
+title: "A requirement may declare the exact replacement for a named wrong version; a declared replacement always wins over a pinned or prepared one and is checked the same way"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given test T1's entry on requirement TQ-9101 names must_catch
+    "propagation that reaches only one level deep" and
+    "drop the _lc_obs_installed guard",
+    and declares, for "propagation that reaches only one level deep" only,
+    one replacement in observer.py: old text
+    "if _STATE.entered or _STATE.inherited:" becomes "if _STATE.entered:",
+    and the work 07_TICKET-observer already holds a pin for that name from an
+    earlier preparation, a different replacement,
+  When the gate runs for that work,
+  Then "propagation that reaches only one level deep" is not sent to the
+      preparer, its pin is not applied, and the declared replacement is
+      applied to observer.py as it now stands,
+    And its row says "declared" and names TQ-9101 and T1's entry,
+    And the declared replacement is held to the same checks as a pinned one
+      (TQ-500g-1-xiii) and to the same refusals as a prepared one (a test
+      file, outside the repository, inside the version-control folder, or not
+      in scope for the name),
+    And when the declared old text no longer occurs exactly once in
+      observer.py, or any other check fails, the name is reported unfinished
+      with a reason naming TQ-9101, T1's entry and the failed check; it is
+      never sent to the preparer and never falls back to the pin,
+    And "drop the _lc_obs_installed guard", which has no declaration, comes
+      from its pin or from the preparer as before,
+    And the pin held for "propagation that reaches only one level deep" stays
+      as it was while the declaration exists, and is used again, after the
+      checks, once the declaration is removed from the entry,
+    And a declaration on T1's entry for a name that entry's must_catch does
+      not list is refused when the requirement is checked, with a message
+      naming the entry and the name.
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-1-xi
+  - TQ-500g-1-xiii
+  - TQ-500f-2
+doc_links:
+  - path: docs/analysis/2026-10-23-the-wrong-version-gate-tests-a-different-guess-each-run.md
+    relationship: describes
+    status: exists
+    relevance: "Remedy option (iii) (the AC carries the alteration) and recommendation item 6 (declared replacement). 'propagation' got two different, both faithful-looking, alterations across rounds I-III."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "must_catch on a test_spec entry and its validation; the declaration sits next to it on the same entry."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-ix.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Precedent for a new optional test_spec item field (in_scope_files) and the writer's path refusals, which a declared replacement must also pass."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "test_spec item fields; the declaration is a new optional field there, refused-unknown-keys rule unchanged."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20261023-test-breaker-no-op-alterations.md
+    relationship: relates-to
+    status: exists
+  - path: docs/reference/wrong-version-runs.md
+    relationship: describes
+    status: planned
+    relevance: "TQ-500g-5 reference page; precedence declared > pinned > prepared and the declared row are documented there."
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+  - path: config/ac_store_schema.json
+    state: existing
+  - path: scripts/ac_store/_ac_schema_test_spec_validators.py
+    state: existing
+  - path: scripts/build_orchestration/_wvr_scope.py
+    state: existing
+  - path: scripts/build_orchestration/_wvp_plan.py
+    state: to_be_created
+  - path: scripts/build_orchestration/_wvw_write.py
+    state: existing
+  - path: scripts/build_orchestration/_wvr_verdict.py
+    state: existing
+it_requirements:
+  - >-
+    Field (IT-PO decision on the shape): one new optional test_spec item field, declared_replacements: an
+    object whose keys are must_catch names of THE SAME entry, spelled exactly as that entry's must_catch
+    spells them, and whose values are non-empty lists of {path: str, old: str, new: str} (path and old
+    non-empty, at least one non-whitespace character; new may be empty; no other key). Replacements apply in
+    list order, each against the result of the one before, exactly as the writer applies a reply's.
+  - >-
+    Enforcement on the gate that actually runs. (1) config/ac_store_schema.json: the property is added to
+    the test_spec item, with additionalProperties false kept on the item and set on each replacement object,
+    so the unknown-key check (_ac_schema_test_spec_validators._declared_entry_keys reads the schema)
+    accepts it and still refuses every other unknown key. (2) The load-bearing, entry-naming check is in
+    scripts/ac_store/_ac_schema_test_spec_validators.py, called from test_spec_entry_errors beside the
+    must_catch check: a key that this entry's must_catch does not list is refused with a message naming the
+    file, the entry and the name; a non-object value, an empty list, a replacement missing path/old/new or
+    holding a non-string, and a blank path or old are refused, each naming the entry and the rule. Both run
+    under validate_ac_schema.py and the check-ac-schema hook. No new ac_store module is created; if one is,
+    it is added to build_phases_ac_store.py's deploy map in the same change, because the hook runs the
+    deployed validator.
+  - >-
+    Not copied onto generated tickets (as in_scope_files): generate_ticket_from_ac.py is not changed, so
+    config/test_requirements.schema.json is not changed either.
+  - >-
+    Reading (runner side, one reader): _wvr_scope reads declared_replacements from the same AC records the
+    declared-scope reader already loads (_wvr_records.load_records), beside _must_catch_by_name and
+    _in_scope_by_name, and attaches to each owed name its declaration and declared_by [{ac_id, entry}]. Never
+    a second parse of the store. Two entries declaring different replacements for the same name (after
+    norm_name) make the name unfinished with a reason naming both requirement ids and entries; identical
+    declarations are one declaration.
+  - >-
+    Precedence in _wvp_plan (TQ-500g-1-xi): declared > pinned > prepared. A declared name is never put in
+    to_prepare, and its pin is neither applied, nor changed, nor cleared while the declaration exists; once
+    the declaration is removed from the entry the pin is planned again through every check of
+    TQ-500g-1-xiii. A declaration is never written to the pin store.
+  - >-
+    Checks: the declared replacements go through the same _wvp_checks functions as a pin (TQ-500g-1-xiii:
+    in scope and the writer's path refusals for a test file, outside the repository and inside the
+    version-control folder; old text exactly once; changes something; loads; reaches a line). A failure
+    makes the manifest entry could_not_prepare with the reason exactly "declared on <ac_id>, entry <entry
+    name>: <failed check>"; the name is unfinished, never sent to the preparer, never replaced by the pin.
+  - >-
+    Row: the manifest entry for a declared name has source "declared" and the additive key declared_by
+    [{ac_id, entry}], which the runner copies onto every row of that wrong version beside alteration_id,
+    source and replacements (TQ-500g-1-xv), so the row names TQ-9101 and T1's entry.
+  - >-
+    Every changed Python file stays at or under 400 counted lines (_wvr_scope.py is at 275,
+    _ac_schema_test_spec_validators.py at 84). Logging to stderr only.
+test_spec:
+  - name: test_declared_replacement_wins_over_pin_and_preparer
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: python scripts/build_orchestration/wrong_version_gate.py finish
+    description: >-
+      Temp repo with observer.py and an AC store whose T1 entry on TQ-9101 declares the propagation
+      replacement; the pin file of 07_TICKET-observer holds a different replacement for that name. list
+      --work-key leaves the name out of to_prepare (decision "declared"); finish applies the declared
+      replacement to observer.py as it now stands, its rows read source "declared" with declared_by naming
+      TQ-9101 and T1's entry, and the pin file is byte-identical afterwards.
+    must_catch:
+      - the pin applied in place of the declaration
+      - the declared name sent to the preparer
+      - the declaration written into the pin store
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_plan.py
+      - scripts/build_orchestration/_wvr_scope.py
+      - scripts/build_orchestration/_wvw_write.py
+  - name: test_failing_declaration_is_unfinished_never_prepared_never_the_pin
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      The declared old text is edited so it no longer occurs, and in a second case the declaration targets a
+      test file. The name is could_not_prepare with reason "declared on TQ-9101, entry <T1>: target changed"
+      (or the test-file refusal), absent from to_prepare, and neither the pin nor a reply answer for it is
+      used.
+    must_catch:
+      - a stale declaration silently replaced by the preparer's guess
+      - a stale declaration falling back to the pin
+      - a declaration allowed to alter a test file
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_plan.py
+  - name: test_undeclared_name_still_comes_from_pin_or_preparer
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: >-
+      "drop the _lc_obs_installed guard", which has no declaration, is "pinned" when a pin matches and in
+      to_prepare when it does not, exactly as without any declaration on the entry.
+    must_catch:
+      - a declaration on one name changing how the entry's other names are planned
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_plan.py
+  - name: test_pin_used_again_after_the_declaration_is_removed
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: >-
+      After a run with the declaration, the declaration is deleted from the entry. The next list plans the
+      name as "pinned" (the earlier pin, re-checked), and finish applies the pin.
+    must_catch:
+      - the pin cleared while the declaration existed
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_plan.py
+  - name: test_schema_refuses_a_declaration_for_an_unlisted_name
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: failure
+    surface_invoked: python scripts/ac_store/validate_ac_schema.py
+    description: >-
+      An AC file whose T1 entry declares a replacement for "invert refresh_due", a name its must_catch does
+      not list, fails validate_ac_schema.py with a message naming the entry and the name; the same
+      declaration under a listed name passes.
+    must_catch:
+      - a declaration for a name the entry does not owe accepted
+    in_scope_files:
+      - scripts/ac_store/_ac_schema_test_spec_validators.py
+      - config/ac_store_schema.json
+  - name: test_schema_shape_of_declared_replacements_and_unknown_keys
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: >-
+      validate_ac_schema.py accepts a well-formed declaration and refuses an empty list, a replacement
+      without old, a non-string new, a blank path, an extra key inside a replacement, and another unknown
+      test_spec key, each message naming the entry.
+    must_catch:
+      - additionalProperties dropped from the test_spec item to admit the new field
+      - shape checked only in the JSON schema, which the hook does not enforce
+    in_scope_files:
+      - scripts/ac_store/_ac_schema_test_spec_validators.py
+      - config/ac_store_schema.json
+test_required: true
+test_rationale: >-
+  The precedence and the failure rule are deterministic, so the build_orchestration entries run the real
+  list and finish CLIs on a temp git repo with an AC store that carries the declaration and a hand-written
+  pin file, and assert on to_prepare, the manifest entry, the rows and the pin file bytes. The schema
+  entries run the real validate_ac_schema.py CLI on temp AC files, because the entry-naming validator, not
+  the JSON schema alone, is the gate the commit hook runs.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500g-1-xiii
+    contract: >-
+      _wvp_checks: the five checks with their reason wording, applied unchanged to a declared replacement.
+  - ac_id: TQ-500g-1-xi
+    contract: >-
+      The plan module's precedence slot and the pin store (_wvp_store), which a declaration overrides
+      without reading as a candidate and without clearing.
+origin_agent: business-analyst-v3
+created: 2026-10-23
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-24'
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-OnceANamedWrongVersionIsPreparedAnd/08_TICKET-20261024-TQ-500g-1-xvii.md
+change_target:
+  - schema
+  - code
+risk_surface: contract_boundary
+notes: |
+  DECISION ON USER BRIEF ITEM 6: IN SCOPE. The analysis recommends (iii) as an
+  optional addition to the pin for names whose reading is contested, and the
+  cost is bounded: one optional test_spec item field (the in_scope_files
+  precedent from TQ-500g-1-ix shows the path) and one branch in the writer. It
+  gives the AC author an exact, reviewable wrong version with no LLM in the
+  loop, which is the only remedy that fixes a contested name on the first run.
+
+  ORDER OF PRECEDENCE: declared > pinned > prepared.
+
+  A FAILED DECLARATION IS NEVER REPAIRED BY A GUESS. When the author declared
+  the replacement, silently swapping in the preparer's reading would defeat
+  the declaration. So a stale or failing declaration is unfinished with a
+  reason naming the AC, and the author fixes the AC. This is the analysis's
+  invariant for (iii): "the declared old must still match the current code
+  exactly once, or the name becomes unfinished, never silently skipped".
+
+  A DECLARATION IS NOT PINNED. It is read from the AC on every run; the pin for
+  the same name is left untouched and comes back if the declaration is
+  removed.
+
+  SCHEMA (for IT-PO). The field shape is IT-PO's (for example a map from a
+  must_catch name to a list of {path, old, new}). It must be added to the
+  test_spec item in config/ac_store_schema.json and enforced by
+  validate_ac_schema.py (the check-ac-schema gate), and documented in
+  docs/reference/ac-schema.md. Whether it is copied onto generated tickets is
+  IT-PO's call; if it is, config/test_requirements.schema.json gains it in the
+  same change (TQ-500f-2 copy-through coupling). The last And clause (a
+  declaration for an unlisted name is refused) belongs to that validator.
+
+  NOT A WAY AROUND THE TEST FILE RULE. A declaration may never alter a test
+  file; the same refusals apply as to a prepared replacement.
+
+  IT-PO ENRICHMENT (2026-10-23)
+  SHAPE: declared_replacements, a map from a must_catch name of the same entry
+  (exact spelling) to a non-empty list of {path, old, new}. Not copied onto
+  tickets, so config/test_requirements.schema.json is unchanged. The
+  entry-naming validator in _ac_schema_test_spec_validators.py is the
+  load-bearing check; the JSON schema only admits the key. Documentation of the
+  field in docs/reference/ac-schema.md is a documentation follow-up
+  (documentation-expert), not part of this AC's declared files.

@@ -1,5 +1,5 @@
 id: GE-117e-1
-readiness: draft
+readiness: approved
 priority: medium
 title: "Guided autofix inserts the correct declaration so the corrected commit proceeds"
 component: guardrail-engine
@@ -22,12 +22,36 @@ criteria: |
 
   Given a commit was blocked because a new public symbol or a new decision-history
     entry does not reference an AC
-  And the surrounding commit context supplies a single AC the change is being made
-    for
+  And the workspace maker recorded the ticket the current branch is being built for
+  And that ticket's declared source ACs (its `source_ac` field) name exactly one AC
+    id, for example "GE-117e-1"
+  And that AC id exists in the AC store
   When the developer invokes the guided autofix for that item
-  Then the autofix inserts that AC reference into the docstring or entry
+  Then the autofix inserts the reference "GE-117e-1" into the symbol's docstring or
+    into the new decision-history entry
   And re-running the guardrail on the corrected staged commit produces a satisfied
     verdict for that declaration
+
+  Given a commit was blocked because a new public symbol or a new decision-history
+    entry does not reference an AC
+  And the workspace maker recorded the ticket the current branch is being built for
+  And that ticket's declared source ACs name no AC id, or name two or more AC ids,
+    or name one AC id that does not exist in the AC store
+  When the developer invokes the guided autofix for that item
+  Then the autofix inserts no AC reference on its own
+  And it follows the prompt-instead-of-guessing behaviour of GE-117e-1-i
+
+  Given a commit was blocked because a new public symbol or a new decision-history
+    entry does not reference an AC
+  And the workspace maker recorded no ticket for the current branch, or the
+    recorded ticket file is not present in the workspace
+  And the commit message or the branch name mentions an AC id that exists in the
+    AC store
+  When the developer invokes the guided autofix for that item
+  Then the autofix inserts no AC reference
+  And it does not take the AC id from the commit message or the branch name
+  And it reports that no declared record of the change's AC exists for this
+    workspace
 depends_on:
   - GE-117e
   - GE-117d-1
@@ -38,23 +62,94 @@ doc_links:
   - path: "docs/components.json"
     relationship: related
     status: exists
+    relevance: "Each component's primary_code list (file paths and directory prefixes ending in '/') is the path data the component inference reads."
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c-2-i.yaml"
+    relationship: related
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
 it_requirements:
-  - "PREREQUISITE (component-inference gap — user-confirmed): module-component VALIDITY resolves against docs/components.json (code-component ids, e.g. 'commit_guardian'), but components.json has NO directory/path-pattern field. The directory_patterns field lives only in docs/acceptance-criteria/index.yaml, whose ids are a DIFFERENT namespace (e.g. 'guardrail-engine'), so index.yaml patterns cannot be used to infer a components.json id. Therefore component auto-inference is NOT implementable until one of these lands: (a) a directory/primary_code-pattern-based inference is added to docs/components.json, or (b) a components.json<->index.yaml id bridge is added. UNTIL a prerequisite lands, the module-component autofix MUST PROMPT for the component (the GE-117e-1-i prompt behavior) rather than infer it. Do not silently insert a components.json id from an index.yaml directory_patterns match."
-  - "AC-reference auto-inference (public symbol / decision-history entry) is UNAFFECTED by the above: when the surrounding commit context supplies a single AC, resolve it against the AC store via the shared _load_ac_by_id and insert it; on re-check the same commit produces a satisfied verdict."
-  - "The autofix EDIT is applied to the staged working tree (module docstring gets the component name; symbol docstring or new decision-history entry gets the AC ref) and the observable success criterion is behavioral: re-running the guardrail on the corrected staged commit yields a satisfied verdict for that item."
+  - "Component inference resolves to a docs/components.json id (the validity namespace) from that registry's existing primary_code paths: an entry ending in '/' covers every file under it, any other entry covers that exact file. A file covered by exactly one component is a confident single match. NEVER infer from docs/acceptance-criteria/index.yaml directory_patterns — those ids ('guardrail-engine') are a different namespace from components.json ids ('commit_guardian')."
+  - "This supersedes the earlier enrichment note that component inference was a PREREQUISITE because components.json had no path field: primary_code is that path data, and the first criteria scenario requires auto-insertion on a single match, which a prompt-only reading would make unsatisfiable. Matching must use primary_code exactly as registered; do not add a second path field or a components.json<->index.yaml bridge for this."
+  - "AC-reference inference (public symbol / decision-history entry) reads exactly one source: the ticket the workspace maker recorded for the current branch (git config branch.<branch>.leafcutterTicket, a project-relative ticket path, per docs/reference/workspace-maker-answer.md), then that ticket's source_ac frontmatter, which may be a single id or a list of ids. Exactly one declared id that resolves through the shared GE-124c-2-i resolver is a confident match and is inserted. No declared id, two or more declared ids, or one id that does not resolve is the prompt path of GE-117e-1-i and inserts nothing on its own. No recorded ticket, or a recorded ticket path whose file is not present in the workspace, counts as no declared record: nothing is inserted and the autofix reports that no declared record of the change's AC exists for this workspace. AC ids are never taken from the commit message or the branch name, in any case."
+  - "The autofix EDIT is applied to the working tree and re-staged, touching only the offending item (module docstring gets the component name; symbol docstring or new decision-history entry gets the AC ref) and leaving every other byte of the file unchanged. The observable success criterion is behavioral: re-running the guardrail on the corrected staged commit yields a satisfied verdict for that item."
+  - "The autofix is reachable from the block report (GE-117d-1 names how to invoke it) and acts on the report's item shape {file, surface, kind, declared_value}; it may be a mode of the declaration hook or a sibling entry point, but it must share the hook's parse and resolvers rather than re-implement them."
   - "Ambiguous / no-confident-inference paths (multi-match, no-match, no single contextual AC) PROMPT and never fabricate — specified in GE-117e-1-i."
-  - "Fail-open on INTERNAL error; edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together and verify via build.py round-trip (ADR-001)."
+  - "Fail-open on INTERNAL error without writing a partial edit. Edit only templates/scripts/commit_guardian/ (ADR-001); verify via the deployed entry point after a build.py round-trip."
 delivers_to:
   agent: python-coder
-  contract: "The applied-declaration edit (component name into module docstring; AC ref into symbol docstring or new entry) that turns a blocking verdict into a satisfied one on re-check"
+  contract: "The applied-declaration edit (components.json id into the module docstring; resolved AC id into the symbol docstring or new decision-history entry), re-staged, that turns a blocking verdict into a satisfied one on re-check"
 expects_from:
   ac_id: GE-117d-1
-  contract: "The block report identifying each offending file/surface/missing value that the autofix acts on"
+  contract: "The block report items {file, surface: 'module-component'|'symbol-ac'|'decision-history-ac', kind: 'missing'|'invalid', declared_value} that the autofix acts on"
+test_spec:
+  - name: test_ge_117e_1_single_primary_code_match_inserts_component_and_recheck_passes
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a temp repo whose docs/components.json gives one component primary_code ['pkg/alpha/'], stage pkg/alpha/new_mod.py with a component-less docstring, confirm the hook blocks, invoke the autofix for that file, then re-run the hook on the re-staged index: the docstring now names that component and the module-component verdict is 'satisfied'."
+  - name: test_ge_117e_1_single_contextual_ac_is_inserted_and_recheck_passes
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a temp git repo with a temp AC store containing GE-117e-1, write a ticket file whose source_ac frontmatter is the single id GE-117e-1 and set git config branch.<current-branch>.leafcutterTicket to that ticket's project-relative path. Stage a module with a blocked public function and a blocked new decision-history entry, confirm the real hook blocks, invoke the autofix for each item, then re-run the real hook on the re-staged index: each item now carries the reference GE-117e-1 and the hook reports 'satisfied' for both."
+  - name: test_ge_117e_1_single_declared_ac_not_in_store_inserts_nothing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Same temp git repo and recorded-ticket setup as the single-AC test, but the ticket's source_ac is one id (for example GE-999z-9) that does not exist in the temp store. Invoke the autofix for the blocked public function: the file is byte-identical, the staged index is unchanged, no AC reference is inserted, and the run hands over to the GE-117e-1-i prompt path; re-running the real hook still blocks that item."
+    must_catch:
+      - "inserts the single declared id without resolving it against the AC store"
+  - name: test_ge_117e_1_inference_never_uses_index_yaml_directory_patterns
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Stage a file under a path covered by an index.yaml directory_patterns entry but by no components.json primary_code entry: the autofix inserts no component, and in particular never writes the index.yaml id."
+    must_catch:
+      - "infers from docs/acceptance-criteria/index.yaml directory_patterns and inserts an AC-store component id such as 'guardrail-engine'"
+  - name: test_ge_117e_1_autofix_changes_only_the_offending_item
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Copy a real templates/scripts/commit_guardian/ module into the temp repo (CRLF-free, with a DECISION HISTORY block), strip its component, and run the autofix: the git diff of the result is confined to the inserted declaration lines."
+    must_catch:
+      - "rewrites or reformats the whole file (for example via ast.unparse) instead of inserting the declaration"
+  - name: test_ge_117e_1_commit_message_text_is_not_an_ac_source
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "In a temp git repo whose branch name and prepared commit message (.git/COMMIT_EDITMSG) both mention GE-117e-1, an id present in the temp store, run the autofix for a blocked public function in two runs: (1) no branch.<branch>.leafcutterTicket is set; (2) branch.<branch>.leafcutterTicket points at a ticket path whose file does not exist in the workspace. In both runs the file is byte-identical, no AC reference is inserted, GE-117e-1 is not taken from the commit message or branch name, and the output reports that no declared record of the change's AC exists for this workspace."
+    must_catch:
+      - "scrapes AC ids from the commit message or branch name"
+      - "treats a recorded ticket path whose file is missing as a valid source, or fails without reporting the missing declared record"
+test_rationale: |
+  The criteria define success behaviourally: after the autofix, the same guardrail passes. So
+  every criteria test runs the real loop of block, fix, re-stage and re-check. A test that only
+  inspects the edited text could pass on an insertion that the checker does not accept. The
+  discrimination test guards against the two-registry error this tree already made once,
+  inferring from index.yaml and writing an id that is not valid for the module-component
+  check. The real-artifact test runs the autofix on a real module, because synthetic
+  two-line fixtures never show a whole-file rewrite. The boundary test closes the guessy AC
+  source the criteria rule out.
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Replaced the 'component inference is a prerequisite, always prompt' requirement: docs/components.json already carries primary_code paths, so a single-match inference in the components.json namespace is implementable and is what the first criteria scenario requires (the index.yaml prohibition is kept). Defined the commit-context AC source, minimal-edit and reachability requirements, pinned the expects_from item shape, re-pointed AC resolution to the shared GE-124c-2-i resolver, and added change_target, declared_files, test_spec and test_rationale. criteria untouched."
+  - "2026-10-22 [business-analyst, user-directed (BrainCandy)]: criteria only. Named the 'surrounding commit context' explicitly: the ticket the workspace maker records for the branch (branch.<branch>.leafcutterTicket, written for ticket workspaces per docs/reference/workspace-maker-answer.md) and that ticket's source_ac frontmatter (scalar or list, per real tickets). Split the AC scenario into (a) exactly one existing AC id -> insert; (b) none, several, or one unresolvable id -> no insertion, defer to GE-117e-1-i; (c) no recorded ticket, or recorded ticket file absent -> no insertion, never from commit message or branch name, report the missing record. Component scenario, title, depends_on, req_status and readiness unchanged."
+  - "2026-10-22 [it-po, user-approved (BrainCandy)]: aligned technical fields with the amended criteria. it_requirements[2] now names the AC source precisely (branch.<branch>.leafcutterTicket, then that ticket's source_ac, single value or list), treats a missing recorded ticket file as no record, and keeps the never-commit-message/branch-name rule and GE-124c-2-i resolution. test_spec: the single-AC test's fixture now records a ticket whose source_ac is one id in the temp store; added test_ge_117e_1_single_declared_ac_not_in_store_inserts_nothing for case (b)'s unresolvable single id; the commit-message boundary test now asserts the 'no declared record' report and covers a recorded ticket path whose file is missing. readiness draft -> approved on the user's approval. criteria, title, depends_on and req_status untouched."
 superseded_by: null
 covered_by:
   - GE-117e-1-i
@@ -76,3 +171,10 @@ notes: |
   (add a pattern-based inference to components.json, or a components.json<->index.yaml
   bridge); until then the module-component autofix PROMPTS (GE-117e-1-i). AC-ref
   inference via _load_ac_by_id is unaffected. Captured in it_requirements above.
+
+  IT-PO ENRICHMENT NOTE (2026-10-22): the index.yaml prohibition above stands. The
+  'prerequisite' conclusion does not: every docs/components.json component already
+  carries a primary_code list of file paths and directory prefixes, which is the
+  path-based inference source option (a) asked for. it_requirements now direct
+  single-match inference over primary_code. Surfaced to the user as a caveat because
+  it revises a 2026-07-02 user-confirmed note.

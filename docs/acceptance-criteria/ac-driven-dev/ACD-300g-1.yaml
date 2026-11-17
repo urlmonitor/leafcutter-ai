@@ -10,34 +10,43 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the /create-ac workflow has completed a stage (PO v3, BA v3, or IT PO v3)
-    and the authoring agent has written AC YAML files to the AC store,
-  And the user has approved the stage's output at the confirmation gate,
-  When the workflow prepares to dispatch the next authoring agent,
+  Given the /plan-feature workflow has completed a stage (product owner, business
+    analyst, or technical planner) and the authoring agent has written AC YAML files
+    to the AC store,
+  And the stage's output has been approved — by the user at the confirmation gate,
+    or automatically for the technical planner's stage once its requirement rule
+    check passes,
+  When the workflow prepares to dispatch the next agent,
   Then a git commit containing all AC files from the approved stage is created
     before the next agent begins,
   And the commit is confirmed to have succeeded (exit code 0) before dispatch,
   And the committed files are present in the repository history.
 
-  Given the /create-ac workflow follows the strategic route
-    (PO v3 -> gate -> BA v3 -> gate -> IT PO v3 -> final gate),
-  When the user approves gate 1 (after PO v3),
-  Then the L0 and L1 AC YAML files produced by PO v3 are committed,
-  And BA v3 is not dispatched until the commit succeeds.
+  Given the /plan-feature workflow follows the strategic route
+    (product owner -> gate -> business analyst -> gate -> technical planner
+    (auto-gated) -> test designer -> final gate),
+  When the user approves gate 1 (after the product owner),
+  Then the L0 and L1 AC YAML files produced by the product owner are committed,
+  And the business analyst is not dispatched until the commit succeeds.
 
-  Given the user approves gate 2 (after BA v3),
-  When the workflow transitions to IT PO v3,
-  Then the L2 and L3 AC YAML files produced by BA v3 are committed,
+  Given the user approves gate 2 (after the business analyst),
+  When the workflow transitions to the technical planner,
+  Then the L2 and L3 AC YAML files produced by the business analyst are committed,
   And the parent AC updates (covered_by additions) are included in the same commit,
-  And IT PO v3 is not dispatched until the commit succeeds.
+  And the technical planner is not dispatched until the commit succeeds.
 
-  Given the user approves gate 3 (final gate after IT PO v3),
+  Given the technical planner's stage has passed its requirement rule check,
+  When the workflow transitions to the test-design stage,
+  Then the AC YAML files enriched by the technical planner are committed,
+  And the design pre-pass and the test designer are not run until the commit succeeds.
+
+  Given the user approves the final gate (after the test-design stage),
   When the workflow completes,
-  Then the enriched AC YAML files modified by IT PO v3 are committed,
+  Then the AC YAML files carrying the test design and the approval are committed,
   And the workflow reports success only after the final commit succeeds.
 depends_on: [ACD-300g]
 doc_links:
-  - path: templates/skills/create-ac/SKILL.md
+  - path: templates/skills/plan-feature/SKILL.md
     relationship: describes
     status: exists
   - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
@@ -58,9 +67,219 @@ it_requirements:
   - "Must log each commit operation to the telemetry sink per the existing workflow telemetry convention"
 delivers_to: null
 expects_from: null
+test_intent:
+- clause: a git commit containing all AC files from the approved stage is created before the next agent
+    begins
+  needs_test: true
+  reason: Commit-before-dispatch ordering is control flow in the stage loop, and a reordered call would
+    let the next agent start on uncommitted files.
+- clause: the commit is confirmed to have succeeded (exit code 0) before dispatch
+  needs_test: true
+  reason: The workflow must read the commit outcome and stop on an error, and ignoring that status would
+    dispatch the next agent anyway.
+- clause: the committed files are present in the repository history
+  needs_test: false
+  reason: The workflow delegates the git commit to the commit agent and only reads its status, so presence
+    in history is git's own guarantee and the commit-and-status clauses already prove the workflow side.
+- clause: the L0 and L1 AC YAML files produced by the product owner are committed
+  needs_test: true
+  reason: Which ids reach the commit after gate 1 is computed from the product owner's reply, and a wrong
+    list would commit the wrong files.
+- clause: the business analyst is not dispatched until the commit succeeds
+  needs_test: true
+  reason: Holding the business analyst back on a failed commit is a branch in the stage loop that a missing
+    check would skip.
+- clause: the L2 and L3 AC YAML files produced by the business analyst are committed
+  needs_test: true
+  reason: Which ids reach the commit after gate 2 is computed from the business analyst's reply, and a
+    wrong list would commit the wrong files.
+- clause: the parent AC updates (covered_by additions) are included in the same commit
+  needs_test: true
+  reason: Parent records reach the same commit only through the rule check's records_to_commit list, and
+    dropping or filtering it wrongly would split or lose the parent updates.
+- clause: the technical planner is not dispatched until the commit succeeds
+  needs_test: true
+  reason: Holding the technical planner back on a failed commit is a branch in the stage loop that a missing
+    check would skip.
+- clause: the AC YAML files enriched by the technical planner are committed
+  needs_test: true
+  reason: The technical planner's stage is auto-approved, so its commit happens with no gate and a missing
+    call would leave its output uncommitted.
+- clause: the design pre-pass and the test designer are not run until the commit succeeds
+  needs_test: true
+  reason: The pre-pass and the designer run only after the auto-gated commit returns ok, and a reordered
+    call would design on uncommitted records.
+- clause: the AC YAML files carrying the test design and the approval are committed
+  needs_test: true
+  reason: The final commit follows the approval step after the final gate, and a wrong order or list would
+    leave the approved test design uncommitted.
+- clause: the workflow reports success only after the final commit succeeds
+  needs_test: true
+  reason: The success return must sit behind the final commit's status check, and a missing check would
+    report success after a failed commit.
+test_spec:
+- name: test_acd_300g_1_itpo_commit_precedes_test_design_dispatch
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: reachability
+  description: 'Drives the real workflow body via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py)
+    on the technical route with a mock commit agent returning ok: the commit-stage-output dispatch for
+    the itpo stage is recorded before the design-prepass and stage-test-design-author dispatches, and
+    its instructions name the it-po ids.'
+  proves_clause: a git commit containing all AC files from the approved stage is created before the next
+    agent begins
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_1_failed_commit_status_stops_dispatch
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: discrimination
+  description: 'Same run via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py), but the commit
+    agent returns status error: no design-prepass or test-designer dispatch follows, and the run returns
+    status error.'
+  proves_clause: the commit is confirmed to have succeeded (exit code 0) before dispatch
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the workflow ignores the commit outcome's status and dispatches the next stage anyway
+  - an unparseable commit reply is coerced to status ok instead of error
+- name: test_acd_300g_1_gate1_commits_product_owner_ids
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: 'Strategic route via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py) with a
+    gate-po approve resume answer: the commit dispatched for stage po lists exactly the ids the product-owner
+    mock returned in acs_written.'
+  proves_clause: the L0 and L1 AC YAML files produced by the product owner are committed
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_1_ba_waits_for_gate1_commit
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: discrimination
+  description: 'Strategic route via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py), gate-po
+    approve, commit agent returns status error: no business-analyst dispatch is recorded and the run returns
+    status error.'
+  proves_clause: the business analyst is not dispatched until the commit succeeds
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the business analyst is dispatched before the gate-1 commit outcome is checked
+- name: test_acd_300g_1_gate2_commits_business_analyst_ids
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: 'Strategic route via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py) resumed
+    at gate-ba (prior PO commit in the mocked git log) with an approve answer: the commit dispatched for
+    stage ba lists exactly the business-analyst mock''s acs_written ids.'
+  proves_clause: the L2 and L3 AC YAML files produced by the business analyst are committed
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_1_parent_updates_ride_the_same_commit
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Calls commitStageOutput via run_isolated_e2 (unit_tests/_plan_feature_e2_runner.py) with
+    extraPaths holding a parent record path under the store plus a path outside it and a ''..'' path:
+    one commit dispatch carries an EXTRA PATHS line naming only the in-store parent path.'
+  proves_clause: the parent AC updates (covered_by additions) are included in the same commit
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - extraPaths is dropped, so repaired parents are left for a later commit
+  - the extraPaths filter keeps paths outside the AC store or with '..'
+- name: test_acd_300g_1_itpo_waits_for_gate2_commit
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: discrimination
+  description: 'Resumed at gate-ba via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py) with
+    approve, commit agent returns status error: no it-po authoring dispatch is recorded and the run returns
+    status error.'
+  proves_clause: the technical planner is not dispatched until the commit succeeds
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the technical planner is dispatched before the gate-2 commit outcome is checked
+- name: test_acd_300g_1_auto_gated_itpo_stage_is_committed
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: 'Technical route via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py): with
+    no gate-itpo answer supplied, a commit for stage itpo (subject plan-feature(IT-PO)) is dispatched
+    with the it-po ids and no gate-itpo pause is recorded.'
+  proves_clause: the AC YAML files enriched by the technical planner are committed
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_1_prepass_waits_for_itpo_commit
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: discrimination
+  description: 'Technical route via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py), itpo-stage
+    commit returns status error: no design-prepass shell dispatch and no test-designer dispatch follow.'
+  proves_clause: the design pre-pass and the test designer are not run until the commit succeeds
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the design pre-pass runs before the auto-gated itpo commit returns
+  - the auto gate skips the commit because no person approved the stage
+- name: test_acd_300g_1_final_gate_commits_design_and_approval
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: 'Technical route via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py) with a
+    final-gate approve answer and approve_acs mocks that succeed: the final commit (subject plan-feature(TEST-DESIGN,
+    final)) is dispatched after the approval-apply dispatch and lists every id of the run.'
+  proves_clause: the AC YAML files carrying the test design and the approval are committed
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_1_success_only_after_final_commit
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: discrimination
+  description: 'Same final-gate approve run via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py),
+    final commit returns status error: the run returns status error, not ok, and no deliver-authoring-branch
+    dispatch follows.'
+  proves_clause: the workflow reports success only after the final commit succeeds
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the run returns status ok without checking the final commit's status
+  - the branch is delivered before the final commit succeeds
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-23'
+test_design_opened_files:
+- templates/workflows-js/plan-feature.js
+- unit_tests/_plan_feature_e2_runner.py
+- unit_tests/test_commit_stage_output_behavioral.py
+- unit_tests/test_commit_stage_output_staging.py
+- unit_tests/test_final_gate_and_commit_message.py
+- unit_tests/test_partial_run_recovery.py
+- unit_tests/workflows/test_bo_2300a_2_cancel_status_distinct.py
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after #1245/#1246: /plan-feature, not /create-ac; agents
+    renamed (no -v3); the technical planner''s stage is committed after its automatic
+    approval (rule check passed) before the test-design stage runs, and the final commit
+    follows the final gate after the test design, not a gate 3 after IT PO. doc_links
+    point at the plan-feature skill. Commit-before-advance intent unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: 'legacy approved record gains a test contract required by check-ac-schema: test_intent recorded,
+    one entry per Then/And outcome clause, each with needs_test and a one-sentence reason. Criteria and
+    readiness unchanged.'
+  date: '2026-10-23'
+  by: it-po
+  directed_by: user
+- reason: 'legacy approved record gains a test contract required by check-ac-schema: test_spec written
+    for every needs_test clause (with a reachability entry through the real workflow body), grounded in
+    templates/workflows-js/plan-feature.js and the existing plan-feature E2 tests. No declared files,
+    so no file findings. Criteria and readiness unchanged.'
+  date: '2026-10-23'
+  by: test-designer
+  directed_by: user
 superseded_by: null
 covered_by:
   - ACD-300g-1-i
@@ -68,3 +287,14 @@ implemented_by:
 - tickets/00_inbox/epics/EPIC-CommitAcOutputPerStage/01_TICKET-20260618-ACD-300g-1.md
 change_target: pipeline
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: stageGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

@@ -1,0 +1,224 @@
+id: GE-134a-1-i
+components:
+  - commit_guardian
+readiness: approved
+priority: high
+title: "Code that mentions the words DECISION HISTORY, or follows a decision-history block, still counts"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given a Python file containing, in this order:
+    the comment "# see DECISION HISTORY below for why", a sentence that mentions the words,
+    the code line LABEL = "DECISION HISTORY",
+    a decision-history block of 6 comment lines (the heading "# DECISION HISTORY", a rule line
+    of "=" characters, 4 entry lines),
+    and then the code line x = 1 directly after the block,
+  When its length is measured,
+  Then the LABEL line is counted, because the words inside code do not make it a comment,
+  And the 6 block lines are not counted,
+  And x = 1 is counted, so code directly after a decision-history block is never hidden by
+    it,
+  And a file whose whole content is one decision-history block measures 0, and is not
+    refused as an empty or unreadable file.
+depends_on:
+  - GE-134a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-134-history-never-costs-size/GE-134a-1.yaml
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+- 'NO BLOCK BOUNDARIES EXIST TO IMPLEMENT (IT PO, 2026-10-23; GE-127d-3 supersedes this rule). The six
+  block lines are uncounted because they are comments, the LABEL line counts because it holds a code
+  token, and x = 1 counts for the same reason -- all decided by GE-127d-3''s per-language lexer in the
+  one shared measure. There is no pre-pass, no heading match, no rule-line attachment and no block-end
+  rule; none may be added, and the words DECISION HISTORY never change how a line is classified.'
+- A file whose every line is uncounted measures 0 through the ordinary path; 0 is a measured length, not
+  the could-not-measure outcome (GE-127d-3-ii) and not a deletion.
+declared_files:
+- path: templates/scripts/commit_guardian/_file_size_ratchet.py
+  state: existing
+delivers_to: null
+expects_from: null
+test_intent:
+- clause: the LABEL line is counted, because the words inside code do not make it a comment
+  needs_test: true
+  reason: The words DECISION HISTORY inside code must not hide the line; only a comment is uncounted.
+- clause: the 6 block lines are not counted
+  needs_test: true
+  reason: The block must add nothing, which is the feature.
+- clause: x = 1 is counted, so code directly after a decision-history block is never hidden by it
+  needs_test: true
+  reason: Code adjacent to comments must still count, or a comment run could swallow code.
+- clause: a file whose whole content is one decision-history block measures 0, and is not refused as an
+    empty or unreadable file
+  needs_test: true
+  reason: A zero-length file must not trip the empty-file or could-not-measure refusal.
+test_spec:
+- name: test_ge_134a_1_i_a_mention_comment_and_a_label_line_are_counted
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'NAME KEPT, PROMISE NARROWED (GE-127d-3, 2026-10-21). The record''s fixture (mention comment,
+    LABEL line, 6-line block, x = 1) measures 2. Removing the LABEL line drops it to 1 (the code line
+    counts); removing the mention comment leaves it at 2 (a comment, whatever words it holds, does not
+    count).'
+  proves_clause: the LABEL line is counted, because the words inside code do not make it a comment
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  must_catch:
+  - a code line containing the words DECISION HISTORY treated as a comment or block heading
+  - the mention comment counted because it is not a 'real' block heading
+- name: test_ge_134a_1_i_the_six_block_lines_are_not_counted
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In the same 9-line fixture none of the six block lines is counted (the measured total is
+    2 -- LABEL and x = 1 -- equal to the independent counter, not 9 as under the pre-change rule).
+  proves_clause: the 6 block lines are not counted
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+- name: test_ge_134a_1_i_code_after_the_block_is_counted
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: x = 1 directly after the last entry line is counted (fixture measures 2); a variant with a
+    blank line and two more code lines after it measures 4 (every code line counts, the blank does not).
+  proves_clause: x = 1 is counted, so code directly after a decision-history block is never hidden by it
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  must_catch:
+  - a comment run treated as extending to the end of the file, so x = 1 is dropped
+  - the line after the last comment line dropped as part of the run
+- name: test_ge_134a_1_i_only_a_whole_text_heading_starts_a_block
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'NAME KEPT, PROMISE CHANGED. A near-miss heading (''# DECISION HISTORY notes are below'')
+    followed by three comment lines measures 0, exactly like the exact heading followed by the same three
+    lines: how a comment is worded never changes whether it counts.'
+  proves_clause: the 6 block lines are not counted
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  must_catch:
+  - a heading-text match reintroduced, so comments after a near-miss heading are counted
+- name: test_ge_134a_1_i_a_rule_line_belongs_to_the_block_only_when_directly_above
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'NAME KEPT, PROMISE CHANGED. A ''='' rule line is a comment wherever it stands: rule line,
+    block, x = 1 measures 1; with a blank line between the rule line and the block it still measures 1; with
+    a code line (y = 0) between them it measures 2 -- only the code line adds.'
+  proves_clause: the 6 block lines are not counted
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  must_catch:
+  - a rule-line attachment rule reintroduced, so a detached rule line is counted
+  - a code line between a rule line and a heading swallowed as part of the block
+- name: test_ge_134a_1_i_a_file_that_is_only_a_history_block_measures_zero_and_is_not_refused
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: measure_current_length gives 0 for a file that is one history block, and staging that file
+    and running the fixture copy of check_file_size.py as a subprocess exits 0, not the INDETERMINATE
+    exit 2. Uses _ge_127d_2_fixture.build_fixture_tree (a copy of the production modules in a temporary
+    git repository, no build.py, no POSIX flock).
+  proves_clause: a file whose whole content is one decision-history block measures 0, and is not refused
+    as an empty or unreadable file
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- templates/scripts/commit_guardian/_file_size_ratchet.py
+- templates/scripts/commit_guardian/check_file_size.py
+- templates/scripts/commit_guardian/config.py
+- unit_tests/commit_guardian/_ge_127d_2_fixture.py
+- unit_tests/commit_guardian/test_ge_127d_2.py
+- unit_tests/commit_guardian/test_ge_127d_2_reachability_and_deployed.py
+file_findings:
+- file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: '[SUPERSEDED 2026-10-23, BrainCandy: the mechanism below was replaced by GE-127d-3''s per-language
+    measure; kept for the record.] It holds count_content_lines, where the block boundary rules must live
+    with the GE-134a-1 exclusion.'
+  decision: null
+file_findings_opened_files:
+- templates/scripts/commit_guardian/_file_size_ratchet.py
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
+- reason: renumbered-out-of-ge-127
+  date: '2026-10-22'
+  by: main-session
+  directed_by: user
+  entry: >-
+    Renumbered from GE-127h-1-i to GE-134a-1-i and moved from GE-127-files-stay-workable/ to
+    GE-134-history-never-costs-size/. GE-127 held 8 L1 children against a cap of 7, its
+    2026-10-09 amendment rules out a child_limit_override, and the user decided on
+    2026-10-22 to give this family its own goal, GE-134. Every id and reference that
+    named the GE-127h-1-i family (covered_by, depends_on, doc_links, expects_from,
+    implemented_by, test_spec names) was renamed to match. Criteria and every
+    other field are unchanged.
+- reason: superseded-by-ge-127d-3
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: BrainCandy
+  entry: >-
+    BrainCandy decided on 2026-10-23 that GE-127d-3 supersedes this rule. Under GE-127d-3
+    every comment is uncounted, so there is no special block to find and its boundaries no
+    longer change the measured length. STILL HOLDS: a code line containing the words
+    DECISION HISTORY counts; the 6 block lines are not counted; code directly after the
+    block counts; a file that is only a decision-history block measures 0 and is not
+    refused. SUPERSEDED: "the comment line [the mention comment] is counted", the
+    whole-text-heading clause ("# DECISION HISTORY notes are below" and the comments after
+    it are counted) and the rule-line attachment clause — every one of those lines is a
+    comment and is now uncounted wherever it stands. Criteria narrowed to the still-true
+    clauses; the x = 1 clause's reason is restated without the block-end rule. Title
+    changed from "Only a real decision-history block is left out: a mention of the words,
+    or code after the block, still counts" (a mention in a comment no longer counts) to
+    "Code that mentions the words DECISION HISTORY, or follows a decision-history block,
+    still counts".
+    test_intent and test_spec entries for the removed clauses (mention comment counted,
+    whole-text heading, rule-line attachment) and the fixture total of 3 are left for the
+    test-writer, who is rewriting them to the new rule with the same covers tags.
+    work_status reset done -> todo until those rewritten tests are green.
+- reason: technical-enrichment-superseded-by-ge-127d-3
+  date: '2026-10-23'
+  by: it-po
+  directed_by: BrainCandy
+  entry: >-
+    criteria untouched. it_requirements: no block boundaries to implement; every line is
+    classified by GE-127d-3's lexer, and a file of only uncounted lines measures 0 on the ordinary
+    path. test_intent replaced by the four outcome clauses of the narrowed criteria (the
+    mention-comment-counted, whole-text-heading and rule-line-attachment clauses are gone).
+    test_spec: all six names kept (the test-writer is rewriting test_ge_134a_1_i.py in place);
+    descriptions, proves_clause and must_catch aligned to it (fixture total 2, not 3; removing
+    LABEL gives 1, removing the mention gives 2; near-miss and exact heading both 0; rule line
+    uncounted wherever it stands). Three names no longer describe their tests; renaming them is
+    the test-writer's call.
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/28_TICKET-20261021-GE-134a-1-i.md
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  [2026-10-23, BrainCandy] SUPERSEDED: the block-boundary mechanism described below was
+  superseded by GE-127d-3 (every comment is uncounted, so no block boundary is detected).
+  Kept for the record.
+
+  Boundaries that keep D1 narrow: the exclusion must not become a way to hide ordinary
+  comments or code by putting the words DECISION HISTORY near them.

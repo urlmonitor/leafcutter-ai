@@ -1,0 +1,113 @@
+id: BO-2300d-1-iii
+components:
+  - build_orchestration
+title: "A resume answer is applied once per run, and a priority answer keeps its action"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a /plan-feature run is paused at the final gate with a durable pause record,
+  And the person resumes it with an "edit" answer for that gate, sent either as
+    type priority_choice (the type the final gate persists) carrying action "edit",
+    or as type single_choice with action "edit",
+  When the run applies the answer, re-runs the stage it names, and its loop
+    reaches the final gate again,
+  Then the "edit" is honoured as an edit (a priority_choice answer is applied as
+    its own valid action, and "approve" still requires a priority),
+  And the stage is re-authored exactly once for that edit, and that re-authoring
+    carries the person's edit feedback (no author run happens before the gate
+    applies the answer),
+  And the edit is applied exactly once in that run: on reaching the final gate
+    again, the run pauses for a NEW decision and persists a fresh pause record
+    instead of re-applying the same resume answer,
+  And the bug symptom ("Resuming a paused /plan-feature run with an 'edit' answer at the final gate never produces one edit. Sent as type priority_choice (the type the final gate persists), the answer is always applied as 'approve', so edit cannot be expressed at all. Sent as type single_choice with action edit, the stage re-runs, then the loop reaches the final gate again, resolveGate re-applies the SAME resume answer, and it edits again until MAX_EDIT_RETRIES, then the run aborts with status error ('it-po failed to produce satisfactory ACs after N attempts'). Seen 2026-10-21 on run pf-shared-code-inliner-20261020b; avoided only by starting a fresh run.") must not occur.
+depends_on: [BO-2300d-1]
+assigned_agent: llm-expert
+estimated_complexity: S
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "Apply-once semantics for a person-authored resume answer within one run."
+    properties:
+      applied_action: {type: string, description: "the answer's own valid action, also for priority_choice"}
+      resume_answer_consumed: {type: boolean, description: "true once the answer has been applied in this run"}
+      repaused_with_fresh_record: {type: boolean}
+    required: [applied_action, resume_answer_consumed]
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - llm-expert
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "SURFACE: applyAnswerByType() and resolveGate() in templates/workflows-js/plan-feature.js (E2 JavaScript workflow engine). Not a standalone Python module."
+    - "applyAnswerByType(): for type priority_choice, honour a valid answer.action (approve / edit / defer / cancel) instead of always returning approve; approve still requires a priority."
+    - "A resume answer applies at most once per run: once resolveGate() has applied args.resume_answer, later resolveGate() calls in the same run must not re-apply it (the final-gate loop currently passes the same args object back on every iteration)."
+    - "After an applied 'edit' re-authors, the next arrival at the gate pauses for a new decision and persists a fresh pause record; the edit retry counter is never driven to MAX_EDIT_RETRIES by one answer."
+    - "Preserve the ADR-024 rule 4 invariant (resume answer consulted before the live gate agent call) and the existing non-edit pause-record clear behaviour."
+    - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js), resuming at the final gate with an edit answer, and assert on captured agent_calls and the returned status."
+delivers_to: null
+expects_from:
+  ac_id: BO-2300d-1
+  contract: "Apply-by-type in resolveGate()/applyAnswerByType(); this edge constrains it to honour the action of a priority_choice answer and to apply one resume answer at most once per run."
+test_spec:
+  - name: test_priority_choice_edit_answer_is_applied_as_edit
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Via run_workflow_under_e2(plan-feature.js), resuming the final gate with a priority_choice answer whose action is 'edit' re-dispatches the authoring stage with the feedback rather than approving."
+    must_catch:
+      - "applyAnswerByType returns {action: 'approve', priority} for every priority_choice answer, ignoring answer.action"
+    in_scope_files:
+      - templates/workflows-js/plan-feature.js
+  - name: test_priority_choice_approve_still_requires_priority
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Via the harness, a priority_choice 'approve' answer without a priority is not applied as an approval."
+  - name: test_priority_choice_cancel_answer_is_applied_as_cancel
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Via the harness, a priority_choice answer with action 'cancel' and a priority cancels the run instead of approving it."
+    must_catch:
+      - "applyAnswerByType returns {action: 'approve', priority} for every priority_choice answer, ignoring answer.action"
+    in_scope_files:
+      - templates/workflows-js/plan-feature.js
+  - name: test_resume_edit_applied_once_then_repauses_with_fresh_record
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Via the harness, a single_choice 'edit' resume answer at the final gate re-runs the stage exactly once, then the run returns paused_awaiting_input at the final gate and persists a fresh pause record, never reaching the MAX_EDIT_RETRIES abort."
+    must_catch:
+      - "resolveGate re-applies the same args.resume_answer on every final-gate loop iteration whose gate_id matches"
+    in_scope_files:
+      - templates/workflows-js/plan-feature.js
+test_rationale: "Both defects live in control flow across loop iterations of the real workflow body, so only a test that drives plan-feature.js through the E2 harness and counts the re-dispatches can tell one edit from a replayed one; a direct unit test of applyAnswerByType would cover defect 1 but is blind to defect 2. The discrimination entries name the exact wrong versions that shipped."
+origin_agent: BrainCandy
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - templates/workflows-js/plan-feature.js
+change_target: pipeline
+risk_surface: internal
+declares_side_effect: true
+notes: "Authored by /quick-fix. Root cause: Two defects. (1) applyAnswerByType() returns {action:'approve', priority} for every priority_choice answer and ignores answer.action, so edit/defer/cancel sent with a priority are silently turned into approve. (2) A resume answer is never marked consumed within a run: resolveGate() checks args.resume_answer on every call whose gate_id matches, and on an 'edit' it deliberately keeps the durable pause record (only non-edit answers clear it), while the final-gate loop passes the same args object back into resolveGate on the next iteration. So one person-authored answer is applied once per loop iteration instead of once per run. Fix: honour a valid answer.action for priority_choice (approve still requires a priority), and make a resume answer apply at most once per run, so after an edit re-authors, the gate pauses for a NEW decision (persisting a fresh pause record) instead of replaying the old one.."

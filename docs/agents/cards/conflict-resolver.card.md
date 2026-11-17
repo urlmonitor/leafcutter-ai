@@ -2,10 +2,10 @@
 agent_id: conflict-resolver
 title: 'Agent Card: conflict-resolver'
 description: 'Resolves merge conflicts in the working tree after a failed merge or
-  rebase. Classifies each conflict as line-by-line (resolved on Sonnet inline) or
-  structural (escalated to Opus via conflict-resolver-deep). Returns a structured
-  payload: resolved_files, escalation, escalation_reason, unresolved_files. (internal
-  — invoked by parent agents only)'
+  rebase. Classifies each conflict as line-by-line or structural and resolves both
+  itself (structural files with a fuller read of both sides'' context). Returns a
+  structured payload: resolved_files, escalation, escalation_reason, unresolved_files.
+  (internal — invoked by parent agents only)'
 type: card
 status: active
 created: 2026-08-13
@@ -15,8 +15,8 @@ last_updated: '2026-08-13'
 # conflict-resolver
 
 **Resolves merge conflicts in the working tree after a failed merge or
-rebase. Classifies each conflict as line-by-line (resolved on Sonnet
-inline) or structural (escalated to Opus via conflict-resolver-deep).
+rebase. Classifies each conflict as line-by-line or structural and resolves
+both itself (structural files with a fuller read of both sides' context).
 Returns a structured payload: resolved_files, escalation, escalation_reason,
 unresolved_files.
 (internal — invoked by parent agents only)**
@@ -58,10 +58,8 @@ flowchart TD
 
     pull_request["pull-request\n(phase tier)"]:::phase
     conflict_resolver["conflict-resolver\n(utility tier, priority ?)"]:::target
-    conflict_resolver_deep["conflict-resolver-deep\n(phase tier)"]:::phase
 
     pull_request -->|dispatches| conflict_resolver
-    conflict_resolver -->|spawns| conflict_resolver_deep
 ```
 ---
 
@@ -107,6 +105,5 @@ flowchart TD
 
 | Pattern | Trigger | Behavior | Related Agent |
 |---------|---------|----------|---------------|
-| Delegation to conflict-resolver-deep | task requiring conflict-resolver-deep capabilities | Delegates to conflict-resolver-deep via Agent tool | `conflict-resolver-deep` |
 | Conditional Behavior | the input is absent or incomplete | list conflicted files yourself via | `None` |
 | Conditional Behavior | the file is a Python source file | check that no conflict marker | `None` |

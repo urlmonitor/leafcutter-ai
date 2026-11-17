@@ -34,6 +34,78 @@ DECISION HISTORY:
     criteria text (a durable, observable effect asserted in its Then clause), never
     authored by opinion. Wired into check_ac_schema.py's per-file validation pass
     (staged files only — forward ratchet, same posture as validate_test_contract).
+  - 2026-10-07 [python-coder/TQ-600a-11 fix-pass]: Reverted load_yaml() from the
+    shared fast accessor (scripts/ac_store/yaml_safe_loader.get_safe_yaml_loader,
+    CSafeLoader-backed) back to the pure-Python yaml.SafeLoader. load_yaml() is
+    the parser behind _ac_store_index.py's _load_one_yaml_file(), whose fail-open
+    `except yaml.YAMLError` is the AC store's one guard against silently treating
+    a malformed AC file as valid. yaml_safe_loader's own docstring documents a
+    fifth divergence class found during this fix: CSafeLoader parses a tab inside
+    a flow sequence (e.g. "key: [\t]\n") permissively as {'key': []}, where the
+    pure-Python SafeLoader correctly raises ScannerError -- so with the fast
+    loader in place here, that fail-open path never fired and a malformed file
+    was silently accepted as valid. Error fidelity wins at THIS call site: this
+    is the AC store's phantom-done guardrail, and a guardrail going quiet on a
+    malformed input is precisely the failure class this repo exists to prevent.
+    Cost measured 2026-10-07 on the real on-disk store (4,765 files, a clean
+    run on an otherwise-idle host): CSafeLoader sweeps it in ~1.9s; pure-Python
+    SafeLoader takes ~22.4s (~11.7x, consistent with the module's own 13.25x
+    headline measurement within host-contention variance -- this is the SAME
+    shared, variably-loaded WSL host TQ-600a-11's own tests warn swings
+    3.8x-10.74x with zero code change; a loaded-host run of the same sweep was
+    separately observed as slow as 120s pure-Python / 12.6s CSafeLoader). Call
+    it a real double-digit-second-to-low-two-digit-second regression on the
+    rare full-store-rebuild path, not a sub-second one. This call site feeds
+    the fingerprint-cached shared index
+    (_ac_store_index.get_ac_index(), consumed by four commit-guardian hooks),
+    so the extra cost is paid once per commit that touches any AC YAML file
+    (whichever hook runs first triggers the rebuild; the other three hit the
+    disk cache), not four times.
+  - 2026-10-07 [SUPERSEDES the two sentences this entry replaces]: the entry
+    above originally went on to say that the required "AC store valid" gate
+    (scripts/ac_store/validate_ac_schema.py) still called the fast accessor
+    directly, was UNCHANGED by this revert, and that "every other call site in
+    this package stays on the fast accessor". All three claims are now FALSE
+    and are struck rather than left to mislead. A subsequent whole-PR narrowing
+    reverted 83 call sites across 61 files -- including validate_ac_schema.py
+    itself -- leaving exactly TWO accessor call sites in the entire package,
+    both in scripts/generate_agent_cards.py's whole-AC-store walk, which is the
+    only site that passed a measured-benefit test. So this file's revert is no
+    longer "the one intentional exception"; it is one of many, and the headline
+    13.25x figure no longer describes any gate. Recorded here because a
+    DECISION HISTORY that asserts a state the code has since left is the same
+    defect class this session spent the day removing elsewhere.
+  - 2026-08-25 [python-coder/BO-2900g-2-ii, moved here 2026-10-15]: replaced two
+    bare alternatives of _DURABLE_EFFECT_RE, the word-bounded "is written" and
+    "are written", with the two object-aware forms now in the pattern.
+    Those two accounted for 108 of the 139 records the pattern then marked,
+    78% of every positive it produced, and they could not distinguish a
+    durable write from a write to a stream, from a reported clause whose
+    subject is a document ("the reference states that a notice is written
+    ..."), or from a relative clause merely naming where something lives
+    ("the file suppressions are written in"). Four false positives surfaced in
+    a single day; none was a real side-effect. Re-measured after the change:
+    139 -> 88 marked, 51 flipped to false, and zero records newly marked. A
+    blunt deletion of the two alternatives was measured first and rejected: it
+    left only 31 and dropped genuine positives such as "a record file is
+    written into that project's own tree" (BP-1500d-1). The comment holding
+    this text moved into the docstring to repay the file-size ratchet.
+  - 2026-10-21 [python-coder/ACD-200b-2]: The declares_side_effect block (derive_declares_side_effect,
+    validate_declares_side_effect and their patterns) moved verbatim to
+    _ac_side_effect_validators.py and is re-exported here, repaying the file-size ratchet.
+  - 2026-10-21 [python-coder/ACD-200b-2]: validate_manually(data, schema) now checks
+    documentation_triggers against the schema's one documentation_triggers enum (no copy of the
+    names here); None skips it. The size ratchet was repaid by turning the slot loop of
+    _build_pattern_duplicate_regex and the required-field loop of validate_manually into one
+    comprehension / join each (same behaviour); the trigger check is its own helper so
+    validate_manually stays under the complexity ceiling.
+  - 2026-10-15 [python-coder/ACS-900d-4]: VALID_STATUSES now includes
+    ``superseded`` so the manual validator agrees with config/ac_store_schema.json
+    and ac-schema.md. validate_test_contract takes a keyword-only ``retired``
+    flag (computed by _ac_supersession_validators.is_retired_record from the
+    shared ac_retirement predicate) that skips ONLY the "approved code AC must
+    declare a test contract" requirement for a retired record.
+    (#TICKETLESS reason=acs-900d-4-ac-driven-no-ticket-file)
 """
 
 from __future__ import annotations
@@ -42,12 +114,14 @@ import re
 import sys
 from pathlib import Path
 from typing import Any
+from _test_design_pending import missing_contract_message
+from _ac_side_effect_validators import derive_declares_side_effect, validate_declares_side_effect  # noqa: F401  (re-export, ACD-200b-2)
 
 _SLOT_REGEX = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
 _HOOK_PREFIX = "[check-ac-schema]"
 
 REQUIRED_FIELDS = ["id", "title", "component", "status", "created_by", "criteria"]
-VALID_STATUSES = {"active", "deprecated", "superseded_by"}
+VALID_STATUSES = {"active", "deprecated", "superseded", "superseded_by"}  # agrees with config/ac_store_schema.json
 _ID_REGEX = re.compile(r"^[A-Z]{2,6}-[0-9]{3}$")
 
 # Agents that produce production code. A leaf AC assigned to one of these — or
@@ -62,7 +136,18 @@ _CODE_CHANGE_TARGETS = {"code", "schema"}
 # ---------------------------------------------------------------------------
 
 def load_yaml(path: Path) -> Any:  # noqa: ANN401
-    """Load a YAML file using PyYAML; raises ImportError when absent.
+    """Load a YAML file using PyYAML's pure-Python SafeLoader; raises
+    ImportError when PyYAML is absent.
+
+    Deliberately pure-Python, NOT the shared fast accessor
+    (``yaml_safe_loader.get_safe_yaml_loader``, CSafeLoader-backed) used
+    elsewhere in this package: this is the parser behind the AC store's
+    fail-open malformed-file guard (``_ac_store_index._load_one_yaml_file``'s
+    ``except yaml.YAMLError``), and CSafeLoader parses at least one input
+    class permissively that the pure-Python loader correctly rejects (a tab
+    inside a flow sequence -- see ``yaml_safe_loader``'s own docstring).
+    Error fidelity wins at this one call site; see this module's DECISION
+    HISTORY for the full rationale and the measured cost of the trade-off.
 
     Args:
         path: Path to the YAML file to load.
@@ -78,7 +163,7 @@ def load_yaml(path: Path) -> Any:  # noqa: ANN401
 
     try:
         with open(path, encoding="utf-8") as fh:
-            return yaml.safe_load(fh)
+            return yaml.load(fh, Loader=yaml.SafeLoader)
     except OSError as exc:
         print(f"Warning: cannot read {path}: {exc}", file=sys.stderr)
         raise
@@ -112,6 +197,18 @@ def load_yaml_manual(path: Path) -> dict[str, Any]:
 def load_yaml_from_string(content: str, source_label: str) -> dict | None:
     """Parse a YAML string; returns dict or None on failure (fail-open).
 
+    Deliberately yaml.SafeLoader, NOT the shared fast accessor (loader-audit,
+    TQ-600a-11 fix-pass, 2026-10-07): this is a second, sibling call site in
+    the same module as `load_yaml` above, which was already reverted for
+    being "the parser behind the AC store's fail-open malformed-file guard."
+    This function feeds `check_ac_schema.py`'s HEAD-vs-staged
+    `implements_pattern` preservation check (the required `check-ac-schema`
+    gate) -- a parse failure on either side is fail-open ("nothing to compare
+    against, no violation"), so a tab-malformed HEAD or staged copy that
+    `yaml.SafeLoader` would correctly reject (forcing the comparison to run)
+    must not instead be silently accepted by a more permissive loader and
+    skip the comparison it exists to make.
+
     Args:
         content: Raw YAML string.
         source_label: Human-readable label for error messages.
@@ -123,7 +220,7 @@ def load_yaml_from_string(content: str, source_label: str) -> dict | None:
         import yaml  # type: ignore[import]
 
         try:
-            data = yaml.safe_load(content)
+            data = yaml.load(content, Loader=yaml.SafeLoader)
             return data if isinstance(data, dict) else None
         except yaml.YAMLError as exc:
             print(
@@ -168,20 +265,24 @@ def validate_with_jsonschema(data: Any, schema: dict[str, Any]) -> list[str]:  #
     return [str(err.message) for err in sorted(validator.iter_errors(data), key=str)]
 
 
-def validate_manually(data: dict[str, Any]) -> list[str]:
-    """Check required fields, status enum, and ID format without jsonschema.
+def _trigger_errors(data: dict[str, Any], schema: dict[str, Any] | None) -> list[str]:
+    """documentation_triggers values outside the schema's one list (ACD-200b-2); no list, no check."""
+    names = ((schema or {}).get("properties", {}).get("documentation_triggers", {}).get("oneOf") or [{}])[0].get("items", {}).get("enum")
+    return [f"invalid documentation_triggers value '{t}': must be one of {names}" for t in data.get("documentation_triggers") or [] if names and t not in names]
+
+
+def validate_manually(data: dict[str, Any], schema: dict[str, Any] | None = None) -> list[str]:
+    """Check required fields, status enum, ID format and documentation_triggers without jsonschema.
 
     Args:
         data: Parsed AC YAML content dict.
+        schema: Parsed config/ac_store_schema.json; its documentation_triggers enum is the one
+            list of trigger names (ACD-200b-2). None skips that check.
 
     Returns:
         Validation error messages; empty on pass.
     """
-    errors: list[str] = []
-
-    for field_name in REQUIRED_FIELDS:
-        if field_name not in data or data[field_name] in (None, "", "null"):
-            errors.append(f"missing required field: '{field_name}'")
+    errors = [f"missing required field: '{f}'" for f in REQUIRED_FIELDS if f not in data or data[f] in (None, "", "null")]
 
     # KM-KGS-100e-1 / -1-i: `components` must be a non-empty list — the field the
     # knowledge graph reads for component_membership edges. Registry-membership
@@ -203,6 +304,8 @@ def validate_manually(data: dict[str, Any]) -> list[str]:
             f"invalid status '{data['status']}': must be one of "
             f"{sorted(VALID_STATUSES)}"
         )
+
+    errors += _trigger_errors(data, schema)
 
     if "id" in data and data["id"] and not _ID_REGEX.match(str(data["id"])):
         errors.append(
@@ -356,13 +459,7 @@ def _build_pattern_duplicate_regex(pattern_criteria: str) -> str | None:
         return None
 
     parts = _SLOT_REGEX.split(norm)
-    regex_parts: list[str] = []
-    for idx, part in enumerate(parts):
-        if idx % 2 == 0:
-            regex_parts.append(re.escape(part))
-        else:
-            regex_parts.append(".+")
-    return "".join(regex_parts)
+    return "".join(re.escape(part) if idx % 2 == 0 else ".+" for idx, part in enumerate(parts))
 
 
 def validate_criteria_not_pattern_duplicate(
@@ -482,7 +579,9 @@ def _is_leaf_ac(data: dict[str, Any]) -> bool:
     return bool(data.get("assigned_agent")) and not covered_by
 
 
-def validate_test_contract(path: Path, data: dict[str, Any]) -> list[str]:
+def validate_test_contract(
+    path: Path, data: dict[str, Any], *, retired: bool = False
+) -> list[str]:
     """Validate that a leaf code AC carries a test contract (source of truth).
 
     The AC — not the ticket — owns what must be tested. A leaf code AC that is
@@ -498,15 +597,23 @@ def validate_test_contract(path: Path, data: dict[str, Any]) -> list[str]:
     Runs on staged files only (per check_ac_schema Phase 1), so it is a forward
     ratchet — it does not retroactively fail the existing store.
 
+    A RETIRED record (ACS-900d-4-i; superseded status naming existing
+    successors, decided by ``ac_retirement`` and passed in as *retired*) is not
+    asked to declare a test contract: only that requirement is exempted. The
+    two shape checks (the contradiction above and ``test_required: false`` on
+    a code AC) still apply.
+
     Args:
         path: Filesystem path to the AC file (for error messages).
         data: Parsed AC YAML content.
+        retired: Whether the caller judged the record retired against the whole
+            store. Defaults to ``False`` (the rule applies).
 
     Returns:
         List of error message strings; empty when the contract is satisfied.
     """
     errors: list[str] = []
-    test_spec = data.get("test_spec")
+    test_spec: Any = data.get("test_spec")
     test_required = data.get("test_required")
     has_spec = isinstance(test_spec, list) and len(test_spec) > 0
 
@@ -535,198 +642,7 @@ def validate_test_contract(path: Path, data: dict[str, Any]) -> list[str]:
                 f"assigned_agent). A code AC with test_required: false generates a "
                 f"ticket that the check-ticket-test-requirements guard blocks."
             )
-        elif not has_spec:
-            errors.append(
-                f"{path}: approved code AC must declare a test contract — add a "
-                f"non-empty test_spec (what test-writer should author, derived from "
-                f"the Gherkin criteria). If this AC is genuinely test-free, "
-                f"reclassify it as non-code (change_target docs/prompt with a "
-                f"non-coder assigned_agent). ACs are the source of truth for tests."
-            )
+        elif not has_spec and not retired:
+            errors.append(missing_contract_message(path, data))
 
     return errors
-
-
-# ---------------------------------------------------------------------------
-# declares_side_effect derivation (BO-2900g-2 / BO-2900g-2-i)
-# ---------------------------------------------------------------------------
-
-# Matches the FIRST Gherkin "Then" clause (line-start, case-insensitive); the
-# derivation reads everything from that point to the end of the criteria text
-# so a trailing "And" continuation of the Then clause is considered too — the
-# same reasoning check_ac_schema's other Gherkin-aware helpers already use.
-_THEN_CLAUSE_START_RE = re.compile(r"\bThen\b", re.IGNORECASE)
-
-# A "Because" clause states WHY a criterion exists. It routinely describes effects
-# belonging to OTHER work — "the same file is deployed to consumer projects" — so
-# reading it as something this record asserts is a category error (BO-2900g-2-ii).
-# It is stripped before the durable-effect search.
-#
-# CASE-SENSITIVE ON PURPOSE. Gherkin keywords are capitalised at line start; a
-# wrapped line beginning with a lowercase "because" is mid-sentence prose. An
-# earlier case-insensitive version of this pattern swallowed the rest of
-# BP-1500d-3's Then clause — including a genuine "leaves the record file written
-# to disk" — because one of its wrapped lines happens to start with "because".
-# Measured: case-sensitive flips exactly one record (the false positive it was
-# written for) and breaks no authored value; case-insensitive flipped two.
-_BECAUSE_CLAUSE_RE = re.compile(
-    r"^[ \t]*Because\b.*?(?=^[ \t]*(?:Given|When|Then)\b|\Z)",
-    re.MULTILINE | re.DOTALL,
-)
-
-# Nouns whose being written outlives the run. BO-2900g-2-ii: the discriminator
-# for a durable effect is the OBJECT written, not the verb — "a record file is
-# written" persists, "before any test is written" is a human authoring a test
-# later, and neither the verb nor its tense tells them apart.
-_DURABLE_OBJECT = (
-    r"(?:file|files|record|records|artifact|artifacts|entry|entries|"
-    r"document|documents|index|manifest|AC|criterion|ticket|log)"
-)
-
-# Destinations that are observable but NOT durable: they are gone when the
-# terminal closes, so a write to one is not the "file that exists and can be
-# read back afterwards" BO-2900g-2 asks for.
-_TRANSIENT_DESTINATION = (
-    r"(?:the\s+|either\s+)?(?:error|output|standard)\s+(?:stream|output)|"
-    r"either\s+stream|both\s+streams|stdout|stderr|the\s+terminal|"
-    r"the\s+console|screen"
-)
-
-# Durable, observable-outside-the-process effect phrases. Deliberately narrow
-# and phrase-based (not single common words like "created" or "recorded" in
-# isolation) so the derivation marks a STRICT subset of the store rather than
-# "everything that ever writes anything" — a derivation that marks everything
-# is indistinguishable from one that marks nothing one gate later (BO-2900g-2
-# constraints). Calibrated against the real on-disk store at authoring time:
-# ~3.6% of records with a Then clause matched (114 of 3148).
-#
-# BO-2900g-2-ii (2026-08-25) replaced two bare alternatives, `\bis written\b`
-# and `\bare written\b`, with the two object-aware forms below. Those two
-# accounted for 108 of the 139 records the pattern then marked — 78% of every
-# positive it produced — and they could not distinguish a durable write from
-# a write to a stream, from a reported clause whose subject is a document
-# ("the reference states that a notice is written ..."), or from a relative
-# clause merely naming where something lives ("the file suppressions are
-# written in"). Four false positives surfaced in a single day; none was a real
-# side-effect. Re-measured after the change: 139 -> 88 marked, 51 flipped to
-# false, and zero records newly marked. A blunt deletion of the two
-# alternatives was measured first and rejected — it left only 31 and dropped
-# genuine positives such as "a record file is written into that project's own
-# tree" (BP-1500d-1).
-_DURABLE_EFFECT_RE = re.compile(
-    r"written to disk|written to a file|"
-    # (a) a durable noun governs the verb directly: "a record file is written"
-    rf"\b{_DURABLE_OBJECT}\s+(?:is|are)\s+written\b|"
-    # (b) the write names a destination, and that destination is not a stream
-    rf"\b(?:is|are)\s+written\s+(?:to|into|under)\s+(?!{_TRANSIENT_DESTINATION})|"
-    r"writes? (?:a|the|an) (?:file|record)|persist(?:ed|s)?\b|"
-    r"saved to disk|\bis saved\b|\bare saved\b|"
-    r"saves? (?:a|the|an) (?:file|record)|record is persisted|"
-    r"created on disk|removed from disk|deletes? (?:a|the|an)? ?file|"
-    r"state-changing command|leaves the system in a different state|"
-    r"changes? the system.s state|commits? (?:a|the) (?:change|transaction)|"
-    r"pushed to|deployed to|updates? the (?:database|store)|"
-    r"a file is written|a record is persisted",
-    re.IGNORECASE,
-)
-
-
-def derive_declares_side_effect(data: dict[str, Any]) -> bool:
-    """Derive whether an AC's own criteria assert a durable, observable effect.
-
-    BO-2900g-2: the declaration that routes a ticket's ``user-surface-smoker``
-    phase agent must be DERIVED from the record's own Then clause — a file
-    written, a record persisted, a state-changing command — never authored by
-    opinion. Only Gherkin ``Then`` clauses (and anything trailing them within
-    the same scenario, e.g. a following ``And``) are examined; a durable-effect
-    phrase appearing only in a ``Given`` clause does not count, because the
-    Given describes pre-existing state, not what this AC's own work does.
-
-    ``Because`` clauses are stripped before the search: they state why a
-    criterion exists, not what it asserts, and routinely cite effects owned by
-    other work (BO-2900g-2-ii).
-
-    KNOWN GAP, DELIBERATELY NOT FIXED HERE (BO-2900g-2-ii). The paragraph above
-    is the intent; it is not quite the behaviour. The search runs from the FIRST
-    ``Then`` to the END of the criteria, so on a multi-scenario record every
-    LATER scenario's ``Given`` and ``When`` is searched as well. A durable-effect
-    phrase in a later Given therefore still counts, which the paragraph above
-    says it should not.
-
-    Bounding each scenario on a line-initial ``Given`` was implemented and
-    measured while narrowing the pattern, then reverted and left to its own
-    change. It moves three more records into disagreement with their authored
-    value — BO-2400c-1-v, UXP-612 and UXP-614 — and at least two of those are
-    arguable rather than clear: UXP-612 and UXP-614 do produce a real file, and
-    only ever say so in a ``When``. Bundling it would have made this change
-    breach its own acceptance criterion that the number of disagreeing records
-    must not rise, and would have decided two judgement calls inside a change
-    about a regular expression.
-
-    Args:
-        data: Parsed AC YAML content.
-
-    Returns:
-        True when the criteria's Then clause asserts a durable, observable
-        effect; False when criteria are absent, contain no Then clause, or
-        the Then clause asserts only a returned value / in-memory result.
-    """
-    criteria = data.get("criteria")
-    if not criteria or not isinstance(criteria, str):
-        return False
-    # Rationale is not assertion: a Because clause explains why the criterion
-    # exists and often cites effects owned by other work (BO-2900g-2-ii).
-    asserted = _BECAUSE_CLAUSE_RE.sub("", criteria)
-    match = _THEN_CLAUSE_START_RE.search(asserted)
-    if match is None:
-        return False
-    then_onward = asserted[match.start():]
-    return bool(_DURABLE_EFFECT_RE.search(then_onward))
-
-
-def validate_declares_side_effect(path: Path, data: dict[str, Any]) -> list[str]:
-    """Validate that ``declares_side_effect`` matches what the criteria derive.
-
-    Runs on staged files only (forward ratchet — the existing store is not
-    retroactively validated, same posture as ``validate_test_contract``).
-
-    Two failure shapes, both required by BO-2900g-2's "never silently
-    overwritten, never silently ignored" constraint:
-
-    - The Then clause asserts a durable effect but ``declares_side_effect``
-      is absent/null/false — the record must gain the declaration.
-    - ``declares_side_effect`` is explicitly authored and DISAGREES with the
-      derived value in either direction — the disagreement is reported by
-      record id rather than silently resolved either way.
-
-    Args:
-        path: Filesystem path to the AC file (for error messages).
-        data: Parsed AC YAML content.
-
-    Returns:
-        List of error message strings; empty when the declaration matches
-        the derivation (including the common case where both are False/absent).
-    """
-    derived = derive_declares_side_effect(data)
-    authored = data.get("declares_side_effect")
-
-    if authored is None:
-        if derived:
-            return [
-                f"{path}: criteria assert a durable, observable effect (a file "
-                f"written, a record persisted, a state-changing command) but "
-                f"declares_side_effect is not set — add declares_side_effect: "
-                f"true. This value must be DERIVED from the AC's own Then "
-                f"clause, not authored by opinion (BO-2900g-2)."
-            ]
-        return []
-
-    if bool(authored) != derived:
-        return [
-            f"{path}: declares_side_effect is authored as {authored!r} but this "
-            f"AC's own Then clause derives {derived!r} — the two disagree. "
-            f"Fix the authored value or the criteria text; a derived value must "
-            f"never be silently overwritten and a disagreement must never be "
-            f"silently ignored (BO-2900g-2)."
-        ]
-    return []

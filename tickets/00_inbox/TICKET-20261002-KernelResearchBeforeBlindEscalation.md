@@ -18,10 +18,10 @@ files_touched:
   - kernel/capabilities/decision/combine.py
   - kernel/capabilities/decision/loading.py
 agents:
-  test-writer: needed
-  python-coder: needed
-  pr-reviewer: needed
-  commit: needed
+  test-writer: signed_off
+  python-coder: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -49,3 +49,92 @@ In order not to hand a human a blind "what is missing?" question while research 
   - `unresolved_feasibility` lands in `cont.gaps`.
 
 ## Comments
+
+### 2026-10-02 12:00 — test-writer (status: ok)
+feedback-id: (submit-failed)
+Wrote tests/kernel/decision_research/test_no_blind_escalation.py (6 tests; 5 red, the nothing-rankable
+test is a guard that keeps current behaviour and passes by design).
+red_baseline:
+  - test_name: test_open_targets_and_no_round_yet_runs_the_research_round
+    file: tests/kernel/decision_research/test_no_blind_escalation.py
+    error: "AssertionError: NEEDS_HUMAN != NEEDS_EVIDENCE (unidentified_gap)"
+  - test_name: test_rounds_exhausted_hands_the_human_a_ranked_question
+    file: tests/kernel/decision_research/test_no_blind_escalation.py
+    error: "AssertionError: 'unidentified_gap' == 'unidentified_gap'"
+  - test_name: test_design_round_already_done_ranks_instead_of_blind_gap
+    file: tests/kernel/decision_research/test_no_blind_escalation.py
+    error: "AssertionError: empty ranking"
+  - test_name: test_unresolved_feasibility_lands_in_cont_gaps
+    file: tests/kernel/decision_research/test_no_blind_escalation.py
+    error: "AssertionError: Lists differ: [] != ['repo fact one', 'repo fact two']"
+  - test_name: test_gaps_are_bounded_and_deduplicated
+    file: tests/kernel/decision_research/test_no_blind_escalation.py
+    error: "AssertionError: 'fact 1' not found in gaps"
+completion_manifest:
+  cross_layer_seam_answer:
+    result: covered
+    producing_side: "OptionsPayload (real serializer) options.v1 output"
+    consuming_side: "loading._absorb_options -> cont.gaps, read by ranking.has_targets in combine"
+  reachability_entry_point_answer:
+    result: not_found
+    reason: "combine is a pure function and _absorb_options an inner helper; no CLI, hook, slash command, workflow step or main(argv) wraps them directly."
+    remediation: "Escalate to ticket-supervisor for a BO-2900d exemption review if required."
+
+### 2026-10-02 13:00 — python-coder (status: ok)
+feedback-id: (submit-failed)
+combine: unidentified_gap with rankable options now yields the design research round if due, else the ranked human question. loading: unresolved_feasibility also feeds cont.gaps (dedup, bounded).
+red_baseline_results:
+  - test_open_targets_and_no_round_yet_runs_the_research_round: green
+  - test_rounds_exhausted_hands_the_human_a_ranked_question: green
+  - test_design_round_already_done_ranks_instead_of_blind_gap: green
+  - test_unresolved_feasibility_lands_in_cont_gaps: green
+  - test_gaps_are_bounded_and_deduplicated: green
+Tests: tests/kernel/decision_research + tests/kernel/capabilities, 204 passed.
+
+### 2026-10-02 14:30 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+Reviewed kernel/capabilities/decision/combine.py and loading.py (+15 lines). No high-confidence findings.
+[M-1] loading.py _add_gaps: when cont.gaps is already at MAX_GAPS_KEPT, new unresolved_feasibility items are silently truncated (bounded by design; confirm acceptable).
+[M-2] combine.py: the new unidentified_gap branch falls back to RESEARCH_CAP as the ranked-question reason when loop_reason is empty; reason label is semantically approximate.
+Suppressed: 0 low. Escalation: not escalated, medium count 2 (threshold > 3).
+No Sign-offs or Implementation Tasks section exists in this ticket; frontmatter updated only.
+
+### 2026-10-02 15:00 — commit (status: ok)
+feedback-id: (submit-failed)
+Auto-authorized commit gate: subject "fix(kernel): research or ranked question before blind unidentified_gap escalation"; staged files: combine.py, loading.py, test_no_blind_escalation.py, this ticket. Unrelated working-tree drift (docs/agents/cards/*, LEAFCUTTER_VERSION) deliberately not staged.
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+
+### 2026-10-02 15:05 — commit (status: blocker)
+feedback-id: (submit-failed)
+Commit not created. Pre-commit hook check-output-drift (always_run) exits 2: "gaps=2" (UNCOMPARABLE GAP .claude/commands/leafcutter.md and .gemini/workflows/leafcutter.md, "run build.py to register it"); main-worktree .venv also missing. Unrelated to this change (kernel/ + tests only); worktree-environment/build-output issue. --no-verify not used. Remedy: run build.py in the worktree (or fix the hook gap handling), then re-run commit. Staged and ready: combine.py, loading.py, test_no_blind_escalation.py, this ticket.
+
+### 2026-10-02 16:00 — commit (status: blocker)
+feedback-id: (submit-failed)
+Retry failed. check-feedback-id fixed (heading 15:05 now has feedback-id), but check-output-drift still exits 2 with gaps=2 (.claude/commands/leafcutter.md, .gemini/workflows/leafcutter.md: 'run build.py to register it'), even though both files exist on disk. Unrelated to this change. --no-verify not used. Remedy: run build.py in the worktree or fix hook gap handling, then re-run commit.
+
+### 2026-10-02 17:00 — commit (status: blocker)
+feedback-id: (submit-failed)
+Third attempt failed identically: check-output-drift exits 2 with gaps=2 (.claude/commands/leafcutter.md, .gemini/workflows/leafcutter.md "run build.py to register it"), drifted=0 missing=0. Probe passes; HEAD unchanged (fb022dbe). Unrelated to kernel change. --no-verify not used. Remedy: run build.py or fix hook GAP handling, then re-run commit.
+
+### 2026-10-02 18:00 — commit (status: blocker)
+feedback-id: (submit-failed)
+Fourth attempt failed identically: check-output-drift exits 2 (gaps=2: .claude/commands/leafcutter.md, .gemini/workflows/leafcutter.md "run build.py to register it"; drifted=0 missing=0). Probe passes; HEAD unchanged (fb022dbe). Unrelated to the kernel change; not fixable by precommit-autofix. --no-verify not used. Remedy: run build.py in the worktree or fix hook GAP handling, then re-run commit.
+
+### 2026-10-02 19:00 — commit (status: ok)
+feedback-id: (submit-failed)
+Commit 87228a8e created: "fix(kernel): research or ranked question before blind unidentified_gap escalation" (4 files). The earlier check-output-drift failure did not recur; hooks passed. No --no-verify used. Unrelated drift in docs/agents/cards/* left unstaged.
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+
+### 2026-10-02 20:00 — python-coder (status: ok)
+feedback-id: fb_2026-10-02_2f6d1112
+Follow-up fix to 87228a8e: when no research round was due because there were no research targets (no gaps, no added options, no uncited files), combine labelled the ranked question `research_cap` although zero rounds ran. It now uses the new `NO_RESEARCH_TARGETS` ("no_research_targets") reason, defined next to `RESEARCH_CAP` in ranking.py and added to `DESIGN_REASONS`. `loop_reason` still yields `research_cap` when the cap was really reached. The ranked question text (`design_ending._WHY`) and the rationale ("stopped researching because no_research_targets after 0 research round(s)") now say so. Two regression tests added to test_no_blind_escalation.py; no existing assertion changed. Kernel capabilities/contracts/interaction/decision_research/memory suites: 532 passed; ruff and ast.parse clean.
+
+### 2026-10-06 12:00 — python-coder (status: ok)
+feedback-id: fb_2026-10-06_156eb559
+Fix: the unidentified_gap branch labelled the "targeted design round already ran below the cap" case `no_research_targets`, so the question claimed the options name nothing left to look up. combine now picks the reason through `_stop_reason`: `design_round_done` when the round already ran, `no_research_targets` when nothing is targeted, `research_cap`/`no_progress` still from `loop_reason`. No existing reason fit: `design_reason` returns `design_judgement` only when a required criterion is a design judgement (None for this evidence-answerable gap case), and the `design_judgement` question text would itself be false here. So one new reason `design_round_done` was added (ranking.DESIGN_ROUND_DONE, in DESIGN_REASONS, with a `design_ending._WHY` text saying the round already ran). Also fixed the `ResearchRequestPayload.gaps` comment (no committed JSON schema renders it) and the Decision.design_reason comment, and the DECISION HISTORY lines. Tests: `test_design_round_already_done_ranks_instead_of_blind_gap` gained assertions (reason design_round_done, no "No research round is due" in the question); no existing assertion changed. The no_research_targets test still covers case (a). Suites: 441 passed, 1 failed (tests/kernel/capabilities/test_host_operations.py, host.retrieval_needs has no SCHEMAS entry; untouched by this change). ruff and ast.parse clean. Follow-up for the staged product-truth flow (docs/product-truth, left alone): its text says no_research_targets also covers a round that already ran, and DESIGN_REASONS lists five reasons; both now need design_round_done.

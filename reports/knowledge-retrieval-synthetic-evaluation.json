@@ -1,0 +1,243 @@
+{
+  "synthetic": true,
+  "source_provenance_note": "synthetic source identities; no real-history or source-excerpt claim",
+  "backend": [
+    {
+      "name": "Neo4j Kernel",
+      "versions": [
+        "5.26.31"
+      ]
+    }
+  ],
+  "driver_version": "6.0.3",
+  "python_version": "3.14.2",
+  "embedding": {
+    "generation_id": "synthetic-v1",
+    "embedded_entities": 3,
+    "provider_calls": 1,
+    "model": "synthetic-fixture-v1",
+    "dimensions": 2,
+    "text_version": "approved-title-summary-v1",
+    "synthetic": true
+  },
+  "node_count": 8,
+  "edge_count": 8,
+  "catalog": [
+    {
+      "operation": "get_entities",
+      "expected": [
+        "AC"
+      ],
+      "actual": [
+        "AC"
+      ],
+      "passed": true
+    },
+    {
+      "operation": "get_component_context",
+      "expected": [
+        "AC",
+        "ADR",
+        "C"
+      ],
+      "actual": [
+        "AC",
+        "ADR",
+        "C"
+      ],
+      "passed": true
+    },
+    {
+      "operation": "get_acceptance_criteria",
+      "expected": [
+        "AC"
+      ],
+      "actual": [
+        "AC"
+      ],
+      "passed": true
+    },
+    {
+      "operation": "get_related_tests",
+      "expected": [
+        "T"
+      ],
+      "actual": [
+        "T"
+      ],
+      "passed": true
+    },
+    {
+      "operation": "get_relevant_adrs",
+      "expected": [
+        "ADR"
+      ],
+      "actual": [
+        "ADR"
+      ],
+      "passed": true
+    },
+    {
+      "operation": "get_previous_decisions",
+      "expected": [
+        "D-old"
+      ],
+      "actual": [
+        "D-old"
+      ],
+      "passed": true
+    },
+    {
+      "operation": "get_corrected_decisions",
+      "expected": [
+        "D-new"
+      ],
+      "actual": [
+        "D-new"
+      ],
+      "passed": true
+    },
+    {
+      "operation": "get_related_lessons",
+      "expected": [
+        "L"
+      ],
+      "actual": [
+        "L"
+      ],
+      "passed": true
+    },
+    {
+      "operation": "get_decision_evidence",
+      "expected": [
+        "E"
+      ],
+      "actual": [
+        "E"
+      ],
+      "passed": true
+    }
+  ],
+  "all_catalog_checks_passed": true,
+  "unsupported_policy": true,
+  "evaluation": {
+    "evaluation_version": "1",
+    "cases": [
+      {
+        "id": "0",
+        "synthetic": true,
+        "status": "ok",
+        "precision_at_k": 1.0,
+        "recall_at_k": 1.0,
+        "correction_coverage": 1.0,
+        "provenance_validity": 1.0,
+        "content_bytes": 1111,
+        "latency_ms": 37.912,
+        "source_sha": "733fe6d073dc5661f7dca8d3ce1e69745ca0c32e",
+        "generation_id": "synthetic-v1",
+        "query_version": "1",
+        "embedding_model": null,
+        "result_count": 1
+      },
+      {
+        "id": "1",
+        "synthetic": true,
+        "status": "ok",
+        "precision_at_k": 1.0,
+        "recall_at_k": 1.0,
+        "correction_coverage": 1.0,
+        "provenance_validity": 1.0,
+        "content_bytes": 1098,
+        "latency_ms": 21.447,
+        "source_sha": "733fe6d073dc5661f7dca8d3ce1e69745ca0c32e",
+        "generation_id": "synthetic-v1",
+        "query_version": "1",
+        "embedding_model": null,
+        "result_count": 1
+      },
+      {
+        "id": "2",
+        "synthetic": true,
+        "status": "ok",
+        "precision_at_k": 1.0,
+        "recall_at_k": 1.0,
+        "correction_coverage": 1.0,
+        "provenance_validity": 1.0,
+        "content_bytes": 1103,
+        "latency_ms": 20.427,
+        "source_sha": "733fe6d073dc5661f7dca8d3ce1e69745ca0c32e",
+        "generation_id": "synthetic-v1",
+        "query_version": "1",
+        "embedding_model": null,
+        "result_count": 1
+      },
+      {
+        "id": "3",
+        "synthetic": true,
+        "status": "ok",
+        "precision_at_k": 1.0,
+        "recall_at_k": 1.0,
+        "correction_coverage": 1.0,
+        "provenance_validity": 1.0,
+        "content_bytes": 1170,
+        "latency_ms": 16.814,
+        "source_sha": "733fe6d073dc5661f7dca8d3ce1e69745ca0c32e",
+        "generation_id": "synthetic-v1",
+        "query_version": "1",
+        "embedding_model": null,
+        "result_count": 1
+      },
+      {
+        "id": "4",
+        "synthetic": true,
+        "status": "ok",
+        "precision_at_k": 1.0,
+        "recall_at_k": 1.0,
+        "correction_coverage": 1.0,
+        "provenance_validity": 1.0,
+        "content_bytes": 523,
+        "latency_ms": 14.99,
+        "source_sha": "733fe6d073dc5661f7dca8d3ce1e69745ca0c32e",
+        "generation_id": "synthetic-v1",
+        "query_version": "1",
+        "embedding_model": null,
+        "result_count": 0
+      },
+      {
+        "id": "5",
+        "synthetic": true,
+        "status": "ok",
+        "precision_at_k": 1.0,
+        "recall_at_k": 1.0,
+        "correction_coverage": 1.0,
+        "provenance_validity": 1.0,
+        "content_bytes": 1267,
+        "latency_ms": 49.196,
+        "source_sha": "733fe6d073dc5661f7dca8d3ce1e69745ca0c32e",
+        "generation_id": "synthetic-v1",
+        "query_version": "1",
+        "embedding_model": "synthetic-fixture-v1",
+        "result_count": 1
+      },
+      {
+        "id": "6",
+        "synthetic": true,
+        "status": "ok",
+        "precision_at_k": 1.0,
+        "recall_at_k": 1.0,
+        "correction_coverage": 1.0,
+        "provenance_validity": 1.0,
+        "content_bytes": 4242,
+        "latency_ms": 88.195,
+        "source_sha": "733fe6d073dc5661f7dca8d3ce1e69745ca0c32e",
+        "generation_id": "synthetic-v1",
+        "query_version": "1",
+        "embedding_model": "synthetic-fixture-v1",
+        "result_count": 4
+      }
+    ],
+    "semantic_usefulness_proven": false,
+    "quality_thresholds": "unset pending representative real-model reviewed baseline"
+  },
+  "real_model_evaluation": "not run: no production embedding model configured"
+}

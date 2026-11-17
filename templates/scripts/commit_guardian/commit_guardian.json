@@ -1,5 +1,11 @@
 {
   "_comment": "Commit Guardian — Central Configuration. Edit this file to customize all pre-commit hook behavior.",
+  "stage_canaries": {
+    "_comment": "BO-4300c-1-ii: the known-bad input the workspace maker feeds each DECLARED git stage to show the stage's protections fire (a rejected commit that stages the reserved path, a rejected commit whose first message line is the reserved line, a merge that adds the reserved path, which the post-merge hook reports as failing). The canaries are keyed on these reserved paths / this exact line, never on file or message contents, so ordinary work that merely mentions them is never rejected. precommit_canary.py --stage <stage> is the hook that rejects it. A declared stage with no entry here cannot be shown to fire and counts as not firing.",
+    "pre-commit": {"path": "leafcutter-stage-canary/pre-commit"},
+    "commit-msg": {"message": "leafcutter-stage-canary: reserved commit-msg line"},
+    "post-merge": {"path": "leafcutter-stage-canary/post-merge"}
+  },
   "roadmap_staleness_threshold_days": 30,
   "changelogs_dir": "changelogs",
   "excluded_dirs": [
@@ -11,7 +17,7 @@
     "templates"
   ],
   "file_size": {
-    "_comment": "check_file_size.py — Line limits per checked extension (GE-127c-1 pinned scope, 2026-09-14). IN SCOPE, each with an explicit limit so none silently inherits default_limit: .py 400 (unchanged), .sql 600 (unchanged), .js 1000 (new — top of the empty 600-1000 band across the 13 tracked files, catching the six oversized workflow bodies while leaving 43% headroom on the largest compliant file), .mjs 1000 (new, same limit as .js so a rename cannot dodge the gate), .ts 400 (new), .tsx 400 (new), .sh 400 (new). OUT OF SCOPE, each for a stated reason, not by omission: .md (already governed by check-doc-length over docs/; a second length gate over the same files would be drift), .yaml/.json (machine-authored/registry-shaped; length carries no comprehension cost), .css/.html (no first-party file over any candidate limit). MEASUREMENT RULE (GE-127d-2, so the quoted length a refusal states is reproducible from a published source, not only from the transient per-refusal Measures line check_file_size.py itself prints): a quoted length discards content inside triple-quoted strings, in either Python quote style, and content inside C-style block comments; every remaining line -- including blank lines and hash comment lines -- is counted. Deleting a triple-quoted or block-comment region therefore never reduces a quoted length that is already over its limit; deleting blank lines or hash comments does.",
+    "_comment": "check_file_size.py — Line limits per checked extension (GE-127c-1 pinned scope, 2026-09-14). IN SCOPE, each with an explicit limit so none silently inherits default_limit: .py 400 (unchanged), .sql 600 (unchanged), .js 1000 (new — top of the empty 600-1000 band across the 13 tracked files, catching the six oversized workflow bodies while leaving 43% headroom on the largest compliant file), .mjs 1000 (new, same limit as .js so a rename cannot dodge the gate), .ts 400 (new), .tsx 400 (new), .sh 400 (new). OUT OF SCOPE, each for a stated reason, not by omission: .md (already governed by check-doc-length over docs/; a second length gate over the same files would be drift), .yaml/.json (machine-authored/registry-shaped; length carries no comprehension cost), .css/.html (no first-party file over any candidate limit). The passage that follows is the published statement of what a quoted length measures (GE-127d-2 and GE-127d-5, so the quoted length a refusal states is reproducible from a published source, not only from the transient per-refusal Measures line check_file_size.py itself prints); it is generated from the measure and compared whole against it by check-file-size-rule-parity, and it is last in this comment on purpose. MEASUREMENT RULE: does not count comments of every style (line and block comments in every language measured), standalone strings (Python strings standing alone as statements: docstrings, bare strings and trailing blocks) and blank lines; counts every line of a used string (a Python string that is assigned, passed, returned or part of a larger expression), every line of an f-string and every other line of code; a line holding several statements counts once per statement (Python, JavaScript, TypeScript, SQL and shell), so joining statements onto one line shortens nothing.",
     "line_limits": {
       ".py": 400,
       ".sql": 600,
@@ -37,14 +43,27 @@
     ]
   },
   "doc_length": {
-    "_comment": "check_doc_length.py — Length limits for docs/**.md (2026-09-14). severity 'block' (was the 'warn' default, under which this gate ALWAYS exited 0 — the reason three known-issues registers reached ~4,500 lines against a 300-line limit without one commit being stopped). Blocking is survivable only because the gate now ratchets exactly as check-file-size does for code (GE-127a-1 crossing refusal + GE-127b-1 growth ratchet, merge-aware, INDETERMINATE on an unresolvable previous value): a doc may not CROSS its limit, and a doc already over may not GROW, but shrinking or holding steady always passes. That matters here — 59 of 339 tracked docs are already over, and an absolute block would freeze every one of them including the append-heavy registers. max_lines/max_lines_adr/max_sections/excluded_files are pinned to their previous implicit defaults, so this change alters ENFORCEMENT only, not which docs are judged or where the thresholds sit. max_sections has zero current violations (the registers use ### per entry, not ##), so its dimension blocks with no grandfathered population.",
+    "_comment": "check_doc_length.py — Length limits for docs/**.md (2026-09-14). severity 'block' (was the 'warn' default, under which this gate ALWAYS exited 0 — the reason three known-issues registers reached ~4,500 lines against a 300-line limit without one commit being stopped). Blocking is survivable only because the gate now ratchets exactly as check-file-size does for code (GE-127a-1 crossing refusal + GE-127b-1 growth ratchet, merge-aware, INDETERMINATE on an unresolvable previous value): a doc may not CROSS its limit, and a doc already over may not GROW, but shrinking or holding steady always passes. That matters here — 59 of 339 tracked docs are already over, and an absolute block would freeze every one of them including the append-heavy registers. max_lines/max_lines_adr/max_sections/excluded_files were pinned to their previous implicit defaults, so THAT change altered ENFORCEMENT only, not which docs are judged or where the thresholds sit. max_sections has zero current violations (the registers use ### per entry, not ##), so its dimension blocks with no grandfathered population. SUPERSEDED IN PART (2026-10-12, GE-127g-1): excluded_files no longer exists — it is replaced by set_aside_locations below, and unlike the 2026-09-14 change that one DOES alter which docs are judged. Membership is now by declared location carrying a stated ground, not by basename: a path ending '/' matches every document beneath it, anything else matches one document exactly. The old key matched basenames alone, so its two entries exempted every README.md and CHANGELOG.md anywhere under docs/; those hand-authored READMEs are back in scope, two of them already over the limit and grandfathered by the growth ratchet. Nothing reads excluded_files any more and nothing warns about it, so a config still carrying that key has a dead setting. GE-127g-5: every set_aside_locations entry must also declare report_above_lines, the per-document size above which the run REPORTS the document (size, ceiling, headroom, and the source its ground names) while the commit still completes; an entry without it is rejected, never defaulted. It is a report threshold, not a refusal limit, which is why it is not named max_lines.",
     "severity": "block",
     "max_lines": 300,
     "max_lines_adr": 400,
     "max_sections": 25,
-    "excluded_files": [
-      "README.md",
-      "CHANGELOG.md"
+    "set_aside_locations": [
+      {
+        "path": "docs/agents/cards/",
+        "ground": "Regenerated whole from templates/agents/ by the build's agent-card phase. No human author decides the length of any document here and no hand edit survives the next regeneration, so a length refusal names work nobody wrote and prescribes a remedy nobody can apply.",
+        "report_above_lines": 1500
+      },
+      {
+        "path": "docs/roadmap.md",
+        "ground": "Regenerated whole from docs/roadmap.json. The document carries its own do-not-edit-by-hand marker and names its source; its length is a function of the roadmap's size, which no author of this file controls.",
+        "report_above_lines": 1500
+      },
+      {
+        "path": "docs/INDEX.md",
+        "ground": "Regenerated whole by the build's doc-index phase from the contents of docs/. Its length is a function of how many documents the project has, so it grows whenever an unrelated document is added.",
+        "report_above_lines": 2000
+      }
     ]
   },
   "complexity": {
@@ -181,6 +200,16 @@
     ],
     "exempt_filenames": [
       "__init__.py"
+    ],
+    "set_aside_locations": [
+      {
+        "path": "docs/acceptance-criteria/",
+        "ground": "Holds acceptance-criteria records that tools read and write and nobody navigates by hand. It is flat by design, one folder per feature family, and its folders are bounded by the AC store's tree limits rather than by a file count."
+      },
+      {
+        "path": "docs/decisions/",
+        "ground": "Holds kernel decision records, one file per decision, written and read by the kernel's publish, index and precedent tools; people review records in PRs, not by browsing the folder."
+      }
     ]
   },
   "debug_scripts": {
@@ -396,6 +425,34 @@
     "_comment": "build_precommit_config() uses this to generate/update .pre-commit-config.yaml. Each entry describes one hook. Package-managed entries are identified by the '@package-managed' marker and are replaced on each build. Project-specific entries (no marker) are preserved.",
     "hooks": [
       {
+        "id": "precommit-canary-pre-commit",
+        "tier": "judgment",
+        "name": "Stage canary (pre-commit) - rejects only the declared known-bad input",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/precommit_canary.py --stage pre-commit",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "always_run": true,
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BO-4300c-1-ii / pr-reviewer H-1 (decided 2026-10-09): the pre-commit-stage canary the workspace maker shows fires. Exits 1 only when the reserved path declared under stage_canaries[pre-commit] is staged; inert (exit 0) for every ordinary commit/merge. Without this registration the generated .pre-commit-config.yaml declares no canary-rejecting hook for the stage and a real ensure refuses HOOKS_INACTIVE."
+      },
+      {
+        "id": "precommit-canary-commit-msg",
+        "tier": "judgment",
+        "name": "Stage canary (commit-msg) - rejects only the declared known-bad input",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/precommit_canary.py --stage commit-msg",
+        "language": "system",
+        "stages": [
+          "commit-msg"
+        ],
+        "always_run": true,
+        "pass_filenames": true,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BO-4300c-1-ii / pr-reviewer H-1 (decided 2026-10-09): the commit-msg-stage canary the workspace maker shows fires. Exits 1 only when the message's first line equals the reserved line declared under stage_canaries[commit-msg]; inert (exit 0) for every ordinary commit/merge. Without this registration the generated .pre-commit-config.yaml declares no canary-rejecting hook for the stage and a real ensure refuses HOOKS_INACTIVE."
+      },
+      {
         "id": "ensure-precommit-config",
         "tier": "transform",
         "name": "Ensure Pre-commit Config (self-healing hook)",
@@ -496,6 +553,21 @@
         "change_set_source": "handed_by_commit_path",
         "always_run": false,
         "_comment": "TICKET-20260715-DocIndexAutoRegen: Regenerates docs/INDEX.md and git-adds it whenever a docs/*.md file (other than INDEX.md itself) is staged. Exits 0 always (fail-open). Ordered before check-doc-frontmatter and check-description-field so generator-emitted frontmatter survives validation."
+      },
+      {
+        "id": "transform-agent-registry",
+        "tier": "transform",
+        "name": "Transform agent registry (regenerate skills_invoked/spawn_allowlist from template declarations)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/transform_agent_registry.py",
+        "language": "system",
+        "files": "^(templates/agents/.*\\.md|config/agent_registry\\.json)$",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": false,
+        "_comment": "AR-300c-3 (user decision, BrainCandy 2026-10-09): the agent registry's ability field (skills_invoked; the older skills_used is retired, AR-400e) is a derived copy of each template's frontmatter `skills:` declaration, and (AR-300c-5-ii) its spawn_allowlist a derived copy of the frontmatter `spawn_allowlist:` declaration. This transform regenerates ONLY skills_invoked/spawn_allowlist (never spawned_by) and drops skills_used from any record that carries it and git-adds config/agent_registry.json when it changed; the build never writes the package source tree, it only reports a disagreeing copy. Exits 0 always (fail-open)."
       },
       {
         "id": "check-doc-frontmatter",
@@ -1048,7 +1120,7 @@
         "name": "Check Workflow Meta Pure-Literal Contract",
         "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_workflow_meta.py",
         "language": "system",
-        "files": "^templates/workflows-js/.*\\.js$",
+        "files": "^templates/workflows-js/[^/]+\\.js$",
         "stages": [
           "pre-commit"
         ],
@@ -1120,13 +1192,13 @@
         "name": "Validate Product-Truth Store (schema + anti-phantom-done truth gate)",
         "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py docs/product-truth/scripts/validate_product_truth.py --quiet",
         "language": "system",
-        "files": "(^docs/product-truth/|^docs/acceptance-criteria/.*\\.yaml$)",
+        "files": "(^docs/product-truth/|^docs/analysis/|^docs/acceptance-criteria/.*\\.yaml$|^kernel/contracts/|^kernel/memory/|^kernel/providers/base\\.py$|^knowledge/|^kernel/schemas/|^kernel/persistence/base\\.py$|^integrations/retrieval_needs_llm\\.py$|^config/|^reports/|^templates/agents/flow-author\\.md$|^docs/how-to/(authoring-product-truth-artifacts|product-truth-schema-reference)\\.md$)",
         "stages": [
           "pre-commit"
         ],
         "pass_filenames": false,
         "change_set_source": "handed_by_commit_path",
-        "_comment": "EPIC-ProductTruthTrust: Runs docs/product-truth/scripts/validate_product_truth.py when any product-truth artifact (flow/mock/mockup/index/schema/eval) OR any AC YAML is staged. jsonschema is a HARD dependency (validator exits 2 if absent — never a silent no-op). Enforces schema conformance, cross-ref integrity, derived-vs-source parity, and the anti-phantom-done truth-evidence gate: a done/in_progress AC referenced by a BUILT flow (realization absent or 'built') must carry non-empty implemented_by or covered_by; mock/spec flows are exempt. Exits non-zero on any error. Wired alongside check-product-truth-generate to stop derived live-status drift and phantom-done from landing."
+        "_comment": "EPIC-ProductTruthTrust: Runs the single offline product-truth validator, including structured handoff fields and examples. The files regex is derived from product_truth_trigger_scope.RESOLVABLE_POINTER_TRIGGER_PATTERNS (ADR-049): truth artifacts, ACs, bounded local schema/model roots, observed receipts, and authoring guidance. Schema-only or model-only edits therefore cannot bypass contract checks. Missing dependencies and violations fail closed. No model/provider calls, no fail_open, no duplicate gate. The generator drift gate remains separate."
       },
       {
         "id": "check-product-truth-generate",
@@ -1171,12 +1243,26 @@
         "_comment": "EPIC-WorktreeQualityGateGuard/02: Manual-stage-only canary hook. Emits PRECOMMIT_CANARY_OK to stdout and exits 0. Invoked by verify_precommit_active.py check D to confirm pre-commit hooks can fire in the worktree environment. stages: [manual] means it never runs automatically on git commit."
       },
       {
+        "id": "precommit-canary-post-merge",
+        "tier": "judgment",
+        "name": "Stage canary (post-merge) - rejects only the declared known-bad input",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/precommit_canary.py --stage post-merge",
+        "language": "system",
+        "stages": [
+          "post-merge"
+        ],
+        "always_run": true,
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BO-4300c-1-ii / pr-reviewer H-1 (decided 2026-10-09): the post-merge-stage canary the workspace maker shows fires. Exits 1 only when the merge adds the reserved path declared under stage_canaries[post-merge]; inert (exit 0) for every ordinary commit/merge. Without this registration the generated .pre-commit-config.yaml declares no canary-rejecting hook for the stage and a real ensure refuses HOOKS_INACTIVE."
+      },
+      {
         "id": "check-hook-parity",
         "tier": "judgment",
         "name": "Check Hook Parity (leafcutter)",
         "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_hook_parity.py",
         "language": "system",
-        "files": "scripts/commit_guardian/|templates/scripts/commit_guardian/|templates/commit-guardian/",
+        "files": "scripts/commit_guardian/|templates/scripts/commit_guardian/|templates/commit-guardian/|templates/scripts/precommit-autofix\\.json",
         "stages": [
           "pre-commit"
         ],
@@ -1184,7 +1270,7 @@
         "change_set_source": "handed_by_commit_path",
         "script": "check_hook_parity.py",
         "description": "Enforces parity of commit-guardian hook scripts and manifest entries across runtime, canonical template, legacy template, and deployed output dirs",
-        "_comment": "EPIC-Phase1ReadyHardening/04: Blocks commits when hook scripts or manifest entries are missing from any of the three tracked source dirs. Fail-open on I/O errors."
+        "_comment": "EPIC-Phase1ReadyHardening/04: Blocks commits when hook scripts or manifest entries are missing from any of the three tracked source dirs. Fail-open on I/O errors in the parity legs. GE-132a-1 adds the remedy-declaration leg (a check needs a declaration before it is registered; the excused list only shrinks; a declaration for an unregistered check is refused), triggered by a change to templates/scripts/precommit-autofix.json too, and FAIL-CLOSED: unreadable input is could-not-check (exit 2), never a pass."
       },
       {
         "id": "check-hook-trigger-reachability",
@@ -1273,6 +1359,20 @@
         "_comment": "KI-1 (BO-2200 retrospective, 2026-08-10): Blocks commits when a staged ticket has status:done but its source_ac is not yet work_status:done in the AC store. Fail-closed only on the specific mismatch; warn-only when the source_ac file is absent (epics/composites have no source_ac and are silently skipped). Scoped to staged tickets only."
       },
       {
+        "id": "check-build-epic-gate-verdicts",
+        "tier": "judgment",
+        "name": "Check Build-Epic Gate Verdicts (TQ-500g-1-viii)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_build_epic_gate_verdicts.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "always_run": true,
+        "change_set_source": "self_derived",
+        "_comment": "TQ-500g-1-viii: on /build-epic, blocks a ticket commit unless the red-baseline and wrong-version records written by the gate CLIs are on record, readable, passing and (wrong-version) fresh for the staged code. Inert when no gate-verdict marker is open in the worktree."
+      },
+      {
         "id": "check-file-size",
         "tier": "judgment",
         "name": "Check File Size (GE-127a-1 — crossing refusal + GE-127b-1 ratchet)",
@@ -1284,6 +1384,7 @@
         "pass_filenames": false,
         "change_set_source": "handed_by_commit_path",
         "always_run": true,
+        "verbose": true,
         "_comment": "GE-127a-1: registers the long-documented (README.md line 41) but previously unreachable check-file-size gate. always_run: true because the script resolves its own staged-file set via `git diff --cached --name-status` and filters to covered extensions internally, mirroring check-build-drift/check-hook-trigger-reachability rather than a files regex. Refuses a commit that takes a covered file from under to over its permitted length (GE-127a-1), refuses one that grows an already-oversized file further per the GE-127b-1 ratchet, and exits 2 INDETERMINATE (GE-127a-1-i / GE-127b-1-i) when a file's length cannot be established or the previous-length source cannot be resolved."
       },
       {
@@ -1292,7 +1393,7 @@
         "name": "Check File Size Rule Parity (GE-127d-1 — published rule vs. enforced rule reconciliation)",
         "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_file_size_rule_parity.py",
         "language": "system",
-        "files": "^(templates/scripts/commit_guardian/(README\\.md|commit_guardian\\.json|check_file_size\\.py)|scripts/commit_guardian/(README\\.md|commit_guardian\\.json|check_file_size\\.py)|docs/pre-commit-hooks\\.md)$",
+        "files": "^(templates/scripts/commit_guardian/(README\\.md|commit_guardian\\.json|check_file_size\\.py|_file_size_ratchet\\.py|_file_size_measure/[^/]+\\.py)|scripts/commit_guardian/(README\\.md|commit_guardian\\.json|check_file_size\\.py|_file_size_ratchet\\.py|_file_size_measure/[^/]+\\.py)|docs/pre-commit-hooks\\.md)$",
         "stages": [
           "pre-commit"
         ],
@@ -1313,7 +1414,7 @@
         "change_set_source": "handed_by_commit_path",
         "always_run": true,
         "script": "check_folder_density.py",
-        "description": "Refuses a commit that takes a directory from at-or-under to over the permitted count of non-markdown files (folder_density.max_files, default 15).",
+        "description": "Refuses a commit that takes a directory from at-or-under to over the permitted count of non-markdown files (folder_density.max_files_per_folder, default 15).",
         "_comment": "GE-120h-3: documented live at README.md line 42 and configured since the initial extract, but named by no hooks_manifest entry and therefore never run. always_run with no files key because main() resolves its own staged set via get_staged_files() (`git diff --cached`) and ignores argv; a files regex would be a filter the script never consults, which check-hook-trigger-reachability flags as a contradiction. Safe to register as-is: _classify_folders raises a violation only when a folder crosses the threshold IN THIS COMMIT (after > limit and before <= limit), so the 113 directories already over 15 classify as warnings. Verified against a real staged set, where templates/scripts/commit_guardian (109) and unit_tests/commit_guardian (142) both reported PRE-EXISTING rather than blocking."
       },
       {
@@ -1331,6 +1432,22 @@
         "script": "check_test_fixture_bloat.py",
         "description": "Warns (or blocks, once armed) when a staged test_*.py carries inline fixture data over the ADR-028 thresholds.",
         "_comment": "GE-120h-3: written for EPIC-TestFixtureConvention/02 and never registered. always_run with no files key because main() enumerates staged test files itself via `git diff --cached --name-only`. INERT ON REGISTRATION, DELIBERATELY: `test_fixture_bloat` is NOT among this file's top-level keys, so main() resolves config = {} (:327-337), `enabled` defaults to False (:339), and every violation path returns 0 (:392-394). That absence is load-bearing — it is what makes registering this zero-risk. Adding the test_fixture_bloat block with enabled: true is a separate, deliberate step to be reviewed on its own merits; do not 'complete' the config as though the key were missing by oversight."
+      },
+      {
+        "id": "check-complexity",
+        "tier": "judgment",
+        "name": "Check Complexity (GE-131a-2 — per-function complexity ratchet)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_complexity.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "verbose": true,
+        "script": "check_complexity.py",
+        "description": "Refuses a staged Python function that grew past its own previous score when it was already over complexity.max_score, or a new or crossing function scoring above complexity.max_score (default 15)."
       },
       {
         "id": "check-sql-complexity",
@@ -1445,6 +1562,10 @@
         "always_run": true,
         "script": "check_ac_done_on_merge.py",
         "description": "After a merge, marks each source AC work_status: done for every ticket the merge moved to status: done.",
+        "negative_control": {
+          "not_applicable": true,
+          "reason": "check-ac-done-on-merge cannot be exercised as a negative control: main() returns 0 unconditionally under every input it is given, and its __main__ guard additionally swallows OSError/ValueError into sys.exit(0), so no input drives it to a non-zero exit. It is a fire-and-forget AC-closer side effect dispatched on the post-merge stage, not a judgment gate that can refuse a commit, so it has no known-bad input for this AC's negative_control shape to reject."
+        },
         "_comment": "GE-120h-3: never registered in either manifest, so no AC has ever been auto-closed on merge. Unlike the four gates above it consults NEITHER argv NOR the staged set — it reads `git diff HEAD~1 HEAD` on the post-merge stage. Cannot block: main() returns 0 unconditionally (:213) and the __main__ guard swallows OSError/ValueError into sys.exit(0) (:219-224). Note the call direction: this script INVOKES scripts/ac_store/mark_ac_done.py by subprocess (:148-162); mark_ac_done.py:6 naming this hook is a back-reference, not an invocation, and has been misread as one. FIRST post-merge entry in this manifest — build_precommit.py renders the stage verbatim, but the git shim is installed by install_pre_commit_shims.collect_stages, which only setup_ticket_worktree.py calls, so an existing checkout that never ran it has no post-merge shim and this gate stays silent there. Verified present in this repository's .git/hooks/post-merge (a genuine pre-commit shim, --hook-type=post-merge)."
       },
       {
@@ -1465,6 +1586,46 @@
           "reason": "This is the census/liveness runner itself: it examines OTHER hooks' declared negative_control.command, it has no known-bad staged-file input of its own to reject the way a judging gate does. Its own falsifiability is covered by unit_tests/portability/test_ge_120f_1.py's alter-and-revert, pairing, seam, deployed, and reachability descriptors (GE-120f-1), not by a self-referential negative_control entry. Declaring negative_control on the other hooks_manifest entries is deliberately deferred to GE-120f-1-i/-ii (out of scope here) per this AC's own 'day-one blast radius is the correct outcome' guidance: most checks read never-attempted until a declaration is added for them."
         },
         "_comment": "GE-120f-1/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/01: registers the negative-control liveness sweep so it actually gates a commit (KI-CG-021 — a runner nothing calls is inert). Reads hooks_manifest.hooks from THIS SAME manifest at run time, actually runs each EXAMINED hook's declared negative_control.command as a real subprocess, and writes the observed `currently` block back into this file in place — see check_negative_control_liveness.py's own module docstring. always_run: true because this hook reads the whole manifest's declared population, never the staged-file list (pass_filenames: false), mirroring check-build-drift's own rationale above in this manifest."
+      },
+      {
+        "id": "check-lint-gate",
+        "tier": "judgment",
+        "name": "Check Lint Gate (BP-1300e-1 — CI lint parity)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_lint_gate.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "verbose": true,
+        "script": "check_lint_gate.py",
+        "description": "Refuses a commit carrying a violation that CI's required lint check would reject, judged on the staged bytes by the rules and over the trees declared in leafcutter-lint.json; a linter that is missing, cannot start, differs in version from CI's, or a configuration it cannot read refuses the commit instead of passing it.",
+        "command": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_lint_gate.py --probe known-clean",
+        "pass_criteria": "exit 0 and RESULT: ok -- a staged file with no violation is accepted",
+        "negative_control": {
+          "input": "a throwaway one-file project whose staged probe.py holds `l = 1` (E741), a violation CI's required lint check would reject, staged and judged by this same script as a separate process (--probe known-bad)",
+          "command": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_lint_gate.py --probe known-bad",
+          "expected_result": "non-zero exit with `RESULT: refused` naming probe.py:1 and E741",
+          "currently": {
+            "state": "passing",
+            "observed": "2026-10-12",
+            "evidence": [
+              {
+                "command": "python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_lint_gate.py --probe known-bad",
+                "output": "lint gate: linter version used: ruff 0.15.15; no exact linter version is declared for the project (requirements-dev.txt does not exist), so no version check was applied\nprobe.py:1:1: E741 Ambiguous variable name: `l` [step: repository-rules]\nlint gate: 1 finding(s) in 1 file(s) that CI's required lint check would also reject; the commit is refused.\nRESULT: refused\n",
+                "exit_code": 1
+              },
+              {
+                "command": "python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_lint_gate.py --probe known-clean",
+                "output": "lint gate: linter version used: ruff 0.15.15; no exact linter version is declared for the project (requirements-dev.txt does not exist), so no version check was applied\nlint gate: inspected 1 staged files, found no violation CI would reject.\n  probe.py\nRESULT: ok\n",
+                "exit_code": 0
+              }
+            ]
+          }
+        },
+        "_comment": "BP-1300e-1: the commit-time counterpart of CI's required 'Lint (ruff)' check. always_run with no files key because the script derives its own staged set from the INDEX (`git diff --cached`) and decides scope from leafcutter-lint.json, not from a regex over filenames. NO tree name and NO rule code lives here or in the script: scope and rule sets are the project's own, declared in leafcutter-lint.json (BP-1300e-1-i). Every could-not-check cause (ruff absent, cannot start, unreadable configuration or declaration, a version that differs from CI's, no repository, an internal defect) BLOCKS rather than fails open, because pre-commit prints Passed beside any hook that exits 0 (BP-1300e-1-iii). Appended after every tier: transform entry. verbose: true so the files-inspected line and RESULT line are visible on a passing commit."
       }
     ]
   },
@@ -1560,6 +1721,10 @@
     "_removed_fixture_exempt_paths": "REMOVED. A `fixture_exempt_paths` key was added here so this guard would not block its own test file, justified on the grounds that a `# presence-only:` waiver placed inside a fixture would be consumed by the scanner under test. That justification does not hold: the scanner only ever receives the `diff` STRING argument, so a waiver comment in the test module's own Python source is invisible to it and works normally — verified. The exemption was therefore unnecessary, and it was strictly worse than the waiver it replaced: an exempt path skips scan_file_block entirely and emits NO output at all, whereas the waiver route prints the accepted exception and its reason. The AC requires accepted exceptions to be readable in one place precisely so they cannot become a silent suppression list. Use the waiver marker.",
     "waiver_marker": "presence-only"
   },
+  "build_epic_gate_verdicts": {
+    "_comment": "check_build_epic_gate_verdicts.py (TQ-500g-1-viii): severity of the /build-epic gate-verdict commit check. Only block is defined; the checked code extensions are read from file_size.checked_extensions.",
+    "severity": "block"
+  },
   "done_proof": {
     "_comment": "check_done_proof.py — Mechanical proof-of-done gate (BO-2500b). Pre-commit mode: static covers-tag presence check for staged done ACs (fast, no pytest). CI mode: full verify_done_eligible run over every done AC in the store (authoritative). Hook is bypassable via SKIP=check-done-proof or --no-verify; CI backstop (BO-2500b-1-i) then catches bypassed proofs.",
     "enabled": true
@@ -1611,6 +1776,61 @@
       "check_*.py",
       "run_hook.py",
       "regenerate_*.py"
+    ],
+    "_platform_agents_comment": "GE-132a-2: the closed list of agents the platform provides, which have no entry in config/agent_registry.json. A remedy declaration may name one of these without a registry entry. Widening it is a reviewed edit to this data, never a code change.",
+    "platform_agents": [
+      "general-purpose"
+    ],
+    "_undeclared_remedy_baseline_comment": "GE-132a-1: ids of pre-commit judgment gates that had no remedy declaration (a rules[] entry with a disposition in templates/scripts/precommit-autofix.json) when the rule landed. It may lose entries and never gain one: check_hook_parity.py compares it with the list in HEAD and every MERGE_HEAD parent. Seeded from the same population the check derives from this manifest; re-measure, never hand-extend.",
+    "undeclared_remedy_baseline": [
+      "check-ac-circular-deps",
+      "check-ac-governance",
+      "check-ac-parent-covered-by",
+      "check-ac-pattern-refs",
+      "check-ac-tree-limits",
+      "check-adr-coverage",
+      "check-adr-cross-reference",
+      "check-agent-diagrams",
+      "check-agent-spawn-consistency",
+      "check-agent-verification-consistency",
+      "check-architecture-scaffolds",
+      "check-components-integrity",
+      "check-debug-scripts",
+      "check-decision-number-uniqueness",
+      "check-description-field",
+      "check-diagram-naming",
+      "check-diff-coverage",
+      "check-doc-types-agents",
+      "check-done-proof",
+      "check-duplicate-code",
+      "check-eval-staleness",
+      "check-file-size-rule-parity",
+      "check-folder-density",
+      "check-hook-parity",
+      "check-hook-trigger-reachability",
+      "check-identifier-uniqueness",
+      "check-infra-docs",
+      "check-mermaid-complexity",
+      "check-mermaid-drift",
+      "check-mermaid-parent-link",
+      "check-negative-control-liveness",
+      "check-output-drift",
+      "check-paths-integrity",
+      "check-predone-scope",
+      "check-presence-only-assertions",
+      "check-product-truth-generate",
+      "check-product-truth-validate",
+      "check-proof-promise-claim",
+      "check-reachability",
+      "check-root-files",
+      "check-structural-change",
+      "check-surface-components-e2",
+      "check-surface-components-e3",
+      "check-test-ac-tags",
+      "check-test-fixture-bloat",
+      "check-ticket-ac-status-parity",
+      "check-ticket-test-requirements",
+      "check-workflow-meta"
     ]
   },
   "__drift_gate_exemption_registry_doc": [
@@ -1815,12 +2035,12 @@
       "ground": "BP-100n-4-i declared non-gate: a shared library module (declares the INDETERMINATE/reason= outcome vocabulary other commit_guardian checks emit) with no __main__ entry point; it is imported by other checks, never itself invoked as a gate."
     },
     {
-      "script": "check_complexity.py",
-      "ground": "BP-100n-4 correction: FUNCTIONAL, not broken -- distinct from the six argparse/NameError crashes above. It would run cleanly if registered: invoked positionally (pass_filenames defaults true, no files/always_run set) it parses staged filenames and reports without crashing. It is withheld from registration solely because this repository currently carries 65 functions over the complexity.max_score threshold (15) across scripts/ and templates/scripts/commit_guardian/, including _build_agents_map (76, generate_ticket_from_ac.py), _compute_output_mappings (70, build_helpers.py), _check_file (47, check_ac_governance.py), _collect_all (44, knowledge_query.py), and validate_agent_self_description (43, which lived in build_phases.py when that count was taken and moved to build_phases_agent_validation.py in main's #806 size split -- the function and its score are unchanged, only its home). The hook scans `git diff --cached`, so registering it now would block ANY commit that merely stages one of those 65 files, even when the commit does not touch the offending function -- and several are high-traffic modules this branch itself repeatedly commits to. This branch already paid down the 7 over-threshold functions in the four files the reachability census itself depends on, but the remaining 65 are pre-existing debt tracked as separate work, not a permanent exemption: once that debt is paid down (or the threshold/scope is otherwise reconciled), this entry should be removed and check-complexity registered as a real gate. Note the 65 count predates #806's split, which moved functions between files without changing their complexity."
-    },
-    {
       "id": "check-paths-integrity",
       "ground": "Targets config/paths.json, one of this package's own internal files. A consumer install may vendor leafcutter-ai/ as an untracked directory or git submodule, in which case this path is never part of the consumer's own tracked tree even though the trigger pattern (^(leafcutter-ai/)?config/paths\\.json$) is correct for both the self-hosted and the tracked-vendor layout."
+    },
+    {
+      "id": "transform-agent-registry",
+      "ground": "Targets this package's own development-source files (templates/agents/*.md and config/agent_registry.json), the class-2 case above: reachable when committing to the package's self-hosted checkout (git root == package root), but under the consumer deploy layout those paths exist only inside the vendored leafcutter-ai/ subtree or the gitignored .leafcutter/ mirror, never at a consumer's own tracked repo root (AR-300c-3)."
     },
     {
       "id": "check-architecture-scaffolds",
@@ -1852,11 +2072,11 @@
     },
     {
       "id": "check-hook-parity",
-      "ground": "Targets scripts/commit_guardian/, templates/scripts/commit_guardian/, and templates/commit-guardian/ — this package's own hook source/deploy trees. In a consumer install scripts/commit_guardian/ is a symlink into the gitignored .leafcutter/ deploy mirror (per the documented deploy layout), so no file under that prefix is ever directly tracked; only reachable in this package's own self-hosted checkout, where these ARE real, separately tracked directories."
+      "ground": "Targets scripts/commit_guardian/, templates/scripts/commit_guardian/, templates/commit-guardian/, and templates/scripts/precommit-autofix.json (the remedy-declaration seed, GE-132a-1) — this package's own hook source/deploy trees. In a consumer install scripts/commit_guardian/ is a symlink into the gitignored .leafcutter/ deploy mirror (per the documented deploy layout), so no file under that prefix is ever directly tracked; only reachable in this package's own self-hosted checkout, where these ARE real, separately tracked directories."
     },
     {
       "id": "check-file-size-rule-parity",
-      "ground": "Targets this package's own published-rule surfaces and the enforcing script itself — templates/scripts/commit_guardian/{README.md,commit_guardian.json,check_file_size.py}, the same three under scripts/commit_guardian/, and docs/pre-commit-hooks.md. Same consumer-layout finding as check-hook-parity, verified empirically against a built layout: in a deployed install scripts/commit_guardian is a SYMLINK into the gitignored .leafcutter/ deploy mirror, so 'git ls-files' reports the one symlink path and never a file beneath it, and templates/ has no counterpart in the deployed tree at all. The trigger is correct for the checkout that matters — this package's own self-hosted repo, where all three source surfaces ARE separately tracked and the gate does fire. It is deliberately NOT widened to match .leafcutter/: those paths are a build output a consumer never hand-edits, so matching them would fire the gate on deploy-mirror commits rather than on a real change to the published rule."
+      "ground": "Targets this package's own published-rule surfaces and the enforcing script and measure themselves — templates/scripts/commit_guardian/{README.md,commit_guardian.json,check_file_size.py,_file_size_ratchet.py} and every module under templates/scripts/commit_guardian/_file_size_measure/ (GE-127d-5: a change to the measure alone must re-run the comparison, because the published measurement rule is compared against what the measure does), the same set under scripts/commit_guardian/, and docs/pre-commit-hooks.md. Same consumer-layout finding as check-hook-parity, verified empirically against a built layout: in a deployed install scripts/commit_guardian is a SYMLINK into the gitignored .leafcutter/ deploy mirror, so 'git ls-files' reports the one symlink path and never a file beneath it, and templates/ has no counterpart in the deployed tree at all. The trigger is correct for the checkout that matters — this package's own self-hosted repo, where all three source surfaces ARE separately tracked and the gate does fire. It is deliberately NOT widened to match .leafcutter/: those paths are a build output a consumer never hand-edits, so matching them would fire the gate on deploy-mirror commits rather than on a real change to the published rule."
     }
   ]
 }

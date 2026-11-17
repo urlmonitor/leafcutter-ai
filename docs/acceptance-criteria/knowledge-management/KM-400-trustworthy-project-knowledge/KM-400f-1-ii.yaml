@@ -1,0 +1,151 @@
+id: KM-400f-1-ii
+title: "A generation that was never retired is aged from a stated basis, not an inherited one"
+component: knowledge-management
+components: [knowledge_system]
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: done
+parent: KM-400f-1
+criteria: |
+  Given the declared retention bound is at most 3 retained generations and a minimum retirement age of 24 hours
+  And generation G5 records a failed publication, was created 40 hours ago, and carries no retirement time because it was never retired
+  And generation G6 records a failed publication, was created 2 hours ago, and carries no retirement time
+  When the retention policy is evaluated
+  Then the evaluation states, for each generation carrying no retirement time, which recorded time its age was measured from
+  And G5 is reported reclaimable, its age measured from that stated time exceeding the declared minimum of 24 hours
+  And G6 is reported not reclaimable, its age measured from that same stated time being under the declared minimum
+  And the stated measuring basis is the same one for G5 and G6
+
+  Given generation G7 records a completed publication, was created 40 hours ago and was retired 2 hours ago
+  When the retention policy is evaluated
+  Then G7 is reported not reclaimable
+  And the evaluation states that G7's age was measured from its retirement time
+  And G7's age is not measured from its creation time, which would place it outside the declared minimum
+
+  Given generation G8 carries neither a retirement time nor a creation time
+  When the retention policy is evaluated
+  Then G8's age is reported as undetermined, naming the times that were absent
+  And G8 is reported not reclaimable while its age is undetermined
+  And an undetermined age is not reported as an age that satisfies the declared minimum
+depends_on: [KM-400f-1, KM-400f-1-i]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1.yaml
+    relationship: context
+    status: exists
+    relevance: Parent. Declares the minimum retirement age this record fixes the measuring
+      basis for; the 24-hour figure and the count bound are unchanged.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-3.yaml
+    relationship: context
+    status: exists
+    relevance: Pinning stays the superior constraint; a stated age basis never makes a
+      generation with an unexpired continuation reclaimable.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: The measuring basis is operator-visible, because an operator reading a
+      reclaimable verdict needs to know which clock produced it.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: The stated age basis accompanying each age-derived verdict, which KM-400f-4's
+    operator listing reports rather than recomputing.
+expects_from:
+  ac_id: KM-400f-1-i
+  contract: The full generation population, including generations whose publication
+    failed and which therefore carry no retirement time.
+origin_agent: business-analyst
+created: '2026-10-12'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_km_400f_1_ii.py
+implemented_by:
+- tickets/00_inbox/TICKET-20261014-KM-400f-1-ii.md
+- knowledge/adapters/neo4j_projection.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-12. A generation whose publication failed was never retired, so it
+  carries no retirement time at all — measured on the live store on 2026-10-12, all 12
+  generation records were in exactly that state. KM-400f-1's minimum-retirement-age test
+  falls back from the retirement time to the creation time when the former is absent. That
+  fallback is currently an accident of implementation rather than a stated criterion: it
+  appears in no AC, so an implementer is free to change it, and an operator reading
+  "reclaimable because it is older than 24 hours" cannot tell which clock produced the
+  figure. This record makes the basis stated. It does not change what the fallback IS —
+  creation time remains the basis when there is no retirement time — it requires the
+  evaluation to say so.
+
+  The third scenario is the honest-reporting case and is the reason this is a separate
+  record rather than a clause: an age that cannot be determined must not pass the minimum
+  age test by default. The failure being prevented is an absent timestamp read as an
+  arbitrarily old generation, which would make the most poorly recorded generations the
+  first ones reclaimed.
+
+  Settled design decision, not reopened here: immutable generations are KEPT, pinning
+  (KM-400b-3) outranks the bound, and the active generation is never reclaimable
+  (KM-400f-1-iii).
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_never_retired_generation_is_aged_from_a_stated_basis
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: With two generations recording failed publications, no retirement time, and
+      creation times 40 hours and 2 hours ago, assert the evaluation names the time each age
+      was measured from, reports the older one reclaimable and the younger one not, and
+      names the same basis for both.
+    covers: [KM-400f-1-ii]
+    must_catch:
+      - "apply the age test silently, reporting a verdict without naming the time it was measured from"
+      - "treat a missing retirement time as an age of zero, so no never-retired generation is ever reclaimable"
+      - "treat a missing retirement time as unbounded age, so a 2-hour-old generation is reclaimable"
+    requires_db: false
+  - name: test_retired_generation_is_aged_from_its_retirement_time_not_its_creation_time
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: With one generation created 40 hours ago but retired 2 hours ago, assert it
+      is reported not reclaimable and that the evaluation names the retirement time as the
+      basis, distinguishing it from the creation-time basis used for never-retired
+      generations.
+    covers: [KM-400f-1-ii]
+    must_catch:
+      - "use creation time for every generation, making a freshly retired one reclaimable"
+    requires_db: false
+  - name: test_undeterminable_age_is_never_a_satisfied_minimum
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: With a generation carrying neither a retirement nor a creation time, assert
+      its age is reported undetermined, the absent times are named, and it is reported not
+      reclaimable rather than passing the minimum-age test.
+    covers: [KM-400f-1-ii]
+    must_catch:
+      - "substitute a zero or epoch timestamp for the missing one, making the generation infinitely old and reclaimable"
+      - "omit the generation from the report entirely because its age could not be computed"
+    requires_db: false
+test_rationale: >-
+  KM-400f-1's existing tests are built on a fixture of completed and retired generations, in
+  which the retirement time is always present, so the fallback this record governs is never
+  once exercised and any fallback — or none — passes. Every fixture here reproduces the REAL
+  observed shape instead: generations whose publication failed and which therefore carry NO
+  retirement time, because a fixture that supplies a retirement time rebuilds precisely the
+  bias that hid this. The two must_catch entries on the first test name the two opposite
+  wrong fallbacks (missing time read as age zero, missing time read as unbounded age) since
+  both produce a plausible-looking report and they fail in opposite directions, so a test
+  asserting only one verdict would pass under the other. The undetermined-age test is
+  separate because its wrong version is a substituted epoch timestamp, which is silent: it
+  produces a confident reclaimable verdict on the least well recorded generation in the
+  store.

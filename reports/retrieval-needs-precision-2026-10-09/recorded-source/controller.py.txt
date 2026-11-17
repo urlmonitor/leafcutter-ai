@@ -1,0 +1,169 @@
+"""One-shot isolated interpretation evaluation; no provider client or graph port."""
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+from pathlib import Path
+
+from eval_support import (BASE, cases, fingerprint, isolated_service, read, request_for,
+                          save, sha256, utc_now, verify_freeze, verify_plan)
+
+
+def validate():
+    """Validate production request preparation without creating a host run."""
+    verify_plan()
+    for case in cases():
+        request, _ = request_for(case)
+        assert request.original_question == case["question"]
+        assert request.context == case["context"]
+    print(json.dumps({"validated_cases": 12, "jev_calls": 0, "graph_calls": 0, "host_generations": 0}))
+
+
+async def start_case(output: Path, case: dict) -> dict:
+    """Create one actual durable host wait without supplying any response or oracle.
+
+    Args:
+        output: New batch directory.
+        case: Frozen question and context, with expectations excluded from the packet.
+
+    Returns:
+        Actual packet and input locations for the supervised blind host.
+    """
+    from integrations.retrieval_needs_llm import build_llm_needs_task
+    from kernel.contracts import Actor, ActorKind, RunStatus
+
+    directory = output / case["id"]
+    request, scope = request_for(case)
+    save(directory / "attempt.json", {"started_at": utc_now(), "action": "start"})
+    save(directory / "request.json", request)
+    service = isolated_service(directory)
+    try:
+        task = build_llm_needs_task(request, scope, Actor(id="precision-evaluator", kind=ActorKind.HOST))
+        envelope = await service.start_run(task)
+        save(directory / "started.json", envelope)
+        assert envelope.status is RunStatus.WAITING_HOST
+        assert envelope.usage_summary.jev_calls == 0
+        packet = envelope.pending_interaction
+        save(directory / "host" / "packet.json", packet)
+        inputs = []
+        for index, ref in enumerate(packet.input_artifact_refs):
+            original = Path(ref)
+            copied = directory / "host" / "inputs" / f"{index}.json"
+            copied.parent.mkdir(parents=True, exist_ok=True)
+            with copied.open("xb") as stream:
+                stream.write(original.read_bytes())
+            inputs.append({"path": str(copied), "sha256": sha256(copied), "original_ref": ref})
+        return {"case_id": case["id"], "packet_path": str(directory / "host" / "packet.json"),
+            "packet_sha256": sha256(directory / "host" / "packet.json"), "inputs": inputs,
+            "response_destination": str(directory / "host" / "response.json")}
+    finally:
+        await service._env.aclose()
+
+
+async def prepare():
+    """Freeze one batch and issue exactly twelve genuine interpretation packets."""
+    verify_plan()
+    output = BASE / "stage1"
+    output.mkdir(exist_ok=False)
+    before = fingerprint()
+    manifest = [await start_case(output, case) for case in cases()]
+    assert fingerprint() == before
+    save(output / "freeze.json", {"frozen_at": utc_now(), "runtime": before,
+        "plan_sha256": sha256(BASE / "plan.json"),
+        "requests_sha256": {c["id"]: sha256(output / c["id"] / "request.json") for c in cases()}})
+    save(output / "host-manifest.json", {"packets": manifest,
+        "host_instruction": "Perform only each actual packet operation from its packet and referenced inputs. Write each schema-valid response at its destination. Do not inspect other files, call tools/providers for research, or infer expected outcomes. model_id is null unless actually known."})
+    print(json.dumps({"manifest": str(output / "host-manifest.json"), "packets": len(manifest),
+                      "jev_calls": 0, "graph_calls": 0, "host_generations": 0}))
+
+
+def check_dispatch(output: Path) -> dict:
+    """Require actual root-supervised fresh-agent provenance before accepting responses.
+
+    Args:
+        output: Frozen batch directory containing the supervisor record.
+
+    Returns:
+        Validated dispatch provenance without inferring model or timing metadata.
+    """
+    record = read(output / "supervision.json")
+    assert record["agent_id"] and record["root_spawn_fork_turns"] == "none"
+    assert record["packet_manifest_sha256"] == sha256(output / "host-manifest.json")
+    assert record["no_gold_or_prior_outcomes_provided"] is True
+    assert record["model_id"] is None or isinstance(record["model_id"], str)
+    return record
+
+
+async def accept_case(output: Path, case: dict) -> None:
+    """Submit one unchanged blind response through the actual durable host ledger.
+
+    Args:
+        output: Frozen batch directory.
+        case: Frozen identity whose original wait is resumed exactly once.
+    """
+    from kernel.contracts import RunStatus
+
+    directory = output / case["id"]
+    marker = directory / "accept-attempt.json"
+    save(marker, {"started_at": utc_now(), "response_sha256": sha256(directory / "host" / "response.json")})
+    pending = read(directory / "started.json")
+    packet = pending["pending_interaction"]
+    response = read(directory / "host" / "response.json")
+    raw = {"run_id": pending["run_id"], "interaction_id": packet["id"],
+        "expected_state_revision": pending["state_revision"], "actor": {"id": "host:blind-precision", "kind": "host"},
+        "response_schema_id": packet["output_schema_id"], "response": response}
+    save(directory / "submission.json", raw)
+    service = isolated_service(directory)
+    try:
+        envelope = await service.resume_run(pending["run_id"], raw)
+        save(directory / "result.json", envelope)
+        assert envelope.status is RunStatus.COMPLETED
+        assert envelope.usage_summary.jev_calls == 0
+        assert envelope.usage_summary.host_operations == 1
+    except Exception as exc:
+        save(directory / "failure.json", {"failed_at": utc_now(), "error_type": type(exc).__name__,
+            "retry_policy": "Preserve this failed attempt. No automatic response generation or submission retry."})
+    finally:
+        await service._env.aclose()
+
+
+async def accept():
+    """Accept the twelve frozen responses once, keeping each failure as an outcome."""
+    output = BASE / "stage1"
+    verify_freeze(output)
+    check_dispatch(output)
+    assert not list(output.glob("IP*/accept-attempt.json")), "Batch was already attempted"
+    manifest = read(output / "host-manifest.json")
+    for row in manifest["packets"]:
+        assert sha256(Path(row["packet_path"])) == row["packet_sha256"]
+        assert Path(row["response_destination"]).is_file()
+        for item in row["inputs"]:
+            assert sha256(Path(item["path"])) == item["sha256"]
+            assert sha256(Path(item["original_ref"])) == item["sha256"]
+    for case in cases():
+        await accept_case(output, case)
+    accepted = sum(read(path)["status"] == "completed" and not (path.parent / "failure.json").exists()
+                   for path in output.glob("IP*/result.json"))
+    print(json.dumps({"attempted": 12, "accepted": accepted,
+                      "failures": len(list(output.glob("IP*/failure.json"))), "jev_calls": 0, "graph_calls": 0}))
+
+
+async def main():
+    """Dispatch only the explicit preparation, ledger acceptance, or local score action."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("action", choices=["validate", "prepare", "accept", "score"])
+    action = parser.parse_args().action
+    if action == "validate":
+        validate()
+    elif action == "prepare":
+        await prepare()
+    elif action == "accept":
+        await accept()
+    else:
+        from score import score
+        score()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

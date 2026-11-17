@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-77e37c22042041b2",
+  "interaction_id": "int-f6430a9bfa744b5e",
+  "sha256": "07b2109bbf90defb6633dbe148b4c3f18760d741bf3899811e04e7c950580b90",
+  "submission": {
+    "schema_version": "1.0",
+    "run_id": "run-77e37c22042041b2",
+    "interaction_id": "int-f6430a9bfa744b5e",
+    "expected_state_revision": 1,
+    "actor": {
+      "schema_version": "1.0",
+      "id": "host:blind-precision",
+      "kind": "host"
+    },
+    "relayed_by": null,
+    "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+    "response": {
+      "schema_version": "1.0",
+      "original_question": "For KM-500c-2, what must tests demonstrate?",
+      "source_scope": {
+        "read_roots": [
+          "docs"
+        ],
+        "repository_id": "leafcutter",
+        "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+        "source_ids": [
+          "knowledge.graph"
+        ]
+      },
+      "selections": {
+        "entity_types": [
+          "ac"
+        ],
+        "target_ids": [
+          "KM-500c-2"
+        ],
+        "required_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": []
+      },
+      "uncertain": {
+        "entity_types": [],
+        "target_ids": [],
+        "required_fields": [],
+        "document_types": [],
+        "relationships": []
+      },
+      "detail_mode": "fields",
+      "completeness": "single_entity",
+      "hierarchy_scope": "not_applicable",
+      "hierarchy_levels": [],
+      "scope_resolution": "sufficient",
+      "unresolved": [],
+      "rationale": "What tests must demonstrate requires both the acceptance behavior and the authored verification scenarios, assertions and failure checks for the named criterion.",
+      "engine": "host_llm",
+      "status": "decided",
+      "model_id": null
+    },
+    "new_evidence": [],
+    "usage": []
+  },
+  "accepted_at": "2026-10-09T21:45:38.657902Z"
+}

@@ -1,0 +1,36 @@
+{
+  "archived_at": "2026-10-09T21:48:42.005366+00:00",
+  "files": [
+    {
+      "original_path": "kernel/capabilities/host/retrieval_needs.py",
+      "recorded_path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-2a8ebc87/tested-source/1-retrieval_needs.py.txt",
+      "sha256": "52a5d46cf900b213cda95540e480a1a33f4ecb3549b581e5f8e79f864ee39692",
+      "consuming_record": "reports/retrieval-aura-2026-10-09/runs/precision-v2-2a8ebc87/working-source-freeze.json"
+    },
+    {
+      "original_path": "integrations/research_needs.py",
+      "recorded_path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-2a8ebc87/tested-source/2-research_needs.py.txt",
+      "sha256": "bc5b0724149aef9f476a417f543a7e3077647deaecaefbe11913295a1f0cfcb9",
+      "consuming_record": "reports/retrieval-aura-2026-10-09/runs/precision-v2-2a8ebc87/working-source-freeze.json"
+    },
+    {
+      "original_path": "reports/retrieval-aura-2026-10-09/controller.py",
+      "recorded_path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-2a8ebc87/tested-source/3-controller.py.txt",
+      "sha256": "b2ea5887e507ffb8f21224ce7fc37fa22a07dbdca10b113cd88599cfb337d827",
+      "consuming_record": "reports/retrieval-aura-2026-10-09/runs/precision-v2-2a8ebc87/working-source-freeze.json"
+    },
+    {
+      "original_path": "reports/retrieval-aura-2026-10-09/proof_support.py",
+      "recorded_path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-2a8ebc87/tested-source/4-proof_support.py.txt",
+      "sha256": "ca02bae45d8cbc251b2b2ed00ce7bda37d56b82e4321bfdfa36dd83fe3c175b4",
+      "consuming_record": "reports/retrieval-aura-2026-10-09/runs/precision-v2-2a8ebc87/working-source-freeze.json"
+    },
+    {
+      "original_path": "reports/retrieval-aura-2026-10-09/score_support.py",
+      "recorded_path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-2a8ebc87/tested-source/5-score_support.py.txt",
+      "sha256": "5d5a4072160d707d77f0fe82e0343a518a52fbcaad1e9a71cad72f2077f9feea",
+      "consuming_record": "reports/retrieval-aura-2026-10-09/runs/precision-v2-2a8ebc87/working-source-freeze.json"
+    }
+  ],
+  "base_revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859"
+}

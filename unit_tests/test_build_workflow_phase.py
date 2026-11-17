@@ -186,3 +186,67 @@ def test_build_workflow_phase_idempotent(
     assert written_second == 0
     # The uptodate counter should reflect 2 skipped files.
     assert build_phases.get_uptodate_count() == 2
+
+
+# ---------------------------------------------------------------------------
+# BP-300d-3-ii — real `claude --version` output format ("2.1.294 (Claude Code)")
+# ---------------------------------------------------------------------------
+
+def _run_with_cli_output(stdout, target_root, monkeypatch):
+    """Run the phase with CLAUDE_CODE_VERSION unset and `claude --version` mocked."""
+    import subprocess
+    from unittest import mock
+
+    monkeypatch.delenv("CLAUDE_CODE_VERSION", raising=False)
+    fake = subprocess.CompletedProcess(
+        args=["claude", "--version"], returncode=0, stdout=stdout, stderr=""
+    )
+    with mock.patch("subprocess.run", return_value=fake):
+        return build_phases.build_workflow_scripts(
+            target_root, {"workflows": {"enabled": True}}, dry_run=False, force=True
+        )
+
+
+def test_cli_version_output_in_real_format_is_parsed(
+    target_root, workflows_js_dir, monkeypatch, capsys
+):
+    # covers: BP-300d-3-ii
+    # angle: criterion
+    """AC BP-300d-3-ii: '2.1.294 (Claude Code)' parses; installs, no 'unknown' warning."""
+    written = _run_with_cli_output("2.1.294 (Claude Code)\n", target_root, monkeypatch)
+    out = capsys.readouterr().out
+
+    assert "version unknown" not in out.lower()
+    assert written == 2
+    assert (target_root / "workflows" / "build-feature.js").exists()
+
+
+def test_cli_version_real_format_below_minimum_is_skipped(
+    target_root, workflows_js_dir, monkeypatch, capsys
+):
+    # covers: BP-300d-3-ii
+    # angle: failure
+    """AC BP-300d-3-ii: '2.1.100 (Claude Code)' is below 2.1.154 -> skipped with warning."""
+    written = _run_with_cli_output("2.1.100 (Claude Code)\n", target_root, monkeypatch)
+    out = capsys.readouterr().out
+
+    assert "required for workflow scripts" in out
+    assert "version unknown" not in out.lower()
+    assert written == 0
+    assert not (target_root / "workflows").exists() or not list(
+        (target_root / "workflows").glob("*.js")
+    )
+
+
+def test_cli_version_output_without_a_version_is_unknown_and_installs(
+    target_root, workflows_js_dir, monkeypatch, capsys
+):
+    # covers: BP-300d-3-ii
+    # angle: boundary
+    """AC BP-300d-3-ii: output with no version number -> 'unknown' warning, fail-open install."""
+    written = _run_with_cli_output("no version here\n", target_root, monkeypatch)
+    out = capsys.readouterr().out
+
+    assert "version unknown" in out.lower()
+    assert written == 2
+    assert (target_root / "workflows" / "build-feature.js").exists()

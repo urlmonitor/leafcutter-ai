@@ -17,7 +17,11 @@ description: 'Automated epic retrospective agent. Reads all completed tickets in
   '
 model: sonnet
 name: retrospective-agent
-tools: Bash, Read, Write, Agent
+tools: Bash, Read, Write, Agent, Skill
+skills:
+- skill_id: route-knowledge
+  mode: conditional
+  condition: Use in Step 5 to classify each proposed Knowledge Item and rule update into its target surface.
 portable: true
 signoff: false
 domain: null
@@ -73,9 +77,12 @@ Run both data-gathering scripts and capture their JSON output:
 
 ```bash
 python scripts/feedback/aggregate.py \
-  --jsonl debugging/logs/feedback.jsonl \
   --format json
 ```
+
+`aggregate.py` reads the install's declared feedback sink and states the file it read and
+the record count on stderr (`read N records from <path>`). Rely on that statement; do not
+open a log path of your own. Quote the stated count in the retrospective.
 
 If the above returns `"total": 0` (no entries), note:
 
@@ -88,8 +95,13 @@ Then fall back to the ticket-comment scanning approach in Step 2b (below).
 ```bash
 python leafcutter/scripts/retrospective/extract_epic_facts.py \
   <epic_folder_path> \
-  --telemetry debugging/logs/agent_telemetry.jsonl
+  --telemetry "$(python3 {{config.output_root}}/scripts/knowledge/sink_resolution.py --print-location telemetry)"
 ```
+
+`extract_epic_facts.py` reads the install's declared telemetry stream, or refuses when there
+is none; it has no working-directory-relative default. The declared stream is still passed
+explicitly through the location query. If the query prints nothing (the install declares no
+stream), say so in the retrospective rather than reporting zero telemetry events.
 
 The output JSON provides:
 - `ticket_count`, `completed_ticket_count`
@@ -111,7 +123,7 @@ When `aggregate.py` returned empty results, read every ticket file in the epic f
 ### 2c — Subagent quality data (supervisor-emitted feedback)
 
 ```bash
-python scripts/feedback/aggregate.py   --jsonl debugging/logs/feedback.jsonl   --category subagent-quality   --format json
+python scripts/feedback/aggregate.py   --category subagent-quality   --format json
 ```
 
 Capture output as `subagent_quality_data`. If the script exits non-zero or returns
@@ -188,7 +200,7 @@ Commits: <git_commit_count>
 <Alternatively, invoke generate_health_report.py for the same output:>
 
 ```bash
-python leafcutter/scripts/agent-health/generate_health_report.py   --feedback debugging/logs/feedback.jsonl
+python leafcutter/scripts/agent-health/generate_health_report.py
 ```
 
 <If data is unavailable: show the graceful message from Step 2c.>
@@ -197,7 +209,7 @@ python leafcutter/scripts/agent-health/generate_health_report.py   --feedback de
 ## Proposed Improvements
 ### KI: <title>
 <Proposed Knowledge Item text>
-Routing: <destination returned by route-learning>
+Routing: <target_surface and path returned by route-knowledge>
 
 ### Rule Update: <title>
 <Proposed rule change as a diff>
@@ -239,13 +251,13 @@ the section silently (do not hard-fail the retrospective).
 ## Step 5 — Route and Present Proposed Changes for Approval
 
 For each proposed KI or rule update:
-1. Load `.claude/skills/route-learning/SKILL.md` and apply the 11-step decision tree to determine the correct destination for the KI.
+1. Load the `route-knowledge` skill (`.claude/skills/route-knowledge/SKILL.md`) and apply it to determine the correct destination for the KI; it returns `{ target_surface, path, rationale }`.
    - Do NOT hardcode `.agents/rules/` as a destination — that directory is being retired.
-   - If the KI would have historically targeted `.agents/rules/`, include a deprecation note: "`.agents/rules/` is being retired; route-learning selected `<correct_destination>` instead."
+   - If the KI would have historically targeted `.agents/rules/`, include a deprecation note: "`.agents/rules/` is being retired; route-knowledge selected `<correct_destination>` instead."
 2. Include the routed destination in the diff shown to the user.
 3. Ask the user to type "yes" to apply, "skip" to skip, or "edit" to revise.
 
-**KIs are proposed (never auto-applied) per the user-approval pattern. The routing destination returned by `route-learning` is included in the diff shown to the user.**
+**KIs are proposed (never auto-applied) per the user-approval pattern. The routing destination returned by `route-knowledge` is included in the diff shown to the user.**
 
 **Do NOT modify any knowledge-home file — including `CLAUDE.md`, agent files, skill files, or READMEs — without explicit user confirmation per item.**
 

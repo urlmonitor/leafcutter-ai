@@ -1,0 +1,111 @@
+id: ACD-1600c-4-vi
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: approved
+priority: high
+title: "The IT product owner writes the declared-files list for every record that changes code or docs, so enriched records reach test design instead of being held"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given a code requirement authored through /plan-feature reaches the IT product owner's
+    enrichment stage (templates/agents/it-po.md), and the work it describes edits or creates
+    files -- for example it edits scripts/build_phases_workflows.py,
+  When the IT product owner enriches that record,
+  Then the enriched record carries a top-level declared_files list, placed before
+    it_requirements, naming every file the record's own change edits or creates, each entry
+    {path: <repository-root-relative, forward slashes>, state: existing | to_be_created} in the
+    shape docs/reference/ac-schema.md "The declared_files Field" defines,
+  And a file the work only reads is not declared (it stays a documentation link), a build
+    output is never declared in place of its template source (ADR-001), and an entry marked
+    existing names a path that is present in the repository,
+  And a record whose work changes no files (for example a pure decision record) carries no
+    declared_files key at all, never an empty list,
+  And the declared list agrees with the record's it_requirements and with its documentation
+    links whose relationship is "modifies",
+  And the bug symptom ("Every code requirement authored through /plan-feature reaches the final
+    gate held as 'test design pending'. The test-design stage (templates/agents/test-designer.md,
+    scripts/ac_store/design_prepass.py) refuses to design a record whose declared_files is
+    absent, because it cannot ground code_file or a test directory. Seen 2026-10-21 on
+    BO-4500b: all 15 code records were held; the IT product owner had written rich
+    it_requirements naming the files (e.g. scripts/build_phases_workflows.py) but no
+    declared_files, and they had to be added by hand (commit 3fdeeef8f) before test design
+    could run. On main, every record that carries declared_files got it by hand.") must not
+    occur.
+depends_on:
+  - ACD-1600c-4
+doc_links:
+  - path: templates/agents/it-po.md
+    relationship: modifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: scripts/ac_store/declared_files.py
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+declared_files:
+  - path: templates/agents/it-po.md
+    state: existing
+  - path: unit_tests/ac_driven_dev/it_po_prompt/test_acd_1600c_4_vi.py
+    state: to_be_created
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Canonical source to change: templates/agents/it-po.md only (ADR-001; never the deployed .claude/agents copy)."
+  - "The description/outputs contract lists declared_files among the IT product owner's enrichment outputs for every record that changes code or docs."
+  - "A short section next to the it_requirements guidance states: top-level list placed before it_requirements; each entry {path: repo-root-relative forward-slash, state: existing | to_be_created}; declare only files the record's own change edits or creates (read-only files stay doc_links); templates not build outputs; confirm an existing path is present; never an empty list (omit the key for a no-file record); keep consistent with it_requirements and 'modifies' doc_links. It links to docs/reference/ac-schema.md#the-declared_files-field rather than restating the schema."
+  - "The checklist gains a declared_files item and the worked example's enriched record carries a declared_files list."
+  - "Keep the edit compact: the template is subject to agent-template size limits."
+test_spec:
+  - name: test_it_po_outputs_contract_names_declared_files
+    target_dir: unit_tests/ac_driven_dev/it_po_prompt/
+    framework: unittest
+    type: unit
+    description: "The it-po template's description/outputs contract names declared_files as an enrichment output for records that change code or docs."
+  - name: test_it_po_declared_files_section_states_shape_and_rules
+    target_dir: unit_tests/ac_driven_dev/it_po_prompt/
+    framework: unittest
+    type: unit
+    description: "The template has a declared_files section that states the {path, state: existing | to_be_created} shape, placement before it_requirements, the never-empty-list rule, the read-only-stays-doc_link rule, and links to docs/reference/ac-schema.md."
+  - name: test_it_po_worked_example_declared_files_validates
+    target_dir: unit_tests/ac_driven_dev/it_po_prompt/
+    framework: unittest
+    type: behavioral
+    description: "The declared_files block in the template's worked example parses as YAML and is accepted by scripts/ac_store/declared_files.py (a non-empty list of {path, state} entries, state in existing/to_be_created)."
+    angle: seam
+  - name: test_it_po_checklist_includes_declared_files
+    target_dir: unit_tests/ac_driven_dev/it_po_prompt/
+    framework: unittest
+    type: unit
+    description: "The template's checklist contains a declared_files item."
+test_rationale: "The defect is an omission in an agent prompt, so the observable contract is the prompt's content: the outputs contract, the rules section, the checklist, and a worked example whose declared_files block must pass the real declared_files seam rather than merely be present."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1600c-4
+  contract: "The declared_files field shape and validation seam scripts/ac_store/declared_files.py."
+origin_agent: BrainCandy
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - templates/agents/it-po.md
+change_target: prompt
+risk_surface: internal
+notes: |
+  Authored by /quick-fix. Root cause: The it-po agent template never mentions declared_files (git log -S on templates/agents/it-po.md finds no commit that ever did), yet the pipeline after it requires the field: ACD-1600c-1 holds a record with no declared files back 'for enrichment' with reason 'missing file targets', and the test designer reads only declared_files. The enrichment stage that is meant to supply it was never told to. Fix: make declared_files part of the IT product owner's enrichment output for every record that changes code or docs: a top-level list placed before it_requirements, each entry `{path: <repo-root-relative, forward slashes>, state: existing | to_be_created}`, exactly the shape in docs/reference/ac-schema.md 'The declared_files Field' (validated by scripts/ac_store/declared_files.py). Rules to state: declare only files the record's own change edits or creates (a file it only reads stays a doc_link); edit templates, not build outputs (ADR-001); confirm an `existing` path is really present; never write an empty list (leave the key out for a record with no files, e.g. a pure decision record); keep it consistent with the it_requirements and doc_links 'modifies' links (the rule check's 'declared files versus modifies links' family). Add it to the description/outputs contract, a short section next to it_requirements, the checklist, and the worked example. Keep the template edit compact (agent templates have size limits); do not restate the schema reference, link to it..
+
+  PLACEMENT. ACD-1600c is at its 5-L2 cap, and this is a constraint on the already-specified
+  ACD-1600c-4 behaviour (a requirement lists the files its work changes): it names the
+  authoring stage that must populate that list, so it is an L3 Roman child of ACD-1600c-4.
+  Component: templates/agents/*.md matches agent-registry and agent-compatibility by
+  directory pattern, but both are generic catch-alls for every agent template; the behaviour
+  is /plan-feature AC enrichment, which ac-driven-dev's description names explicitly.

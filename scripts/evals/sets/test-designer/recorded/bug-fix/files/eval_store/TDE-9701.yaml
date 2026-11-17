@@ -1,0 +1,56 @@
+id: TDE-9701
+title: A database outage no longer causes a retry storm
+component: testing-quality
+components:
+- testing_quality
+level: L3
+status: active
+readiness: approved
+priority: high
+criteria: 'Given the report job runs,
+
+  When the requirement applies,
+
+  Then a database outage no longer causes a retry storm: the refresh runs only when
+  a refresh is due and a retry is due.
+
+  '
+assigned_agent: python-coder
+declared_files:
+- path: scripts/refresh_gate.py
+  state: existing
+test_required: true
+test_intent:
+- clause: 'a database outage no longer causes a retry storm: the refresh runs only
+    when a refresh is due and a retry is due'
+  needs_test: true
+  reason: The behaviour is observable only by running the code.
+test_spec:
+- name: test_bug_fix_guard
+  target_dir: unit_tests/refresh/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Proves: a database outage no longer causes a retry storm: the refresh
+    runs only when a refresh is due and a retry is due.'
+  proves_clause: 'a database outage no longer causes a retry storm: the refresh runs
+    only when a refresh is due and a retry is due'
+  code_file: scripts/refresh_gate.py
+  must_catch:
+  - revert the fix
+  - drop the retry_due condition
+- name: test_bug_fix_reachable
+  target_dir: unit_tests/refresh/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: Running the production entry point exits 0.
+  proves_clause: 'a database outage no longer causes a retry storm: the refresh runs
+    only when a refresh is due and a retry is due'
+  code_file: scripts/refresh_gate.py
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-25'
+test_design_opened_files:
+- unit_tests/refresh/existing_refresh.py.recorded
+- scripts/refresh_gate.py

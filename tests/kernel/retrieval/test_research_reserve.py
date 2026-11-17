@@ -84,7 +84,7 @@ class TestThePlanIsTrimmed(ReserveCase):
     def test_with_nothing_to_spare_no_child_is_requested(self) -> None:
         waiting = self.run_research(self.request(10), self.ctx_with(10))
         self.assertEqual(waiting.requests, [])
-        self.assertEqual(waiting.status, ResultStatus.COMPLETED)  # nothing to wait for ...
+        self.assertEqual(waiting.status, ResultStatus.PARTIAL)  # nothing ran: never `completed`
         self.assertIn("need need.prior_decisions not researched", " ".join(waiting.limitations))
 
     def test_an_unbounded_budget_changes_nothing(self) -> None:

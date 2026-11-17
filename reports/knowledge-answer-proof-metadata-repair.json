@@ -1,0 +1,76 @@
+{
+  "scope": "Test-only proof metadata and layout repair required by the normal pre-commit checks",
+  "product_code_digest_unchanged": "efea3056a9326c071825f309cf3e001d813461f0956a4133e49569cd7b05926c",
+  "test_files_sha256": {
+    "tests/knowledge/test_query_answer_contract_acceptance.py": "95004351276a10bbf065058c1b3988b6dfad2433621bba1b6e2db3371917ca52",
+    "tests/knowledge/test_query_answer_contract_acceptance_assessment.py": "6dea1eb921abb80af6c58c05cb8c3632f882ae17903c2b3e4208403c8a9596b2",
+    "tests/knowledge/test_query_answer_contract_acceptance_clauses.py": "7d1993e3a420b57401f3b82c26d47a96cdf3997b666327fd9c0a11550e914900",
+    "tests/knowledge/test_query_answer_contract_acceptance_kernel.py": "943cbf7f06a2ac1af0d3966cb8320d6b7328b7522093b6b8e829d6088efe0c7b",
+    "tests/knowledge/test_query_answer_contract_acceptance_observation.py": "96c883291649caff304cb6a8515a62572d385eb512f829f1ae9a86f50f72f479",
+    "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py": "b7dc29514034a4becc5dbf3d2631c1e9985a680b4fb2968ec8c292204225c966",
+    "tests/knowledge/query_answer_contract_acceptance_research_support.py": "465b3a7852a3109dc990286f08c36c6ec7070b3b9ac4bf9ce7a209430133560b",
+    "tests/knowledge/test_query_answer_contract_acceptance_saved_artifacts.py": "f1415c148a9ebe17c1270e1d6815529a7f6732434a18e17308349b77515226ed",
+    "tests/knowledge_live/test_query_answer_contract_acceptance_live_observation.py": "512a84bf5d925b2364f972aab2e2d4c2ffce073d73e543b267b714fcea79d007"
+  },
+  "receipts": {
+    "reports/knowledge-answer-proof-metadata-tests.xml": {
+      "tests": "25",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "212.874",
+      "timestamp": "2026-10-01T21:13:52.902482+00:00"
+    },
+    "reports/knowledge-answer-live-observation-not-run.xml": {
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1",
+      "time": "0.045",
+      "timestamp": "2026-10-01T21:30:06.580639+00:00"
+    }
+  },
+  "targeted_replay": {
+    "tests": 23,
+    "subtests": 2,
+    "outcome": "passed",
+    "terminal_seconds": 212.95,
+    "boundary": "public kernel scenarios and cold consumers of saved actual evaluation/dependency artifacts; external judgment scripted"
+  },
+  "remote_observation": {
+    "state": "not_run",
+    "default_skip_verified": true,
+    "consent_variable": "LEAFCUTTER_KNOWLEDGE_LANGFUSE_LIVE",
+    "consent_absent_in_test_process": true,
+    "network_calls": 0,
+    "contract": "Opt-in test uses actual application observer and independently matched remote REST readback; default output remains unverified and no remote success is claimed",
+    "conditional_guard": "Explicit unittest.skipUnless consent predicate, documented as legitimate by the unchanged contract-shrinking guard; missing configuration or credentials after consent fails assertions",
+    "terminal_default_skip_seconds": 0.1
+  },
+  "metadata_checks": {
+    "promise_claim_checker": "passed for all 15 staged tickets after conditional-guard repair; declaration alignment only",
+    "counted_lines": {
+      "kernel": 379,
+      "research_assessment": 326,
+      "research_support": 161,
+      "saved_artifacts": 70,
+      "live_observation": 110
+    },
+    "line_cap": 400,
+    "live_test_complexities": {
+      "entry": 7,
+      "remote_readback": 14,
+      "controlled_storage": 1
+    },
+    "complexity_cap": 15,
+    "staged_contract_shrinking": "passed with PYTHONUTF8=1; unchanged canonical guard"
+  },
+  "preserved_limits": [
+    "111-clause audit and all lifecycle verdicts unchanged",
+    "Remote provider proof, representative evaluation and freshness prerequisite remain qualified",
+    "Saved artifacts are historical actual outputs, not fresh DB/provider executions",
+    "Synchronous test wrappers preserve scenario assertions and use a copied asynchronous context; moved support does not change test IDs",
+    "Intermediate wrapper context/import setup failures were harness repairs, not product regressions"
+  ],
+  "installed_api_review": "Builder A read-only review confirmed installed Langfuse 4.16.0 REST signature/model compatibility; no API/client calls or remote proof"
+}

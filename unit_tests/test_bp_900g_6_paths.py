@@ -151,18 +151,26 @@ def test_deployed_workflow_js_script_paths_resolve(tmp_path: Path) -> None:
     # while checking nothing at all.
     expected = {
         f"{output_root.name}/scripts/pause_store.py",
-        f"{output_root.name}/scripts/setup_ticket_worktree.py",
         f"{output_root.name}/scripts/build_orchestration/fast_lane.py",
     }
     missing_expected = expected - seen
     assert not missing_expected, (
         f"The deployed-tree scan found no reference to {sorted(missing_expected)!r}. "
         f"It found: {sorted(seen)!r}. plan-feature.js/finalize-feature.js invoke "
-        "pause_store.py at every gate, setup_ticket_worktree.py bootstraps every "
-        "AC-authoring and fast-lane worktree, and fast-lane-ship.js/fast-lane-build.js "
+        "pause_store.py at every gate, worktree.py (the workspace maker) makes every "
+        "AC-authoring and fast-lane workspace, and fast-lane-ship.js/fast-lane-build.js "
         "invoke fast_lane.py at every gate — their absence means this test is no "
         "longer checking anything (AC BP-900g-6)."
     )
+
+    # BO-4300a-1-ia (consumer_drift): the workspace maker's path is no longer one literal in each workflow; every
+    # maker request hands its RENDERED output root to the shared helper, which joins it to the repository root.
+    # So the rendered root those requests name must be the deployed one, and the maker must exist there.
+    maker_roots = {
+        root for js_file in js_files for root in re.findall(r'outputRoot: "([^"]*)"', js_file.read_text(encoding="utf-8"))
+    }
+    assert maker_roots == {output_root.name}, f"maker requests name output roots {sorted(maker_roots)!r}"
+    assert (target_dir / output_root.name / "scripts" / "worktree.py").is_file(), "the deployed tree has no workspace maker"
 
     assert not unresolved, (
         f"{len(unresolved)} script reference(s) baked into the DEPLOYED .js "

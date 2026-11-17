@@ -1,0 +1,78 @@
+id: ACD-2500a-5-iii
+components:
+  - ac_driven_dev
+  - ac_store
+  - documentation_system
+readiness: approved
+priority: high
+title: "The rule check's reference doc covers the protected-field family and says a repairing run needs a before-state"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given the rule check's reference document (ACD-2500a-5),
+    and the protected-field family (ACD-2500a-2-vi, ACD-2500a-2-vii) and the no-before-state
+    behaviour (ACD-2500a-2-viii) are done,
+  When the reference document is updated,
+  Then it lists the protected-field family with its disposition "needs a decision", its fixed
+    field list, and the per-stage owner map, including that the planner's hand-back pass may
+    change the assignment and a file finding's decision,
+  And it states that a run repairs anything only when it is given a before-state, names the
+    two ways to give one, and states what a run without one reports
+    ("not evaluated: no before-state", nothing repaired),
+  And every example command in it that can repair records passes a before-state,
+  And its family count and family list agree with the families the check reports.
+depends_on:
+  - ACD-2500a-5
+  - ACD-2500a-2-vi
+  - ACD-2500a-2-vii
+  - ACD-2500a-2-viii
+doc_links:
+  - path: docs/reference/requirement-rule-check.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+- 'Updates docs/reference/requirement-rule-check.md in place: the family table and count, the CLI stage
+  list (including itpo-handback), the report keys (the no-before-state statement) and every example command
+  that can repair.'
+- Family names and the count are taken from the check as built (its family registry), not retyped from
+  the records.
+- Stays within the document-length standard; if the page would exceed its budget it is split by the docs
+  convention, not trimmed of required content.
+declared_files:
+- path: docs/reference/requirement-rule-check.md
+  state: existing
+delivers_to: null
+expects_from: null
+test_required: false
+test_rationale: "Documentation-only update; link, frontmatter and length rules are enforced by the project's documentation checks at commit time."
+file_findings:
+- file: docs/reference/requirement-rule-check.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the family list, the CLI stage list and the before-state sentence the update changes.
+  decision: null
+file_findings_opened_files:
+- docs/reference/requirement-rule-check.md
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/07_TICKET-20261021-ACD-2500a-5-iii.md
+change_target:
+  - docs
+risk_surface: internal
+notes: |
+  Items 2 and 9. KI-ACS-20261015 notes the reference doc presents the standalone CLI as a
+  way to check a folder without saying a before-state is needed.

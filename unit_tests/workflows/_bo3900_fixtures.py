@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+
 # ---------------------------------------------------------------------------
 # The incident's own literals (BO-3900.yaml criteria + notes)
 # ---------------------------------------------------------------------------
@@ -99,13 +100,9 @@ DOUBLE_ROOT = (
 def epic_resolve_response(epic_path: str, worktree_path: str) -> dict[str, Any]:
     """label_responses["resolve-target"] value for an epic drive.
 
-    BO-4000: build-feature.js now checks THIS field's own worktree_path via a
-    repo-facts call (label "worktree-facts-resolved", see
-    worktree_facts_resolved_response()) before deciding reuse, rather than
-    discarding it in favour of a separate worktree-setup dispatch. Passing
-    the SAME worktree_path this fixture module's caller wants as the run's
-    final worktree here reproduces every pre-BO-4000 test's outcome
-    unchanged, with one fewer agent dispatch.
+    BO-4300c-3: this field's worktree_path is only the resolver's CLAIM; the run's workspace is the
+    workspace maker's answer (see worktree_setup_response()). It is still reported so a test can prove the
+    claim is ignored.
     """
     return {
         "target_type": "epic",
@@ -115,19 +112,24 @@ def epic_resolve_response(epic_path: str, worktree_path: str) -> dict[str, Any]:
     }
 
 
-def worktree_facts_resolved_response() -> dict[str, Any]:
-    """label_responses["worktree-facts-resolved"] value: reusable facts.
-
-    Paired with epic_resolve_response()'s real worktree_path so BO-4000's
-    reuse check accepts it, matching every pre-BO-4000 test's outcome.
-    """
-    facts = {"exists": True, "is_git_toplevel": True, "is_linked_worktree": True, "is_main_checkout": False, "same_repository": True, "branch": "fixture-default"}
-    return {"output": json.dumps(facts), "exit_code": 0}
+def _workspace_reply(worktree_path: str, branch: str) -> dict[str, Any]:
+    """The shell executor's reply carrying the workspace maker's ok answer (self-contained: this module is
+    imported under more than one package root, so it does not import the engine harness)."""
+    answer = {
+        "schema_version": 1, "status": "ok", "code": "OK", "verb": "ensure",
+        "workspace_path": worktree_path, "worktree_path": worktree_path, "branch": branch,
+        "created": False, "message": "workspace ready (test)",
+    }
+    return {"command": "python3 worktree.py ensure (test)", "exit_status": 0, "stdout": json.dumps(answer), "stderr": ""}
 
 
 def worktree_setup_response(worktree_path: str) -> dict[str, Any]:
-    """label_responses["worktree-setup"] value."""
-    return {"worktree_path": worktree_path, "status": "reused"}
+    """label_responses["workspace-ensure"] value: the workspace maker's ok answer at *worktree_path*.
+
+    BO-4300c-3: the retired worktree-facts-resolved / worktree-setup pair is replaced by the ONE workspace
+    step, scripted in the shell-executor shape the real engine delivers.
+    """
+    return _workspace_reply(worktree_path, "fixture-default")
 
 
 def epic_planner_response(
@@ -183,8 +185,7 @@ def base_epic_label_responses(
     """The full label_responses dict needed to reach per-ticket dispatch."""
     return {
         "resolve-target": epic_resolve_response(epic_path, worktree_path),
-        "worktree-facts-resolved": worktree_facts_resolved_response(),
-        "worktree-setup": worktree_setup_response(worktree_path),
+        "workspace-ensure": worktree_setup_response(worktree_path),
         "epic-planner": epic_planner_response(epic_path, ticket_paths),
         "signoff-readback": signoff_readback_response(depends_on),
         "epic-recheck": epic_recheck_response(epic_path),

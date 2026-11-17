@@ -1,0 +1,111 @@
+id: DK-500c-3
+title: Merging categories retires one into the other without changing any id or decision record
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the published cat-40cc613f737e3323 with the member (dec-acdfd972fcaca478, crit.person_authorises) and the published cat-d15d52392d7aa94c with the member (dec-d53e1c52cd47c832, crit.human_authority), both asking whether only a person's approval authorises a record,
+  When human:user merges cat-40cc613f737e3323 into cat-d15d52392d7aa94c in a kernel run and publishes the change,
+  Then cat-40cc613f737e3323 is retired, with replaced_by [cat-d15d52392d7aa94c], no members, and a retirement entry naming human:user, the time and the reason,
+  And cat-d15d52392d7aa94c keeps its id, gains the member (dec-acdfd972fcaca478, crit.person_authorises) and gains the retired category's preferred wording as one of its other wordings,
+  And cat-40cc613f737e3323 stays resolvable by its id,
+  And no published decision record changes.
+depends_on:
+- DK-500c
+- DK-500c-2
+covered_by:
+- DK-500c-3-i
+- DK-500c-3-ii
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: DK-500c-2
+  contract: Stage-and-publish path for category records, including base_sha256 conflict refusal.
+change_target: code
+risk_surface: internal
+it_requirements:
+- Merge, split, retire and label edits are person-made proposals in a criteria.review run, staged and published through the same path as new categories (DK-500c-1, DK-500c-2). No merge is ever applied automatically, including from a grouping suggestion.
+- 'Merging A into B stages both records. A gets lifecycle_stage retired, replaced_by [B], members [] and retirement {retired_at, retired_by: human(:<name>), reason}. B gets A''s members and A''s preferred wording as an other wording, plus whichever of A''s other wordings the person keeps. Both are published in one all-or-nothing publish.'
+- Ids never change, and a retired id stays resolvable in the index, in the reuse lookup and in the graph queries.
+- The invariant 'lifecycle_stage retired iff replaced_by is non-empty iff retirement is set' is a publish check.
+- No decision record changes, proven by byte comparison.
+test_required: true
+test_spec:
+- name: test_merge_retires_source_with_replacement_and_retirement_entry
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: After the merge cat-40cc613f737e3323 is retired with replaced_by [cat-d15d52392d7aa94c], no members and a retirement entry naming human:user, the time and the reason.
+- name: test_target_keeps_id_gains_member_and_label
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: cat-d15d52392d7aa94c keeps its id, gains (dec-acdfd972fcaca478, crit.person_authorises) and the retired category's preferred wording.
+- name: test_retired_id_stays_resolvable
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: cat-40cc613f737e3323 is still found by id in the index and resolves to its replacement.
+- name: test_merge_changes_no_decision_record
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Every file in docs/decisions/ is byte-identical after the merge is published.
+test_rationale: Exercise the review run and the publish command through their public CLI and RunService boundaries on a temporary repository copy and run root; assert staged files, published files, exit codes and byte-level before/after snapshots of docs/decisions/. Model-level unit tests alone would not prove that nothing is written outside the staged area or that publish is all-or-nothing.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  Flow node: criteria-library curate. Data: mock records cat-40cc613f737e3323 (retired) and cat-d15d52392d7aa94c (replaces it), the exact state a merge leaves behind.
+  SETTLED by dec-93c1c730463c1f3c (crit.regroup_without_rewrites): regrouping edits only category data, and retired ids stay resolvable through replaced_by. Mock invariant: lifecycle_stage retired iff replaced_by is not empty iff retirement is set; a retired category has no members.
+  A merge goes through the same stage and publish path as a new category (DK-500c-1, DK-500c-2); its checks apply.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: curate.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: curate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+    source: mock
+    asof: '2026-10-04'

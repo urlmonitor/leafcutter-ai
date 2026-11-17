@@ -6,21 +6,25 @@
       "properties": {
         "approval_status": {
           "const": "approved",
+          "description": "Always approved, because a record is filed only for a decision a human approved.",
           "title": "Approval Status",
           "type": "string"
         },
         "approved_at": {
+          "description": "When the human approved (UTC).",
           "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$",
           "title": "Approved At",
           "type": "string"
         },
         "approved_by": {
+          "description": "The human who approved the decision (`human` or `human:<id>`); a host or service cannot approve.",
           "pattern": "^human(:[A-Za-z0-9][A-Za-z0-9._@-]{0,127})?$",
           "title": "Approved By",
           "type": "string"
         },
         "note": {
           "default": "",
+          "description": "Anything the approver added, such as a condition.",
           "title": "Note",
           "type": "string"
         }
@@ -38,11 +42,13 @@
       "description": "One append-only correction: why the decision was corrected, by whom, and what it kept.",
       "properties": {
         "corrected_at": {
+          "description": "When the correction was made (UTC).",
           "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$",
           "title": "Corrected At",
           "type": "string"
         },
         "corrected_by": {
+          "description": "The human who made the correction.",
           "pattern": "^human(:[A-Za-z0-9][A-Za-z0-9._@-]{0,127})?$",
           "title": "Corrected By",
           "type": "string"
@@ -57,12 +63,15 @@
             }
           ],
           "default": null,
+          "description": "Option that now stands, when the correction changes the choice.",
           "title": "New Selected Option Id"
         },
         "preserved": {
-          "$ref": "#/$defs/PreservedOriginal"
+          "$ref": "#/$defs/PreservedOriginal",
+          "description": "What the correction keeps of the original record, because records are never edited."
         },
         "reason": {
+          "description": "Why the decision was corrected.",
           "minLength": 1,
           "title": "Reason",
           "type": "string"
@@ -78,6 +87,7 @@
             }
           ],
           "default": null,
+          "description": "Id of the decision that replaces this one, when a new decision was filed.",
           "title": "Superseded By"
         }
       },
@@ -95,6 +105,7 @@
       "properties": {
         "note": {
           "default": "",
+          "description": "What was observed, in a sentence.",
           "title": "Note",
           "type": "string"
         },
@@ -109,10 +120,12 @@
             }
           ],
           "default": null,
+          "description": "When the outcome was observed (UTC).",
           "title": "Observed At"
         },
         "status": {
           "default": "pending",
+          "description": "What later happened to the decision: still pending, confirmed, corrected or abandoned.",
           "enum": [
             "pending",
             "confirmed",
@@ -132,6 +145,7 @@
       "properties": {
         "action": {
           "default": "used_as_evidence",
+          "description": "What became of it: used as evidence, offered for reuse, reused, set aside or not applicable.",
           "enum": [
             "used_as_evidence",
             "offered_for_reuse",
@@ -154,15 +168,18 @@
             }
           ],
           "default": null,
+          "description": "Judged probability (0 to 1) that the earlier decision applied.",
           "title": "Applicability"
         },
         "id": {
+          "description": "Id of the earlier decision that was considered.",
           "pattern": "^dec-[0-9a-f]{16}$",
           "title": "Id",
           "type": "string"
         },
         "note": {
           "default": "",
+          "description": "Why, in a sentence.",
           "title": "Note",
           "type": "string"
         }
@@ -178,6 +195,7 @@
       "description": "What a correction preserves of the original record (never edited, only kept).",
       "properties": {
         "assumptions": {
+          "description": "Assumptions the record held before the correction.",
           "items": {
             "type": "string"
           },
@@ -185,6 +203,7 @@
           "type": "array"
         },
         "evidence_ids": {
+          "description": "Evidence the record cited before the correction.",
           "items": {
             "type": "string"
           },
@@ -201,6 +220,7 @@
             }
           ],
           "default": null,
+          "description": "Option the record selected before the correction.",
           "title": "Selected Option Id"
         }
       },
@@ -212,11 +232,13 @@
       "description": "One option's place in the kernel ranking shown to the human (evidence, never authority).",
       "properties": {
         "option_id": {
+          "description": "The option this ranking entry describes.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
           "title": "Option Id",
           "type": "string"
         },
         "rank": {
+          "description": "Position in the kernel ranking shown to the human (1 is best); evidence, never authority.",
           "minimum": 1,
           "title": "Rank",
           "type": "integer"
@@ -233,6 +255,7 @@
             }
           ],
           "default": null,
+          "description": "Mean satisfies probability over the required criteria.",
           "title": "Required Mean"
         },
         "required_passed": {
@@ -246,6 +269,7 @@
             }
           ],
           "default": null,
+          "description": "How many required criteria the option met at the satisfies threshold.",
           "title": "Required Passed"
         },
         "required_total": {
@@ -259,12 +283,14 @@
             }
           ],
           "default": null,
+          "description": "How many required criteria were assessed.",
           "title": "Required Total"
         },
         "scores": {
           "additionalProperties": {
             "type": "number"
           },
+          "description": "Satisfies probability per criterion id behind the ranking.",
           "title": "Scores",
           "type": "object"
         }
@@ -282,6 +308,7 @@
       "properties": {
         "origin": {
           "default": "template",
+          "description": "Who wrote the text: a kernel template or the host, never hidden model reasoning.",
           "enum": [
             "template",
             "host"
@@ -290,6 +317,7 @@
           "type": "string"
         },
         "text": {
+          "description": "Why the option was chosen.",
           "minLength": 1,
           "title": "Text",
           "type": "string"
@@ -307,6 +335,7 @@
       "properties": {
         "basis": {
           "default": "kernel_ranking",
+          "description": "How the outcome came about: from the kernel ranking, a resolved gate, or reuse of a precedent.",
           "enum": [
             "kernel_ranking",
             "resolved_gate",
@@ -327,6 +356,7 @@
             }
           ],
           "default": null,
+          "description": "The model's confidence in its assessment (0 to 1), when it gave one.",
           "title": "Confidence"
         },
         "design_reason": {
@@ -339,9 +369,11 @@
             }
           ],
           "default": null,
+          "description": "Why the kernel stopped researching and handed the ranking to a human; null when it did not.",
           "title": "Design Reason"
         },
         "ranking": {
+          "description": "The ranking the human saw when choosing.",
           "items": {
             "$ref": "#/$defs/RankedOption"
           },
@@ -359,6 +391,7 @@
             }
           ],
           "default": null,
+          "description": "Rank the human's choice held in the ranking shown, so overrides of the ranking are visible.",
           "title": "Selected Rank"
         }
       },
@@ -370,6 +403,7 @@
       "description": "One criterion the options were weighed against.",
       "properties": {
         "evidence_ids": {
+          "description": "Evidence cited for the criterion, resolved in the record's evidence list.",
           "items": {
             "type": "string"
           },
@@ -377,12 +411,14 @@
           "type": "array"
         },
         "id": {
+          "description": "Stable id of the criterion within this record.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
           "title": "Id",
           "type": "string"
         },
         "kind": {
           "default": "evidence_answerable",
+          "description": "Whether evidence could settle the criterion or it was a judgement of the designs themselves.",
           "enum": [
             "evidence_answerable",
             "design_judgement"
@@ -392,6 +428,7 @@
         },
         "priority": {
           "default": "required",
+          "description": "Whether the criterion was required for a decision or only supporting.",
           "enum": [
             "required",
             "supporting"
@@ -400,6 +437,7 @@
           "type": "string"
         },
         "question": {
+          "description": "The question each option was weighed against.",
           "minLength": 1,
           "title": "Question",
           "type": "string"
@@ -417,21 +455,25 @@
       "description": "A reference to one evidence item: where it was read, its hash and the revision (no text).",
       "properties": {
         "category": {
+          "description": "Kind of evidence (guidance, prior decision, existing pattern, ...).",
           "minLength": 1,
           "title": "Category",
           "type": "string"
         },
         "content_hash": {
+          "description": "Hash of the text at the time, so a later reader can tell whether the source changed.",
           "pattern": "^[0-9a-f]{8,128}$",
           "title": "Content Hash",
           "type": "string"
         },
         "id": {
+          "description": "Evidence id the options and criteria cite.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
           "title": "Id",
           "type": "string"
         },
         "locator": {
+          "description": "Where the evidence was read, so it can be found again; the text itself is not stored.",
           "minLength": 1,
           "title": "Locator",
           "type": "string"
@@ -448,6 +490,7 @@
             }
           ],
           "default": null,
+          "description": "Judged relevance to the question (0 to 1).",
           "title": "Relevance"
         },
         "source_version": {
@@ -459,10 +502,12 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Repository revision the evidence was read at."
         },
         "verification": {
           "default": "unverified",
+          "description": "How far the text was checked against its source.",
           "title": "Verification",
           "type": "string"
         }
@@ -490,9 +535,11 @@
             }
           ],
           "default": null,
+          "description": "Actor that approved the option.",
           "title": "Approved By"
         },
         "assumptions": {
+          "description": "Premises the option relied on, kept verbatim so a later reader can check whether they still hold.",
           "items": {
             "type": "string"
           },
@@ -501,10 +548,12 @@
         },
         "description": {
           "default": "",
+          "description": "What the option meant in practice.",
           "title": "Description",
           "type": "string"
         },
         "evidence_ids": {
+          "description": "Evidence the option cites, resolved in the record's evidence list.",
           "items": {
             "type": "string"
           },
@@ -512,6 +561,7 @@
           "type": "array"
         },
         "id": {
+          "description": "Stable id the selection and the criteria evidence refer to.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
           "title": "Id",
           "type": "string"
@@ -526,9 +576,11 @@
             }
           ],
           "default": null,
+          "description": "Actor that proposed the option.",
           "title": "Proposed By"
         },
         "title": {
+          "description": "Short name of the option.",
           "minLength": 1,
           "title": "Title",
           "type": "string"
@@ -546,12 +598,14 @@
       "description": "Concept section 12 provenance: where, when and under which versions it was made.",
       "properties": {
         "created_at": {
+          "description": "When the record was created (UTC).",
           "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$",
           "title": "Created At",
           "type": "string"
         },
         "created_by_capability": {
           "default": "decision",
+          "description": "Capability that produced the decision.",
           "title": "Created By Capability",
           "type": "string"
         },
@@ -559,6 +613,7 @@
           "additionalProperties": {
             "type": "string"
           },
+          "description": "Versions of the components that took part in the decision, keyed by component.",
           "title": "Decision Versions",
           "type": "object"
         },
@@ -572,6 +627,7 @@
             }
           ],
           "default": null,
+          "description": "Version of the kernel that produced the record.",
           "title": "Kernel Version"
         },
         "langfuse_trace_id": {
@@ -585,6 +641,7 @@
             }
           ],
           "default": null,
+          "description": "Trace id in Langfuse, for opening the run's trace.",
           "title": "Langfuse Trace Id"
         },
         "langfuse_trace_url": {
@@ -597,6 +654,7 @@
             }
           ],
           "default": null,
+          "description": "Link to the trace in Langfuse.",
           "title": "Langfuse Trace Url"
         },
         "model_version": {
@@ -609,11 +667,13 @@
             }
           ],
           "default": null,
+          "description": "Version of the model that answered.",
           "title": "Model Version"
         },
         "origin": {
           "const": "learned",
           "default": "learned",
+          "description": "How the record came to exist; learned means the kernel filed it from an approved run.",
           "title": "Origin",
           "type": "string"
         },
@@ -627,10 +687,12 @@
             }
           ],
           "default": null,
+          "description": "Version of the policy under which the decision was made.",
           "title": "Policy Version"
         },
         "repository_revision": {
-          "$ref": "#/$defs/SourceRevision"
+          "$ref": "#/$defs/SourceRevision",
+          "description": "Repository revision the run read."
         },
         "root_task_id": {
           "anyOf": [
@@ -642,9 +704,11 @@
             }
           ],
           "default": null,
+          "description": "Root task of that run.",
           "title": "Root Task Id"
         },
         "run_id": {
+          "description": "Run that produced the decision, to find its trace and artifacts.",
           "minLength": 1,
           "title": "Run Id",
           "type": "string"
@@ -659,6 +723,7 @@
             }
           ],
           "default": null,
+          "description": "Version of the prompt templates used.",
           "title": "Template Version"
         }
       },
@@ -683,10 +748,12 @@
             }
           ],
           "default": null,
+          "description": "Commit the fact was read at, so a later reader can tell whether the repository has moved on.",
           "title": "Commit"
         },
         "dirty": {
           "default": false,
+          "description": "True when the working tree differed from that commit.",
           "title": "Dirty",
           "type": "boolean"
         }
@@ -699,6 +766,7 @@
       "description": "What the run was asked and where (concept section 15 `task_context`).",
       "properties": {
         "component_ids": {
+          "description": "Components the task concerned, to find the record again by component.",
           "items": {
             "type": "string"
           },
@@ -706,6 +774,7 @@
           "type": "array"
         },
         "constraints": {
+          "description": "Constraints the task stated, which the chosen option had to respect.",
           "items": {
             "type": "string"
           },
@@ -713,11 +782,13 @@
           "type": "array"
         },
         "goal": {
+          "description": "What the run was asked, in the caller's words.",
           "minLength": 1,
           "title": "Goal",
           "type": "string"
         },
         "technologies": {
+          "description": "Technologies the task involved, as context for judging whether the decision still applies.",
           "items": {
             "type": "string"
           },
@@ -738,12 +809,15 @@
   "description": "One filed decision (`docs/decisions/<id>.yaml`), a plain-YAML subset (see module note).",
   "properties": {
     "approval": {
-      "$ref": "#/$defs/Approval"
+      "$ref": "#/$defs/Approval",
+      "description": "Who approved the decision and when."
     },
     "assessment": {
-      "$ref": "#/$defs/RecordAssessment"
+      "$ref": "#/$defs/RecordAssessment",
+      "description": "How the decision was assessed, including the ranking the human saw."
     },
     "assumptions": {
+      "description": "Premises the decision as a whole rests on, kept verbatim for later review.",
       "items": {
         "type": "string"
       },
@@ -751,6 +825,7 @@
       "type": "array"
     },
     "change_target": {
+      "description": "Kinds of change the decision applies to (a filter drawn from the ticket vocabulary).",
       "items": {
         "type": "string"
       },
@@ -758,6 +833,7 @@
       "type": "array"
     },
     "components": {
+      "description": "Classification filters, drawn only from the existing vocabularies (see `validate`).",
       "items": {
         "type": "string"
       },
@@ -765,6 +841,7 @@
       "type": "array"
     },
     "corrections": {
+      "description": "Append-only corrections made after filing; the original is never edited.",
       "items": {
         "$ref": "#/$defs/Correction"
       },
@@ -772,6 +849,7 @@
       "type": "array"
     },
     "criteria": {
+      "description": "The criteria the options were weighed against.",
       "items": {
         "$ref": "#/$defs/RecordCriterion"
       },
@@ -779,16 +857,19 @@
       "type": "array"
     },
     "decision_type": {
+      "description": "Kind of decision (a slug), so similar decisions can be grouped.",
       "pattern": "^[a-z][a-z0-9_]{0,63}$",
       "title": "Decision Type",
       "type": "string"
     },
     "description": {
       "default": "",
+      "description": "One-line summary shown in the decision index.",
       "title": "Description",
       "type": "string"
     },
     "evidence": {
+      "description": "References to the evidence cited, without the text.",
       "items": {
         "$ref": "#/$defs/RecordEvidence"
       },
@@ -796,6 +877,7 @@
       "type": "array"
     },
     "file_globs": {
+      "description": "File path patterns the decision applies to (a filter).",
       "items": {
         "type": "string"
       },
@@ -803,9 +885,11 @@
       "type": "array"
     },
     "final_outcome": {
-      "$ref": "#/$defs/FinalOutcome"
+      "$ref": "#/$defs/FinalOutcome",
+      "description": "What later happened to the decision."
     },
     "id": {
+      "description": "Identifier (`dec-<16 hex>`) that links and precedent lookups refer to this record by.",
       "pattern": "^dec-[0-9a-f]{16}$",
       "title": "Id",
       "type": "string"
@@ -813,10 +897,12 @@
     "kind": {
       "const": "decision",
       "default": "decision",
+      "description": "Marks the file as a decision record among other documents.",
       "title": "Kind",
       "type": "string"
     },
     "options": {
+      "description": "The options that were weighed, including the one chosen.",
       "items": {
         "$ref": "#/$defs/RecordOption"
       },
@@ -825,6 +911,7 @@
       "type": "array"
     },
     "precedents_considered": {
+      "description": "Earlier decisions the kernel considered, and what became of each.",
       "items": {
         "$ref": "#/$defs/PrecedentNote"
       },
@@ -832,17 +919,21 @@
       "type": "array"
     },
     "provenance": {
-      "$ref": "#/$defs/RecordProvenance"
+      "$ref": "#/$defs/RecordProvenance",
+      "description": "Where, when and under which versions the record was made."
     },
     "question": {
+      "description": "The decision question as asked; precedent lookup matches new questions against it.",
       "minLength": 1,
       "title": "Question",
       "type": "string"
     },
     "rationale": {
-      "$ref": "#/$defs/Rationale"
+      "$ref": "#/$defs/Rationale",
+      "description": "Why the option was chosen."
     },
     "related": {
+      "description": "Ids of decisions that are linked without replacing each other.",
       "items": {
         "type": "string"
       },
@@ -850,16 +941,19 @@
       "type": "array"
     },
     "repository_id": {
+      "description": "Repository the decision belongs to; with the id it forms the record's identity key.",
       "minLength": 1,
       "title": "Repository Id",
       "type": "string"
     },
     "repository_wide": {
       "default": false,
+      "description": "True when the decision applies to the whole repository, so it needs no other filter.",
       "title": "Repository Wide",
       "type": "boolean"
     },
     "risk_surface": {
+      "description": "Risk surfaces the decision applies to (a filter drawn from the ticket vocabulary).",
       "items": {
         "type": "string"
       },
@@ -867,6 +961,7 @@
       "type": "array"
     },
     "roadmap_phase": {
+      "description": "Roadmap phases the decision applies to (a filter).",
       "items": {
         "type": "string"
       },
@@ -876,15 +971,18 @@
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this record format, so a reader can reject a record written for another shape.",
       "title": "Schema Version",
       "type": "string"
     },
     "selected_option_id": {
+      "description": "Id of the option the human chose; it must be one of the listed options.",
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
       "title": "Selected Option Id",
       "type": "string"
     },
     "superseded_by": {
+      "description": "Ids of later decisions that replace this one.",
       "items": {
         "type": "string"
       },
@@ -892,6 +990,7 @@
       "type": "array"
     },
     "supersedes": {
+      "description": "Ids of earlier decisions this one replaces.",
       "items": {
         "type": "string"
       },
@@ -899,14 +998,17 @@
       "type": "array"
     },
     "task_context": {
-      "$ref": "#/$defs/TaskContext"
+      "$ref": "#/$defs/TaskContext",
+      "description": "What the run was asked and where."
     },
     "title": {
+      "description": "Short name shown in the decision index.",
       "minLength": 1,
       "title": "Title",
       "type": "string"
     },
     "unresolved_risks": {
+      "description": "Risks that remained open when the decision was made.",
       "items": {
         "type": "string"
       },

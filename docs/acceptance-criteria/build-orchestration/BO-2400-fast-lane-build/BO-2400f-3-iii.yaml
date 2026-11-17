@@ -1,0 +1,275 @@
+id: BO-2400f-3-iii
+components:
+  - build_orchestration
+title: "The run acts on the worktree setup's own finished result, however long the setup takes"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the fast lane is pointed at UXP-510,
+  And setting up that run's worktree, including its bootstrap, takes 180 seconds —
+    longer than the 2 minutes a single command an agent runs may last before it is
+    cut off or moved to the background,
+  And the setup finishes and reports that it opened the worktree at a location on
+    branch fast-lane/uxp-510,
+  When the run decides the outcome of its worktree step,
+  Then the run waits for the setup to finish and reads the setup's complete final
+    result, not the part of its output that existed when 2 minutes had passed,
+  And the run proceeds on the location and branch the setup reported,
+  And the run does not end in a refusal.
+
+  Given the same setup is still running, or has ended without a final result the
+    run can read, at the moment the run must decide,
+  When the run decides the outcome of its worktree step,
+  Then the run halts as "worktree setup result not obtained", naming the criterion,
+    how long it waited, and that the setup's own result was never read,
+  And that halt is not reported as a refusal by the setup and carries no refusal
+    reason,
+  And no later step runs.
+
+  Given four fast-lane runs are started at the same time for UXP-510, UXP-511,
+    UXP-512 and UXP-513, and each setup reports success after between 90 and 180
+    seconds,
+  When each run decides the outcome of its worktree step,
+  Then all four runs proceed on their reported worktrees — a setup that is slower
+    because its siblings are running in parallel ends no differently from a fast one.
+depends_on: [BO-2400f-3, BO-2400f-13]
+doc_links:
+- path: templates/workflows-js/fast-lane-ship.js
+  relationship: modifies
+  status: exists
+  relevance: The worktree step and the place its outcome is decided.
+- path: templates/agents/worktree-agent.md
+  relationship: related
+  status: exists
+  relevance: The agent that runs the setup today; its command window is what truncated the read.
+- path: templates/scripts/setup_ticket_worktree.py
+  relationship: related
+  status: exists
+  relevance: The setup whose final result is the one the run must act on.
+- path: docs/how-to/fast-lane-build.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+  relevance: 'Occupied Build Workspace section: the refusal shape the setup emits and the lane relays.'
+- path: templates/agents/command-step-runner.md
+  relationship: related
+  status: exists
+  relevance: The lane's deterministic one-command executor (returns stdout verbatim); the candidate executor
+    for launching and reading the setup.
+- path: docs/known-issues/build-orchestration/open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md
+  relationship: related
+  status: exists
+  relevance: Names command-step-runner as the durable answer for the lane's shell dispatches.
+- path: docs/known-issues/build-orchestration/open-high-ki-bo-20260930-fast-lane-ship-is-649-lines-over-and-cannot-grow.md
+  relationship: related
+  status: exists
+  relevance: The fast-lane-ship.js size ratchet that bounds the JS side of this change.
+- path: unit_tests/_workflow_engine_harness.py
+  relationship: specifies
+  status: exists
+  relevance: Runs the lane under a stubbed agent() so the outcome decision can be executed, not grepped.
+- path: docs/testing/test-angles.md
+  relationship: related
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fastlane_worktree_setup_result:
+      type: object
+      description: The setup's own final result for one fast-lane run, persisted by create-fastlane-worktree
+        as its LAST act on every exit path and read back by the lane. The lane decides the worktree step's
+        outcome from this record only, never from an agent's paraphrase and never from output captured
+        before the command ended.
+      required:
+      - slug
+      - run_token
+      - final
+      - written_at
+      - result
+      properties:
+        slug:
+          type: string
+        run_token:
+          type: string
+          description: Opaque per-run token the lane hands to the setup. The reader rejects a record whose
+            token differs, so an earlier run's record for the same slug is never read as this run's.
+        final:
+          type: boolean
+          description: True only once the result is complete. A missing, half-written, unparseable or
+            non-final record reads as NOT OBTAINED, never as a refusal.
+        written_at:
+          type: string
+          format: date-time
+        result:
+          type: object
+          description: 'Verbatim the payload the command prints today: the opened shape {outcome:''opened'',
+            worktree_path, branch, ac_store_path, created, base_commit, base_matches_origin_main}, the
+            BO-2400f-13 refused shape {outcome:''refused'', branch, refusal:{...}}, or {outcome:''failed'',
+            message} when the command exits non-zero.'
+    fastlane_worktree_result_read:
+      type: object
+      description: What one bounded read of the record returns to the lane, as one JSON line on stdout.
+      required:
+      - obtained
+      - waited_seconds
+      - record
+      properties:
+        obtained:
+          type: boolean
+        waited_seconds:
+          type: integer
+        record:
+          type:
+          - object
+          - 'null'
+          description: The fastlane_worktree_setup_result, or null when not obtained.
+  reference_file_path: templates/scripts/setup_ticket_worktree.py
+  n_location_rule: '2: (1) templates/scripts/setup_ticket_worktree.py: cmd_create_fastlane_worktree (currently
+    :1939-2027) persists the record as its last act on all three exit paths (opened; refused through the
+    single _build_fastlane_refusal_payload site at :1089; failed), plus a bounded read entry point that
+    returns fastlane_worktree_result_read. (2) The Worktree phase of templates/workflows-js/fast-lane-ship.js
+    (:801-892): the outcome is decided from the read''s reply, replacing the worktree-agent prompt at
+    :803-830 that asks the agent to ''return that JSON verbatim''.'
+  required_skills:
+  - python-coder
+  post_write_commands:
+  - python scripts/build.py --target-dir .
+  - python -m pytest unit_tests/build_orchestration/ unit_tests/workflows/ unit_tests/setup/ -q
+  constraints:
+  - 'THE OUTCOME COMES FROM THE SETUP''S OWN PERSISTED RESULT. Today the Worktree phase (fast-lane-ship.js:803-830)
+    asks worktree-agent to run create-fastlane-worktree and return its stdout verbatim. The agent''s Bash
+    call is limited to the 2-minute command window. On UXP-510 the command was then moved to the background,
+    and the agent built a refusal from partial output. Raising the agent''s timeout alone does NOT satisfy
+    this AC: it moves the limit without removing it and still leaves an LLM as the reader.'
+  - THE SETUP MUST NOT DEPEND ON THE DISPATCH THAT STARTED IT. Launching returns promptly. The setup then
+    runs to completion independently of the launching agent's session, so a backgrounded or ended dispatch
+    cannot cut it off. It must work on win32 as well as POSIX, because the operator runs Windows.
+  - 'EVERY LANE-SIDE CALL FINISHES INSIDE THE COMMAND WINDOW. Launch and read run on command-step-runner
+    (templates/agents/command-step-runner.md: one command, reply {command, workspace, exit_status, stdout,
+    stderr} verbatim, never reshaped), the executor the claim step already uses (CLAIM_EXECUTOR_AGENT_TYPE,
+    fast-lane-ship.js:1232). Each read blocks for at most 90 seconds. The lane issues a bounded number
+    of reads against ONE total wait budget, declared once as a named constant of at least 600 seconds,
+    so a 180-second setup is waited out. The record is parsed on the caller''s side from stdout. No worktree
+    is confirmed yet, so the target workspace for these calls is the main repository root.'
+  - ATOMIC, PER-RUN, NON-CONTENDING RECORDS. Write to a temp file and rename it into place, so a reader
+    never sees a partial record. Records are keyed by slug and run_token, so four simultaneous runs write
+    four distinct records and never share a file. A setup that is slow because its siblings are running
+    is treated exactly like a fast one until the budget is exhausted.
+  - RECORD LOCATION. The record lives outside worktrees/<slug> and outside every git-tracked path. Writing
+    it must not create the target directory or touch any branch or ref, so BO-2400f-13-iii ('the refusing
+    path performs no fetch, branch or directory write') stays green. The setup alone derives the location;
+    the lane never composes it.
+  - 'THE NOT-OBTAINED HALT HAS ITS OWN SHAPE AND ONE CONSTRUCTION SITE: {status:''error'', classification:''halt'',
+    failing_phase:''worktree'', halt_reason:''worktree setup result not obtained'', target_ac, waited_seconds:<int>,
+    setup_result_read:false}. It has NO `refusal` key and NO `reason` key, so it cannot fall into the
+    existing fail-closed refusal branch at fast-lane-ship.js:874-884, which reports status ''refused''.
+    It returns before Resolve, and no claim exists yet, so no release is owed.'
+  - THE GIT VERIFY STEP STAYS. The worktree_path taken from the record is still checked against `git worktree
+    list --porcelain` by the existing BO-2400f-3 / -3-i verify step (:897-972).
+  - 'SOURCE/TEMPLATE PARITY: edit templates/scripts/setup_ticket_worktree.py and carry it to scripts/setup_ticket_worktree.py
+    with build.py. The two copies already differ (2318 vs 2237 lines), so never hand-patch the scripts/
+    copy.'
+  - 'JS SIZE: templates/workflows-js/fast-lane-ship.js is over its 1000 counted-line cap (KI-BO-20260930)
+    and the check-file-size ratchet refuses any growth. The change to the lane must be a net shrink in
+    counted lines: put the logic in Python and replace the existing prompt/branch rather than adding beside
+    it.'
+delivers_to:
+  agent: python-coder
+  contract: The setup's complete final result, as fastlane_worktree_setup_result (slug, run_token, final,
+    written_at, result), obtained by the lane through fastlane_worktree_result_read. It is the single
+    input to the worktree step's outcome. BO-2400f-3-iv reconciles any agent/executor reply against result.outcome
+    and result.refusal.reason.
+expects_from: null
+test_required: true
+test_spec:
+- name: test_slow_setup_is_read_in_full_after_it_finishes_not_at_the_window
+  target_dir: unit_tests/setup/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: 'REAL SUBPROCESS: create-fastlane-worktree in a temp repo, with bootstrap delayed past
+    a scaled-down command window (an injected delay and window keep the test in seconds while keeping
+    window < setup duration < budget). The read returns obtained:true with the complete opened record,
+    not the output present when the window expired.'
+- name: test_lane_proceeds_on_the_location_and_branch_the_setup_reported
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Under the workflow-engine harness, with the read stubbed to an obtained opened record for
+    fast-lane/uxp-510, the lane carries that record's worktree_path and branch into the verify step and
+    Resolve.
+- name: test_slow_successful_setup_never_ends_in_a_refusal
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: discrimination
+  description: 'Same harness. The first read returns obtained:false and the second returns the opened
+    record: the terminal payload is never status ''refused'' and carries no refusal.'
+  must_catch:
+  - The lane decides from the first read's (or the agent's) partial reply and refuses.
+  - The lane treats any reply lacking worktree_path as an occupancy refusal.
+- name: test_unobtained_result_halts_naming_criterion_wait_and_unread_result
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: 'Every read returns obtained:false until the budget is spent: the terminal payload has
+    halt_reason ''worktree setup result not obtained'', target_ac, the total waited_seconds, and setup_result_read:false.'
+- name: test_unobtained_result_halt_is_not_a_refusal_and_carries_no_reason
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: discrimination
+  description: The same halt has status other than 'refused' and has neither a refusal key nor a reason
+    key.
+  must_catch:
+  - The unobtained case is routed through the existing fail-closed occupancy-refusal branch (status 'refused').
+- name: test_no_step_after_worktree_runs_when_result_not_obtained
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: reachability
+  description: After the not-obtained halt, the harness records no dispatch with a phase after Worktree
+    (no verify, Resolve, claim or Test Writer).
+- name: test_four_parallel_setups_of_varying_duration_all_proceed
+  target_dir: unit_tests/setup/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: 'Four real create-fastlane-worktree subprocesses on four slugs in one temp repo, started
+    together with staggered delays: each read returns obtained:true with an opened record naming its own
+    slug''s worktree, and no record is read under another slug or run_token.'
+- name: test_partial_or_foreign_token_record_reads_as_not_obtained
+  target_dir: unit_tests/setup/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: A half-written file, a record with final:false, and a record with a different run_token
+    each read as obtained:false, never as a refusal and never as this run's result.
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Observed 2026-10-12..14 on UXP-510. The setup succeeded; the worktree agent's command
+  hit its 2-minute window, was moved to the background, and the agent read partial output
+  and returned a refusal. Four parallel sibling runs opened fine, so the failure depends on
+  timing, not on the criterion. The halt in the second scenario is deliberately not a
+  refusal: a refusal is a statement by the setup, and here the setup said nothing the run
+  read. Whether the waiting is done by a longer command window or by the run itself
+  reading the setup's result is the IT PO's call; the criterion only requires that the
+  result acted on is the setup's own finished one.

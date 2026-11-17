@@ -10,7 +10,8 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given PO v3, BA v3, or IT PO v3 is invoked by the create-ac workflow,
+  Given the product owner, business analyst, or technical planner (it-po) is invoked
+    by the /plan-feature workflow,
   When the agent produces AC YAML output,
   Then each AC file is written to docs/acceptance-criteria/<component>/
     where <component> matches the AC's component field,
@@ -19,7 +20,16 @@ criteria: |
     present, enums valid, depends_on references existing ids),
   And if the component subdirectory does not exist, it is created,
   And no file is written to tickets/, scripts/, or any other directory,
-  And the workflow reports the list of files written at each gate.
+  And the workflow reports the list of files written at each gate it presents.
+
+  Given the test designer is invoked by the /plan-feature workflow for a batch
+    (e.g. ACD-400a-1 and ACD-400a-2),
+  When it records the test design and the file findings for that batch,
+  Then it writes them only into AC YAML files under docs/acceptance-criteria/<component>/
+    (here ACD-400a-1.yaml and ACD-400a-2.yaml),
+  And each edited file still passes validate_ac_schema.py validation,
+  And no file is created or modified in tickets/, scripts/, a test directory,
+    or any other directory outside the AC store.
 depends_on: [ACD-300d]
 doc_links: []
 assigned_agent: python-coder
@@ -28,9 +38,24 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after #1245/#1246: names only — the /plan-feature workflow
+    and the product-owner, business-analyst and it-po agents; "at each gate" now reads
+    "at each gate it presents" because the technical planner''s stage has no gate.
+    Behaviour unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: 'criteria amendment: added a scenario for the test designer, which also edits AC
+    files during /plan-feature. It writes the test design and the file findings only into
+    AC YAML files under the AC store, each still schema-valid, and touches nothing outside
+    the store. Directed by the coordinator under the user''s ACD-300 family go-ahead.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
+declares_side_effect: true

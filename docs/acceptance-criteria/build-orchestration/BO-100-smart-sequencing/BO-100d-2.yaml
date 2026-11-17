@@ -32,12 +32,16 @@ origin_agent: business-analyst
 created: 2026-06-22
 amended_by:
   - reason: "it-po split: the success path also crosses the two enforcement surfaces (build-epic.js deterministic gate vs build-feature.md command prose). Split into BO-100d-2a (python-coder, build-epic.js) and BO-100d-2b (llm-expert, build-feature.md prose parity). Criteria preserved verbatim across the children."
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Parent back-link only: covered_by now also lists BO-100d-2-i, whose id-derived parent is this record, so scan_ac_orphans no longer reports it as an orphan. Its probe criteria were re-pointed to the declared telemetry location on the same day. This record stays retired and unchanged otherwise. Note: because this record is retired, done-proof skips it entirely, so BO-100d-2-i does not feed BO-100d's derivation; its logical home is BO-100d-1a (its depends_on), which ids cannot express."
 superseded_by:
   - BO-100d-2a
   - BO-100d-2b
 covered_by:
   - BO-100d-2a
   - BO-100d-2b
+  - BO-100d-2-i
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

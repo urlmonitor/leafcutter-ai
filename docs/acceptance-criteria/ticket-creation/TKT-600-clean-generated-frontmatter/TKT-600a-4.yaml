@@ -8,7 +8,7 @@ component: ticket-creation
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -104,13 +104,15 @@ amended_by:
     directed_by: user
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/48_TICKET-20261012-TKT-600a-4.md
 change_target: docs
 risk_surface: internal
 # test_required false: change_target docs -- the deliverable is ADR prose with no executable
 # behaviour for test-writer to exercise. Link resolution and frontmatter validity are enforced
 # by the project's documentation checks at commit time, not by a unit test.
 test_required: false
+test_rationale: "Documentation-only deliverable (an amendment to ADR-010) with no executable behaviour for test-writer to exercise. Link resolution, frontmatter validity and length are enforced by the project's documentation checks at commit time, not by a unit test."
 notes: |
   ORIGIN (2026-09-28, user-directed follow-up C1 of the declared-files run). TKT-600a-3's
   notes flagged that ADR-010 names doc_links -> files_touched as THE derivation, while

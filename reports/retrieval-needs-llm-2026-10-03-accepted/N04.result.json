@@ -1,0 +1,295 @@
+{
+  "case_id": "N04",
+  "question": "Where does work_status travel from AC YAML into returned evidence?",
+  "human_gold": "Inspect actual code, schema, projection and disclosure handoffs for this field. No canonical ID is supplied or necessary before discovery. Source-file membership is not a proven call graph. Complete inspected chain is ideal; bounded evidence must retain unknown stages.",
+  "actor_id": "codex:root:needs_llm_host",
+  "model_id": null,
+  "underlying_model_requests": null,
+  "tokens": null,
+  "error": null,
+  "result": {
+    "schema_version": "1.0",
+    "original_question": "Where does work_status travel from AC YAML into returned evidence?",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "source_file",
+        "schema"
+      ],
+      "target_ids": [],
+      "required_fields": [
+        "mapping",
+        "content",
+        "provenance"
+      ],
+      "document_types": [
+        "source_code",
+        "schema"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "exhaustive_set",
+    "hierarchy_scope": "not_applicable",
+    "scope_resolution": "discovery_needed",
+    "unresolved": [],
+    "rationale": "This asks for the complete field flow from the AC YAML boundary to returned evidence: the relevant implementation and contract content, each producer/consumer handoff or transformation, and locations identifying where those steps occur. It asks about the work_status field's passage, not any criterion's progress value. Discover the participating code and contracts; no IDs or hierarchy edges are specified.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  },
+  "envelope": {
+    "schema_version": "1.0",
+    "run_id": "run-cf7dcd7269414194",
+    "root_task_id": "task-b052e95245db4131",
+    "state_revision": 3,
+    "status": "completed",
+    "output": {
+      "schema_version": "1.0",
+      "schema_id": "leafcutter.retrieval_needs_output.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "original_question": "Where does work_status travel from AC YAML into returned evidence?",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "source_file",
+            "schema"
+          ],
+          "target_ids": [],
+          "required_fields": [
+            "mapping",
+            "content",
+            "provenance"
+          ],
+          "document_types": [
+            "source_code",
+            "schema"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_set",
+        "hierarchy_scope": "not_applicable",
+        "scope_resolution": "discovery_needed",
+        "unresolved": [],
+        "rationale": "This asks for the complete field flow from the AC YAML boundary to returned evidence: the relevant implementation and contract content, each producer/consumer handoff or transformation, and locations identifying where those steps occur. It asks about the work_status field's passage, not any criterion's progress value. Discover the participating code and contracts; no IDs or hierarchy edges are specified.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      }
+    },
+    "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-cf7dcd7269414194\\artifacts\\report.md",
+    "decision_ids": [],
+    "evidence_ids": [],
+    "open_questions": [],
+    "pending_interaction": null,
+    "limitations": [
+      "host-reported; not verified by the kernel",
+      "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+    ],
+    "gaps": [
+      {
+        "schema_version": "1.0",
+        "id": "gap-dc3094a8402a5f2d",
+        "created_at": "2026-10-03T09:45:54.862171Z",
+        "updated_at": "2026-10-03T09:45:54.862171Z",
+        "created_seq": 0,
+        "gap_key": "f508f9c6e7a85dc085ef092215dc4970b747cd340b6c2647f685a1538e0e7630",
+        "gap_type": "host_only",
+        "goal": "Where does work_status travel from AC YAML into returned evidence?",
+        "normalized_need": "ac evidence from into returned travel where work_status yaml",
+        "request_kind": "capability",
+        "input_schema": "leafcutter.retrieval_needs_request.v1",
+        "output_schema": "leafcutter.retrieval_needs_output.v1",
+        "scope_component_ids": [],
+        "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+        "candidates_considered": [
+          "host.retrieval_needs"
+        ],
+        "candidate_exclusions": {},
+        "need_title": "Where does work_status travel from AC YAML into returned evidence?",
+        "why_insufficient": "host-backed only; no native implementation exists",
+        "occurrence_count": 1,
+        "example_run_ids": [
+          "run-cf7dcd7269414194"
+        ],
+        "example_trace_urls": [],
+        "fallback_outcome": "host_completed",
+        "missing_native_capability": "native implementation of host.retrieval_needs",
+        "proposal": {
+          "schema_version": "1.0",
+          "author": "template",
+          "title": "Capability for: Where does work_status travel from AC YAML into returned evidence?",
+          "purpose": "host_only need",
+          "draft_ref": "drafts/f508f9c6e7a85dc085ef092215dc4970b747cd340b6c2647f685a1538e0e7630.md"
+        },
+        "first_seen": "2026-10-03T09:45:54.862171Z",
+        "last_seen": "2026-10-03T09:45:54.862171Z"
+      }
+    ],
+    "usage_summary": {
+      "schema_version": "1.0",
+      "jev_calls": 0,
+      "host_operations": 1,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd_known": null,
+      "cost_unknown_calls": 1,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "host",
+          "model_id": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "duration_ms": 624662,
+          "cost_usd": null,
+          "cost_provenance": "unavailable",
+          "calls": 1
+        }
+      ]
+    },
+    "trace_refs": {
+      "schema_version": "1.0",
+      "trace_id": "5cbcd12055acaa7b60244a37b4eb49a9",
+      "trace_url": null,
+      "observability": "ok"
+    },
+    "errors": []
+  },
+  "shared_semantics": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "original_question",
+        "passed": true,
+        "actual": "Where does work_status travel from AC YAML into returned evidence?",
+        "expected": "Where does work_status travel from AC YAML into returned evidence?"
+      },
+      {
+        "name": "include.entity_types",
+        "passed": true,
+        "actual": [
+          "source_file",
+          "schema"
+        ],
+        "expected": [
+          "source_file"
+        ]
+      },
+      {
+        "name": "include.document_types",
+        "passed": true,
+        "actual": [
+          "source_code",
+          "schema"
+        ],
+        "expected": [
+          "source_code"
+        ]
+      },
+      {
+        "name": "exclude.target_ids",
+        "passed": true,
+        "actual": [],
+        "expected": {
+          "forbidden": []
+        }
+      },
+      {
+        "name": "detail_mode",
+        "passed": true,
+        "actual": "fields",
+        "expected": [
+          "fields",
+          "full_document",
+          "bounded_context"
+        ]
+      },
+      {
+        "name": "completeness",
+        "passed": true,
+        "actual": "exhaustive_set",
+        "expected": [
+          "examples",
+          "exhaustive_set"
+        ]
+      },
+      {
+        "name": "hierarchy_scope",
+        "passed": true,
+        "actual": "not_applicable",
+        "expected": [
+          "not_applicable"
+        ]
+      },
+      {
+        "name": "status",
+        "passed": true,
+        "actual": "decided",
+        "expected": [
+          "decided"
+        ]
+      },
+      {
+        "name": "required_fields_when_projecting",
+        "passed": true,
+        "actual": [
+          "mapping",
+          "content",
+          "provenance"
+        ],
+        "expected": [
+          "content",
+          "mapping"
+        ]
+      }
+    ]
+  },
+  "overlay": {
+    "applicable": true,
+    "passed": true,
+    "checks": [
+      {
+        "id": "M03",
+        "passed": true,
+        "reason": "These unbound discovery questions must not demand a named target before source discovery."
+      }
+    ]
+  }
+}

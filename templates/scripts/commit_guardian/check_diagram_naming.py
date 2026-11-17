@@ -91,7 +91,15 @@ def _parse_frontmatter(content: str) -> dict:
     if end == -1:
         return {}
     try:
-        return yaml.safe_load(content[3:end]) or {}
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): this hook's except branch treats a parse
+        # failure as "skip the naming check for this file" -- a permissive
+        # parse that swallows malformed frontmatter instead of raising
+        # silently narrows that check. One small frontmatter block per
+        # staged diagram, so there is no speed case for the fast loader here
+        # (measured: ~4ms per 5-file staged batch either way, noise against
+        # the hook's own subprocess/git overhead).
+        return yaml.load(content[3:end], Loader=yaml.SafeLoader) or {}
     except yaml.YAMLError:
         return {}
 

@@ -33,7 +33,7 @@ import subprocess
 import unittest
 from pathlib import Path
 
-from _workflow_engine_harness import run_workflow_under_e2
+from _workflow_engine_harness import finalize_baseline_responses, run_workflow_under_e2, workspace_ensure_reply
 
 # ---------------------------------------------------------------------------
 # Path constants
@@ -701,85 +701,45 @@ class TestParseAgentJsonIntegration(unittest.TestCase):
     def test_finalize_feature_run_tolerates_prose_wrapped_reply(self) -> None:
         # covers: BP-300e-5
         """AC: Replay a prose-wrapped reply through finalize-feature; the run continues
-        to its next stage AND the correctly parsed worktree root appears in the
-        subsequent agent prompt (proving the prose was parsed correctly, not merely
-        falling through to a fallback).
+        to its next stage AND the correctly parsed value appears in the subsequent agent
+        prompt (proving the prose was parsed correctly, not merely falling through to a
+        fallback).
 
-        Injects a prose-wrapped JSON string as the pre-flight agent reply.
-        The trailing prose deliberately contains a closing brace character
-        ('feature-{name}' in the convention note) so that the old greedy-regex
-        safeParseJSON implementation fails (greedy match spans across the '}' in
-        the trailing text) and falls back to worktree_root="unknown".
-        parseAgentJson brace-matching correctly extracts the first complete balanced
-        block, producing worktree_root="/tmp/wt-leafcutter-test".
+        Since BO-4300c-3 the workspace step's answer must be ONE JSON object (a prose-wrapped one is
+        refused, not parsed), so the reply replayed here is the gh-config reply -- still read through
+        parseAgentJson. Its trailing prose deliberately contains a closing brace character
+        ('feature-{name}' in the convention note) so that the old greedy-regex safeParseJSON
+        implementation fails (greedy match spans across the '}' in the trailing text) and falls back to
+        no repo. parseAgentJson brace-matching correctly extracts the first complete balanced block,
+        producing gh_repo="owner/leafcutter-test", which the PR-open dispatch embeds in its EMU
+        fallback instruction.
 
         The test asserts that:
-        1. The workflow dispatches at least two agents (run continues).
-        2. A subsequent call's prompt contains the expected worktree root
-           "/tmp/wt-leafcutter-test" — confirming the reply was correctly parsed
-           rather than falling through to the "unknown" fallback.
+        1. The workflow dispatches well past the prose-wrapped reply (run continues).
+        2. A subsequent call's prompt contains the expected repo -- confirming the reply was correctly
+           parsed rather than falling through to the no-repo fallback.
         """
         if not _FINALIZE_FEATURE_JS.exists():
             self.fail(f"finalize-feature.js not found at {_FINALIZE_FEATURE_JS}")
 
-        # A prose-wrapped reply whose trailing text contains '}' so that a greedy
-        # /\{[\s\S]*\}/ regex captures too much and produces invalid JSON (the greedy
-        # match extends from the opening '{' all the way to the last '}' in
-        # 'feature-{name}'), whereas brace-matching stops at the correct closing brace.
-        expected_worktree_root = "/tmp/wt-leafcutter-test"
+        expected_repo = "owner/leafcutter-test"
         prose_reply_with_brace_in_trailing_text = (
-            "Pre-flight completed:\n"
-            f'{{"branch": "conventions-fix", "worktree_root": "{expected_worktree_root}", '
-            '"found": true, "status": "ok"}\n'
+            "Config read:\n"
+            f'{{"gh_target_account": null, "gh_repo": "{expected_repo}"}}\n'
             "Note: branch convention is `feature-{name}` (see docs/conventions.md)."
         )
 
-        label_responses = {"pre-flight": prose_reply_with_brace_in_trailing_text}
-        result = run_workflow_under_e2(
-            _FINALIZE_FEATURE_JS,
-            timeout=20,
-            label_responses=label_responses,
-        )
+        label_responses = {"workspace-ensure": workspace_ensure_reply("/tmp/wt-leafcutter-test"),
+                           "gh-config": prose_reply_with_brace_in_trailing_text,
+                           **finalize_baseline_responses(), "step-1-pr-probe": {"found": False}}
+        result = run_workflow_under_e2(_FINALIZE_FEATURE_JS, timeout=20, label_responses=label_responses)
         self.assertFalse(
             result.error,
             f"Harness returned an error running finalize-feature.js: {result.error!r}",
         )
-        # Expect at least 2 dispatches: pre-flight + one subsequent call (gh-config).
-        self.assertGreaterEqual(
-            result.dispatch_count,
-            2,
-            (
-                f"finalize-feature.js dispatched only {result.dispatch_count} agent(s) "
-                "with a prose-wrapped pre-flight reply — expected at least 2. "
-                f"stderr: {result.stderr!r}"
-            ),
-        )
-        # The gh-config call (the call after pre-flight) embeds WORKTREE_ROOT in its
-        # prompt: `cat "${WORKTREE_ROOT}/settings.json"`. After correct prose parsing,
-        # WORKTREE_ROOT must equal the expected value from the JSON block.
-        # If safeParseJSON (greedy regex) was used, WORKTREE_ROOT would be "unknown"
-        # because the greedy regex fails on the trailing '}' and safeParseJSON returns
-        # {malformed: true}, causing the fallback {worktree_root: "unknown"} to apply.
-        settings_prompts = [
-            str(call.prompt)
-            for call in result.agent_calls
-            if "settings.json" in str(call.prompt)
-        ]
-        self.assertGreater(
-            len(settings_prompts),
-            0,
-            "Expected at least one agent call with 'settings.json' in its prompt "
-            "(the gh-config call embeds WORKTREE_ROOT); none found. "
-            f"All prompts: {[str(c.prompt)[:120] for c in result.agent_calls]!r}",
-        )
-        self.assertIn(
-            expected_worktree_root,
-            settings_prompts[0],
-            f"Expected WORKTREE_ROOT '{expected_worktree_root}' (from correctly parsed JSON) "
-            "in the gh-config prompt, but it was absent — likely 'unknown' (the fallback "
-            "from greedy-regex safeParseJSON failure) appeared instead. "
-            f"Actual prompt (first 200 chars): {settings_prompts[0][:200]!r}",
-        )
+        open_pr_prompts = [str(c.prompt) for c in result.agent_calls if c.label == "step-1-open-pr"]
+        self.assertGreater(len(open_pr_prompts), 0, f"run did not reach step-1-open-pr; labels: {[c.label for c in result.agent_calls]!r}")
+        self.assertIn(expected_repo, open_pr_prompts[0], f"GH_REPO '{expected_repo}' absent: {open_pr_prompts[0][:200]!r}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,496 @@
+{
+  "scenario_id": "RS-03",
+  "request": {
+    "schema_version": "1.0",
+    "goal": "For KM-500c-2, what must tests demonstrate?",
+    "caller": {
+      "schema_version": "1.0",
+      "id": "scenario-evaluator",
+      "kind": "host"
+    },
+    "scope": {
+      "schema_version": "1.0",
+      "workspace_id": "leafcutter",
+      "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\knowledge-retrieval-v01",
+      "revision": {
+        "schema_version": "1.0",
+        "commit": "59269e024e4d0290b68b03d0d382745966e67e29",
+        "dirty": false,
+        "tree_fingerprint": null
+      },
+      "component_ids": [],
+      "read_roots": [
+        "docs"
+      ],
+      "source_ids": [],
+      "technologies": []
+    },
+    "requested_output_schema": "leafcutter.evidence_bundle.v1",
+    "input_payload_schema": "leafcutter.research_request.v1",
+    "input_payload": {
+      "question": "For KM-500c-2, what must tests demonstrate?"
+    },
+    "initial_evidence": [],
+    "constraints": [],
+    "permissions": [
+      "read_repo"
+    ]
+  },
+  "entry_point": "KernelService.start_run via actual build_environment",
+  "actors": {
+    "Jev": "real TypeSafe; configured jev-latest; resolved jev-1.13.0",
+    "host": "not substituted; waits retained",
+    "human": "not substituted; waits retained",
+    "tracer": "local RecordingTracer; no remote export"
+  },
+  "actual_response": {
+    "schema_version": "1.0",
+    "run_id": "run-3dba3860a478418d",
+    "root_task_id": "task-9469faa00db446af",
+    "state_revision": 2,
+    "status": "waiting_human",
+    "output": null,
+    "report_ref": null,
+    "decision_ids": [],
+    "evidence_ids": [],
+    "open_questions": [],
+    "pending_interaction": {
+      "schema_version": "1.0",
+      "id": "int-e053bb33b433473e",
+      "created_at": "2026-10-02T12:21:10.707757Z",
+      "updated_at": "2026-10-02T12:21:10.707757Z",
+      "created_seq": 0,
+      "work_item_id": "work-9ae6596faff94f1b",
+      "decision_id": null,
+      "subject_ids": [],
+      "question": "I am not sure how to handle this request: \"For KM-500c-2, what must tests demonstrate?\". Which of these fits best? You can also say it in your own words.",
+      "relevant_evidence_ids": [],
+      "choices": [
+        {
+          "schema_version": "1.0",
+          "id": "research",
+          "label": "Gathers inspectable evidence for a question: selects needed evidence categories, retrieves from available sources, an...",
+          "consequences": ""
+        }
+      ],
+      "free_text_allowed": true,
+      "structured_allowed": false,
+      "why_research_cannot_settle": "I could not tell which of my abilities fits your request.",
+      "required_actor_kind": "human",
+      "state_revision": 2
+    },
+    "limitations": [],
+    "gaps": [],
+    "usage_summary": {
+      "schema_version": "1.0",
+      "jev_calls": 1,
+      "host_operations": 0,
+      "input_tokens": 556,
+      "output_tokens": 61,
+      "cost_usd_known": 2.3352e-05,
+      "cost_unknown_calls": 0,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "jev",
+          "model_id": "jev-1.13.0",
+          "input_tokens": 556,
+          "output_tokens": 61,
+          "duration_ms": 321,
+          "cost_usd": 2.3352e-05,
+          "cost_provenance": "estimated",
+          "calls": 1
+        }
+      ]
+    },
+    "trace_refs": {
+      "schema_version": "1.0",
+      "trace_id": "fdb64b5aec2674292f5d53d0b9dda6cc",
+      "trace_url": null,
+      "observability": "ok"
+    },
+    "errors": []
+  },
+  "seconds": 0.46,
+  "trace": [
+    {
+      "index": 0,
+      "kind": "segment",
+      "name": "leafcutter.run.start",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-3dba3860a478418d",
+        "root_task_id": "pending",
+        "task_id": null,
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {},
+      "closed": false
+    },
+    {
+      "index": 1,
+      "kind": "span",
+      "name": "kernel.intake",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-3dba3860a478418d",
+        "root_task_id": null,
+        "task_id": null,
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 2,
+      "kind": "span",
+      "name": "kernel.schedule",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-3dba3860a478418d",
+        "root_task_id": "task-9469faa00db446af",
+        "task_id": "task-9469faa00db446af",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 3,
+      "kind": "span",
+      "name": "kernel.route",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-3dba3860a478418d",
+        "root_task_id": "task-9469faa00db446af",
+        "task_id": "task-9469faa00db446af",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 4,
+      "kind": "generation",
+      "name": "jev.kernel.route",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-3dba3860a478418d",
+        "root_task_id": "task-9469faa00db446af",
+        "task_id": "task-9469faa00db446af",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": 3,
+      "data": {
+        "model": "jev-1.13.0",
+        "input": {
+          "questions": [
+            {
+              "id": "route.work-f5b4627112b545b5",
+              "kind": "choice",
+              "template_id": "kernel.route",
+              "template_version": "1"
+            }
+          ],
+          "state_chars": 306,
+          "input_fingerprint": "f996c2b5c23096b9c4f52185db48edae4836791906ccb9bf66d750f33034553c"
+        },
+        "output": {
+          "answers": {
+            "route.work-f5b4627112b545b5": {
+              "schema_version": "1.0",
+              "kind": "choice",
+              "question_id": "route.work-f5b4627112b545b5",
+              "choice": "research",
+              "probabilities": {
+                "research": 0.58,
+                "__NEEDS_CONTEXT__": 0.38,
+                "__NONE__": 0.04
+              },
+              "confidence": 0.36
+            }
+          }
+        },
+        "usage": {
+          "schema_version": "1.0",
+          "provider": "jev",
+          "model_id": "jev-1.13.0",
+          "input_tokens": 556,
+          "output_tokens": 61,
+          "duration_ms": 321,
+          "cost_usd": 2.3352e-05,
+          "cost_provenance": "estimated",
+          "calls": 1
+        },
+        "metadata": {
+          "purpose": "kernel.route",
+          "adapter_version": "typesafe-classifier/0.0.1a3",
+          "latency_ms": 321,
+          "question_count": 1,
+          "status": "ok",
+          "template_ids": [
+            "kernel.route@1"
+          ],
+          "request_id": "req_01a0fc8fb12a7a0db737920cc1a3bd7d",
+          "calls": 1,
+          "input_fingerprint": "f996c2b5c23096b9c4f52185db48edae4836791906ccb9bf66d750f33034553c",
+          "chunk_index": 0,
+          "chunk_count": 1,
+          "attempts": 1
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 5,
+      "kind": "event",
+      "name": "routing.assessed",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-3dba3860a478418d",
+        "root_task_id": "task-9469faa00db446af",
+        "task_id": "task-9469faa00db446af",
+        "work_item_id": "work-f5b4627112b545b5",
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": 3,
+      "data": {
+        "level": "DEFAULT",
+        "payload": {
+          "outcome": "insufficient_context",
+          "selected": null,
+          "reason_codes": [
+            "low_confidence"
+          ]
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 6,
+      "kind": "span",
+      "name": "kernel.integrate",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-3dba3860a478418d",
+        "root_task_id": "task-9469faa00db446af",
+        "task_id": "task-9469faa00db446af",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 7,
+      "kind": "span",
+      "name": "kernel.schedule",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-3dba3860a478418d",
+        "root_task_id": "task-9469faa00db446af",
+        "task_id": "task-9469faa00db446af",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 8,
+      "kind": "span",
+      "name": "kernel.route",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-3dba3860a478418d",
+        "root_task_id": "task-9469faa00db446af",
+        "task_id": "task-9469faa00db446af",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 9,
+      "kind": "event",
+      "name": "interaction.opened",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-3dba3860a478418d",
+        "root_task_id": "task-9469faa00db446af",
+        "task_id": "task-9469faa00db446af",
+        "work_item_id": "work-9ae6596faff94f1b",
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": "int-e053bb33b433473e",
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "level": "DEFAULT",
+        "payload": {
+          "kind": "human",
+          "state_revision": 1
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 10,
+      "kind": "span",
+      "name": "kernel.integrate",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-3dba3860a478418d",
+        "root_task_id": "task-9469faa00db446af",
+        "task_id": "task-9469faa00db446af",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 11,
+      "kind": "span",
+      "name": "kernel.schedule",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-3dba3860a478418d",
+        "root_task_id": "task-9469faa00db446af",
+        "task_id": "task-9469faa00db446af",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    }
+  ],
+  "independent_verdict": "pending independent review",
+  "provider_calls": 1,
+  "retrieval_reached": false,
+  "retrieved_source_sha": null,
+  "configured_source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+  "checkpoint": {
+    "path": "C:/Users/Hendrik/AppData/Local/Temp/leafcutter-retrieval-scenarios-20261002/live/checkpoints.sqlite",
+    "run_id": "run-3dba3860a478418d",
+    "retained_locally": true
+  },
+  "interpretation": "Initial routing selected research with confidence below acceptance threshold; actual kernel requested an ability choice before any retrieval. No answer or source evidence was returned."
+}

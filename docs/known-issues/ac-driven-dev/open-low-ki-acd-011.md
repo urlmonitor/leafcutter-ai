@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-10-12'
 components:
   - ac_driven_dev
 related_docs:
@@ -22,8 +22,8 @@ related_docs:
 
 - **Severity:** medium
 - **Status:** open
-- **Occurrences:** 2
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-31
+- **Occurrences:** 3
+- **First seen:** 2026-08-25 · **Last seen:** 2026-10-12
 - **2026-08-31 recurrence:** `GE-123`'s title *"Trust that the last check between you and a
   leaked credential is still on"* yielded `EPIC-TrustThatTheLastCheckBetweenYouAndA` — ending
   on a bare article, exactly the shape described below. Two further facts from that run: the
@@ -64,5 +64,27 @@ the rare one.
 **Fix direction.** Drop trailing stopwords after truncating, or require the fallback to
 cut at the last *content*-word boundary rather than the last word boundary. Either way,
 keep the cap — the defect is where the cut lands, not that a cut happens.
+
+**2026-10-12 recurrence, with a correction to the 2026-08-31 note.** `goal_to_epic.py --ids`
+named a 48-ticket epic `EPIC-AnAcMissingFileTargetsOrATestContractIs`. The source title was
+`ACD-1600c-1`'s "An AC missing file targets or a test contract is flagged not
+implementation-ready", which is 68 characters as naive PascalCase. The name ends on the bare
+verb `Is`. (That the name came from a prerequisite rather than the goal is a separate defect,
+`KI-ACD-20261012-ids-mode-names-the-epic-after-its-first-prerequisite`.) The goal's own title
+would have given `EveryPartOfARequirementIsWrittenBy`, which ends on a preposition. Both names
+were reproduced with `_derive_epic_name()` on origin/main `a104d934`. Current line numbers are
+`_truncate_pascal_at` `:251` and `_derive_epic_name` `:302`.
+
+*The correction.* The summariser no longer probes a `claude` binary.
+`_summarise_title_via_llm()` (`epic_naming.py:190`) imports the `anthropic` SDK and calls
+`model="claude-3-5-haiku-latest"` (`:225`). The SDK is not a declared dependency
+(`requirements-dev.txt`), so on a dev or CI machine the import fails and the function returns
+`None` without logging anything. That was verified on Windows with Python 3.14. With the SDK
+installed the call fails as well. Anthropic's model list records Claude Haiku 3.5 as retired on
+2026-02-19, and the current Haiku-tier id is `claude-haiku-4-5`. The function catches that failure,
+logs a WARNING and falls back. So the truncation path described above is not just the common
+path: it is the only path that can produce a name. If the summariser is kept, it needs a live
+model id and a declared dependency. Otherwise it is dead code that hides this entry's defect
+behind an assumption that it rarely runs.
 
 ---

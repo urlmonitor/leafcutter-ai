@@ -338,6 +338,16 @@ amended_by:
   agent: it-po
   date: '2026-09-28'
   reason: "Declared package_surface: true and converted it_requirements to the structured ACS-100i-6 form (config_schema_fragment, reference_file_path, n_location_rule, required_skills, post_write_commands), because the commit-msg hook check-package-surface-declaration (ACS-100i-8) refused the build commit that adds the command-step-runner registry entry. The 12 earlier requirements are kept verbatim under constraints. Criteria, title, depends_on and req_status unchanged."
+- action: contract-widened-by
+  agent: BrainCandy
+  date: '2026-10-14'
+  by_record: BO-4500a-5-viii
+  reason: "BO-4500a-5-viii (approved 2026-10-14) widens the request target this record defines: a request may name a run id (target.run_id) INSTEAD of an acceptance-criterion id, so routes with no single AC (plan-feature, finalize-feature) can reach the command-step-runner. A target naming neither is declined, naming the missing run-or-criterion; a target naming an AC id behaves exactly as today, so the fast lane is unaffected. This record's criteria, title and work_status (done) are unchanged; the widening is built and proved under BO-4500a-5-viii, and this entry exists so a reader of this record learns its contract is no longer AC-only."
+- action: contract-widened-by
+  agent: business-analyst
+  date: '2026-11-16'
+  by_record: BO-2400f-7-v
+  reason: "BO-2400f-7-v (approved at the BA gate 2026-11-16) adds a third reply shape to the two this record defines: the unfinished reply {unfinished: true, command, workspace, step, waited_seconds}, returned when the command is still running once the request's time budget is spent. Like a decline it carries no exit_status; unlike a decline it carries no declined key and means the command may have run. The result and decline shapes stay exactly as defined here, and every clause of this record's criteria is still true: a command that ran and exited non-zero is still a result, and a decline still carries no exit_status. What no longer holds is the closing sentence of this record's notes ('a reply without one is a decline') and the delivers_to wording 'either result or decline': a reply without an exit status is now a decline only when it has the decline shape (BO-2400f-7-vii). work_status stays done because this record's own proof (registry entry, tools, template naming both shapes, non-zero exit as a result, deploy) is not invalidated: the widening adds a shape and removes none. The unfinished reply is built under BO-2400f-7-v and the lane's reading of it is proved under BO-2400f-7-vii."
 superseded_by: null
 covered_by: []
 implemented_by: []

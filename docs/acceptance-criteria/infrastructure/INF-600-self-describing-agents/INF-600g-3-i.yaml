@@ -4,7 +4,7 @@ components:
 title: "Project-local skill referenced in skills_invoked resolves via .claude/skills/ fallback"
 component: infrastructure
 level: L3
-status: active
+status: superseded_by
 req_status: active
 work_status: done
 readiness: approved
@@ -35,7 +35,7 @@ expects_from:
 origin_agent: BrainCandy
 created: 2026-06-05
 amended_by: []
-superseded_by: null
+superseded_by: [AR-400c-1]
 covered_by: []
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-INF-600g-3-i.md

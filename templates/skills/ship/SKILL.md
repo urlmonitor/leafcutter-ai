@@ -7,19 +7,20 @@ allowed-tools: Bash(git *), Bash(cd *), Bash(gh *), Bash(poetry run *), Bash(pyt
 
 # Ship Feature
 
-Merge the current feature worktree back to main and clean up.
+Merge the current feature workspace back to main and clean up. The workspace comes from, and is cleared by, the workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`.
 
 **This skill can ONLY be invoked by the user.** Never call this yourself - the user must explicitly say the feature is ready.
 
 ## Pre-flight Checks
 
-1. **Confirm we're in a worktree** (not the main repo):
+1. **Confirm we're in a workspace** (not the main repo). Ask the workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`:
+   Run ONE exact command with the ABSOLUTE, quoted path to the deployed maker, unchanged, and return its stdout verbatim. The path is `<project root>/.leafcutter/scripts/worktree.py`, with the project root from `git rev-parse --show-toplevel`. Never a cwd-relative path.
    ```
-   git worktree list
+   python "<project root>/.leafcutter/scripts/worktree.py" locate --kind feature --slug "<name>"
    ```
-   The current directory should be a worktree, not the main working tree. If we're in the main repo, abort with a clear message.
+   The `workspace_path` of the ok answer must be the current directory. If we're in the main repo, abort with a clear message.
 
-2. **Get the current branch name** and the main repo path from `git worktree list`.
+2. **Get the current branch name** from `git branch --show-current`; the main repo path is the project the workspace was made from (the answer's `repo_root`).
 
 3. **Run tests** to make sure everything passes:
    ```
@@ -47,14 +48,14 @@ Merge the current feature worktree back to main and clean up.
    - `git merge --no-ff feature/<name>` (preserve merge commit)
    - `git push origin main`
 
-8. **Clean up the worktree**:
-   - Switch working directory back to the main repo
-   - `git worktree remove <worktree-path>`
-   - `git branch -d feature/<name>` (only if merged)
+8. **Clear the workspace** with the workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`, never by hand:
+   - Switch working directory back to the main repo, then recompute the project root there: `git rev-parse --show-toplevel` (ONE exact command, run unchanged, stdout verbatim)
+   - `python "<project root>/.leafcutter/scripts/worktree.py" remove --path "<workspace-path>"` (ONE exact command: the absolute, quoted maker path built from the project root just recomputed, run unchanged, stdout verbatim) (if it refuses with `UNSENT_WORK`, stop and report; see `docs/how-to/clear-a-workspace.md`)
+   - `git branch -d feature/<name>` in the main repo (only if merged)
 
-9. **Confirm** to the user:
+9. **Confirm** to the user (workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`):
    - What was merged
-   - That the worktree is removed
+   - That the workspace is cleared
    - That we're back in the main repo
 
 ## Abort

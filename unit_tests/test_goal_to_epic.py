@@ -180,5 +180,123 @@ class TestMainCallsWorktreeRootWhenPathsMissing(unittest.TestCase):
         self.assertEqual(result, 0)
 
 
+# ---------------------------------------------------------------------------
+# --ids --dry-run (ACD-1200a-3-iii, BO-2600a-5): real subprocess, temp store
+# ---------------------------------------------------------------------------
+
+_SCRIPT = _SCRIPTS_DIR / "goal_to_epic.py"
+_DRY_PREFIX = "Dry-run: would create"
+
+
+def _write_ac(root: Path, ac_id: str, depends_on: list[str] | None = None) -> None:
+    import yaml
+
+    data = {
+        "id": ac_id, "title": f"Test AC {ac_id}", "component": "build-orchestration",
+        "level": "L2", "status": "active", "work_status": "todo",
+        "readiness": "approved", "priority": "medium",
+        "estimated_complexity": "S", "depends_on": depends_on or [],
+        "covered_by": [], "amended_by": [], "implemented_by": [],
+        "superseded_by": None,
+    }
+    d = root / "test-component"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / f"{ac_id}.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
+
+
+class TestIdsModeHonoursDryRun(unittest.TestCase):
+    """goal_to_epic.py --ids ... --dry-run must plan and print, never write."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        base = Path(self._tmp.name)
+        self.store = base / "docs" / "acceptance-criteria"
+        self.inbox = base / "tickets" / "00_inbox"
+        self.inbox.mkdir(parents=True)
+        self.store.mkdir(parents=True)
+
+    def _run(self, ids: str, *extra: str):
+        import subprocess
+
+        return subprocess.run(
+            [sys.executable, str(_SCRIPT), "--ids", ids, "--store-root",
+             str(self.store), "--inbox-dir", str(self.inbox), *extra],
+            capture_output=True, text=True, encoding="utf-8",
+        )
+
+    def _inbox_files(self) -> set[str]:
+        return {str(p.relative_to(self.inbox)) for p in self.inbox.rglob("*")}
+
+    def _store_bytes(self) -> dict[str, bytes]:
+        return {str(p): p.read_bytes() for p in sorted(self.store.rglob("*.yaml"))}
+
+    def test_ids_dry_run_writes_nothing_under_inbox(self) -> None:
+        # covers: ACD-1200a-3-iii
+        # covers: BO-2600a-5
+        # angle: criterion
+        _write_ac(self.store, "DRY-A")
+        _write_ac(self.store, "DRY-B")
+        before = self._inbox_files()
+        res = self._run("DRY-A,DRY-B", "--dry-run")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(self._inbox_files(), before, res.stdout)
+
+    def test_ids_dry_run_leaves_ac_yamls_byte_identical(self) -> None:
+        # covers: ACD-1200a-3-iii
+        # covers: BO-2600a-5
+        # angle: real_artifact
+        _write_ac(self.store, "DRY-A")
+        _write_ac(self.store, "DRY-B")
+        before = self._store_bytes()
+        res = self._run("DRY-A,DRY-B", "--dry-run")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(self._store_bytes(), before, res.stdout)
+
+    def test_ids_dry_run_name_equals_real_run_name(self) -> None:
+        # covers: ACD-1200a-3-iii
+        # angle: criterion
+        _write_ac(self.store, "DRY-A")
+        _write_ac(self.store, "DRY-B")
+        dry = self._run("DRY-A,DRY-B", "--dry-run")
+        self.assertEqual(dry.returncode, 0, dry.stderr)
+        last = [ln for ln in dry.stdout.splitlines() if ln.strip()][-1]
+        self.assertTrue(last.startswith(_DRY_PREFIX), dry.stdout)
+        dry_path = last[len(_DRY_PREFIX):].strip()
+        real = self._run("DRY-A,DRY-B")
+        self.assertEqual(real.returncode, 0, real.stderr)
+        real_path = [ln for ln in real.stdout.splitlines() if ln.strip()][-1].strip()
+        self.assertEqual(Path(dry_path).name, Path(real_path).name)
+        self.assertEqual(dry_path, real_path)
+
+    def test_ids_dry_run_prints_ids_in_build_order(self) -> None:
+        # covers: ACD-1200a-3-iii
+        # covers: BO-2600a-5
+        # angle: boundary
+        _write_ac(self.store, "DRY-A")
+        _write_ac(self.store, "DRY-B", depends_on=["DRY-A"])
+        res = self._run("DRY-B,DRY-A", "--dry-run")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        lines = [ln for ln in res.stdout.splitlines() if ln.strip()]
+        self.assertTrue(lines[-1].startswith(_DRY_PREFIX), res.stdout)
+        body = "\n".join(lines[:-1])
+        self.assertIn("DRY-A", body)
+        self.assertIn("DRY-B", body)
+        self.assertLess(body.index("DRY-A"), body.index("DRY-B"), res.stdout)
+
+    def test_ids_dry_run_cycle_exits_1_without_writes(self) -> None:
+        # covers: ACD-1200a-3-iii
+        # covers: BO-2600a-5
+        # angle: failure
+        _write_ac(self.store, "DRY-A", depends_on=["DRY-B"])
+        _write_ac(self.store, "DRY-B", depends_on=["DRY-A"])
+        inbox_before, store_before = self._inbox_files(), self._store_bytes()
+        res = self._run("DRY-A,DRY-B", "--dry-run")
+        self.assertEqual(res.returncode, 1, res.stdout + res.stderr)
+        self.assertIn("ERROR:", res.stderr)
+        self.assertEqual(self._inbox_files(), inbox_before)
+        self.assertEqual(self._store_bytes(), store_before)
+
+
 if __name__ == "__main__":
     unittest.main()

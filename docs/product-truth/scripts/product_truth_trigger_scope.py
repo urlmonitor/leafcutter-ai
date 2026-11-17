@@ -5,9 +5,9 @@ GOAL: The record checker's own resolvable-pointer trigger scope (ADR-049
     automatic-check hook entry (`check-product-truth-validate`) must derive
     its `files:` activation regex from, instead of a hand-restated literal.
 BUSINESS CONTEXT: The checker's resolvable-pointer surface is currently
-    exactly one kind (an acceptance-criterion id;
-    product_truth_checks.is_resolvable_pointer_target()). ADR-049 requires
-    that whoever widens that predicate to recognise a new pointer kind adds
+    acceptance-criterion ids plus bounded JSON schemas, runtime models and
+    example receipts. The AC pointer and JSON contract checkers share this
+    automatic gate. ADR-049 requires that widening the resolvable surface adds
     that kind's repository root here, in the SAME commit, so the hook's
     trigger scope can never silently fall behind what the checker actually
     resolves (GE-120: green must mean checked). A tiny, standalone module
@@ -27,16 +27,28 @@ from __future__ import annotations
 
 #: One anchored regex alternative per repository root the record checker's
 #: RESOLVABLE pointer surface can name -- the record's own root, plus one
-#: root per pointer kind product_truth_checks.is_resolvable_pointer_target()
-#: recognises (today: an acceptance-criterion id, rooted at
-#: "docs/acceptance-criteria/"). Widening that predicate to recognise a new
+#: root per pointer kind the AC pointer and JSON contract checkers resolve.
+#: Schema/example roots and the explicit model import surface are bounded
+#: by product_truth_contract_sources.py. Widening this surface for a new
 #: kind MUST add that kind's root here in the SAME commit (ADR-049
 #: sub-decision 3) -- unless the new kind's target set cannot be expressed
 #: as a bounded set of repository roots, in which case a new ADR is required
 #: instead of a catch-all regex (that `unless` clause).
 RESOLVABLE_POINTER_TRIGGER_PATTERNS: tuple[str, ...] = (
     r"^docs/product-truth/",
+    r"^docs/analysis/",
     r"^docs/acceptance-criteria/.*\.yaml$",
+    r"^kernel/contracts/",
+    r"^kernel/memory/",
+    r"^kernel/providers/base\.py$",
+    r"^knowledge/",
+    r"^kernel/schemas/",
+    r"^kernel/persistence/base\.py$",
+    r"^integrations/retrieval_needs_llm\.py$",
+    r"^config/",
+    r"^reports/",
+    r"^templates/agents/flow-author\.md$",
+    r"^docs/how-to/(authoring-product-truth-artifacts|product-truth-schema-reference)\.md$",
 )
 
 

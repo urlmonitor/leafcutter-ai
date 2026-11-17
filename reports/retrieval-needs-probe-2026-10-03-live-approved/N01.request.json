@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "original_question": "For KM-500c-2, what must tests demonstrate?",
+  "context": [],
+  "known_ids": [],
+  "source_scope": {
+    "repository": "leafcutter",
+    "source_revision": "planning-probe-only",
+    "read_roots": [
+      "docs",
+      "kernel",
+      "knowledge",
+      "integrations"
+    ],
+    "allow_retrieval": false
+  },
+  "catalog": {
+    "schema_version": "1.0",
+    "entity_types": {
+      "ac": "Acceptance criterion or requirement",
+      "source_file": "Implementation source code",
+      "test": "Test or fixture source",
+      "adr": "Architecture decision record",
+      "schema": "Schema or versioned input/output contract",
+      "report": "Actual execution or publication report",
+      "component": "Product or code component"
+    },
+    "target_ids": {},
+    "required_fields": {
+      "criteria": "Acceptance criteria, exact required behavior or canonical clauses",
+      "test_spec": "Test requirements and must-catch wrong implementations",
+      "work_status": "Implementation progress such as todo, in progress, done; distinct from lifecycle",
+      "status": "Requirement lifecycle status such as active or deprecated; never implementation progress",
+      "level": "Requirement hierarchy level, e.g. L2 or L3",
+      "parent": "Declared parent requirement identity",
+      "covered_by": "Declared test links, not proof tests executed",
+      "content": "Relevant source code or document content",
+      "provenance": "Canonical identity, source revision, path and field/line locators",
+      "mapping": "Inspected field transformations or producer/consumer handoffs",
+      "compatibility": "Contract compatibility obligations and version constraints"
+    },
+    "document_types": {
+      "ac_yaml": "Canonical acceptance criterion definition",
+      "source_code": "Implementation source code",
+      "test_source": "Test and fixture code",
+      "adr": "Architecture decision record",
+      "schema": "Machine-readable schema or versioned contract definition",
+      "execution_report": "Actual test execution or publication receipt; not declarations"
+    },
+    "relationships": {
+      "parent_direct": "Immediate parent only, one hierarchy hop",
+      "children_direct": "Direct children only, one hierarchy hop",
+      "all_descendants": "Every descendant under the target, including intermediate levels, subject to later explicit completeness checks; execution depth caps do not redefine this need",
+      "incoming_dependencies_direct": "Requirements that directly depend on the target, incoming dependency edges, one hop",
+      "linked_tests": "Declared tests linked to the target; no execution proof implied"
+    }
+  }
+}

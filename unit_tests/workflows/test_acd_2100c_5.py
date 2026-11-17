@@ -114,14 +114,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-# unit_tests/ must be on sys.path so _workflow_engine_harness is importable
-# from this sub-package (unit_tests/workflows/), mirroring every other file
-# in this directory.
 _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from _plan_feature_harness_defaults import approval_step_replies  # noqa: E402
+from _workflow_engine_harness import fill_workspace_answer, run_workflow_under_e2  # noqa: E402
+from unit_tests.workflows._acd_2100c_support import _cancel_answer  # noqa: E402
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
@@ -164,7 +163,7 @@ _MUTATING_LABELS = (
     "commit-stage-output",
     "commit-stage-output-product-truth",
     "commit-flow-reconciliation",
-    "apply-approval",
+    "approval-apply",
     "deliver-authoring-branch",
 )
 
@@ -198,35 +197,13 @@ def _run_mid_gate(label_overrides=None, resume_answer=None, run_id="run"):
     )
 
 
-def _cancel_answer(gate_id, channel):
-    answer = {"gate_id": gate_id, "action": "cancel"}
-    if channel is not None:
-        answer["channel"] = channel
-    return answer
-
-
-# ---------------------------------------------------------------------------
-# Forced-null-gate harness for the "missing gate result" test.
-#
-# resolveGate() itself, unmodified, structurally cannot return a falsy value
-# today (see this module's docstring). This helper produces a byte-identical
-# TEMP COPY of the real, on-disk plan-feature.js with ONE surgical insertion
-# at the top of resolveGate()'s body: for one named gate_id, it returns
-# `null` immediately -- before any of resolveGate()'s own real logic runs.
-# Every call site downstream of that gate_id is left COMPLETELY unmodified,
-# so the test drives the REAL, unmodified surrounding code (the actual
-# `if (!_xGateResult) {...}` guards, or final-gate's already-removed guard)
-# through the real workflow -- never a hand-derived stand-in for the
-# fallback expression itself.
-# ---------------------------------------------------------------------------
-
 _RESOLVE_GATE_SIGNATURE = (
     "async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId) {"
 )
 
 
 def _write_forced_null_gate_script(gate_id: str) -> Path:
-    source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
+    source = fill_workspace_answer(_PLAN_FEATURE_JS.read_text(encoding="utf-8"))
     if _RESOLVE_GATE_SIGNATURE not in source:
         raise AssertionError(
             "resolveGate()'s signature in plan-feature.js changed -- update "
@@ -515,15 +492,17 @@ class TestWorkSurvivesAMissingGateResultOnTheRealExitPath(unittest.TestCase):
             result = run_workflow_under_e2(
                 patched_script,
                 timeout=_TIMEOUT,
-                label_responses={},
+                label_responses=approval_step_replies(),  # an approve would reach approval-apply
                 args=dict(_PERMITTED, run_id="acd2100c5-forced-null-final-gate"),
             )
         finally:
             patched_script.unlink(missing_ok=True)
 
-        # No mutating/destructive dispatch may fire regardless of how the
-        # run ultimately reports its own outcome.
-        _assert_no_mutating_dispatch(self, result, "forced-null-final-gate")
+        # itpo's own auto-commit (ACD-2500c-2) precedes the design stage; nothing mutating may follow.
+        labels = _labels(result)
+        commits = [i for i, label in enumerate(labels) if label == "commit-stage-output"]
+        self.assertTrue(len(commits) <= 1 and all(i < labels.index("design-prepass") for i in commits), labels)
+        self.assertFalse(set(_MUTATING_LABELS[1:]) & set(labels), labels)
 
         terminal = result.result
         self.assertIsInstance(

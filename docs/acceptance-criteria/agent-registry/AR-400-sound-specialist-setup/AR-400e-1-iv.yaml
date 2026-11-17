@@ -1,0 +1,104 @@
+id: AR-400e-1-iv
+title: "The one-time abilities migration helper is retired, and nothing depends on the retired list"
+component: agent-registry
+components:
+  - agent_registry
+  - skill_registry
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the package's real tree after AR-400e-2,
+  When the build runs, the commit-time step that regenerates the derived
+    registry fields runs, and the package's test suite runs,
+  Then the abilities migration helper (scripts/migrate_agent_abilities.py) no
+    longer exists in the package and is not deployed by the build,
+    And no script, hook, test or test-support module in the package imports
+      it, invokes it, or names it as a command to run,
+    And no script, hook or test reads or writes the older derived abilities
+      field (`skills_used`) of the central registry, other than the registry
+      validator's refusal of it (AR-400e-2-i) and fixtures that record a
+      pre-change registry as data,
+    And every test that previously reached the registry's abilities through
+      the migration helper reaches them through the commit-time regeneration
+      step instead, and passes.
+depends_on:
+  - AR-400e-1
+  - AR-400e-2
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "The registry the retired helper used to write."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The AR-300 consolidation the one-time migration served; it has run and its output is the committed declarations."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "DELETE scripts/migrate_agent_abilities.py (232 content lines, 2026-10-12). Its shared regeneration rule already lives in templates/scripts/commit_guardian/_agent_ability_sync.py; update that module's docstring, which names the migration as one of its two writers."
+  - "DEPENDENTS TO RETARGET IN THE SAME CHANGE (enumerated 2026-10-12): unit_tests/prompt_assembly/_ar_300c_support.py (MIGRATION_SCRIPT, run_migration, migrate_or_fail -- the AR300C_MIGRATION_SCRIPT env override goes with it) and the tests that call it: test_ar_300c_1_frontmatter_declaration.py, test_ar_300c_2_consolidation.py, test_ar_300c_2_i_single_field_agents.py, test_ar_300c_3_derived_copy_comparison.py, test_ar_300c_3_i_unresolvable_ability.py, test_ar_300c_3_ii_registry_transform.py. These cover DONE AR-300 records; retarget them at the transform hook / _agent_ability_sync, never delete or xfail them (CI runs AC_ENFORCE_STRICT=1)."
+  - "scripts/migrate_agent_spawn_allowlist.py names migrate_agent_abilities in its docstring (~36); check it does not import it, and update the text."
+  - "THE 7 AR-300 TEST MODULES ARE RETARGETED AT THE TRANSFORM HOOK (orchestrator call, 2026-10-12): _ar_300c_support.py plus the six test modules above go through transform_agent_registry.py / _agent_ability_sync.regenerate_record instead of the migration CLI. None is deleted, skipped or xfailed, and each keeps proving the AR-300 promise it covered."
+  - "Checked 2026-10-12: no done AR-300 criterion text names migrate_agent_abilities. AR-300c-1, AR-300c-2 and AR-300c-2-i list it in implemented_by; each now carries an amended_by note (no criteria rewrite), and their implemented_by is re-pointed when this record is implemented."
+  - "The 'no skills_used reader' clause is verified by an AST/import-level scan of scripts/ and templates/scripts/ for registry field access, plus running the readers -- the scan may use text search because the assertion is about the absence of a field name in code, and every finding is confirmed against the running readers of AR-400e-1."
+test_spec:
+  - name: test_migration_helper_is_absent_from_package_and_deployed_layout
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "scripts/migrate_agent_abilities.py does not exist in the checked-out package, and the shared reference build's deployed scripts contain no migrate_agent_abilities.py."
+  - name: test_nothing_imports_or_invokes_the_migration_helper
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "No .py, .js, .json or .md under scripts/, templates/, unit_tests/ or .github/ imports migrate_agent_abilities or names it as a command (decision-history comments and AC records excluded)."
+  - name: test_retargeted_ar300_tests_pass_without_the_helper
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Run the retargeted AR-300c test modules in a subprocess with scripts/migrate_agent_abilities.py absent: they collect and pass; restoring a call to the deleted helper in one of them makes that module fail."
+    must_catch:
+      - "a retargeted test still shells out to the deleted script and is skipped instead of failing"
+test_rationale: >-
+  Retiring a helper is only done when its dependents still prove what they
+  proved; the third descriptor runs those dependents without the helper, which
+  is the real risk of this change.
+delivers_to: null
+expects_from:
+  ac_id: AR-400e-2
+  contract: "The commit-time regeneration (transform-agent-registry / _agent_ability_sync.regenerate_record) writing skills_invoked only -- the path the retargeted tests use."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400e-1.yaml
+amended_by:
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "title and criteria REPLACED. Was: 'The abilities migration helper neither reads nor writes the retired list' -- the helper, run over a fixture whose specialist carried only skills_used, builds its proposal from skills_invoked and the definition, reports the ignored ids, writes no skills_used, and proposes no change on the real tree. Now: the helper is retired (scripts/migrate_agent_abilities.py deleted and not deployed), nothing imports or invokes it, nothing but the validator's refusal reads skills_used, and the tests that used it reach the registry through the commit-time regeneration and pass. WHY: user decision 7 (BrainCandy, 2026-10-12, BA-stage Q7): retire scripts/migrate_agent_abilities.py (a one-time AR-300 migration that has already run) and its tests' dependence on skills_used; AR-400e-1-iv changes from 'ignores and says so' to 'is removed'. depends_on gains AR-400e-2 (the retargeted tests need the skills_invoked-only regeneration)."
+superseded_by: null
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400e_1_iv_helper_retired.py
+implemented_by:
+  - unit_tests/prompt_assembly/_ar_300c_support.py
+notes: |
+  USER DECISION 7 (BrainCandy, 2026-10-12), BINDING: the migration helper is
+  retired, not taught to ignore the retired field. The BA's ignore-and-report
+  option and its "an adopter's stale registry does not block migration"
+  rationale are withdrawn: the migration was a one-time AR-300 step for this
+  package's own registry, and it has run.
+
+  The criteria are about the package after the change; the population of
+  dependents was measured on 2026-10-12 and is recorded in it_requirements,
+  not as a constant in the test.

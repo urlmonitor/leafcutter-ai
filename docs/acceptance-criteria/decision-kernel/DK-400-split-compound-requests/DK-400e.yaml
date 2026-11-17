@@ -1,0 +1,94 @@
+id: DK-400e
+title: "Parts are worked through in order, each building on the last"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Approved parts run one at a time; earlier answers inform later ones.
+
+  Approved parts are settled one at a time within the same piece of work, in
+  the order their dependencies require, and each decided part gets its own
+  decision record linked back to the request it came from. An earlier part's
+  answer reaches the later parts as evidence that is still checked for fit,
+  never taken as given.
+depends_on:
+  - DK-400
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: specified-by
+    status: exists
+    relevance: "Flow v5: step split-run and branch split-part-unsettled. A decision part goes through the flow's steps from precedent to resolve; a research part runs as a research child."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Mock v5 (v6 in preparation) has invariants on settled_order (dependency order, no gaps), run_id (children of the run that split), decision_id with Decision.split_part, research findings with result_ref, and precedents_considered naming every earlier decided part. A part that ran but did not settle has outcome not_settled with stop_reason; its dependants are not_run with waited_for; the split ends ended_partial and the run partial (record dcp-reusable-criteria-partial)."
+  - path: docs/product-truth/flows/leafcutter/decision-retrieval.flow.json
+    relationship: related
+    status: exists
+    relevance: "How an earlier decision is judged for fit as precedent; an earlier part's result enters the same way."
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "Jev judges whether an earlier part's result applies; it does not decide the later part on its own."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-400e-1
+  - DK-400e-2
+  - DK-400e-3
+  - DK-400e-4
+  - DK-400e-5
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
+notes: |
+  FLOW NODES: split-run (step); split-part-unsettled (branch).
+
+  SETTLED: children are work items of the run that split. They run one after
+  another (no parallel children), and a part starts only after every part it
+  depends on has settled. Each decided part stages its own decision record,
+  whose question is the part's text (as edited, if the person reworded it). A
+  research part returns findings, not a record. Every earlier decided part is
+  named as precedent for the later ones, and its applicability is still judged,
+  never assumed.
+
+  This L1 carries the second half of TICKET-20261001-KernelCompoundGoalSplit:
+  one decision record per sub-decision, linked to the goal. The link is
+  Decision.split_part, a derived reverse view rather than a field of the record
+  file, so published decision records keep their shape.
+
+  CARRY TO L2 / IT PO:
+    - A PART THAT DOES NOT SETTLE: in the flow since v5. A part may fail to
+      settle: its own decision is blocked, hits a capability gap or a budget
+      stop, or is cancelled. DECIDED on 2026-10-05 (DK-400 "DECISIONS AT THE PO
+      GATE", Q5): the parts that depend on it are marked not run, each naming
+      the part it waited for; independent parts carry on; and the report says
+      which is which. Flow v5's branch split-part-unsettled and mock v5 carry
+      this: outcome not_settled with stop_reason, waited_for on dependants,
+      split state ended_partial and run_status partial, never completed.
+    - FINAL GATE (DK-400 FINAL GATE): the approved IT PO defaults apply here.
+      Each part has its own budget, there are at most 5 parts per run, and a
+      decision_question part runs as a decision child only.
+    - Each child decision still goes through its own approval steps (options,
+      criteria, the final choice). A split multiplies the questions a person is
+      asked, which matters for the bounded-count setting the IT PO owns.
+    - settled_by_human (a person answers a part directly) exists in the mock
+      data only for the hand split. DECIDED on 2026-10-05 (DK-400 "DECISIONS AT
+      THE PO GATE", Q4): hand splits are history only, so the kernel path does
+      not offer settled_by_human (see DK-400f).
+
+  DOCS: the kernel, its child work items and the person's gates interact in
+  order (sequence-diagram).

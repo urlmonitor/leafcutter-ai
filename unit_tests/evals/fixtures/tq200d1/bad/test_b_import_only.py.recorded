@@ -1,0 +1,7 @@
+# Recorded BAD output: test B fails only because a name cannot be imported.
+from refresh_config import a_helper_that_does_not_exist
+
+
+def test_refresh_config_regression():
+    # covers: TQ-9304
+    assert a_helper_that_does_not_exist() == "refresh"

@@ -1,0 +1,94 @@
+id: BO-4500a-2-iii
+title: "A message line that starts with # or ends in blank lines is kept, not tidied away"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-2.yaml"
+criteria: |
+  Given a message file whose body contains the line "# covers: BO-4500a-2" and the line
+    "#1043 is the fix this follows",
+  When the shared commit step commits,
+  Then both lines appear in the recorded message, unchanged and in place.
+
+  Given a message file whose body contains a line indented with four spaces and a line with
+    trailing spaces,
+  When the step commits,
+  Then the indented line keeps its four leading spaces,
+  And the only differences between the file and the recorded message are trailing whitespace
+    at line ends and blank lines at the very end of the message, which the version-control
+    system always removes.
+depends_on: [BO-4500a-2]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20260914-commit-agent-rewrites-co-author-trailer.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+package_surface: false
+it_requirements:
+  - >-
+    The message must be recorded with message cleanup disabled (the version-control system's
+    verbatim mode or equivalent), so "#" lines, indentation and blank lines survive. The
+    "whitespace" mode is not acceptable: it collapses consecutive blank lines. The default "strip"
+    mode is forbidden: it deletes "#" lines.
+  - >-
+    CARVE-OUT CONFIRMED NARROWER THAN WRITTEN: with verbatim cleanup the version-control system
+    removes nothing, so trailing whitespace and trailing blank lines are also kept. The criterion's
+    carve-out ("the only differences are ...") is still satisfied (an empty difference is within
+    it); the tests assert the stronger fact -- the recorded message equals the file byte for byte.
+  - The behaviour must not depend on the user's or repository's commit.cleanup or core.commentChar configuration; the step sets what it needs for its own call only.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-2
+  contract: "Message-from-file rule."
+test_required: true
+test_spec:
+  - name: test_hash_lines_survive_in_place
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "A body holding '# covers: BO-4500a-2' and '#1043 is the fix this follows' is recorded with both lines unchanged and in place."
+    must_catch:
+      - "use the default strip cleanup"
+  - name: test_indentation_and_whitespace_survive
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A four-space-indented line keeps its indentation and the recorded message equals the file byte for byte, including trailing spaces."
+    must_catch:
+      - "use the whitespace cleanup mode, which collapses blank lines"
+  - name: test_repo_cleanup_config_does_not_change_the_result
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "With commit.cleanup=strip and core.commentChar set in the scratch repo config, the recorded message still equals the file."
+test_rationale: >-
+  The default cleanup is invisible until a message carries a "#" line, so each case is a real
+  commit read back from git with a hostile repository configuration in place.
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS IS NOT OBVIOUS. A commit taken from a message file is, by default, cleaned as if it had
+  been typed in an editor: lines beginning with "#" are treated as comments and deleted. "# covers:"
+  lines are this repo's own test-tag convention and issue numbers are routinely written "#1043", so
+  the default silently edits caller messages -- the same failure as KI-BO-20260914 by a different
+  hand. The second scenario's carve-out names the whitespace the step may not be able to preserve
+  under any cleanup setting; the IT PO should confirm the exact set against the version-control
+  system's "verbatim"/"whitespace" cleanup modes and narrow the carve-out if more can be kept.

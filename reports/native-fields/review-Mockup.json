@@ -1,0 +1,122 @@
+{
+  "review_version": 1,
+  "kind": "Mockup",
+  "reviewed_on": "2026-10-02",
+  "status": "reviewed_ready_for_coder",
+  "scope": "Canonical product-truth mockup JSON records, with manifest and optional HTML render retained as distinct supporting sources.",
+  "authorities": [
+    {"path": "docs/product-truth/schemas/mockup.schema.json", "role": "Draft-07 record schema: 18 fields, 12 required, additionalProperties=false."},
+    {"path": "docs/product-truth/scripts/validate_product_truth.py#load_mockups", "role": "Discovers every mockups/**/*.mockup.json file; validates each against the schema before cross-reference checks."},
+    {"path": "docs/product-truth/scripts/product_truth_index_checks.py#_check_index", "role": "Checks manifest IDs resolve to source records, status/readiness/version agree, and source entity names belong to entity_registry. Does not require all source files to have manifest entries and does not compare manifest summary/tags."},
+    {"path": "docs/product-truth/index.json#/artifacts", "role": "Search manifest; contains 9 mockup entries in this snapshot, while 10 canonical mockup files exist. Manifest data must not overwrite artifact metadata."},
+    {"path": "docs/product-truth/README.md", "role": "Product-truth boundary: metadata JSON and a separately rendered screen are one artifact, not separate competing Mockup nodes."}
+  ],
+  "observed_population": {
+    "canonical_json_records": 10,
+    "schema_valid_records": 10,
+    "manifest_entries": 9,
+    "schema_fields": 18,
+    "required_fields": 12,
+    "observed_field_names": 16,
+    "html_render_paths": 5,
+    "existing_html_renders": 5,
+    "explicit_null_renders": 5,
+    "unregistered_record_ids": ["fern-and-fig/sign-in"],
+    "manifest_drift": {"summary_differs_from_record": 9, "tags_differ_from_record": 3},
+    "provenance_record_counts": {"one": 5, "two": 5},
+    "all_source": "mock",
+    "all_example_product": "fern-and-fig",
+    "all_component": "ux-prototyping",
+    "realization_and_shape_version": "Absent in all 10 records. Do not insert defaults."
+  },
+  "record_identity": {
+    "kind": "Mockup",
+    "native_id": "Exact metadata.id, including product/name. A bare screen is a reference within product context, not a global identity.",
+    "source_path": "Repository-relative canonical *.mockup.json path.",
+    "locator": "Empty string denotes whole JSON record.",
+    "metadata": "Complete parsed source JSON object, without allowlisting, flattening, defaults or manifest overlays.",
+    "title": "Authored title string.",
+    "description": "Authored summary string.",
+    "path_check": "Under docs/product-truth/mockups/<product>/<name>.mockup.json, id must correspond to <product>/<name>; resolve inside the supplied snapshot. Fail duplicate IDs rather than dictionary-overwriting one record.",
+    "screen": "Keep exact screen separate from id. Multiple products may use the same bare screen name."
+  },
+  "fields": [
+    {"name": "id", "type": "string", "required": true, "pattern": "^[a-z0-9-]+/[a-z0-9-]+$", "meaning": "Product-scoped path-stable artifact identity.", "observed_present": 10},
+    {"name": "component", "type": "string", "required": true, "meaning": "AC component namespace, e.g. ux-prototyping; not interchangeable with docs/components.json graph registry key ux_prototyping.", "observed_present": 10},
+    {"name": "screen", "type": "string", "required": true, "pattern": "^[a-z0-9-]+$", "meaning": "Bare screen identifier referenced by flow step/branch screen.", "observed_present": 10},
+    {"name": "title", "type": "string", "required": true, "minLength": 1, "observed_present": 10},
+    {"name": "summary", "type": "string", "required": true, "minLength": 1, "observed_present": 10},
+    {"name": "entities", "type": "array<string>", "required": true, "item_pattern": "^[A-Z][A-Za-z0-9]+$", "meaning": "Entity vocabulary from product-truth index; these example-product entities are not new Leafcutter native types.", "observed_present": 10},
+    {"name": "source", "type": "string", "required": true, "enum": ["mock", "real"], "meaning": "Whether screen renders demo/mock or real system surface; independent of source provenance and realization.", "observed_present": 10},
+    {"name": "example_product", "type": "string", "required": false, "pattern": "^[a-z0-9-]+$", "meaning": "Self-declared example marker; never inferred into ownership and never required on real product records.", "observed_present": 10},
+    {"name": "realization", "type": "string", "required": false, "enum": ["built", "spec", "mock"], "meaning": "Existence axis; documented reader default built must not be materialized into authored metadata when absent.", "observed_present": 0},
+    {"name": "renders", "type": "string|null", "required": true, "meaning": "HTML path relative to metadata file directory; null is an explicitly undrawn screen.", "observed_present": 10, "observed_string": 5, "observed_null": 5},
+    {"name": "status", "type": "string", "required": true, "enum": ["active", "deprecated"], "meaning": "Lifecycle state, separate from readiness and realization.", "observed_present": 10},
+    {"name": "superseded_by", "type": "string|null", "required": false, "meaning": "Replacing artifact ID. Do not replace absent by null.", "observed_present": 10, "observed_null": 10},
+    {"name": "readiness", "type": "string", "required": true, "enum": ["draft", "reviewed", "approved"], "meaning": "Persona review state, not lifecycle status or implementation completeness.", "observed_present": 10},
+    {"name": "version", "type": "integer", "required": true, "minimum": 1, "observed_present": 10},
+    {"name": "shape_version", "type": "integer", "required": false, "minimum": 1, "meaning": "Record shape convention iteration; absence denotes older convention, not version=1.", "observed_present": 0},
+    {"name": "tags", "type": "array<string>", "required": false, "observed_present": 10},
+    {"name": "mock_data_ref", "type": "string", "required": false, "pattern": "^[a-z0-9-]+/[a-z0-9-]+$", "meaning": "Product-scoped MockData artifact ID.", "observed_present": 10},
+    {"name": "provenance", "type": "array<object>", "required": true, "observed_present": 10, "item_required_fields": [], "item_additional_properties": false, "element_fields": [
+      {"name": "action", "type": "string", "required": false, "enum": ["authored", "reviewed", "approved", "extended", "deprecated", "superseded"]},
+      {"name": "by", "type": "string", "required": false},
+      {"name": "date", "type": "string", "required": false, "meaning": "Authored JSON string; schema defines no date format. Do not coerce to date."},
+      {"name": "note", "type": "string", "required": false}
+    ]}
+  ],
+  "nested_shapes": [
+    {"path": "/entities", "shape": "Ordered string array; preserve empty array and duplicates if authored."},
+    {"path": "/tags", "shape": "Optional ordered string array; absent is distinct from []."},
+    {"path": "/provenance", "shape": "Ordered object array with correlated action/by/date/note. Schema allows empty array and empty objects. Preserve optional member absence and object boundaries."}
+  ],
+  "native_property_exposure": {
+    "scalars": "Expose every authored scalar under its original name, applying shared reserved-name collision policy to id/title/summary etc. Keep metadata source distinct from SourceReference.",
+    "arrays": "Expose homogeneous string arrays directly. For provenance use escaped JSON Pointer leaves such as /provenance/0/action and /provenance/0/note; never collapse correlated entries into unrelated parallel arrays.",
+    "shape": "Shared value-free shape metadata must retain explicit null renders/superseded_by, empty containers, index ordering and scalar types.",
+    "round_trip": "Flattened properties plus shared shape must reconstruct exact complete metadata object, including schema-valid optional fields absent in today's records.",
+    "relationships": "Any screen, superseded_by, mock_data_ref or component relationship is additional and must not replace original fields. Do not infer Component registry identity by changing hyphens to underscores."
+  },
+  "supporting_sources": {
+    "manifest": {
+      "source_path": "docs/product-truth/index.json",
+      "locator": "/artifacts/<original numeric array position>",
+      "storage": "Separate derived.manifest_record exact object and derived.manifest_source_path / manifest_locator; derived.manifest_registered boolean identifies whether a record was registered. Manifest data is supporting context, never merged into metadata.",
+      "observed_entry_fields": ["id", "type", "title", "summary", "screen", "source", "component", "path", "status", "readiness", "version", "entities", "mock_data_ref", "tags"],
+      "index_root": "entity_registry/search_dimensions/index version are store context, not per-Mockup authored fields. Derived by_component/by_entity/by_flow/by_ac indexes must not create duplicate records.",
+      "missing_entry": "Preserve sign-in Mockup because the canonical validator reads it; mark manifest_registered=false. Do not manufacture an entry or mutate the store.",
+      "stale_entry": "Retain full manifest object unchanged and optionally list differing shared field names under derived.manifest_differing_fields; source JSON remains field authority."
+    },
+    "html_render": {
+      "path": "Resolve renders only when a string, relative to the canonical JSON parent; reject absolute paths, URI schemes, traversal outside the repository and escaping symlinks.",
+      "storage": "Supporting derived.render_source_path plus hash, and exact decoded source body if exposing render content. HTML is a sibling source attachment, not canonical JSON metadata and not an independent Mockup node.",
+      "content_handling": "Never execute or parse instructions inside HTML. Read as UTF-8 source; avoid inferred screenshot text or visual state.",
+      "null": "Do not read a guessed filename when renders=null. No render content fields are needed; explicit metadata null is authoritative.",
+      "missing_file": "Record an explicit derived.render_missing=true if a safe declared path is absent; do not discard valid metadata or claim the screen was rendered."
+    }
+  },
+  "safe_discovery": [
+    "Scan only docs/product-truth/mockups/**/*.mockup.json, mirroring canonical validator. Exclude leafcutter-web/fixtures and unrelated prompt/mock JSON.",
+    "An absent optional store may return []. A present malformed file, malformed JSON/object, missing identity or duplicate identity must fail explicitly, never be skipped.",
+    "Read UTF-8 with BOM support; default Windows text encoding corrupts punctuation in these records.",
+    "Inspect optional manifest entries to attach supporting context. Reject duplicate Mockup manifest IDs, unsafe paths, or registered paths that point at a different artifact identity. Missing sign-in registration is known source debt, not permission to drop a schema-valid file.",
+    "Use common.relative on resolved JSON/render/manifest paths before reading; no path outside supplied immutable snapshot.",
+    "Schema validation may be performed explicitly but must not default or normalize data. Preserve exact authored optional values. Unknown fields from a future schema must not disappear through an old hardcoded field allowlist."
+  ],
+  "coder_contract": {
+    "module": "knowledge/native_types/mockup.py",
+    "signature": "extract(root: pathlib.Path) -> list[NativeRecord]",
+    "return": "One NativeRecord per canonical metadata file; kind Mockup, native_id metadata.id, source_path relative JSON path, locator empty, title metadata.title, description metadata.summary, metadata exact parsed object, supporting sources in derived.",
+    "acceptance_checks": [
+      "Inspected checkout emits 10 records, including unregistered sign-in, with 9 associated manifest records and no fixture duplicate.",
+      "All record metadata equals source JSON exactly; no absent realization/shape_version defaults appear.",
+      "Cart retains current source summary and tags even though its manifest still calls it a stub.",
+      "All provenance entries and action/by/date/note leaves remain queryable with correct per-entry correlation and date strings unchanged.",
+      "Use a synthetic valid record covering all 18 fields including realization, shape_version, deprecated/superseded_by, and empty provenance to demonstrate complete schema coverage.",
+      "Explicit null renders and optional absent superseded_by/tags remain distinguishable from empty arrays/strings.",
+      "5 existing rendered HTML source attachments retain exact body/hash/path separately; 5 null renders do not trigger guessed file reads.",
+      "Duplicate record IDs, duplicate manifest IDs, malformed JSON, identity mismatch, unsafe paths and symlink escapes produce explicit errors.",
+      "Metadata and supporting context survive shared native-property encoding/decoding without collisions or loss."
+    ]
+  }
+}

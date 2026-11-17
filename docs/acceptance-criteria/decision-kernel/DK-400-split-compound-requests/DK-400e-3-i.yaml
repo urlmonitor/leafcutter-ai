@@ -1,0 +1,88 @@
+id: DK-400e-3-i
+title: "An earlier part's result judged not to apply is not used as evidence"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reusable-criteria split where p4, "Decide whether to mine the reusable categories
+    from Langfuse as a start", runs after p1 was decided,
+  When Jev judges p1's record to apply to p4's question below the applicability threshold,
+  Then p4's record names p1's record as considered and not applicable,
+  And p1's record is not used as evidence for p4's options or criteria.
+depends_on:
+  - DK-400e-3
+doc_links:
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "precedents_considered action: below 0.5 not_applicable."
+  - path: docs/product-truth/flows/leafcutter/decision-retrieval.flow.json
+    relationship: related
+    status: exists
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400e-3
+  contract: "The precedent offer and Jev's applicability judgment."
+it_requirements:
+  - Below memory.applies_threshold the earlier part's record is listed in precedents_considered with action not_applicable
+    and contributes no evidence id to options, criteria or the assessment.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default: batch order inside E3 does not guarantee that DK-400e-1''s
+    flip lands first, and a later default change must not silently flip a test (dec-9925ebf1895222f4).'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_not_applicable_earlier_part_kept_out_of_evidence
+    target_dir: tests/kernel/memory/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: With p1 judged below the applicability threshold for p4, p4's record lists p1 as not_applicable
+      and no evidence id of p1 appears in p4's options, criteria or assessment.
+test_rationale: Checks the evidence ids actually used, not only the recorded action.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly and never depend
+      on the shipped default of split.enabled.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The "never taken as given" half of DK-400e: the earlier result is judged, and a low fit
+  keeps it out of the evidence.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-run
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

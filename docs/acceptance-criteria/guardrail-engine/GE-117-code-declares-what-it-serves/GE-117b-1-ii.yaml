@@ -1,5 +1,5 @@
 id: GE-117b-1-ii
-readiness: draft
+readiness: approved
 priority: medium
 title: "A symbol may declare multiple ACs, and every declared reference must resolve"
 component: guardrail-engine
@@ -33,19 +33,59 @@ doc_links:
   - path: "docs/reference/ac-schema.md"
     relationship: related
     status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c-2-i.yaml"
+    relationship: related
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
 it_requirements:
-  - "declared_refs collects ALL AC references parsed from the symbol docstring (a list, possibly length > 1); the verdict is 'satisfied' iff EVERY declared ref resolves via the shared _load_ac_by_id; a single unresolvable ref among otherwise-valid ones yields 'invalid' (partial validity never passes)."
+  - "declared_refs collects ALL AC references parsed from the symbol docstring, in the order written (a list, possibly length > 1); the verdict is 'satisfied' iff EVERY declared ref resolves through the shared GE-124c-2-i resolver; a single unresolvable ref among otherwise-valid ones yields 'invalid' (partial validity never passes)."
   - "On the invalid branch, record which specific ref(s) failed to resolve in the verdict so GE-117e can act on the exact dangling id; do not collapse to a boolean."
-  - "Reuse the SAME extracted _load_ac_by_id resolver as GE-117b-1 / GE-117c-1 (one shared module); no per-leaf reimplementation. Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+  - "Reuse the SAME shared GE-124c-2-i resolver as GE-117b-1 / GE-117c-1; no per-leaf reimplementation. Edit only templates/scripts/commit_guardian/ (ADR-001); verify via the deployed hook after a build.py round-trip."
 delivers_to: null
 expects_from:
   ac_id: GE-117b-1
   contract: "The per-symbol verdict object whose declared_refs list and invalid branch this edge case exercises"
+test_spec:
+  - name: test_ge_117b_1_ii_two_resolvable_refs_are_satisfied_and_both_recorded
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "With GE-900a-1 and GE-900a-2 in a temp AC store, stage a public function citing both: verdict 'satisfied' and declared_refs equals ['GE-900a-1', 'GE-900a-2']."
+    must_catch:
+      - "reads only the first AC reference in the docstring"
+  - name: test_ge_117b_1_ii_one_dangling_ref_makes_the_symbol_invalid
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Stage a public function citing GE-900a-1 (exists) and GE-900z-9 (absent): verdict 'invalid', not 'satisfied'."
+    must_catch:
+      - "passes when any declared ref resolves instead of requiring all of them"
+  - name: test_ge_117b_1_ii_invalid_verdict_names_exactly_the_failing_ref
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "For the mixed case above, the verdict identifies GE-900z-9 as the unresolved ref and does not list GE-900a-1 as failing."
+    must_catch:
+      - "records only a boolean resolved flag without naming the failing id"
+test_rationale: |
+  The criteria turn on all-versus-any. The one-character wrong version (any() instead of all())
+  passes the first scenario and every single-ref test elsewhere in this tree. Only a mixed-ref
+  fixture catches it. The reads-only-the-first-ref wrong version is caught by asserting the
+  full declared_refs list in order. Naming the exact failing id is tested on its own, because
+  GE-117e's autofix and the block report both act on that id. A verdict that only says 'some
+  ref failed' meets the 'invalid' assertion and still leaves the developer guessing.
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Re-pointed resolution to the shared GE-124c-2-i resolver; added change_target, declared_files, test_spec and test_rationale; corrected the source path to templates/scripts/commit_guardian/ (ADR-001). criteria untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []

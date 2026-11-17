@@ -33,21 +33,47 @@ Usage:
     When --source hook is used, --ticket is optional and --hook-name and
     --outcome are required.
 
+    --jsonl <path> overrides the sink and is honoured as given. Without it the
+    sink is ``feedback_sink`` from the install's build-time declaration,
+    ``<output_root>/config/knowledge_sink.json`` (ADR-069; ``feedback_sink.py``).
+
 Exit codes:
     0: success (feedback_id printed to stdout)
-    1: validation failure (error details on stderr)
+    1: validation failure, or the declared sink cannot be determined (error
+       details on stderr; nothing on stdout, nothing written)
+
+Output streams on success (callers parse these -- keep them stable):
+    stdout: exactly one line, the feedback_id (fb_YYYY-MM-DD_xxxxxxxx).
+    stderr: "sidecar:<tmpdir>/feedback_id_<digits>.txt" -- the id-recovery
+        fallback the signoff skill greps for (KI-FC-002). <digits> is a
+        digits-only run built from time_ns, process id, random digits and a
+        retry index, so each submission owns its file; it is created
+        exclusively and never overwrites another's. Then
+        "[submit_feedback] sink: <absolute path>" -- the resolved file the
+        record was appended to (AC INF-500d-4-ii, KI-FC-001). The sink line
+        is on stderr, never stdout, because callers capture stdout verbatim
+        as the id; its prefix is not "sidecar:", so the recovery grep does
+        not pick it up. 2026-10-08 [quick-fix/INF-500d-4-ii].
+
+Refusal (AC INF-500d-4-i): when the declaration is absent, unreadable,
+    unparseable, lacks ``feedback_sink`` / ``operational_log_root``, holds a
+    relative value, names a ``feedback_sink`` that is not directly under
+    ``operational_log_root``, or is stale (the enduring root holding the log
+    directory is gone), stdout is empty, stderr carries exactly one
+    "[submit_feedback] ERROR: destination could not be written: ..." line
+    naming the expected declaration and the failed condition, the exit code is
+    1, and no file or directory is created (no sidecar either).
 """
 
 from __future__ import annotations
 
 import argparse
-import difflib
-import hashlib
 import json
-import re
+import os
 import secrets
 import sys
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -57,24 +83,18 @@ try:
 except ImportError:
     _FCNTL_AVAILABLE = False
 
+# Sibling modules are imported by name: emit_hook_finding loads this file by path,
+# which leaves its directory off sys.path.
+_HERE = str(Path(__file__).resolve().parent)
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)
+
+import feedback_sink  # noqa: E402
+import feedback_validation as _fv  # noqa: E402
+
 # ---------------------------------------------------------------------------
-# Project root discovery
+# Configuration root discovery
 # ---------------------------------------------------------------------------
-
-
-def _find_project_root() -> Path:
-    """Walk up from this file to find the project root (directory containing .claude/).
-
-    Used for resolving paths that live at the project root (e.g. debugging/logs/).
-    For config files that live alongside the script in a portable install
-    (e.g. .leafcutter/config/), use _find_config_root() instead.
-    """
-    current = Path(__file__).resolve().parent
-    for _ in range(6):
-        if (current / ".claude").is_dir():
-            return current
-        current = current.parent
-    return Path(__file__).resolve().parents[2]
 
 
 def _find_config_root() -> Path:
@@ -91,22 +111,57 @@ def _find_config_root() -> Path:
         Path: Absolute path to the config directory that contains
             feedback_categories.yaml.
     """
+    # Prefer the invoked (abspath) location when it sits inside a .leafcutter/:
+    # a symlinked deployed script must stay anchored there rather than follow
+    # the link out of it. (AC INF-100c-1-i)  Otherwise use the resolved
+    # location: the CI build shim <root>/scripts/feedback -> .leafcutter/...
+    # must land on .leafcutter/config, not <root>/config. (AC INF-100c-1)
+    invoked_root = Path(os.path.abspath(__file__)).parents[2]
+    if invoked_root.name == ".leafcutter":
+        return invoked_root / "config"
     return Path(__file__).resolve().parents[2] / "config"
+
+
+def _categories_candidates(config_dir: Path) -> list[Path]:
+    """Return, in order, every place feedback_categories.yaml is looked for.
+
+    First the config directory found by _find_config_root() (the deployed
+    copy). Then the config/ two levels above the invoked script path, when
+    that is a different place. That second place is the source repo's own
+    config/ when the script runs through the build shim
+    leafcutter-ai/scripts/feedback -> .leafcutter/scripts/feedback.
+    (AC INF-100c-2)
+
+    Args:
+        config_dir: The directory _find_config_root() returned.
+
+    Returns:
+        list[Path]: One or two absolute candidate file paths.
+    """
+    primary = config_dir / _CATEGORIES_NAME
+    source = Path(os.path.abspath(__file__)).parents[2] / "config" / _CATEGORIES_NAME
+    if os.path.realpath(source) == os.path.realpath(primary):
+        return [primary]
+    return [primary, source]
+
+
+def _first_existing(candidates: list[Path]) -> Path:
+    """Return the first candidate that is a file, else the first candidate."""
+    return next((path for path in candidates if os.path.isfile(path)), candidates[0])
 
 
 # ---------------------------------------------------------------------------
 # Config loading
 # ---------------------------------------------------------------------------
 
-_PROJECT_ROOT = _find_project_root()
+_CATEGORIES_NAME = "feedback_categories.yaml"
 _CONFIG_DIR = _find_config_root()
-_CATEGORIES_FILE = _CONFIG_DIR / "feedback_categories.yaml"
-_JSONL_DEFAULT = _PROJECT_ROOT / "debugging" / "logs" / "feedback.jsonl"
+_CATEGORIES_CANDIDATES = _categories_candidates(_CONFIG_DIR)
+_CATEGORIES_FILE = _first_existing(_CATEGORIES_CANDIDATES)
 
 VALID_SEVERITIES = ("low", "medium", "high")
 VALID_SOURCES = ("agent", "hook")
 VALID_OUTCOMES = ("warn", "block")
-_TAG_RE = re.compile(r"^[a-z][a-z0-9-]{0,39}$")
 
 
 def _load_categories(config_path: Path | None = None) -> dict:
@@ -136,12 +191,14 @@ def _load_categories(config_path: Path | None = None) -> dict:
         with open(path, encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
     except OSError as exc:
-        checked_path = Path(path).resolve()
+        # Name every absolute path tried, one per line (AC INF-100c-4).
+        checked = [Path(path).resolve()] if config_path else [Path(os.path.abspath(p)) for p in _CATEGORIES_CANDIDATES]
+        checked_lines = "".join(f"  Checked path: {p}\n" for p in checked)
         print(
             f"ERROR: Cannot read feedback_categories.yaml.\n"
-            f"  Checked path: {checked_path}\n"
+            f"{checked_lines}"
             f"  OS error: {exc}\n"
-            f"  To fix: Place feedback_categories.yaml at {checked_path}",
+            f"  To fix: Place feedback_categories.yaml at {checked[0]}",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -150,174 +207,6 @@ def _load_categories(config_path: Path | None = None) -> dict:
     for entry in data.get("categories", []):
         cats[entry["id"]] = entry
     return cats
-
-
-# ---------------------------------------------------------------------------
-# Validation helpers
-# ---------------------------------------------------------------------------
-
-
-def _validate_category(category: str, cats: dict) -> None:
-    """Raise SystemExit(1) if the category is not in the closed list.
-
-    Args:
-        category: The category id string to validate.
-        cats: The loaded categories dict from _load_categories.
-    """
-    if category in cats:
-        return
-    close = difflib.get_close_matches(category, cats.keys(), n=1, cutoff=0.5)
-    suggestion = f" Did you mean '{close[0]}'?" if close else ""
-    print(
-        f"ERROR: Unknown category '{category}'.{suggestion}",
-        file=sys.stderr,
-    )
-    sys.exit(1)
-
-
-def _validate_writer(phase: str, category: str, cats: dict) -> None:
-    """Raise SystemExit(1) if phase is not in the category's allowed_writers.
-
-    Args:
-        phase: The agent name or writer id submitting feedback.
-        category: The category id string.
-        cats: The loaded categories dict.
-    """
-    allowed: list = cats[category].get("allowed_writers", [])
-    if phase in allowed:
-        return
-    print(
-        f"ERROR: Phase '{phase}' is not an allowed writer for category "
-        f"'{category}'. Allowed writers: {', '.join(allowed)}",
-        file=sys.stderr,
-    )
-    sys.exit(1)
-
-
-def _validate_tags(raw_tags: str) -> list[str]:
-    """Parse and validate the tags string, returning a list of clean tag strings.
-
-    Args:
-        raw_tags: Comma-separated tag string from the CLI argument.
-
-    Returns:
-        list[str]: Validated, trimmed, lowercase tags.
-
-    Raises:
-        SystemExit: When any tag fails shape validation.
-    """
-    if not raw_tags:
-        return []
-    # Trim whitespace but do NOT lowercase — uppercase tags are a shape violation
-    tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
-    bad: list[str] = []
-    for tag in tags:
-        if not _TAG_RE.match(tag):
-            bad.append(tag)
-    if bad:
-        digit_starts = [t for t in bad if t and t[0].isdigit()]
-        if digit_starts:
-            print(
-                f"ERROR: Tag '{digit_starts[0]}' must start with a letter "
-                "(a-z), not a digit. Try renaming the tag (e.g. '26-tests' "
-                "-> 'fast-tests').",
-                file=sys.stderr,
-            )
-        else:
-            print(
-                f"ERROR: Tag shape validation failed for: {bad}. "
-                "Tags must be lowercase, kebab-case, start with a letter, "
-                "and be at most 40 characters.",
-                file=sys.stderr,
-            )
-        sys.exit(1)
-    return tags
-
-
-VALID_ADDRESSED_BY_TYPES = ("ticket", "commit", "pr")
-
-
-def _validate_addressed_by(raw: str | None) -> list[dict] | None:
-    """Parse and validate the --addressed-by JSON string argument.
-
-    Each element must be a dict with "type" (one of ticket/commit/pr) and
-    "ref" (a non-empty string). Extra keys are accepted and preserved as-is
-    to allow forward-compatible extensions.
-
-    Args:
-        raw: JSON array string from the --addressed-by CLI argument, or None.
-
-    Returns:
-        list[dict] | None: Parsed list of reference objects, or None when the
-            argument was not supplied.
-
-    Raises:
-        SystemExit: When the JSON is malformed or any element fails validation.
-    """
-    if raw is None:
-        return None
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        print(
-            f"ERROR: --addressed-by must be a valid JSON array. Parse error: {exc}",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    if not isinstance(parsed, list):
-        print(
-            "ERROR: --addressed-by must be a JSON array (list), not "
-            f"{type(parsed).__name__}.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    for idx, item in enumerate(parsed):
-        if not isinstance(item, dict):
-            print(
-                f"ERROR: --addressed-by element {idx} must be an object, "
-                f"not {type(item).__name__}.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-        item_type = item.get("type")
-        item_ref = item.get("ref")
-        if item_type not in VALID_ADDRESSED_BY_TYPES:
-            print(
-                f"ERROR: --addressed-by element {idx} 'type' must be one of "
-                f"{VALID_ADDRESSED_BY_TYPES}, got '{item_type}'.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-        if not item_ref or not isinstance(item_ref, str):
-            print(
-                f"ERROR: --addressed-by element {idx} 'ref' must be a non-empty string.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-    return parsed
-
-
-# ---------------------------------------------------------------------------
-# feedback_id generation
-# ---------------------------------------------------------------------------
-
-
-def _generate_feedback_id(timestamp: str, phase: str, ticket: str) -> str:
-    """Generate a unique, deterministic-looking feedback_id.
-
-    Args:
-        timestamp: ISO8601 timestamp string.
-        phase: Agent name or source identifier.
-        ticket: Ticket path string (may be empty for hook-mode).
-
-    Returns:
-        str: Feedback id in format fb_YYYY-MM-DD_XXXXXXXX.
-    """
-    date_part = timestamp[:10]  # YYYY-MM-DD
-    salt = secrets.token_hex(8)
-    digest_input = f"{timestamp}{phase}{ticket}{salt}"
-    sha8 = hashlib.sha256(digest_input.encode()).hexdigest()[:8]
-    return f"fb_{date_part}_{sha8}"
 
 
 # ---------------------------------------------------------------------------
@@ -371,9 +260,8 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Number of staged files at commit time (hook mode).",
     )
     parser.add_argument(
-        "--jsonl",
-        default=None,
-        help=f"Override JSONL output path. Default: {_JSONL_DEFAULT}",
+        "--jsonl", default=None,
+        help="Override JSONL output path. Default: feedback_sink from the build-time declaration.",
     )
     parser.add_argument(
         "--config",
@@ -477,6 +365,81 @@ def _build_entry(
     return entry
 
 
+def _prepare_sink(jsonl_arg: str | None) -> Path | None:
+    """Return the file to append to, or None after reporting why there is none.
+
+    An explicit ``--jsonl`` is the caller's own responsibility and is never
+    refused. Otherwise the sink is the declared ``feedback_sink``; when the
+    declaration is unusable one refusal line goes to stderr and nothing is
+    created. ``resolve_feedback_sink`` has established that the enduring root
+    holding the log directory is live, so only the missing log directory (and
+    ``debugging`` above it, on a fresh install) is created -- never a project.
+    """
+    if jsonl_arg:
+        path = Path(jsonl_arg)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+    path, refusal = feedback_sink.resolve_feedback_sink(_CONFIG_DIR.parent)
+    if path is None:
+        print(refusal, file=sys.stderr)
+        return None
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        print(f"[submit_feedback] ERROR: destination could not be written: {path.parent}: {exc}", file=sys.stderr)
+        return None
+    return path
+
+
+_SIDECAR_MAX_ATTEMPTS = 50
+
+
+def _sidecar_digits(attempt: int) -> str:
+    """Build the digits-only name part from per-submission values.
+
+    Args:
+        attempt: Zero-based retry index, so a repeated first choice still
+            yields a different name on the next attempt.
+
+    Returns:
+        str: Decimal digits: time_ns, process id, 9 random digits, attempt.
+    """
+    return f"{time.time_ns()}{os.getpid()}{secrets.randbelow(10**9):09d}{attempt}"
+
+
+def _write_sidecar(feedback_id: str) -> Path | None:
+    """Create this submission's own id-recovery file, never touching another's.
+
+    The file is created exclusively (mode ``x``), so an existing file is
+    never overwritten or truncated; on ``FileExistsError`` a new name is
+    chosen, up to ``_SIDECAR_MAX_ATTEMPTS`` times. Fail-open: any failure logs
+    a WARNING on stderr and returns None.
+
+    Args:
+        feedback_id: The id to store as the file's entire content.
+
+    Returns:
+        Path | None: The created file, or None when it could not be written.
+    """
+    tmpdir = Path(tempfile.gettempdir())
+    for attempt in range(_SIDECAR_MAX_ATTEMPTS):
+        path = tmpdir / f"feedback_id_{_sidecar_digits(attempt)}.txt"
+        try:
+            with open(path, "x", encoding="utf-8") as fh:
+                fh.write(feedback_id)
+        except FileExistsError:
+            continue
+        except OSError as exc:
+            print(f"[submit_feedback] WARNING: sidecar write failed: {exc}", file=sys.stderr)
+            return None
+        return path
+    print(
+        f"[submit_feedback] WARNING: sidecar write failed: no unused name after {_SIDECAR_MAX_ATTEMPTS} attempts",
+        file=sys.stderr,
+    )
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -489,7 +452,8 @@ def main(argv: list[str] | None = None) -> int:
         argv: Argument list. When None, uses sys.argv[1:].
 
     Returns:
-        int: Exit code (0 on success, 1 on validation failure).
+        int: Exit code (0 on success, 1 on validation failure or when the
+            declared sink cannot be determined).
     """
     args = _build_parser().parse_args(argv)
 
@@ -500,28 +464,29 @@ def main(argv: list[str] | None = None) -> int:
 
     config_path = Path(args.config) if args.config else None
     cats = _load_categories(config_path)
-    _validate_category(args.category, cats)
+    _fv.validate_category(args.category, cats)
 
     if args.source == "agent":
-        _validate_writer(args.phase, args.category, cats)
+        _fv.validate_writer(args.phase, args.category, cats)
 
-    tags = _validate_tags(args.tags)
-    # _validate_addressed_by parses and validates the JSON; it mutates args
+    tags = _fv.validate_tags(args.tags)
+    # validate_addressed_by parses and validates the JSON; it mutates args
     # by replacing the raw string with the parsed list (or leaves it None).
-    args.addressed_by = _validate_addressed_by(getattr(args, "addressed_by", None))
+    args.addressed_by = _fv.validate_addressed_by(getattr(args, "addressed_by", None))
     severity = _resolve_severity(args, cats)
+
+    jsonl_path = _prepare_sink(args.jsonl)
+    if jsonl_path is None:
+        return 1
 
     now = datetime.now(timezone.utc)
     timestamp = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-    feedback_id = _generate_feedback_id(timestamp, args.phase, args.ticket or "")
+    feedback_id = _fv.generate_feedback_id(timestamp, args.phase, args.ticket or "")
     entry = _build_entry(args, tags, severity, feedback_id, timestamp)
 
     # ------------------------------------------------------------------
     # Write JSONL (atomic under concurrent writes via advisory flock)
     # ------------------------------------------------------------------
-    jsonl_path = Path(args.jsonl) if args.jsonl else _JSONL_DEFAULT
-    jsonl_path.parent.mkdir(parents=True, exist_ok=True)
-
     try:
         fh = open(jsonl_path, "a", encoding="utf-8")
     except OSError as exc:
@@ -540,20 +505,13 @@ def main(argv: list[str] | None = None) -> int:
             if _FCNTL_AVAILABLE:
                 _fcntl.flock(fh, _fcntl.LOCK_UN)
 
-    # ------------------------------------------------------------------
-    # Sidecar temp file — fallback recovery when stdout capture fails
-    # ------------------------------------------------------------------
-    # Write feedback_id to a deterministic-suffix temp file so calling
-    # agents can recover the ID even if stdout capture returned empty.
-    # The path is printed to stderr (not stdout) to avoid disrupting FB_ID.
-    ts_epoch = int(datetime.now(timezone.utc).timestamp())
-    sidecar_path = Path(tempfile.gettempdir()) / f"feedback_id_{ts_epoch}.txt"
-    try:
-        sidecar_path.write_text(feedback_id, encoding="utf-8")
+    # Sidecar temp file -- fallback recovery when stdout capture fails. The
+    # path goes to stderr (not stdout) to avoid disrupting FB_ID=$(...).
+    sidecar_path = _write_sidecar(feedback_id)
+    if sidecar_path is not None:
         print(f"sidecar:{sidecar_path}", file=sys.stderr)
-    except OSError as exc:
-        print(f"[submit_feedback] WARNING: sidecar write failed: {exc}", file=sys.stderr)
 
+    print(f"[submit_feedback] sink: {jsonl_path.resolve()}", file=sys.stderr)
     return 0
 
 
@@ -563,6 +521,46 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-11-16 [python-coder/fastlane/inf-100c-2-4]:
+#   feedback_categories.yaml now has an ordered candidate list
+#   (_categories_candidates): first the _find_config_root() directory (the
+#   deployed copy, unchanged and still preferred), then config/ two levels above
+#   the INVOKED script path when that is a different place. Run through the
+#   source-repo build shim (leafcutter-ai/scripts/feedback ->
+#   .leafcutter/scripts/feedback), the script used to look only in
+#   .leafcutter/config/ and never in leafcutter-ai/config/. _CONFIG_DIR, and so
+#   the sink declaration lookup, is unchanged. When no candidate can be read,
+#   the error prints one "Checked path: <absolute>" line per candidate tried
+#   instead of only the first. (AC INF-100c-2, INF-100c-4)
+# - 2026-10-25 [python-coder/INF-500d-3-i]:
+#   The id-recovery ("sidecar") file was named after whole epoch seconds, so two
+#   submissions in one second shared a file and the later overwrote the earlier
+#   (KI-FC-002 half 1). It is now feedback_id_<digits>.txt with digits built from
+#   time_ns + pid + 9 random digits + retry index, and is created with open mode
+#   "x" (O_EXCL): on FileExistsError a new name is chosen (max 50 attempts), so
+#   uniqueness holds by construction and an existing file is never overwritten or
+#   truncated. Digits-only keeps the documented search
+#   'sidecar:[^ ]*feedback_id_[0-9]*.txt' matching once. Stderr line shape, file
+#   content, stdout and fail-open warning are unchanged. (AC INF-500d-3-i, KI-FC-002)
+# - 2026-10-12 [python-coder/EPIC-OneDurableLogRootForEveryWorkspace/02_INF-500d-4-i]:
+#   Without --jsonl the sink is now the declared feedback_sink (feedback_sink.py,
+#   which reads config/knowledge_sink.json through the shared sink_resolution
+#   reader); an absent / unreadable / unparseable / keyless / relative / stale
+#   declaration is REFUSED -- one stderr line, exit 1, empty stdout, no sidecar,
+#   nothing created. Removed _find_project_root and _JSONL_DEFAULT (the upward
+#   walk for .claude/ that KI-FC-001 names as the root cause); _find_config_root
+#   is unchanged. An explicit --jsonl is still honoured and still creates its
+#   parent. Only the final log directory is created for a declared sink. To
+#   stay within the GE-127b-1 ratchet the validators and the id generator moved
+#   verbatim into feedback_validation.py (measured length 463 -> 371).
+#   (AC INF-500d-4-i, ADR-069)
+# - 2026-10-25 [python-coder/fastlane/inf-100c-1-i]:
+#   _find_config_root() now anchors on the invoked (abspath) location only when
+#   its parents[2] is a directory named .leafcutter; otherwise it uses the
+#   resolved location. The unconditional abspath form broke the CI build shim
+#   (<root>/scripts/feedback symlinked into .leafcutter/scripts/feedback), which
+#   resolved to <root>/config. Both INF-100c-1 and INF-100c-1-i hold.
+#   (AC INF-100c-1, INF-100c-1-i)
 # - 2026-07-08 [python-coder/EPIC-Phase1ReadyHardening/03_InfrastructureFixes]:
 #   Promoted scripts/feedback/submit_feedback.py to a tracked source file
 #   (removed scripts/feedback/ from .gitignore). The file was previously
@@ -583,8 +581,8 @@ if __name__ == "__main__":
 #   than using _find_project_root(). This ensures feedback_categories.yaml is found
 #   at <leafcutter_root>/config/ regardless of where the script is deployed:
 #   source (leafcutter-ai/scripts/feedback/) and deployed (.leafcutter/scripts/feedback/)
-#   both resolve to two parents up + /config/. _find_project_root() is retained for
-#   _JSONL_DEFAULT which must remain at the project root. (AC INF-100c-1) (#EPIC-FeedbackPortability)
+#   both resolve to two parents up + /config/. _find_project_root() was retained for
+#   _JSONL_DEFAULT, which no longer exists (see 2026-10-12). (AC INF-100c-1) (#EPIC-FeedbackPortability)
 # - 2026-06-03 09:00 [python-coder/EPIC-TemplateDocViolations/06]: Confirmed 2026-05-21 entry already has HH:MM (12:00); no change needed. Added this audit entry for traceability. (#EPIC-TemplateDocViolations/06)
 # - 2026-05-30 12:00 [python-coder/TICKET-20260528-FeedbackCorrelationIDLoss]:
 #   Wrapped JSONL append and stdout print in fcntl.flock(LOCK_EX) advisory
@@ -593,8 +591,8 @@ if __name__ == "__main__":
 #   that previously caused (submit-failed) sentinels in ticket comments.
 #   Added sidecar temp file (feedback_id_<epoch>.txt in tempdir) as a
 #   fallback: calling agents can read the ID from the sidecar when stdout
-#   capture fails. Sidecar path is printed to stderr to avoid disrupting
-#   FB_ID=$(...) capture. fcntl import wrapped in try/except ImportError
+#   capture fails. Sidecar path is printed to stderr (not stdout) to avoid
+#   disrupting FB_ID=$(...) capture. fcntl import wrapped in try/except ImportError
 #   for Windows compatibility (falls back to unlocked path with a warning).
 #   Removed bare `import os` (was unused after refactor). (#TICKET-20260528)
 # - 2026-05-21 12:00 [python-coder/TICKET-20260519-deploy_feedback_scripts_via_build]:
@@ -608,7 +606,7 @@ if __name__ == "__main__":
 #   invoked from a worktree. Fix: Path(__file__).resolve().parents[3] / "debugging" / "logs" / "feedback.jsonl".
 # - 2026-05-18 10:45 [EPIC-AgentSystemFrictionReduction/05]: Added --addressed-by argument for linking feedback to its fix. (#EPIC-AgentSystemFrictionReduction/05)
 #   Optional JSON array of {type, ref} objects. Types: ticket, commit, pr.
-#   Validated by _validate_addressed_by() before entry construction.
+#   Validated by validate_addressed_by() before entry construction.
 #   Additive: old entries without the field remain valid.
 # - 2026-05-15 16:35 [chore/feedback-collection-kis]: Specialised the (#EPIC-LeafcutterMVP/01)
 #   tag-shape error so digit-start violations emit the explicit message

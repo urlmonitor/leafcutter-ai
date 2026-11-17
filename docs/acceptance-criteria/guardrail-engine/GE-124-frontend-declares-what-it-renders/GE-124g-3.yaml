@@ -110,7 +110,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Required ONE shared two-axis counting function across all three consumers and flagged the cross-stack boundary — the Atlas is TypeScript/vitest while the other two are Python, so either it consumes a structured artifact from the Python side or this AC needs a python-coder/frontend-coder split with a matching contract pair. Also required unexamined, out-of-scope and outside-the-chain records to be excluded from both axes, and the caveat to sit inline next to the number. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/47_TICKET-20261023-GE-124g-3.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -141,3 +142,4 @@ notes: |
   and a frontend-coder half with a matching delivers_to/expects_from pair —
   flagged rather than resolved unilaterally, because the split changes what the
   Atlas is allowed to compute.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

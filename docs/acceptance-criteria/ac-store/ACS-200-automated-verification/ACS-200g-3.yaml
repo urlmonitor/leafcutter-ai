@@ -1,0 +1,221 @@
+id: ACS-200g-3
+components:
+  - ac_store
+  - testing_quality
+title: "The reachability check of the acceptance-criteria schema guardrail runs against a small self-contained repository, so its run time does not grow with the real store"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a self-contained fixture repository built in a temporary directory that
+    holds a copy of the deployed acceptance-criteria schema guardrail, three
+    valid acceptance-criterion records, and one malformed record whose only
+    field is its identifier "ZZTEST-999",
+  When the reachability check runs the real deployed guardrail entry point with
+    that fixture repository as its repository root and the malformed record as
+    the only staged change,
+  Then the guardrail reports a failing, blocking result,
+  And its output names the record "ZZTEST-999" and the rule it breaks.
+
+  Given the same fixture repository,
+  When the reachability check runs the real deployed guardrail entry point with
+    one of the three valid records as the only staged change,
+  Then the guardrail reports a passing result,
+  And it reports no failure for that record.
+
+  Given the real requirement store holds about 5,270 records,
+  When the reachability check runs against the fixture repository,
+  Then the guardrail reads only the records inside the fixture repository and
+    reads no record from the real requirement store,
+  And adding records to the real requirement store does not change how many
+    records the guardrail reads during the check.
+
+  Given a machine on which no requirement-store index cache exists, neither for
+    the fixture repository nor for the real repository — as on a fresh
+    continuous-integration runner,
+  When the reachability check runs,
+  Then each guardrail run finishes in under 10 seconds, at most one third of
+    its 30-second time limit,
+  And the check passes on that cold machine in every run, without a rerun.
+
+  Given the real working tree and the real requirement-store index cache before
+    the reachability check runs,
+  When the check has finished, passed or failed,
+  Then the real working tree has the same tracked and untracked files with the
+    same content as before,
+  And the real requirement-store index cache is neither created, changed, nor
+    deleted by the check,
+  And the temporary fixture repository no longer exists.
+
+  And the symptom ("the reachability check times out on a cold
+    continuous-integration runner because a one-record run first reads the
+    whole real requirement store, which fails the required test suite on pull
+    requests the change under review did not cause") must not occur.
+depends_on:
+  - ACS-200g
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-200-automated-verification/ACS-200g.yaml
+    relationship: parent
+    status: exists
+  - path: docs/known-issues/testing-quality/resolved/resolved-high-ki-tq-20261021-acs200g-hook-run-outgrows-its-30s-timeout.md
+    relationship: describes
+    status: exists
+    relevance: "The defect this record fixes: mechanism, measured cold and warm timings, and the two suggested fixes (the fixture repository is the one the user chose)."
+  - path: unit_tests/build_guards/test_acs200g_pr_scoped_ac_check.py
+    relationship: implements
+    status: exists
+    relevance: "Holds test_check_reachable_via_real_entry_point_blocks_on_a_malformed_record, the reachability check this record re-scopes to a fixture repository."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the angle values (reachability, discrimination, boundary, criterion) and the must_catch rule used by this record's test_spec."
+assigned_agent: test-writer
+estimated_complexity: S
+it_requirements:
+  - "Test-only change: the whole change lives in unit_tests/build_guards/test_acs200g_pr_scoped_ac_check.py. No production file changes — not the deployed hook (.leafcutter/scripts/commit_guardian/), not its canonical source (templates/scripts/commit_guardian/), not _ac_store_index.py or _ac_store_index_disk.py. The hook already honours everything the fixture needs: it reads the schema from HOOK_ROOT/config/ac_store_schema.json, indexes HOOK_ROOT/docs/acceptance-criteria/, takes the staged set from HOOK_TEST_STAGED_FILES, and resolves its index cache with `git rev-parse --git-dir` from its working directory. If implementation shows the hook reads the real store whatever HOOK_ROOT and cwd are set to, stop and report it. That is a separate guardrail defect and needs its own record, not a production edit under this one."
+  - "The fixture repository must be built in a fresh temporary directory outside the real working tree, one per test (or per class with every test reading it unchanged). It must hold: (a) a copy of the whole deployed .leafcutter/scripts/commit_guardian/ directory, without __pycache__, so check_ac_schema.py and every sibling module it imports come along (_ac_schema_validators, _ac_supersession_validators, _test_spec_entry_bridge, _ac_store_file_discovery, _declared_files_bridge, _ac_store_index, _ac_store_index_disk, _ac_store_locator, _test_design_pending and any others there); (b) a copy of the deployed .leafcutter/scripts/ac_store/ directory next to it, so _ac_store_locator resolves its sibling ac_store/ inside the fixture and not in the real repo; (c) a copy of the real config/ac_store_schema.json at <fixture>/config/ac_store_schema.json, so the jsonschema branch runs and not the 'schema not found' fallback; (d) three valid AC records and the malformed record {id: ZZTEST-999}, all under <fixture>/docs/acceptance-criteria/. The subprocess runs the COPIED <fixture>/.leafcutter/scripts/commit_guardian/check_ac_schema.py as a script, never an imported function or a mock. Keep the existing precondition assertion that the deployed source script exists before copying."
+  - "Reuse the existing shared fixture helpers rather than writing new plumbing where they fit: unit_tests/ac_store/_declared_files_fixtures.py provides default_ac_fields / write_ac_yaml (real yaml.safe_dump records), init_repo_root, copy_real_schema_into and init_git_index. The three valid records must be draft-readiness, criteria-only records that pass every gate the hook applies (the default_ac_fields shape does). Note that helper module points at the templates/ hook on purpose; this record copies the DEPLOYED .leafcutter/ hook, because the deployed script is what ac-store-valid runs. Fixtures are written by the real serializer, never hand-indented YAML literals."
+  - "The fixture must be `git init`-ed (with a local user.name/user.email), because the hook writes its index cache to `<git-dir>/ac_store_index_cache.json`, where git-dir comes from `git rev-parse --git-dir` in the hook's working directory. With cwd inside an initialised fixture the cache lands at <fixture>/.git/ac_store_index_cache.json and is removed with the fixture. Without git init, the hook falls back to a cache file in the system temp directory, which outlives the test. Do not stage or commit the records; the staged set comes only from HOOK_TEST_STAGED_FILES, and an empty fixture index keeps the Phase-2 `git diff --cached --diff-filter=M` empty."
+  - "Every hook run must set BOTH HOOK_ROOT=<fixture> and cwd=<fixture>. HOOK_ROOT picks the schema and the store that get indexed; cwd picks the git dir and so where the cache goes. Each alone is not enough. HOOK_TEST_STAGED_FILES must name exactly one absolute path inside the fixture: the ZZTEST-999 record for the blocking run, one valid record for the control run. HOOK_TEST_FILES_MODIFIED must be unset or empty, and HOOK_NO_GIT must be unset, so the cache path is resolved through git as in production."
+  - "Keep the hard subprocess timeout at 30 s (timeout=30, unchanged). Measure each hook run's wall-clock time with a monotonic clock around subprocess.run, and assert each run takes under 10.0 s. The failure message must give the measured seconds and the run (blocking or control). Every run is cold by construction: the fixture is new, so it has no cache. The test must NOT delete, rename or pre-warm the real repository's index cache to simulate a cold runner. That the real cache does not matter is proved by the read-only-fixture test, not by changing it."
+  - "Read-only-fixture proof, with no production change: after the runs, <fixture>/.git/ac_store_index_cache.json must exist, and the set of keys of its top-level 'index' object must equal exactly the four fixture ids (the three valid ids plus ZZTEST-999). This proves the hook indexed the fixture store and nothing else, and that the number of records read does not depend on the size of the real store. The hook reports no record count of its own: its only count is the number of failed files. So this check uses the cache contents, which the hook writes as an id-keyed index. A real-store id in the cache, or no fixture cache at all, means HOOK_ROOT or cwd still points at the real repo."
+  - "Real index cache untouched: resolve the real git dir with `git rev-parse --absolute-git-dir` (cwd = real repo root; in a linked worktree it is .git/worktrees/<name>/). Snapshot <real-git-dir>/ac_store_index_cache.json before the first hook run and after the last one: whether it exists, and if so st_mtime_ns and st_size. Assert both snapshots are equal (not created, not changed, not deleted). Take the snapshots right around the fixture runs, because other tests in the same pytest process may legitimately rebuild the real cache. If that makes the check flaky in CI, the fixture-cache id-set assertion above is the main proof, and the mtime check may be relaxed to 'not created when it did not exist'. Record that relaxation in the test's docstring; do not drop it silently."
+  - "Real working tree untouched: capture `git status --porcelain=v1 --untracked-files=all` and a SHA-256 of `git diff HEAD --binary` (both with cwd = real repo root) before building the fixture and after removing it, and assert both pairs are equal. This covers tracked and untracked files and the content of already-modified files."
+  - "Fixture removal: the fixture directory must be removed whether the hook passes, fails or times out (TemporaryDirectory context or addCleanup, with Windows-safe removal of read-only files under .git). Assert the directory no longer exists after the cleanup. Do the tree and real-cache comparisons after that cleanup, so a failed assertion inside the run cannot skip them."
+  - "Assertions on the blocking run: return code is 1, not merely non-zero. Combined stdout+stderr contains 'ZZTEST-999' and names at least one required field the record lacks (for example 'title' or 'criteria'). It must not contain 'unexpected error (fail-open)', because the hook exits 0 on an unexpected exception and a crashed copy must not look like a pass or a block. Assertions on the control run: return code is 0, and the output contains no '[check-ac-schema]: ... failed validation' line and no line naming the staged valid record."
+  - "No new dependency: use only modules the test file and its shared helpers already import (os, subprocess, sys, tempfile, shutil, time, hashlib, json, pathlib, unittest, yaml). It must run on Windows and Linux CI unchanged, with POSIX-agnostic path joining and HOOK_TEST_STAGED_FILES given as an absolute native path."
+test_required: true
+test_rationale: >-
+  The check exists to prove that the REAL deployed guardrail entry point is
+  reachable and blocks a malformed record. So the tests must drive the copied
+  deployed script as a subprocess, not an imported function, or the
+  reachability proof is lost. A blocking result on its own is not enough: a
+  fixture the copied hook cannot read or import would also exit non-zero, so a
+  valid-record control run is needed. And because the hook fails open (exit 0)
+  on an unexpected exception, the blocking assertion must also check the
+  record id and rule in the output. The defect being fixed is about scope and
+  time, so separate tests pin (a) that only fixture records are indexed,
+  proved through the id-keyed index cache the hook already writes inside the
+  fixture git dir, (b) a 10 s per-run bound under the unchanged 30 s timeout
+  on a cold, cache-less fixture, and (c) that the real working tree and the
+  real index cache are left as they were and the fixture is removed. A
+  timing-only assertion would not show WHY the run is fast. The cache id-set
+  assertion is what shows the real store was not read.
+test_spec:
+  - name: test_check_reachable_via_real_entry_point_blocks_on_a_malformed_record
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Run the copied deployed check_ac_schema.py as a subprocess with HOOK_ROOT=cwd=<fixture>, staging only <fixture>/docs/acceptance-criteria/.../ZZTEST-999.yaml. Assert exit code 1. Assert the output names ZZTEST-999 and at least one missing required field. Assert the output has no 'unexpected error (fail-open)' line."
+    must_catch:
+      - "a malformed record passes"
+      - "the hook crashes on import in the fixture and fails open with exit 0"
+      - "the output does not name ZZTEST-999 or the rule it breaks"
+    in_scope_files:
+      - unit_tests/build_guards/test_acs200g_pr_scoped_ac_check.py
+  - name: test_check_passes_a_valid_fixture_record_via_real_entry_point
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Same fixture and same copied entry point, staging only one of the three valid records. Assert exit code 0 and no failed-validation line naming that record. This proves the fixture is readable, so the blocking result above comes from the malformed record and not from a broken fixture."
+    must_catch:
+      - "the fixture store or schema is unreadable so every staged record is blocked"
+      - "a sibling module is missing from the copied hook directory"
+      - "the valid fixture records are themselves invalid under the real schema"
+    in_scope_files:
+      - unit_tests/build_guards/test_acs200g_pr_scoped_ac_check.py
+  - name: test_check_reads_only_fixture_records_not_the_real_store
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "After a hook run in the fixture, <fixture>/.git/ac_store_index_cache.json exists and its 'index' keys equal exactly the four fixture ids. No real-store id is present, and the count is independent of the size of the real store."
+    must_catch:
+      - "HOOK_ROOT still points at the real repo"
+      - "cwd still points at the real repo so the cache is written to the real git dir"
+      - "fixture is not git-initialised so the cache falls back to the system temp dir"
+    in_scope_files:
+      - unit_tests/build_guards/test_acs200g_pr_scoped_ac_check.py
+  - name: test_each_fixture_hook_run_finishes_under_ten_seconds_cold
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "On a fresh fixture with no index cache, time the blocking run and the control run separately with a monotonic clock. Assert each is under 10.0 s while the subprocess timeout stays at 30 s. Do not touch the real index cache to simulate a cold runner."
+    must_catch:
+      - "the hook indexes the whole real store on a cold run (about 22 s)"
+      - "the 30 s timeout is raised instead of narrowing the store"
+      - "the cache is pre-warmed so the measured run is not cold"
+    in_scope_files:
+      - unit_tests/build_guards/test_acs200g_pr_scoped_ac_check.py
+  - name: test_check_leaves_real_tree_and_real_index_cache_untouched
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Snapshot the real `git status --porcelain=v1 --untracked-files=all`, the SHA-256 of `git diff HEAD --binary`, and the real <absolute-git-dir>/ac_store_index_cache.json (exists, st_mtime_ns, st_size) before and after the fixture runs. Assert all three snapshots are equal, and assert the fixture directory no longer exists after cleanup."
+    must_catch:
+      - "real index cache written"
+      - "fixture or malformed record written inside the real working tree"
+      - "tmp repo left behind after the check"
+    in_scope_files:
+      - unit_tests/build_guards/test_acs200g_pr_scoped_ac_check.py
+delivers_to: null
+expects_from:
+  ac_id: ACS-200g
+  contract: "The real deployed acceptance-criteria schema guardrail entry point that the pull-request check runs; this record changes only the repository it is exercised against, not the entry point."
+origin_agent: business-analyst
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  USER DECISION (2026-10-21): fix known issue KI-TQ-20261021 by running the
+  reachability check against a small fixture repository built in a temporary
+  directory — a few valid records, the malformed record, and the deployed
+  guardrail — instead of the real repository. Of the two fixes the known issue
+  suggests, the user chose this one over a time limit that scales with store
+  size, because the fixture removes the dependence on store size instead of
+  chasing it.
+  KNOWN ISSUE: KI-TQ-20261021-acs200g-hook-run-outgrows-its-30s-timeout
+  (docs/known-issues/testing-quality/). The check passes one staged record but
+  points the guardrail at the real repository, so the guardrail indexes the
+  whole store first: about 5,270 records, measured cold 22.2 s and warm 1.2 s
+  against a hard 30 s limit, and continuous integration never has the index
+  cache. It failed shard 3/8 in 4 of the last 6 main runs on 2026-10-21 and
+  blocks every pull request through the required test-suite aggregate.
+  The check must still drive the REAL deployed entry point (not an imported
+  function or a mock), because reachability of that entry point is what the
+  check exists to prove for ACS-200g. The valid-record scenario is a control:
+  without it, a fixture that the guardrail cannot read at all would also
+  "block" the malformed record. The 10-second bound is a BA choice that leaves
+  a two-thirds margin under the existing 30 s limit; a fixture of four records
+  should take on the order of the 1.2 s warm full-store run or less.
+  Assigned to test-writer because the change lives entirely in the test; no
+  production behaviour of the guardrail changes. If the guardrail turns out
+  to read the real store regardless of the repository root it is given, that
+  is a separate guardrail defect and needs its own record.
+  IT PO ENRICHMENT (2026-10-21): the user chose this fix (the fixture store)
+  on 2026-10-21 and approved building it now, as relayed by the main session.
+  readiness is set to reviewed, not approved: the IT PO may not record an
+  approval relayed through another agent. The user, or the main session
+  acting on the user's own message, promotes it to approved.
+  The enrichment confirms the change is test-only. The hook takes its schema
+  and store from HOOK_ROOT and its index cache location from
+  `git rev-parse --git-dir` in its working directory, so a git-initialised
+  fixture used as both HOOK_ROOT and cwd confines every read and the cache
+  write to the fixture. Read-only-fixture proof: the id keys of
+  <fixture>/.git/ac_store_index_cache.json equal the four fixture ids. The
+  real cache's existence, mtime and size are checked as well. amended_by
+  stays empty: this is a new record, and the parent's covered_by already
+  lists it.

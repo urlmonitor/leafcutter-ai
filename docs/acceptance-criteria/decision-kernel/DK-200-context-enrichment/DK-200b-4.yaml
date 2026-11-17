@@ -1,0 +1,77 @@
+id: DK-200b-4
+title: "Optional context fits the receiving judgment's remaining payload allowance"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a valid judgment request leaves less payload space than the saved initial context requires,
+  When the kernel adds context for the receiving judgment,
+  Then the complete transmitted request stays within the receiving allowance,
+  And optional context is shortened with an explicit limitation,
+  And the base request and full saved context remain unchanged.
+depends_on: [DK-200b]
+covered_by:
+  - "DK-200b-4-i"
+  - "DK-200b-4-ii"
+  - "tests/kernel/enrichment/test_projection.py::TestContextProjection::test_near_limit_request_fits_with_plain_or_json_escaped_context"
+  - "tests/kernel/enrichment/test_projection.py::TestContextProjection::test_downstream_batch_uses_configured_remaining_allowance"
+  - "tests/kernel/enrichment/test_projection.py::TestContextProjection::test_intent_batch_preserves_goal_while_projecting_context_with_its_budget"
+implemented_by:
+  - "kernel/enrichment_projection.py"
+  - "kernel/intent/classify.py"
+  - "kernel/capabilities/decision/jev_support.py"
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The full serialized provider state, including JSON escaping, must not exceed the receiving batch's configured max_state_chars."
+  - "Only the optional context projection may be shortened; the base request, questions and persisted context must remain unchanged."
+  - "Trimming must report a payload-budget limitation while preserving a valid provider request."
+delivers_to: null
+expects_from:
+  ac_id: DK-200a-3
+  contract: "EnrichedContext checkpoint value: original_goal:string; caller_context:{host:string|null, capabilities:string[], conversation:string[], observations:string[]}; workspace_id:string; repository_root:string; registered_capabilities:string[]; evidence:{source_id:string, locator:string, excerpt:string, content_hash:string, truncated:boolean}[]; sources_consulted:string[]; files_scanned:integer; limitations:string[]; truncated:boolean; status:gathered|no_evidence|partial|unavailable|disabled. Caller claims and source evidence remain distinct; the saved value is unchanged by provider projection."
+test_required: true
+test_spec:
+  - name: test_near_limit_request_fits_with_plain_or_json_escaped_context
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Both plain and JSON-escaped oversized context fit the 60,000-character serialized allowance, retain the base request and snapshot and report truncation."
+  - name: test_downstream_batch_uses_configured_remaining_allowance
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "The actual downstream batch builder respects a 36,000-character allowance and preserves its base task while reporting context truncation."
+  - name: test_intent_batch_preserves_goal_while_projecting_context_with_its_budget
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "The actual intent batch builder respects an 8,000-character allowance while retaining the original task and questions."
+test_rationale: "Exact serialization boundaries plus both real batch builders are required; raw string-length checks or a projection helper alone would miss consumer budget drift."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-25'
-last_updated: '2026-09-25'
+last_updated: '2026-10-12'
 components:
   - build_orchestration
 related_docs:
@@ -15,8 +15,10 @@ related_docs:
 
 # KI-BO-20260925-commit-agent-pkill-kills-parallel-test-runs — commit.md Step 0 runs 'pkill -f pytest', which kills every pytest on the machine, and its failure path uses the shared git stash that quick-fix forbids
 
-- **Severity:** medium (indexed low). Not yet observed; follows directly from the command once two drives or sessions run together, which is routine (28 concurrent sessions were listed on 2026-09-25).
+- **Severity:** medium (indexed low). Observed once (2026-10-02, see Occurrences); it follows directly from the command whenever two drives or sessions run together, which is routine (28 concurrent sessions were listed on 2026-09-25).
 - **Status:** open — no AC. Template read 2026-09-25; impact inferred.
+- **Occurrences:** 1 observed (the entry was filed from the template alone). 2026-10-02: a commit agent's Step 0 `pkill -f pytest` ran while a pr-reviewer was running pytest in another worktree.
+- **First seen:** 2026-10-02 · **Last seen:** 2026-10-02
 - **Where:** `templates/agents/commit.md:106-120` (`pkill -f "pytest"`), `:381-384` (`git stash` / `git stash pop`).
 
 ## Mechanism

@@ -30,6 +30,19 @@ _HARVESTER_REQUIRED_SIBLINGS: tuple[str, ...] = (
     "sink_resolution.py",
     "capture_write.py",
     "harvest_cli.py",
+    "harvest_status.py",
+    "record_identity.py",
+)
+
+# INF-700b-1: the four surfaces now run emit_knowledge.py (no --sink), and
+# check_sink_parity.py resolves them by running the DEPLOYED
+# `emit_knowledge.py --print-sink` for real. That script imports
+# sink_resolution (already above) and entry_kind_vocabulary at load time, so a
+# deploy that omits them crashes with ImportError before printing anything.
+_EMIT_HELPER_SRC_NAME = "emit_knowledge.py"
+_EMIT_HELPER_REQUIRED_SIBLINGS: tuple[str, ...] = (
+    "sink_resolution.py",
+    "entry_kind_vocabulary.py",
 )
 
 _REAL_SURFACES: tuple[tuple[str, Path, tuple[str, ...]], ...] = (
@@ -66,7 +79,8 @@ _TIMEOUT_SECONDS = 30
 
 
 def _deploy_harvester(deployed_root: Path) -> Path:
-    """Deploy harvest_learnings.py AND its required sibling modules.
+    """Deploy harvest_learnings.py AND its required sibling modules, plus
+    emit_knowledge.py and the modules it imports (INF-700b-1).
 
     Mirrors what a real ``build.py`` run actually deploys
     (``build_knowledge_scripts`` in ``scripts/build_phases_knowledge.py``) --
@@ -78,7 +92,11 @@ def _deploy_harvester(deployed_root: Path) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     dest = output_dir / "harvest_learnings.py"
     shutil.copy2(_HARVESTER_SRC, dest)
-    for sibling_name in _HARVESTER_REQUIRED_SIBLINGS:
+    for sibling_name in (
+        *_HARVESTER_REQUIRED_SIBLINGS,
+        _EMIT_HELPER_SRC_NAME,
+        *_EMIT_HELPER_REQUIRED_SIBLINGS,
+    ):
         shutil.copy2(_KNOWLEDGE_SRC_DIR / sibling_name, output_dir / sibling_name)
     return dest
 
@@ -91,11 +109,19 @@ def _write_declaration(
 ) -> Path:
     config_path = deployed_root / "config" / "knowledge_sink.json"
     config_path.parent.mkdir(parents=True, exist_ok=True)
+    # INF-500d-4-iii (ADR-069): a current declaration also records the one
+    # operational log root (the directory the telemetry stream sits directly
+    # under -- an absolute path at every call site) and the feedback sink
+    # beneath it. A pre-feature two-key declaration is rejected by the
+    # declared-log-root parity check, so the fixture must write all four.
+    log_root = Path(operational_telemetry_stream).parent
     config_path.write_text(
         json.dumps(
             {
                 "knowledge_emission_sink": knowledge_emission_sink,
                 "operational_telemetry_stream": operational_telemetry_stream,
+                "operational_log_root": str(log_root),
+                "feedback_sink": str(log_root / "feedback.jsonl"),
             },
             indent=2,
         )

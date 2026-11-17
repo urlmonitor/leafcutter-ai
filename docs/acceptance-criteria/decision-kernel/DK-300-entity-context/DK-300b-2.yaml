@@ -1,0 +1,88 @@
+id: DK-300b-2
+title: "Mention matching follows boundaries, declared phrases and case rules"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: reviewed
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a request contains overlapping declared glossary phrases, mixed-case glossary and type names, repeated mentions, quoted examples and ordinary prose,
+  When recognition scans the admitted text,
+  Then glossary and type matching case-folds and selects the longest declared phrase within each family using Unicode identifier boundaries,
+  And code-symbol and artifact-ID matching preserves their owners' case rules,
+  And "AC" does not match inside "CACHE" and "TaskInput" does not match inside "TaskInputExtra",
+  And generic document genres require an explicit type cue or declared alias,
+  And repeated mentions share one canonical card while the checkpoint retains their original matched surfaces and source offsets,
+  And quoted mentions supply data without instruction authority.
+depends_on: [DK-300b]
+doc_links:
+  - path: docs/analysis/2026-10-03-kernel-entity-context-concept.md
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+delivers_to: {"agent":"python-coder","contract":"EntityContext (kernel.contracts.entity_context): schema_version='1.0', kind='entity_context'; entities:list[EntityCard] with family:glossary|doc_type|entry_kind|native_kind|symbol|artifact_id, identity:string, native_kind:string|null, meaning:string, signature:string|null, resolution:resolved|ambiguous, matches:list[{channel:string,record_index:int|null,start:int,end:int,surface:string}], provenance:{source_id:string,locator:string,snapshot:string,source_hash:string,projection_hash:string}. Offsets are half-open Unicode code-point positions in original channel text. Original goal and caller claims are separate from meaning projection. Context has original_goal:string (verbatim), caller_context, workspace_id, repository_root, registered_capabilities:string[], status:recognized|no_matches|partial|unavailable|disabled, unresolved:list[{family,reference,state,matches,candidates}], coverage:{scan_complete:bool,index_status,index_fingerprint:string|null,families,counts,by_family}, budgets:{lookups:int,serialized_chars:int,elapsed_ms:number,jev_calls:0}, limitations:string[]. Counts contain detected,resolved,returned,omitted,unknown,ambiguous. No evidence field."}
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-03
+amended_by:
+  - reason: "IT PO review on 2026-10-03 adds technical contracts and planned test specifications under existing user authorization; readiness is now reviewed. BA criteria, implementation status and historical evidence are preserved."
+superseded_by: null
+covered_by:
+  - 'DK-300b-2-i'
+  - 'tests/kernel/entity_context/test_recognition.py::test_unicode_boundaries_longest_phrases_and_owner_case_rules'
+  - 'tests/kernel/entity_context/test_recognition.py::test_generic_types_need_cues_and_quoted_mentions_are_data'
+  - 'tests/kernel/entity_context/test_recognition.py::test_repeated_mentions_keep_exact_original_offsets_and_one_card'
+implemented_by:
+  - "kernel/entity_matching.py"
+  - "kernel/entity_context.py"
+notes: |
+  New behavioral requirement derived from the user-authorized entity-context concept.
+  BA behavior and IT PO technical contracts are reviewed; implementation is verified by the independent strict entity suite and recognition corpus.
+  Verification evidence: reports/entity-context-verification.md. No human approval is implied.
+  Historical DK-200 direct-gather tests and evaluation reports are preserved.
+  Fresh-run wiring criteria were explicitly reconciled to EntityContext on 2026-10-04.
+estimated_complexity: L
+it_requirements:
+  - "Matches record half-open Unicode code-point offsets into original text, with channel and caller-record identity; normalization must not corrupt surface spans."
+  - "Deduplication keys retain typed owner identity; repeat frequency and uppercase spelling cannot improve selection rank or consume extra lookup/identity slots."
+  - "All admitted mentions for retained identities remain checkpointed even when the compact provider projection uses a representative span and count."
+test_required: true
+test_spec:
+  - name: "test_unicode_boundaries_longest_phrases_and_owner_case_rules"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "behavioral"
+    angle: "criterion"
+    description: "tests/kernel/entity_context/test_recognition.py::test_unicode_boundaries_longest_phrases_and_owner_case_rules: Assert longest within-family phrase, casefolded glossary/type names, case-sensitive symbols/IDs, and no AC-in-CACHE or TaskInput-in-TaskInputExtra hit."
+  - name: "test_generic_types_need_cues_and_quoted_mentions_are_data"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "behavioral"
+    angle: "criterion"
+    description: "tests/kernel/entity_context/test_recognition.py::test_generic_types_need_cues_and_quoted_mentions_are_data: Compare ordinary reference with type:reference/reference document and a quoted valid mention; assert cue-dependent matching without any authority change."
+  - name: "test_repeated_mentions_keep_exact_original_offsets_and_one_card"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "behavioral"
+    angle: "criterion"
+    description: "tests/kernel/entity_context/test_recognition.py::test_repeated_mentions_keep_exact_original_offsets_and_one_card: Repeat one term100 times across goal/caller text with Unicode and quotes; assert one identity, original matched surfaces/offsets, occurrence100 and one distinct lookup."
+test_rationale: "Exercise production public boundaries with real canonical-source fixtures and an injected recording classifier; assert observable outputs and side effects, not source strings. Capture red results before runtime implementation; no live provider is required."
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-03'

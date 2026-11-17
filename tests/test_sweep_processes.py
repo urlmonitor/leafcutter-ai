@@ -2,7 +2,7 @@
 MODULE: test_sweep_processes
 GOAL: Unit tests for leafcutter/scripts/worktree/sweep_processes.py.
 BUSINESS CONTEXT: Validates that the process-sweep helper correctly terminates
-    residual worker processes and removes log files before git worktree remove,
+    residual worker processes and removes log files before the linked-checkout remove,
     preventing orphaned PIDs and partially-deleted worktree directories.
 ARCHITECTURE: pytest-based unit tests using tmp_path and monkeypatch.  No
     database, no Docker, no file output to the project root.  All tests must

@@ -5,6 +5,7 @@ GOAL: Hand-rolled, entry-naming validation for ``test_spec[].angle`` and
     ``test_spec[].must_catch`` — the two TQ-500f-1 / TQ-500f-2-i fields whose
     rejection messages must name the offending entry, the field, and (for
     ``must_catch``) which rule failed.
+    Also (ACD-2500c-3) rejects an entry key the schema does not declare, by name.
 BUSINESS CONTEXT: ``test_spec`` is a JSON Schema ``oneOf`` (array branch or
     null branch) in ``config/ac_store_schema.json``. jsonschema's generic
     ``Draft7Validator`` report against a ``oneOf`` collapses any violation
@@ -59,6 +60,53 @@ def _permitted_test_spec_angles(schema: dict[str, Any] | None) -> set[str] | Non
     except (KeyError, IndexError, TypeError):
         return None
     return set(enum) if enum else None
+
+
+def _declared_entry_keys(schema: dict[str, Any] | None) -> set[str] | None:
+    """Return the property names a ``test_spec`` entry may carry, read from *schema*.
+
+    Uses the same ``oneOf`` navigation as ``_permitted_test_spec_angles`` so the
+    closed key set has one source of truth (ACD-2500c-3), never a second typed list.
+
+    Args:
+        schema: Parsed ``config/ac_store_schema.json`` content, or ``None``.
+
+    Returns:
+        The declared item property names, or ``None`` when *schema* is ``None`` or
+        its shape is unexpected (the closed set is then unknowable).
+    """
+    if schema is None:
+        return None
+    try:
+        test_spec = schema["properties"]["test_spec"]
+        array_branches = [b for b in test_spec["oneOf"] if b.get("type") == "array"]
+        properties = array_branches[0]["items"]["properties"]
+    except (KeyError, IndexError, TypeError):
+        return None
+    return set(properties) if isinstance(properties, dict) and properties else None
+
+
+def _unknown_key_errors(
+    path: Path, entry_name: str, item: dict[str, Any], declared: set[str] | None
+) -> list[str]:
+    """Report each ``test_spec`` entry key the schema does not declare, by name.
+
+    Args:
+        path: The AC YAML file being validated (for error prefixing).
+        entry_name: The ``test_spec`` entry's ``name`` (or a placeholder).
+        item: The ``test_spec`` entry dict.
+        declared: The schema-declared key set, or ``None`` (check skipped).
+
+    Returns:
+        One error per undeclared key, in sorted key order.
+    """
+    if declared is None:
+        return []
+    return [
+        f"{path}: test_spec entry {entry_name!r} has undeclared key {key!r}. "
+        f"Declared keys: {sorted(declared)}."
+        for key in sorted(map(str, set(item) - declared))
+    ]
 
 
 def _angle_field_errors(
@@ -152,6 +200,7 @@ def test_spec_entry_errors(
     if not isinstance(test_spec, list):
         return []
     permitted_angles = _permitted_test_spec_angles(schema)
+    declared_keys = _declared_entry_keys(schema)
     errors: list[str] = []
     for item in test_spec:
         if not isinstance(item, dict):
@@ -159,6 +208,7 @@ def test_spec_entry_errors(
         entry_name = item.get("name", "<unnamed test_spec entry>")
         errors.extend(_angle_field_errors(path, entry_name, item, permitted_angles))
         errors.extend(_must_catch_field_errors(path, entry_name, item))
+        errors.extend(_unknown_key_errors(path, entry_name, item, declared_keys))
     return errors
 
 

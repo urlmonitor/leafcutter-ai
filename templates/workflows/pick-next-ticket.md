@@ -129,8 +129,8 @@ Which ticket do you want to work on? [1-3 / ticket path / none]:
 ## Integration with /build-feature
 
 After the user selects a ticket (or `--auto` selects it), this workflow hands off to
-`/build-feature` with the ticket path as the argument. `/build-feature` then creates
-the epic worktree (if needed) and drives the ticket through all its phase agents.
+`/build-feature` with the ticket path as the argument. `/build-feature` then gets
+the epic workspace (if needed) from the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) and drives the ticket through all its phase agents.
 
 ```
 /pick-next-ticket  →  user selects ticket  →  /build-feature <ticket_path>

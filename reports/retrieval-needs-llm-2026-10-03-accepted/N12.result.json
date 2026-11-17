@@ -1,0 +1,279 @@
+{
+  "case_id": "N12",
+  "question": "Which ADRs and contracts govern adding a retrieval operation, and what must remain compatible?",
+  "human_gold": "Both governing architecture decisions and actual versioned contracts are needed, with clauses and compatibility obligations. Single-source/doc-type output is insufficient. No fabricated ADR or schema identifier.",
+  "actor_id": "codex:root:needs_llm_host",
+  "model_id": null,
+  "underlying_model_requests": null,
+  "tokens": null,
+  "error": null,
+  "result": {
+    "schema_version": "1.0",
+    "original_question": "Which ADRs and contracts govern adding a retrieval operation, and what must remain compatible?",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "adr",
+        "schema"
+      ],
+      "target_ids": [],
+      "required_fields": [
+        "content",
+        "compatibility",
+        "provenance"
+      ],
+      "document_types": [
+        "adr",
+        "schema"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "exhaustive_set",
+    "hierarchy_scope": "not_applicable",
+    "scope_resolution": "discovery_needed",
+    "unresolved": [],
+    "rationale": "Discover the ADRs and versioned contracts governing addition of a retrieval operation, identify those governing records, and obtain their relevant provisions and compatibility obligations. No particular IDs are supplied. The request concerns the governing set, not examples or an acceptance-criterion hierarchy.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  },
+  "envelope": {
+    "schema_version": "1.0",
+    "run_id": "run-a472ae6b468148e2",
+    "root_task_id": "task-48bed735be184731",
+    "state_revision": 3,
+    "status": "completed",
+    "output": {
+      "schema_version": "1.0",
+      "schema_id": "leafcutter.retrieval_needs_output.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "original_question": "Which ADRs and contracts govern adding a retrieval operation, and what must remain compatible?",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "adr",
+            "schema"
+          ],
+          "target_ids": [],
+          "required_fields": [
+            "content",
+            "compatibility",
+            "provenance"
+          ],
+          "document_types": [
+            "adr",
+            "schema"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_set",
+        "hierarchy_scope": "not_applicable",
+        "scope_resolution": "discovery_needed",
+        "unresolved": [],
+        "rationale": "Discover the ADRs and versioned contracts governing addition of a retrieval operation, identify those governing records, and obtain their relevant provisions and compatibility obligations. No particular IDs are supplied. The request concerns the governing set, not examples or an acceptance-criterion hierarchy.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      }
+    },
+    "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-a472ae6b468148e2\\artifacts\\report.md",
+    "decision_ids": [],
+    "evidence_ids": [],
+    "open_questions": [],
+    "pending_interaction": null,
+    "limitations": [
+      "host-reported; not verified by the kernel",
+      "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+    ],
+    "gaps": [
+      {
+        "schema_version": "1.0",
+        "id": "gap-c00a80f0d61697f9",
+        "created_at": "2026-10-03T09:45:55.581296Z",
+        "updated_at": "2026-10-03T09:45:55.581296Z",
+        "created_seq": 0,
+        "gap_key": "beec8cfadcd9eec77d2118d4cb80077f52e6692d766ed997663114d06ad2f586",
+        "gap_type": "host_only",
+        "goal": "Which ADRs and contracts govern adding a retrieval operation, and what must remain compatible?",
+        "normalized_need": "adding adrs compatible contracts govern must operation remain retrieval what which",
+        "request_kind": "capability",
+        "input_schema": "leafcutter.retrieval_needs_request.v1",
+        "output_schema": "leafcutter.retrieval_needs_output.v1",
+        "scope_component_ids": [],
+        "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+        "candidates_considered": [
+          "host.retrieval_needs"
+        ],
+        "candidate_exclusions": {},
+        "need_title": "Which ADRs and contracts govern adding a retrieval operation, and what must r...",
+        "why_insufficient": "host-backed only; no native implementation exists",
+        "occurrence_count": 1,
+        "example_run_ids": [
+          "run-a472ae6b468148e2"
+        ],
+        "example_trace_urls": [],
+        "fallback_outcome": "host_completed",
+        "missing_native_capability": "native implementation of host.retrieval_needs",
+        "proposal": {
+          "schema_version": "1.0",
+          "author": "template",
+          "title": "Capability for: Which ADRs and contracts govern adding a retrieval operation, and what must r...",
+          "purpose": "host_only need",
+          "draft_ref": "drafts/beec8cfadcd9eec77d2118d4cb80077f52e6692d766ed997663114d06ad2f586.md"
+        },
+        "first_seen": "2026-10-03T09:45:55.581296Z",
+        "last_seen": "2026-10-03T09:45:55.581296Z"
+      }
+    ],
+    "usage_summary": {
+      "schema_version": "1.0",
+      "jev_calls": 0,
+      "host_operations": 1,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd_known": null,
+      "cost_unknown_calls": 1,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "host",
+          "model_id": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "duration_ms": 624531,
+          "cost_usd": null,
+          "cost_provenance": "unavailable",
+          "calls": 1
+        }
+      ]
+    },
+    "trace_refs": {
+      "schema_version": "1.0",
+      "trace_id": "cf8adb90bf858c59b68f5c8b5e4f6177",
+      "trace_url": null,
+      "observability": "ok"
+    },
+    "errors": []
+  },
+  "shared_semantics": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "original_question",
+        "passed": true,
+        "actual": "Which ADRs and contracts govern adding a retrieval operation, and what must remain compatible?",
+        "expected": "Which ADRs and contracts govern adding a retrieval operation, and what must remain compatible?"
+      },
+      {
+        "name": "include.entity_types",
+        "passed": true,
+        "actual": [
+          "adr",
+          "schema"
+        ],
+        "expected": [
+          "adr",
+          "schema"
+        ]
+      },
+      {
+        "name": "include.document_types",
+        "passed": true,
+        "actual": [
+          "adr",
+          "schema"
+        ],
+        "expected": [
+          "adr",
+          "schema"
+        ]
+      },
+      {
+        "name": "completeness",
+        "passed": true,
+        "actual": "exhaustive_set",
+        "expected": [
+          "examples",
+          "exhaustive_set"
+        ]
+      },
+      {
+        "name": "hierarchy_scope",
+        "passed": true,
+        "actual": "not_applicable",
+        "expected": [
+          "not_applicable"
+        ]
+      },
+      {
+        "name": "status",
+        "passed": true,
+        "actual": "decided",
+        "expected": [
+          "decided"
+        ]
+      },
+      {
+        "name": "required_fields_when_projecting",
+        "passed": true,
+        "actual": [
+          "content",
+          "compatibility",
+          "provenance"
+        ],
+        "expected": [
+          "content",
+          "compatibility"
+        ]
+      }
+    ]
+  },
+  "overlay": {
+    "applicable": true,
+    "passed": true,
+    "checks": [
+      {
+        "id": "M04",
+        "passed": true,
+        "reason": "When the answer requires a schema/contract entity, the source plan must not silently omit its contract document type."
+      }
+    ]
+  }
+}

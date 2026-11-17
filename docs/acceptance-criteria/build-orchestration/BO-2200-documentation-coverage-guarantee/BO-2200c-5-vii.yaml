@@ -1,0 +1,100 @@
+id: BO-2200c-5-vii
+title: "The writer dispatched by a build can author the brief's docs itself, because the build cannot give it anyone to delegate to"
+component: build-orchestration
+components:
+  - build_orchestration
+  - documentation_system
+status: active
+level: L3
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a build-feature drive over a doc-required ticket whose "## Agent Contracts" ->
+    "### documentation-expert" block lists at least one required doc,
+    And build-feature dispatches every phase as a flat depth-1 agent, so the
+    documentation-expert phase agent has no Agent tool and cannot spawn a specialist,
+  When build-feature dispatches the documentation-expert phase for that ticket,
+  Then the prompt sent to that dispatch carries a leaf-mode instruction stating that this
+    dispatch cannot spawn sub-agents, and that for each required doc in the Agent Contracts
+    documentation-expert block the agent must classify intent as its template prescribes,
+    pick the specialist (how-to-author, reference-author, explanation-author, adr-author,
+    architecture-diagram-author or architecture-author), read that specialist's agent template
+    (.claude/agents/<specialist>.md in the worktree, falling back to
+    templates/agents/<specialist>.md) and its canonical how-to, and author the doc itself
+    following that specialist's rules,
+    And the instruction states that, for this dispatch only, it overrides the template's
+    "never write or edit a doc file yourself" rule,
+    And the instruction forbids returning status handoff to a specialist that is not a key of
+    the ticket's agents map, directing the agent to author that doc instead.
+  And given the same drive,
+  When build-feature dispatches any phase other than documentation-expert (for example
+    pr-reviewer),
+  Then that phase's prompt does not carry the leaf-mode instruction.
+  And the bug symptom ("Every build-feature drive halts tickets at the documentation-expert phase. On run wf_5c31f1a2-e27 (EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace) 4 of 5 halted tickets stopped there (05, 06, 44 with status blocker; 08 with a handoff to adr-author that is not in the ticket's agents map). Each sign-off says the same thing: 'This dispatch exposed no Agent tool, so none of the Diataxis specialists (how-to-author, reference-author, ...) could be dispatched, and this agent must not author doc files itself.' So no doc is written and the ticket cannot advance.") must not occur
+depends_on:
+  - BO-2200c-5
+  - BO-2200c-5-iv
+doc_links:
+  - path: templates/agents/documentation-expert.md
+    relationship: describes
+    status: exists
+    relevance: "The orchestrator template whose 'never author yourself' rule (around lines 198 and 367) the leaf-mode instruction overrides for a build-feature dispatch only."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The per-phase dispatch the leaf-mode instruction is added to."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+declared_files:
+  - path: templates/workflows-js/build-feature.js
+    state: existing
+test_spec:
+  - name: test_bo_2200c_5_vii_documentation_expert_dispatch_prompt_carries_leaf_mode
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "Run build-feature over a doc-required ticket fixture through unit_tests/_workflow_engine_harness.py with a mocked agent(); capture the prompt actually passed to the documentation-expert dispatch and assert it states the dispatch cannot spawn sub-agents, names the specialists, tells the agent to read .claude/agents/<specialist>.md (falling back to templates/agents/<specialist>.md) and author the doc itself, says it overrides the never-author-yourself rule for this dispatch only, and forbids a handoff to a specialist absent from the ticket's agents map."
+    must_catch:
+      - "build-feature.js dispatches documentation-expert with the same prompt as every other phase (no leaf-mode text)"
+      - "the leaf-mode text is defined in build-feature.js but never appended to the prompt sent to the dispatch"
+  - name: test_bo_2200c_5_vii_other_phases_do_not_receive_leaf_mode
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "Negative control in the same harness run: the prompt captured for pr-reviewer (and every other non-documentation-expert phase) does not contain the leaf-mode instruction."
+    must_catch:
+      - "the leaf-mode instruction is appended to every phase prompt unconditionally"
+test_rationale: |
+  Per CLAUDE.md "Gate / Workflow ACs -- Verify Behaviorally, Not by Grep", a grep of
+  build-feature.js for the leaf-mode string would pass on a constant that is defined and never
+  sent. Both tests therefore execute the real workflow under the existing engine harness and
+  assert on the prompt the mocked agent() actually received. The negative control on pr-reviewer
+  catches the opposite wrong version, an unconditional append that would tell every phase it may
+  override its own template.
+origin_agent: BrainCandy
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/workflows/test_bo2200c5vii_doc_expert_leaf_mode_dispatch.py
+implemented_by: []
+notes: |
+  Authored by /quick-fix. Root cause: build-feature dispatches every phase as a flat depth-1 agent() call (agentType: phaseName). Sub-agents are hard-limited to depth 1, so a phase agent has no Agent tool. templates/agents/documentation-expert.md is an orchestrator whose rules are 'never write or edit a doc file yourself; all authoring is delegated to specialists' (lines ~198 and ~367). Inside the workflow it can neither delegate nor author, so it always returns blocker. The dispatch prompt gives it no leaf-mode instruction. Fix: when phaseName === 'documentation-expert', append a leaf-mode instruction to the dispatch prompt. It says this dispatch cannot spawn sub-agents, so for each required doc in the ticket's '## Agent Contracts → ### documentation-expert' block the agent must classify intent exactly as its template says, pick the specialist (how-to-author, reference-author, explanation-author, adr-author, architecture-diagram-author or architecture-author), read that specialist's agent template (.claude/agents/<specialist>.md in the worktree, falling back to templates/agents/<specialist>.md) and its canonical how-to, and author the doc itself following that specialist's rules. For this dispatch only, this explicitly overrides the 'never author yourself' rule. Never return status handoff to a specialist that is not a key of the ticket's agents map; author it instead. The test must run the workflow through the existing workflow engine harness (unit_tests/_workflow_engine_harness.py) and assert on the prompt actually sent to the documentation-expert dispatch, plus a negative control that other phases (e.g. pr-reviewer) do not receive the leaf-mode text. Not a grep of the source..
+
+  Placement: BO-2200c ("The writer gets a precise brief") is at its child_limit_override of 6
+  L2s, and this is a constraint on the writer side of BO-2200c-5 (the writer reads the Agent
+  Contracts block as its brief) rather than a new behaviour, so it is a Roman-suffix L3.
+  Related: BO-3100c-2 states the structural end-state (no entry point reaches a coordinating
+  specialist at all); this AC is the interim leaf-mode remedy that lets the current flat
+  dispatch produce docs. readiness is left at reviewed: approval is the user's sign-off.

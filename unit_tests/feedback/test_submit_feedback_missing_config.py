@@ -12,6 +12,7 @@ BUSINESS CONTEXT: Agents and hooks that call submit_feedback.py may run from
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -23,7 +24,9 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_SUBMIT_SCRIPT = _REPO_ROOT / "scripts" / "feedback" / "submit_feedback.py"
+# The canonical source. The gitignored scripts/feedback symlink is a build
+# output that a checkout or worktree may not carry.
+_SUBMIT_SCRIPT = _REPO_ROOT / "templates" / "scripts" / "feedback" / "submit_feedback.py"
 
 
 def _run_submit(extra_args: list, *, cwd: str | None = None) -> subprocess.CompletedProcess:
@@ -188,11 +191,16 @@ class TestMissingConfigErrorMessage(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create a fake script layout that resolves to a nonexistent config
             fake_scripts_dir = Path(tmpdir) / "scripts" / "feedback"
-            fake_scripts_dir.mkdir(parents=True)
 
-            import shutil
+            # INF-500d-4-i: submit_feedback.py imports sibling modules
+            # (feedback_sink.py, feedback_validation.py), so the layout is the
+            # whole scripts/feedback directory as the build deploys it, not
+            # the lone script.
+            shutil.copytree(
+                str(_SUBMIT_SCRIPT.parent), str(fake_scripts_dir),
+                ignore=shutil.ignore_patterns("__pycache__"),
+            )
             fake_script = fake_scripts_dir / "submit_feedback.py"
-            shutil.copy2(str(_SUBMIT_SCRIPT), str(fake_script))
 
             # The resolved config root would be parents[2]/config = tmpdir/config
             # which does NOT have feedback_categories.yaml

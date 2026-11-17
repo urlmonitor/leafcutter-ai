@@ -1,0 +1,61 @@
+"""MODULE: graph_selection_result
+GOAL: Preserve unsupported obligations and execute only permitted repository fallback.
+BUSINESS CONTEXT: Bounded samples cannot claim an exhaustive answer.
+ARCHITECTURE: Maps finite selector outcomes into existing evidence and assessment contracts.
+"""
+from __future__ import annotations
+
+from integrations.graph_offers import repository_sources, selection_context
+from integrations.retrieval_decision import RetrievalChoice
+from kernel.capabilities.base import CapabilityExecutor, ExecutionContext
+from kernel.capabilities.retrieval import RepositoryRetrievalExecutor
+from kernel.contracts import schema_ids
+from kernel.contracts.capability import CapabilityResult, Usage
+from kernel.contracts.enums import NeedStatus, ResultStatus
+from kernel.contracts.evidence import EvidenceBundlePayload
+from kernel.contracts.payloads import RetrievalRequestPayload
+from kernel.contracts.work import CapabilityInvocation
+
+
+async def selection_result(ctx: ExecutionContext, invocation: CapabilityInvocation,
+                           payload: RetrievalRequestPayload, choice: RetrievalChoice,
+                           usage: list[Usage], fallback: CapabilityExecutor | None = None
+                           ) -> CapabilityResult:
+    """Return an honest unsupported result or consume an authorized repository fallback.
+
+    Args:
+        ctx: Trusted scope, budget and configured sources.
+        invocation: Original registered retrieval invocation.
+        payload: Original question and current source restrictions.
+        choice: Validated finite selector outcome.
+        usage: Completed selection calls, retained even without graph evidence.
+        fallback: Injected ordinary repository executor, when supplied.
+
+    Returns:
+        An existing capability result with durable population limitations when required.
+    """
+    if choice.operation == "repository_fallback":
+        native = repository_sources(ctx, payload)
+        request = payload.model_copy(update={"source_ids": native,
+            "query_hints": list(dict.fromkeys([payload.need.question, *payload.query_hints]))})
+        call = invocation.model_copy(update={"input_payload": request.model_dump(mode="json")})
+        output = await (fallback or RepositoryRetrievalExecutor()).ainvoke(call, selection_context(ctx))
+        output = output.model_copy(update={"usage": [*usage, *output.usage]})
+        output.diagnostics["knowledge_selection"] = "repository_fallback"
+        output.diagnostics["knowledge_reason"] = choice.reason
+        return output
+    bundle = EvidenceBundlePayload(request_id=invocation.id,
+        coverage={payload.need.id: NeedStatus.UNAVAILABLE}, limitations=[choice.reason])
+    if choice.operation == "unsupported_population":
+        bundle.assessments[payload.need.id] = {"status": "unresolved", "kind": "unsupported_population",
+            "original_question": payload.need.question, "limitations": [choice.reason]}
+    return CapabilityResult(invocation_id=invocation.id, work_item_id=invocation.work_item_id,
+        status=ResultStatus.PARTIAL, output_schema_id=schema_ids.EVIDENCE_BUNDLE,
+        output_payload=bundle.model_dump(mode="json"), usage=usage, limitations=bundle.limitations,
+        diagnostics={"knowledge_selection": choice.operation, "knowledge_status": "unsupported",
+                     "knowledge_reason": choice.reason})
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-03 20:00 [python-coder]: Preserve unsupported population obligations across research merges. (#TICKETLESS reason=user-approved-DK300-graph-routing)

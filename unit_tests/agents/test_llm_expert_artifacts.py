@@ -143,7 +143,6 @@ def _registry_agent(agent_id: str) -> dict:
     assert len(matches) == 1, f"expected exactly one '{agent_id}' registry entry"
     return matches[0]
 
-
 # ---------------------------------------------------------------------------
 # BP-200a — agent template (templates/agents/llm-expert.md)
 # ---------------------------------------------------------------------------
@@ -238,18 +237,6 @@ def test_bp200a_4_i_graceful_degradation_when_context_absent():
     assert "continue" in section.lower()
     # Must NOT instruct the agent to abort/raise when the file is missing.
     assert "abort" not in section.lower()
-
-
-def test_bp200a_5_skills_table_lists_exactly_three():
-    # covers: BP-200a-5
-    section = _md_section(_read(_LLM_EXPERT_TEMPLATE), "## Skills")
-    assert section, "Skills section not found"
-    for skill in ("add-agent-to-package", "add-skill-to-package", "signoff"):
-        assert skill in section, f"Skills table missing {skill}"
-        assert f"skills/{skill}/SKILL.md" in section, f"{skill} row lacks SKILL.md path"
-    # A markdown table with exactly three data rows (rows referencing SKILL.md).
-    data_rows = [ln for ln in section.splitlines() if "SKILL.md" in ln and ln.strip().startswith("|")]
-    assert len(data_rows) == 3, f"expected exactly 3 skill rows, got {len(data_rows)}"
 
 
 # ---------------------------------------------------------------------------
@@ -375,12 +362,11 @@ def test_bp200c_2_trigger_conditions_dsl_and_llm():
 def test_bp200c_3_spawn_wiring_and_skills_used():
     # covers: BP-200c-3
     supervisor = _registry_agent("ticket-supervisor")
-    assert "llm-expert" in supervisor["spawn_allowlist"]
     entry = _registry_agent("llm-expert")
+    assert "__ticket_phase_agents__" in supervisor["spawn_allowlist"] and entry.get("is_ticket_phase")  # AR-400f-2
     assert "ticket-supervisor" in entry["spawned_by"]
     assert "research-agent" in entry["spawn_allowlist"]
-    for skill in ("add-agent-to-package", "add-skill-to-package", "signoff"):
-        assert skill in entry["skills_used"], f"skills_used missing {skill}"
+    assert {"add-agent-to-package", "add-skill-to-package", "signoff"} <= {s["skill_id"] for s in entry["skills_invoked"]}
 
 
 def test_bp200c_4_readme_phase_agents_row():

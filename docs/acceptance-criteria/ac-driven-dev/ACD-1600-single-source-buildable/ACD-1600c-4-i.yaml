@@ -99,6 +99,67 @@ amended_by:
     date: '2026-09-28'
     by: it-po
     directed_by: user
+  - reason: >-
+      ADDITIVE ONLY. THE CLOSING CRITERION'S STATED REASON IS UNSOUND FOR A SHARED PATH; ITS
+      BEHAVIOUR IS CORRECT AND IS NOT DISTURBED. criteria, status, req_status, work_status
+      (done), readiness (approved), test_spec, covered_by, implemented_by and every other
+      field are UNTOUCHED -- one notes block is added and this entry. Nothing here changes
+      what this record requires or what its tests assert.
+
+
+      THE DEFECT. The final criterion reads "for a requirement whose work is finished, a file
+      it marked to be created that now exists is neither refused nor reported, BECAUSE THE
+      FINISHED WORK IS WHAT CREATED IT". The exemption is right. The causal clause is false
+      whenever the path is shared between records, and shared paths are the ordinary case in
+      any multi-record family that builds one module. MEASURED 2026-10-12 across the three
+      paths TQ-600a-13-x declares: 15 `to_be_created` declarations, of which 3 are on the
+      creating record and 12 on finished records exempted by this clause -- so the stated
+      reason is true of 3 and false of 9 of the 12 it absolves.
+
+
+      WHY THE WRONG REASON MATTERS WHEN THE BEHAVIOUR IS RIGHT, which is the whole point of
+      recording it rather than letting it stand. The sentence reads as a COMPLETE account of
+      every exempted entry, so nobody asks how many exempted entries exist or how many that
+      sentence holds for. The condition is exempted rather than flagged, no gate or report
+      counts it, and the explanation is what makes it look accounted-for. A wrong reason
+      attached to right behaviour is a different defect from wrong behaviour, and this is the
+      form it takes: not a bad outcome, an uncounted population.
+
+
+      THE PRIOR QUESTION IT RESTS ON, AND THE ANSWER IS NEITHER OF THE TWO CANDIDATES.
+      Whether `to_be_created` means "my own work creates this" (ownership) or "this path did
+      not exist when I was authored" (a historical note). Settled in ACD-1600c-4-v as NEITHER:
+      the marker is a BUILD PRECONDITION -- a claim about the tree at the moment this record's
+      work is built -- so it is live while the work is pending and SPENT once it is finished.
+      Ownership dies on the enum's arity (a record whose work EDITS a file a sibling CREATES
+      has no honest value available, and nine of the fifteen measured declarations are that
+      shape) and on severity (a false ownership claim would have to refuse, and this condition
+      is advisory by explicit design). THE HISTORICAL READING DIES ON THIS RECORD'S OWN
+      REFUSAL BRANCH: nothing blocks a merge over a stale dated note, so `existing` + absent
+      being a BLOCKING REFUSAL is proof the field is a live claim about the tree the work will
+      be built against -- which is exactly what this record's notes say when they call it "a
+      claim that cannot be true of any repository state".
+
+
+      SO THE CORRECT REASON FOR THIS RECORD'S EXEMPTION IS THAT THE PRECONDITION IS SPENT, and
+      that reason is true of all 12 exempted entries, creator and consumer alike -- which is
+      precisely what the filed reason is not. Under the settled reading zero of the fifteen
+      declarations are mistakes and the nine are not stale markers to be fixed; what is wrong
+      is that the live advisory cannot distinguish a precondition a sibling satisfied early
+      from a declaration no record accounts for, and its wording reads as the second.
+
+
+      NOTE THAT THIS RECORD'S OWN NOTES ALREADY STATE THE SOUND PREMISE -- "the marker records
+      intent at authoring time" -- so the unsound clause contradicts the prose two fields
+      below it. Only the criteria sentence asserts ownership, and the criteria is the field a
+      reader treats as normative. FILED, NOT FIXED HERE: the criteria text is left verbatim
+      per this store's convention, and the correction plus the new countability requirement
+      live in ACD-1600c-4-v (readiness draft, pending the user). See also INF-600b-2's
+      canonical shape list, where `declared_files[].state` is recorded as the fourth
+      true-looking-and-wrong shape.
+    date: '2026-10-12'
+    by: business-analyst
+    directed_by: user
 superseded_by: null
 covered_by: [unit_tests/ac_store/test_acd_1600c_4_i.py, unit_tests/commit_guardian/test_acd_1600c_4_i.py]
 implemented_by: [scripts/ac_store/declared_files.py, scripts/ac_store/_declared_files_path_form.py, templates/scripts/commit_guardian/_declared_files_bridge.py, templates/scripts/commit_guardian/check_ac_schema.py, scripts/ac_store/validate_ac_schema.py, config/ac_store_schema.json, scripts/build_phases_ac_store.py]
@@ -117,3 +178,59 @@ notes: |
   at commit time; it is listed as "declared existing, now absent (work finished)" in a section
   of the store-wide declared-files report (ACD-1600c-4-ii), and its declared list is left
   unchanged. This record's own criteria are unchanged.
+
+  ==========================================================================
+  READ THE ASYMMETRY PARAGRAPH ABOVE WITH THIS CORRECTION (2026-10-12).
+  ==========================================================================
+  THE LAST SENTENCE OF "WHY THE ASYMMETRY" IS THE SOUND VERSION; THE CLOSING CRITERION IS NOT.
+  The paragraph above says the exemption holds because "the marker records intent at authoring
+  time, and the work fulfilling it must not turn every later commit touching the record into
+  noise". That is correct and it is the reason the exemption is right. The final CRITERION
+  gives a different reason -- "because the finished work is what created it" -- and that one is
+  FALSE whenever the declared path is shared between records, which is the ordinary case rather
+  than the exotic one.
+
+  MEASURED 2026-10-12 across the three paths TQ-600a-13-x declares (post_merge_hold.py,
+  post_merge_notice.py, post_merge_tunables.json, all three present in the tree): 15
+  `to_be_created` declarations; 3 on the record that created the path; 12 on finished records
+  exempted by this record's closing criterion, of which only those same 3 are declarations by
+  a creator. So the stated reason is true of 3 of the 12 entries it absolves and false of 9.
+
+  THE BEHAVIOUR IS NOT IN QUESTION AND IS NOT BEING CHANGED. Under the settled meaning of the
+  marker -- a BUILD PRECONDITION on the tree at this record's build time, so NOT "my work
+  creates it" and NOT merely "this did not exist when I was authored" -- all 15 declarations
+  are correct, the exemption is right because a SPENT PRECONDITION has nothing left to check,
+  and `test_finished_record_exempt_from_already_exists_report` asserts the right thing. Note
+  that THIS RECORD'S REFUSAL BRANCH IS WHAT SETTLES THE SEMANTICS: nothing would block a merge
+  over a stale historical note, so `existing` + absent refusing proves the field is a live
+  claim about the tree the work will be built against.
+
+  WHAT THE WRONG REASON COSTS, in two places. First COUNTABILITY: it reads as a complete
+  account of every exempted entry, so the population is never counted, and because the
+  condition is exempted rather than flagged no gate will ever surface it. Second, and this one
+  bites on records that are still LIVE: the same wrong frame makes "marked to be created but
+  already exists" read as a stale marker when the common cause is a precondition a SIBLING
+  SATISFIED EARLY -- so a correct declaration looks like a mistake, and the tidy-ups it invites
+  are both harmful. Re-marking to `existing` asserts a precondition the record cannot
+  guarantee and arms a blocking refusal keyed on another record's build order. Silencing the
+  advisory reaches into the branch that produces this record's refusal, since both outcomes
+  come from one comparison.
+
+  WHERE THE CORRECTION LIVES. ACD-1600c-4-v settles the marker's meaning as a build
+  precondition, replaces this record's rationale with "the precondition is spent", counts the
+  exempted population in the one store-wide declared-files report, and RELABELS the live
+  advisory so it names its cause (another record declares this path and is finished, versus no
+  record accounts for it -- both derivable from the store with no new field). It is
+  `readiness: draft`, pending the user, and it carries one open question: whether the field's
+  consumers treat `state` as a build precondition or as a correctness assertion, which this
+  author asserts from observable behaviour rather than from source. The general shape -- a
+  condition on work, evaluated against a tree that other records' work moves, diverging with
+  nobody making a mistake, and exempted rather than flagged once done -- is the fourth entry on
+  INF-600b-2's canonical list of true-looking-and-wrong shapes, recorded there as the most
+  common member because it needs no error to occur.
+
+  ONE MORE SURFACE, NAMED SO IT IS NOT MISSED: `declared_files` and `to_be_created` appear
+  NOWHERE under docs/reference/ (grepped 2026-10-12). The schema SSOT does not document the
+  field at all, so this record's criteria sentence is the only published statement of what the
+  marker means -- which is how a reader reconstructs the ownership reading. ACD-1600c-4-v
+  carries docs/reference/ac-schema.md as a modify target for exactly this reason.

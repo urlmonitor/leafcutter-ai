@@ -4,8 +4,8 @@
  * One command, one AC id, a PR back. Point the fast lane at ANY acceptance
  * criterion and it does the whole arc with no other input (BO-2400f):
  *
- *   1. Worktree      — setup_ticket_worktree.py create-fastlane-worktree <slug>
- *                      opens a fresh isolated worktree off the latest origin/main
+ *   1. Worktree      — the workspace maker (worktree.py ensure --kind fastlane
+ *                      --slug <slug>) opens a fresh isolated workspace off the latest origin/main
  *                      (fast-lane/<slug> branch), bootstrapped (BO-2400f-3).
  *   2. Resolve       — fast_lane.py select_connected --ac <id> resolves the
  *                      connected build set (subtree ∪ unmet-deps closure, in
@@ -28,8 +28,8 @@
  *
  * Gate script:   {{config.output_root}}/scripts/build_orchestration/fast_lane.py
  *                (resolved inside the freshly-created worktree, once bootstrapped)
- * Worktree tool: {{config.output_root}}/scripts/setup_ticket_worktree.py
- *                (run from the consumer repo root, BEFORE any worktree exists)
+ * Worktree tool: the workspace maker script under the output root's scripts folder, run by its ABSOLUTE,
+ *                quoted path (resolved from the repository, BEFORE any worktree exists)
  * Done marker:   fast_lane.py's own `mark_done` subcommand (coverage-gated) —
  *                not a direct call to scripts/ac_store/mark_ac_done.py
  *
@@ -46,53 +46,10 @@ export const meta = {
     { title: "Coder", detail: "make green + verify_green_and_coverage" },
     { title: "Review", detail: "pr-reviewer over the uncommitted working diff (BO-2400f-11)" },
     { title: "Changelog", detail: "emit_entry.py when the change owes one (BO-2400f-4/KI-BO-001)" },
-    { title: "Knowledge Routing", detail: "route emitted learnings to their surfaces before commit (INF-700a-1, fail-open)" },
+    { title: "Knowledge Routing", detail: "stage learnings into the worktree for the commit; observe what it carried (INF-700a-5, fail-open)" },
     { title: "Commit", detail: "mark ACs done + commit on the worktree branch" },
     { title: "Pull Request", detail: "open the PR against main (gh + EMU fallback)" },
   ],
-};
-
-// ---------------------------------------------------------------------------
-// JSON Schemas
-// ---------------------------------------------------------------------------
-
-// BO-2400f-13: worktree_path is no longer required — a refusal payload
-// (outcome: "refused") legitimately carries no worktree_path at all. The
-// Phase 1 guard below branches on `outcome === "opened"` and treats any
-// other value (a refusal, a missing/null outcome, an unparseable reply, or
-// the legacy blank-worktree_path shape) as a refusal by a plain-falsy,
-// fail-closed read.
-const WORKTREE_SCHEMA = {
-  type: "object",
-  required: ["outcome"],
-  properties: {
-    outcome: { type: "string", enum: ["opened", "refused"] },
-    worktree_path: { type: "string" },
-    branch: { type: "string" },
-    ac_store_path: { type: "string" },
-    created: { type: "boolean" },
-    base_commit: { type: "string" },
-    base_matches_origin_main: { type: "boolean" },
-    refusal: { type: "object" },
-  },
-};
-
-const WORKTREE_VERIFY_SCHEMA = {
-  type: "object",
-  required: ["worktree_path", "raw"],
-  properties: {
-    worktree_path: { type: "string" },
-    raw: { type: "string" },
-  },
-};
-
-const RESOLVER_SCHEMA = {
-  type: "object",
-  required: ["ac_ids"],
-  properties: {
-    ac_ids: { type: "array", items: { type: "string" } },
-    message: { type: "string" },
-  },
 };
 
 const TEST_WRITER_SCHEMA = {
@@ -101,18 +58,11 @@ const TEST_WRITER_SCHEMA = {
   properties: {
     status: { type: "string", enum: ["ok", "blocker", "failed"] },
     tests_written: { type: "array", items: { type: "string" } },
-    // AMENDED 2026-08-17 (BO-2400a-3-v): the red-baseline gate no longer
-    // returns all_red/offender — it returns gate_passed (True when >=1
-    // newly-added covering test is red) plus a named `reason` on halt and
-    // the individual green_at_baseline entries (never collapsed into a
-    // count). The pre-amendment keys are REMOVED, not kept as aliases.
+    // BO-2400a-3-v: gate_passed (true when >=1 newly-added covering test is red), a named `reason`
+    // on halt and the individual green_at_baseline entries; all_red/offender are REMOVED, not aliased.
     gate_passed: { type: "boolean" },
     // KI-BO-004: `reason` is null on a passing gate — verify_red_baseline only
-    // names a reason when it halts. Declaring it string-only made the agent
-    // coerce the null, so the journal recorded the four-character string
-    // "null" (observed on the TKT-600a-1 run). Harmless while the workflow
-    // branches on gate_passed, but a trap for anything that later branches on
-    // reason, where "null" is truthy and matches no named halt reason.
+    // names a reason when it halts. String-only made the agent record the truthy string "null".
     reason: { type: ["string", "null"] },
     green_at_baseline: { type: "array" },
     message: { type: "string" },
@@ -152,14 +102,8 @@ const PR_SCHEMA = {
   },
 };
 
-// BO-2400c-1-iii (2026-08-25 amendment, KI-BO-019): the reply shape now
-// carries `bytes` and `location` alongside `bundle`/`obtained`, because a
-// producer that cannot inline the full text still needs a way to report what
-// it DID do (assemble successfully, N bytes, written to <path>) without that
-// report being mistaken for the content. `bundle` is the ONLY field the lane
-// accepts as content; `bytes`/`location` are read only to build an honest
-// halt message when `bundle` turns out to be a reference, never merged into
-// what is threaded to the test-writer/coder dispatches.
+// BO-2400c-1-iii (KI-BO-019): `bundle` is the ONLY field accepted as content; `bytes`/`location`
+// only build an honest halt message when `bundle` is a reference, never threaded to dispatches.
 const CONTEXT_BUNDLE_SCHEMA = {
   type: "object",
   required: ["obtained"],
@@ -177,27 +121,6 @@ const CONTEXT_BUNDLE_SCHEMA = {
 // Kept as a single named constant here so the usability check below and any
 // future consumer cannot drift from the CLI's own default.
 const CACHE_BREAKPOINT_MARKER = "<!-- CACHE_BREAKPOINT -->";
-
-// ---------------------------------------------------------------------------
-// BO-2400c-1-iii (2026-08-25 amendment) — the four-state classification of
-// the context-bundle-assembling dispatch's reply. Location 2 of 3 (the other
-// two are the dispatch prompt above the "Context Bundle" phase and the halt
-// payload that consumes this classification's `.message`).
-//
-// KI-BO-019: run wf_bd4984e8-438 assembled a real, well-formed 141,933-byte
-// bundle and returned `obtained: true` with a truncated preview plus a path
-// because the full text was too large to inline. The pre-amendment gate
-// folded "obtained falsy", "bundle empty", and "marker absent" into a single
-// boolean, so that reply took the same branch as a genuinely-absent bundle
-// and halted saying "the context bundle was not obtained" — wrong, and
-// actively misleading given the assembly had, in fact, succeeded.
-//
-// Reference-rejection MUST be evaluated BEFORE the marker/incompleteness
-// check (it-po enrichment note): a locator that happens to contain the
-// marker substring, or that merely MENTIONS the marker while describing
-// itself, must still be refused as a reference — never reclassified as
-// incomplete content because a naive marker-first check found the substring.
-// ---------------------------------------------------------------------------
 
 const CONTEXT_BUNDLE_STATE_NOT_OBTAINED = "not_obtained";
 const CONTEXT_BUNDLE_STATE_REFERENCE = "reference";
@@ -296,7 +219,32 @@ function findTruncatedPreviewLocation(text) {
  * `bundle` string; either one is sufficient, and this check runs BEFORE the
  * marker/incompleteness check so a locator that also contains (or merely
  * mentions) the marker substring is still refused as a reference rather than
- * being reclassified as incomplete content.
+ * being reclassified as incomplete content (it-po enrichment note).
+ *
+ * BO-2400c-1-iii (2026-08-25 amendment): this four-state classification is
+ * location 2 of 3 — the other two are the dispatch prompt above the "Context
+ * Bundle" phase and the halt payload that consumes its `.message`. KI-BO-019:
+ * run wf_bd4984e8-438 assembled a real, well-formed 141,933-byte bundle and
+ * returned `obtained: true` with a truncated preview plus a path because the
+ * full text was too large to inline. The pre-amendment gate folded "obtained
+ * falsy", "bundle empty", and "marker absent" into a single boolean, so that
+ * reply took the same branch as a genuinely-absent bundle and halted saying
+ * "the context bundle was not obtained" — wrong, and actively misleading given
+ * the assembly had, in fact, succeeded.
+ *
+ * The incompleteness check on real content is deliberately only a TRANSPORT
+ * check. Whether a layer was EMPTY is an assembly-time fact, now refused at
+ * assembly time by injection_builders.py, the only place the layer boundaries
+ * still exist. It used to also test /\n{4,}/, on the theory that an empty
+ * layer collapses two "\n\n" joins into a run of 4+ newlines "that never
+ * occurs when every layer is non-empty". That premise is false: a layer whose
+ * own content ends in a blank line produces the same run. It cost a real run —
+ * the architecture layer (a markdown document ending in an HTML comment and a
+ * trailing blank line) yielded five consecutive newlines, and a complete
+ * 16,442-byte bundle with its marker present exactly once was refused as
+ * incomplete. The signal is genuinely ambiguous in this direction, so no
+ * textual rule here can be sound; the check belongs upstream and now lives
+ * there.
  *
  * Pure function: no agent(), no I/O — safe to extract and execute directly.
  *
@@ -344,22 +292,6 @@ function classifyContextBundle(bundleResult, marker) {
     };
   }
 
-  // Real content, not a locator — but still incomplete when it did not
-  // survive the crossing intact. What remains here is deliberately only a
-  // TRANSPORT check. Whether a layer was EMPTY is an assembly-time fact, and
-  // it is now refused at assembly time by injection_builders.py, which is the
-  // only place the layer boundaries still exist.
-  //
-  // This used to also test /\n{4,}/, on the theory that an empty layer
-  // collapses two "\n\n" joins into a run of 4+ newlines "that never occurs
-  // when every layer is non-empty". That premise is false: a layer whose own
-  // content ends in a blank line produces the same run. It cost a real run —
-  // the architecture layer (a markdown document ending in an HTML comment and
-  // a trailing blank line) yielded five consecutive newlines, and a complete
-  // 16,442-byte bundle with its marker present exactly once was refused as
-  // incomplete. The signal is genuinely ambiguous in this direction, so no
-  // textual rule here can be sound; the check belongs upstream and now lives
-  // there.
   var markerIndex = bundleText.indexOf(marker);
 
   // Truncation after the marker. This is NOT the empty-layer rule wearing a
@@ -429,7 +361,6 @@ const RELEASE_SCHEMA = {
   },
 };
 
-// ---------------------------------------------------------------------------
 // KI-BO-001 / BO-2400f-4-i: mirror of the CI changelog-presence gate module's
 // EXEMPT_PREFIXES (check_changelog_presence.py, under scripts). The SINGLE
 // SOURCE OF TRUTH for this rule is that Python module — fast_lane.py's
@@ -487,7 +418,6 @@ function buildFastLaneDeliveryOutcome(prUrl, unsatisfiedRequiredChecks) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // buildReleaseOutcomeFields — the SINGLE construction site for the
 // release-outcome fields merged into every one of the nine halting payloads
 // (BO-2400f-10-ii). Fails CLOSED: only a reply shaped like
@@ -500,7 +430,6 @@ function buildFastLaneDeliveryOutcome(prUrl, unsatisfiedRequiredChecks) {
 // unreleased_ac_ids — never inferred from the mere fact that the dispatch ran.
 //
 // Pure function: no agent(), no I/O — safe to extract and execute directly.
-// ---------------------------------------------------------------------------
 
 // Shape (a) per BO-2400f-10-i's it_requirements: dispatch an executor whose
 // declared config/agent_registry.json entry does not explicitly forbid
@@ -587,19 +516,30 @@ function buildReleaseOutcomeFields(releaseReply, claimedIds, executorAgentType) 
   };
 }
 
-// BO-2400f-4-vi-adjacent: the routing dispatch's expected reply shape
-// (INF-700a-1). `case` is the only required field — `read`/`written`/
-// `unwritten`/`detail` are read defensively by classifyKnowledgeRouting()
-// below, never trusted as present just because the schema names them.
+// The ONE release dispatch every post-claim halt shares: `why` names the failure to the release agent,
+// `label`/`phaseName` tag the dispatch (phaseName optional), `verb` is "Release" or "Roll".
+async function releaseClaimed(why, label, phaseName, claimedIds, releaseCommand, verb) {
+  const releaseReply = await agent(
+    `You are the release-phase agent. ${why}\n\n` +
+    `${verb || "Release"} all claimed ACs back to todo by running this single Bash command:\n   ${releaseCommand}\n\n` +
+    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label: label, ...(phaseName ? { phase: phaseName } : {}) }
+  );
+  return buildReleaseOutcomeFields(releaseReply, claimedIds, RELEASE_EXECUTOR_AGENT_TYPE);
+}
+
 const KNOWLEDGE_ROUTING_SCHEMA = {
   type: "object",
   required: ["case"],
   properties: {
-    case: { type: "string", enum: ["completed", "could_not_complete", "did_not_run"] },
+    case: { type: "string", enum: ["completed", "completed_with_waiting", "could_not_complete", "did_not_run"] },
     read: { type: "integer" },
     written: { type: "integer" },
     unwritten: { type: "integer" },
     detail: { type: ["string", "null"] },
+    manifest: { type: "array", items: { type: "string" } },
+    unwritten_records: { type: "array" },
+    waiting: { type: ["object", "null"] },
   },
 };
 
@@ -608,8 +548,11 @@ const KNOWLEDGE_ROUTING_SCHEMA = {
  * `knowledge_routing` figures consumed into a completion path's terminal
  * payload (INF-700a-1 / INF-700a-1-ii). Fails CLOSED, the same pattern used
  * throughout this file for the review verdict and red-baseline gate_passed
- * checks: only a reply carrying a RECOGNISED `case` value ("completed" or
- * "could_not_complete") is trusted as having actually run. Anything else —
+ * checks: only a reply carrying a RECOGNISED `case` value ("completed",
+ * "completed_with_waiting" or "could_not_complete": the schema's enum) is
+ * trusted as having actually run. "completed_with_waiting" (INF-700a-5-ii)
+ * is a completed run that left a late-emitted record waiting; it is passed
+ * through as its own value, never folded into "completed". Anything else —
  * a missing case, an unparseable reply, or the harness's own unlabelled
  * default stub — is reported as the third, distinct "did_not_run" case
  * (INF-700a-1-ii), never rendered as "completed" with zero figures, which is
@@ -626,28 +569,183 @@ const KNOWLEDGE_ROUTING_SCHEMA = {
  * @returns {{case: string, read: number, written: number, unwritten: number, detail: (string|null)}}
  */
 function classifyKnowledgeRouting(reply) {
-  var recognisedCase =
-    reply && (reply.case === "completed" || reply.case === "could_not_complete")
-      ? reply.case
-      : "did_not_run";
+  var recognisedCase = reply && KNOWLEDGE_ROUTING_SCHEMA.properties.case.enum.includes(reply.case) ? reply.case : "did_not_run";
+  var ran = recognisedCase !== "did_not_run";
   var asInt = function (value) {
-    return typeof value === "number" && Number.isFinite(value) ? value : 0;
+    return ran && typeof value === "number" && Number.isFinite(value) ? value : 0;
   };
+  var asList = function (value) { return ran && Array.isArray(value) ? value : []; };
   return {
     case: recognisedCase,
-    read: recognisedCase === "did_not_run" ? 0 : asInt(reply.read),
-    written: recognisedCase === "did_not_run" ? 0 : asInt(reply.written),
-    unwritten: recognisedCase === "did_not_run" ? 0 : asInt(reply.unwritten),
-    detail:
-      recognisedCase === "could_not_complete" && typeof reply.detail === "string"
-        ? reply.detail
-        : null,
+    read: asInt(reply && reply.read),
+    written: asInt(reply && reply.written),
+    unwritten: asInt(reply && reply.unwritten),
+    detail: recognisedCase === "could_not_complete" && typeof reply.detail === "string" ? reply.detail : null,
+    manifest: asList(reply && reply.manifest).filter((p) => /^[\w.\/-]+$/.test(p) && !p.includes("..")),
+    unwritten_records: asList(reply && reply.unwritten_records),
+    waiting: ran && reply.waiting && typeof reply.waiting === "object" ? reply.waiting : null,
   };
 }
 
 // ---------------------------------------------------------------------------
-// Phase 0 — Argument validation
+// BO-2400f-5-iii: the one shared reply classifier every step's reply passes
+// through, and the terminal declined-step halt it feeds. classifyStepReply()
+// is extracted and executed standalone by
+// test_bo2400f5iii_declined_step_replay_and_boundary.py (the same
+// brace-extraction technique test_bo_2700_defer_epic_pr.py uses for
+// selectDispatchPhases()), so it may reference NOTHING declared outside its
+// own body.
 // ---------------------------------------------------------------------------
+
+/**
+ * classifyStepReply — self-contained (see the note above). Decision order:
+ *  1. empty reply                         -> declined (no readable result).
+ *  2. object with `declined === true` or `status === "declined"`
+ *                                         -> declined; reason is the agent's own
+ *                                            reason/message/detail, trimmed only.
+ *  3. command step (`isCommandStep`, BO-2400a-1-i): a readable integer
+ *     `exit_status` decides (0 = result, else failed; wording is never
+ *     consulted). No readable `exit_status` -> declined (a stated refusal
+ *     verbatim, else a no-readable-result reason quoting any text).
+ *  4. object carrying a SUCCESS signal -> result, whatever its wording.
+ *  5. object with a failure `status` or `outcome === null` -> declined ONLY on
+ *     a STRONG marker in reason/message/detail; otherwise result, so the
+ *     step's own failure branch handles it.
+ *  6. object with no signal at all -> declined on a STRONG or WEAK marker.
+ *  7. plain string -> declined (stated refusal verbatim, else unparseable).
+ *  8. anything else -> result.
+ *
+ * @param {*} reply
+ * @param {{step: string, agent: string, isCommandStep: boolean}} meta
+ * @returns {{kind: ('result'|'declined'|'failed'), reason: (string|null)}}
+ */
+function classifyStepReply(reply, meta) {
+  var isCommandStep = !!(meta && meta.isCommandStep);
+  var noResult = "No readable result was returned for this step";
+  // Wording that states a role mismatch or a refusal of the task itself.
+  var strongMarker = /^\s*(refusing|declining)\s+(this|the)\s+(task|request|step)|\bmisrouted\b|\bnot\s+my\s+role\b|\bwrong\s+role\b|\bwrong\s+agent\s+for\b|outside\s+(of\s+)?(my|its)\s+(role|charter|scope)|\bnot\s+authori[sz]ed\s+to\s+act\s+as\b|\bi\s+am\s+(the\s+)?`?[\w-]+`?\s*,\s*(not|scoped\s+to)\b/i;
+  // Other first-person refusals: decisive only when nothing else signals.
+  var weakMarker = /\b(i|we)\s+(am\s+|must\s+|have\s+to\s+|will\s+)?(declin|refus)|\bi'?m\s+(declin|refus)|\bi\s+(can'?t|cannot|can\s+not)\s+help/i;
+  var successStatuses = ["ok", "success", "passed"];
+  var failureStatuses = ["error", "failed", "blocked", "refused", "blocker", "partial"];
+  var trueFlags = ["gate_passed", "green", "verdict_obtained", "obtained", "coverage_ok", "created", "entry_added"];
+  var anyBoolean = ["producible"];
+  var nonEmptyArrays = ["ac_ids", "tests_written", "files_modified"];
+  var anyArray = ["high_findings"];
+  var nonEmptyStrings = ["pr_url", "worktree_path"];
+  var anyString = ["bundle"];
+
+  function collectTexts(value) {
+    if (typeof value === "string") return value.trim() ? [value.trim()] : [];
+    if (!value || typeof value !== "object") return [];
+    return [value.reason, value.message, value.detail]
+      .filter(function (t) { return typeof t === "string" && t.trim(); })
+      .map(function (t) { return t.trim(); });
+  }
+  function hasSuccessSignal(obj) {
+    return successStatuses.indexOf(obj.status) !== -1 ||
+      trueFlags.some(function (k) { return obj[k] === true; }) ||
+      anyBoolean.some(function (k) { return typeof obj[k] === "boolean"; }) ||
+      nonEmptyArrays.some(function (k) { return Array.isArray(obj[k]) && obj[k].length > 0; }) ||
+      anyArray.some(function (k) { return Array.isArray(obj[k]); }) ||
+      nonEmptyStrings.some(function (k) { return typeof obj[k] === "string" && obj[k].trim() !== ""; }) ||
+      anyString.some(function (k) { return typeof obj[k] === "string"; }) ||
+      (obj.outcome !== undefined && obj.outcome !== null);
+  }
+  function hasFailureStatus(obj) {
+    return failureStatuses.indexOf(obj.status) !== -1 || obj.outcome === null;
+  }
+  function firstMatch(texts, pattern) {
+    return texts.filter(function (t) { return pattern.test(t); })[0] || null;
+  }
+
+  if (reply === null || reply === undefined || (typeof reply === "string" && reply.trim() === "")) {
+    return { kind: "declined", reason: noResult + ": the reply was empty." };
+  }
+  var isObject = typeof reply === "object";
+  var texts = collectTexts(reply);
+  var strongText = firstMatch(texts, strongMarker);
+  var anyMarkerText = strongText || firstMatch(texts, weakMarker);
+  if (isObject && (reply.declined === true || reply.status === "declined")) {
+    return { kind: "declined", reason: texts.length ? texts[0] : noResult + ": the reply declined without stating a reason." };
+  }
+  if (isCommandStep) {
+    if (isObject && Number.isInteger(reply.exit_status)) {
+      return reply.exit_status === 0 ? { kind: "result", reason: null } : { kind: "failed", reason: null };
+    }
+    if (anyMarkerText) return { kind: "declined", reason: anyMarkerText };
+    return {
+      kind: "declined",
+      reason: texts.length
+        ? "No readable command result was returned (no exit_status): " + texts.join(" | ")
+        : "No readable command result was returned for this step: no exit_status was reported. Received: " + JSON.stringify(reply),
+    };
+  }
+  if (isObject) {
+    if (hasSuccessSignal(reply)) return { kind: "result", reason: null };
+    var decisiveText = hasFailureStatus(reply) ? strongText : anyMarkerText;
+    return decisiveText ? { kind: "declined", reason: decisiveText } : { kind: "result", reason: null };
+  }
+  if (typeof reply === "string") {
+    return {
+      kind: "declined",
+      reason: anyMarkerText || noResult + ": the reply was unparseable text, not the expected result shape.",
+    };
+  }
+  return { kind: "result", reason: null };
+}
+
+/**
+ * buildDeclinedStepHalt — the SINGLE construction site for the terminal
+ * declined-step halt payload (BO-2400f-5-iii). `target` is null only while
+ * the worktree-confirming steps are themselves the ones declining.
+ * `failingPhase` matches the short `failing_phase` vocabulary every other
+ * halt in this file already uses; `messagePrefix` carries the ONE
+ * phase-specific noun (e.g. "verdict", "context bundle") a pre-existing
+ * caller keys its own wording check on, kept out of `reason` itself, which
+ * stays the agent's quoted text untouched.
+ */
+function buildDeclinedStepHalt(step, agentType, reason, target, failingPhase, messagePrefix) {
+  const prefix = messagePrefix ? `${messagePrefix} ` : "";
+  return {
+    status: "halt", classification: "halt", halt_kind: "declined_step",
+    step: step, agent: agentType, reason: reason, target: target,
+    failing_phase: failingPhase,
+    message: `${prefix}The ${agentType} agent declined the "${step}" step: ${reason}`,
+  };
+}
+
+/**
+ * releaseOnDecline — for a decline discovered AFTER the claim succeeded,
+ * releases the claimed ACs back to todo (BO-2400f-10) before returning the
+ * same declined-step halt buildDeclinedStepHalt produces, merged with the
+ * release outcome fields every other post-claim halt already carries.
+ */
+async function releaseOnDecline(step, agentType, reason, target, claimedIds, releaseCommand, failingPhase, messagePrefix) {
+  const releaseOutcome = await releaseClaimed(`The "${step}" step declined after claiming.`, `release-on-${step}-decline`, null, claimedIds, releaseCommand);
+  const halt = buildDeclinedStepHalt(step, agentType, reason, target, failingPhase, messagePrefix);
+  return { ...halt, message: `${halt.message} ${releaseOutcome.note}`, ...releaseOutcome.fields };
+}
+
+/**
+ * settleKnowledgeRouting — the routing step's FINAL report (INF-700a-5 /
+ * INF-700a-5-i). A learning counts as written only once the unit of work's
+ * own commit is observed to carry it, so the post-commit observation is what
+ * the terminal payload reports. If that observation cannot be obtained while
+ * the stage did run, nothing staged is counted as written: every staged
+ * write is reported unwritten (still eligible -- nothing was marked), never
+ * the stage's own optimistic figure. Pure; never throws (fail-open).
+ */
+function settleKnowledgeRouting(staged, observedReply) {
+  var observed = classifyKnowledgeRouting(observedReply);
+  if (observed.case !== "did_not_run" || staged.case === "did_not_run") return observed;
+  return Object.assign({}, staged, {
+    case: "could_not_complete", written: 0, manifest: [], unwritten: staged.written + staged.unwritten,
+    detail: "the commit's contents could not be observed, so no staged write is counted as written",
+  });
+}
+
+// Phase 0 — Argument validation
 
 const acId = (args && args.ac) || null;
 
@@ -665,180 +763,32 @@ const targetAc = acId.trim();
 const slug = targetAc.toLowerCase().replace(/[^a-z0-9._-]/g, "-");
 const acStoreRel = "docs/acceptance-criteria";
 
-// ---------------------------------------------------------------------------
 // Phase 1 — Worktree: auto-create off origin/main (BO-2400f-3)
-// ---------------------------------------------------------------------------
 
 phase("Worktree");
 
-const worktreeResult = await agent(
-  `You are the worktree phase agent for a fast-lane build. Create the isolated ` +
-  `build worktree — do NOT ask for confirmation (creation is non-destructive).\n\n` +
-  `Run this single Bash command from the repository root:\n` +
-  `   python3 {{config.output_root}}/scripts/setup_ticket_worktree.py create-fastlane-worktree "${slug}"\n\n` +
-  `It decides FIRST whether the workspace for this AC is already occupied — ` +
-  `something already sits at the location this run would open, or the ` +
-  `fast-lane/${slug} branch is already checked out elsewhere. If so it prints ` +
-  `a REFUSAL and does nothing else: ` +
-  `{ "outcome": "refused", "branch": "fast-lane/${slug}", "refusal": { "reason": ..., ` +
-  `"ac_id": ..., "occupied_path": ..., "occupant": "own_prior_attempt"|"foreign", ` +
-  `"occupant_branch": ..., "uncommitted_changes": ..., "published": {...}, ` +
-  `"options": [...], "message": ... } } — return that JSON verbatim, with NO ` +
-  `worktree_path key at all (absent, not blank).\n\n` +
-  `Otherwise it fetches origin, creates or reconnects the worktree rooted at the ` +
-  `latest origin/main, bootstraps it, and prints ` +
-  `{ "outcome": "opened", "worktree_path": "<abs path>", "branch": "fast-lane/${slug}", ` +
-  `"ac_store_path": "<abs>", "created": <bool>, "base_commit": "<sha>", ` +
-  `"base_matches_origin_main": <bool> } — return that JSON verbatim.\n\n` +
-  `If the command exits non-zero for a reason OTHER than an occupancy refusal ` +
-  `(e.g. it crashed), return { "outcome": null, "message": "<stderr>" }.`,
-  {
-    agentType: "worktree-agent",
-    schema: WORKTREE_SCHEMA,
-    label: "fastlane-worktree",
-    phase: "Worktree",
-  }
-);
+// BO-4300c-3 / BO-4300a-1-ia: the lane's workspace is the workspace maker's answer, handed in as
+// args.workspace or obtained by exactly ONE verbatim dispatch of the maker command. Its location comes from
+// the accepted answer's workspace_path ONLY -- no claimed path, no "git said" cross-check, no fallback.
+// A refusal (occupied workspace included), an error, prose or no answer ends the run quoting what came back.
 
-// BO-2400f-13: fail CLOSED, by a plain-falsy read. The run proceeds on an
-// explicit `outcome === "opened"`, OR on the PRE-BO-2400f-13 success shape
-// (the `outcome` key entirely ABSENT — not explicitly null — with a
-// non-blank `worktree_path`), preserved for backward compatibility with
-// callers that predate this discriminant. Every other shape — a
-// discriminated refusal, an EXPLICIT null/unparseable outcome (even with a
-// worktree_path present — the sharpest fail-closed case), an empty reply, or
-// the legacy `{"worktree_path": ""}` blank-but-present shape — takes the
-// refusing branch. This guard sits AHEAD of where the old
-// `!worktreeResult.worktree_path` check used to live, and is now the ONLY
-// thing that can end the run at this phase.
-const isPreDiscriminantOpenedShape =
-  !!worktreeResult &&
-  worktreeResult.outcome === undefined &&
-  typeof worktreeResult.worktree_path === "string" &&
-  worktreeResult.worktree_path.trim() !== "";
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
 
-if (!worktreeResult || (worktreeResult.outcome !== "opened" && !isPreDiscriminantOpenedShape)) {
-  const refusalBranch =
-    (worktreeResult && worktreeResult.branch) || `fast-lane/${slug}`;
-  const refusal = (worktreeResult && worktreeResult.refusal) || null;
+const workspace = await workspaceEnsure("Worktree", { kind: "fastlane", slug: slug, outputRoot: "{{config.output_root}}" });
+if (!workspace.accepted) return workspaceFailure(workspace);
 
-  if (worktreeResult && worktreeResult.outcome === "refused" && refusal) {
-    // A real, discriminated occupancy refusal — relay it verbatim. No claim
-    // was ever taken at this point (the refusal precedes Resolve and the
-    // claim step by two whole phases), so the release step is never reached.
-    return {
-      status: "refused",
-      message:
-        refusal.message ||
-        `The workspace for ${targetAc} is occupied and the run refused before any work began.`,
-      failing_phase: "worktree",
-      target_ac: targetAc,
-      branch: refusalBranch,
-      refusal,
-    };
-  }
-
-  // Fail-closed: an unreadable, missing, or legacy reply. Refuse rather than
-  // guess that the workspace is free.
-  return {
-    status: "refused",
-    message:
-      `Occupancy of the fast-lane workspace for ${targetAc} could not be ` +
-      `determined from the worktree phase's reply — refusing rather than ` +
-      `proceeding. Detail: ${JSON.stringify(worktreeResult)}`,
-    failing_phase: "worktree",
-    target_ac: targetAc,
-    branch: refusalBranch,
-  };
-}
-
-const claimedWorktreePath = worktreeResult.worktree_path;
-const branch = worktreeResult.branch || `fast-lane/${slug}`;
+const worktreePath = workspace.workspace_path;
+const branch = workspaceBranch(workspace.answer) || `fast-lane/${slug}`;
 // BO-2400f-13-iv: carried through to the operator so a green result is never
 // silently ambiguous about which mainline it was measured against.
 const workspaceCreated =
-  typeof worktreeResult.created === "boolean" ? worktreeResult.created : null;
-const baseCommit = worktreeResult.base_commit || null;
+  typeof workspace.answer.created === "boolean" ? workspace.answer.created : null;
+const baseCommit = workspace.answer.base_commit || null;
 const baseMatchesOriginMain =
-  typeof worktreeResult.base_matches_origin_main === "boolean"
-    ? worktreeResult.base_matches_origin_main
+  typeof workspace.answer.base_matches_origin_main === "boolean"
+    ? workspace.answer.base_matches_origin_main
     : null;
-
-// Remove the LLM from the trust path for worktree_path, exactly as the comment
-// below already does for ac_store_path. The worktree phase agent has been
-// observed to echo a fabricated path instead of create-fastlane-worktree's real
-// JSON: 2026-08-11 on BO-2400f (<worktree>/tickets/00_inbox), and again
-// 2026-09-07 on UXP-700d, where it returned <repo_root>/worktrees/<slug> while
-// git had actually placed the worktree at <workspace>/worktrees/<slug>.
-//
-// The location is NOT a fixed convention that could simply be recomputed here.
-// setup_ticket_worktree.py's _resolve_installed_layout() deliberately differs by
-// layout: in the dev layout worktrees_base is the workspace PARENT of the repo,
-// while in a consumer/installed layout it is the consumer project root. Deriving
-// a path here would therefore be correct in one layout and wrong in the other.
-// git is the only authority that knows where the worktree really is in both, so
-// ask git and require the answer to be quoted from its raw output.
-const worktreeVerify = await agent(
-  `Report where git says the fast-lane worktree actually is. Do NOT compute, ` +
-  `infer, guess or normalise a path — only quote what git prints.
-
-` +
-  `Run exactly this one command (the -C pins the probe to the repository this run already knows, not wherever your shell happens to start):
-` +
-  `   git -C "${claimedWorktreePath}" worktree list --porcelain
-
-` +
-  `Find the record whose branch line is refs/heads/${branch}. Return:
-` +
-  `{ "worktree_path": "<that record's worktree line path, verbatim>", ` +
-  `"raw": "<that record's full porcelain text, verbatim>" }
-
-` +
-  `If that command cannot run at all, or no record matches that branch, return ` +
-  `{ "worktree_path": "", "raw": "<full output, verbatim>" }.`,
-  {
-    agentType: "worktree-agent",
-    schema: WORKTREE_VERIFY_SCHEMA,
-    label: "fastlane-worktree-verify",
-    phase: "Worktree",
-  }
-);
-
-// Trust git over the agent, only where it answered — an ABSENT answer (raw
-// empty) is not evidence and falls back to the claim as before; an answer
-// EMPTY OF THIS RUN'S OWN BRANCH (raw non-empty, no record for `branch`)
-// HALTs — positive evidence of a stale second clone, not silence
-// (BO-2400f-3-i, 2026-09-14). A reported path absent from its own raw
-// output is invented, not quoted, and also HALTs (BO-2400f-3; BO-2400f
-// 2026-08-11 / UXP-700d 2026-09-07).
-const gitReportedPath =
-  worktreeVerify && worktreeVerify.worktree_path ? worktreeVerify.worktree_path : "";
-const gitRaw = (worktreeVerify && worktreeVerify.raw) || "";
-const branchRefLine = `refs/heads/${branch}`;
-
-if (gitReportedPath && !gitRaw.includes(gitReportedPath)) {
-  return {
-    status: "error",
-    message: `The worktree location reported for branch ${branch} does not appear in the git output it was supposedly read from, so it was composed rather than quoted. Reported: "${gitReportedPath}". git worktree list --porcelain returned: ${JSON.stringify(gitRaw)}. The worktree phase separately claimed "${claimedWorktreePath}". Proceeding on an invented path is what sent the resolver to a non-existent directory on BO-2400f and UXP-700d.`,
-    failing_phase: "worktree",
-    claimed_worktree_path: claimedWorktreePath,
-    branch,
-    classification: "halt",
-  };
-}
-
-if (gitRaw.trim() !== "" && !gitRaw.includes(branchRefLine)) {
-  return {
-    status: "error",
-    message: `git worktree list --porcelain answered, but has no record for branch ${branch} — this run's own branch, created moments earlier — so the probe looked at a repository without it (e.g. a stale second clone). That is positive evidence, not silence, and is not forgiven the way an unanswered probe is. Raw output: ${JSON.stringify(gitRaw)}. The worktree phase claimed "${claimedWorktreePath}".`,
-    failing_phase: "worktree",
-    claimed_worktree_path: claimedWorktreePath,
-    branch,
-    classification: "halt",
-  };
-}
-
-const worktreePath = gitReportedPath || claimedWorktreePath;
 // Derive the AC store root deterministically from the worktree path — do NOT
 // trust worktreeResult.ac_store_path. The store lives at a fixed convention
 // (<worktree>/docs/acceptance-criteria) inside every worktree cut from
@@ -850,9 +800,12 @@ const worktreePath = gitReportedPath || claimedWorktreePath;
 const acStoreRoot = `${worktreePath}/${acStoreRel}`;
 const gateScript = `${worktreePath}/{{config.output_root}}/scripts/build_orchestration/fast_lane.py`;
 
-// ---------------------------------------------------------------------------
+// BO-2400f-5-iii: every declined-step halt from here on names a confirmed
+// workspace — the worktree steps above are the only ones that halt with a
+// null target.
+const declinedStepTarget = { workspace: worktreePath, branch, ac_id: targetAc };
+
 // Phase 2 — Resolve the connected build set (BO-2400f-1/f-2)
-// ---------------------------------------------------------------------------
 
 phase("Resolve");
 
@@ -862,10 +815,9 @@ phase("Resolve");
 // it: aim at the branch (BO-2600b-1-i) — the exclusion only prunes the
 // depends_on walk, never the subtree gathered beneath the aimed-at criterion.
 const selectConnectedInvocation =
-  `python3 ${gateScript} select_connected --ac ${targetAc} --ac-root ${acStoreRoot} ` +
+  `python ${gateScript} select_connected --ac ${targetAc} --ac-root ${acStoreRoot} ` +
   `--exclude-structural-parent`;
 
-// Derived from the command actually composed above, never asserted independently.
 // What the run REPORTS about its own scope must be read off what the run DID:
 // a hardcoded `true` here would keep telling the operator the exclusion was in
 // force after a partial revert removed the flag 60 lines up, and the one test
@@ -873,41 +825,72 @@ const selectConnectedInvocation =
 const structuralParentExcluded =
   selectConnectedInvocation.includes("--exclude-structural-parent");
 
-const resolverResult = await agent(
-  `You are the resolver phase agent for a fast-lane build.\n\n` +
-  `Run this single Bash command and parse its JSON stdout (a list of AC ids):\n` +
-  `   ${selectConnectedInvocation}\n\n` +
-  `This is the connected build set for ${targetAc}: its subtree plus any unmet ` +
-  `dependency prerequisites, in dependency order, restricted to not-done leaves.\n\n` +
-  `If the command exits non-zero (e.g. the AC id does not exist), return ` +
-  `{ "ac_ids": [], "message": "<stderr>" }.\n` +
-  `Otherwise return { "ac_ids": [<the parsed list>], "message": "<n> to build" }.`,
+// BO-4300a-1-ia: the resolver is a command step -- one command-step-runner dispatch (BO-2400f-5-i, the same
+// executor and request shape as the claim step) whose reply must be a result before any field of it is read.
+// A decline, prose, no answer, or a reply without an exit status ends the run quoting what came back.
+const resolverRaw = (await agent(
+  JSON.stringify({
+    step: "resolve-connected",
+    command: selectConnectedInvocation,
+    target: { workspace: worktreePath, branch, ac_id: targetAc },
+  }),
   {
-    agentType: "status-checker",
-    schema: RESOLVER_SCHEMA,
+    agentType: "command-step-runner",
+    schema: SHELL_REPLY_SCHEMA,
     label: "resolve-connected",
     phase: "Resolve",
   }
-);
+));
 
-const acIds = (resolverResult && resolverResult.ac_ids) || [];
+// BO-2400f-5-iii (re-applied on the maker-era command step): a decline is classified BEFORE the reply is read as a
+// result, so it halts as a declined step and is never read as an empty connected set.
+const resolverStepClassification = classifyStepReply(resolverRaw, {
+  step: "resolve-connected", agent: "command-step-runner", isCommandStep: true,
+});
+if (resolverStepClassification.kind === "declined") {
+  return buildDeclinedStepHalt("resolve-connected", "command-step-runner", resolverStepClassification.reason, declinedStepTarget, "resolve");
+}
+const resolverReply = shellStepReply(resolverRaw, "resolve-connected");
+
+if (!resolverReply.ok) {
+  return {
+    status: "error",
+    message:
+      `Resolver step for ${targetAc} gave no usable result: ${resolverReply.reason}. ` +
+      `Received: ${resolverReply.received}. Nothing was dispatched after it.`,
+    failing_phase: "resolve",
+    worktree_path: worktreePath,
+    branch,
+    classification: "halt",
+  };
+}
+
+// The gate prints a JSON list of AC ids; a non-zero exit or any other output is a failed resolution.
+let acIds = [];
+let resolverMsg = "";
+if (resolverReply.exit_status !== 0) {
+  resolverMsg = `the resolver exited ${resolverReply.exit_status}: ${resolverReply.stderr || resolverReply.stdout}`;
+} else {
+  try {
+    const parsedIds = JSON.parse(resolverReply.stdout);
+    acIds = Array.isArray(parsedIds) ? parsedIds : [];
+    if (!Array.isArray(parsedIds)) resolverMsg = `the resolver printed no list of AC ids: ${workspaceQuote(resolverReply.stdout)}`;
+  } catch (_parseErr) {
+    resolverMsg = `the resolver's output is not JSON: ${workspaceQuote(resolverReply.stdout)}`;
+  }
+}
 
 // Distinguish a RESOLUTION ERROR from a genuinely-empty connected set.
-// A bad --ac-root (e.g. an un-deployed create-fastlane-worktree returning the
-// wrong ac_store_path), a missing store, or a typo'd id all make the resolver
-// exit non-zero with a diagnostic message while still yielding an empty ac_ids
-// list. Treating that as a clean "nothing to build" no-op hides a real failure
-// (observed 2026-08-10: ac_store_path resolved to <worktree>/tickets, so every
-// id was "not found"). Fail loudly instead so the operator sees the cause.
-const resolverMsg = (resolverResult && resolverResult.message) || "";
-if (acIds.length === 0 && /not found|no build set|no such|does not exist|no module|traceback|error/i.test(resolverMsg)) {
+// A bad --ac-root, a missing store, or a typo'd id all make the resolver
+// exit non-zero or print something that is not a list. Treating that as a clean
+// "nothing to build" no-op hides a real failure. Fail loudly instead so the
+// operator sees the cause.
+if (resolverMsg) {
   return {
     status: "error",
     message:
       `Resolver could not resolve the connected build set for ${targetAc} — ` +
-      `this is a failure, not an empty set. Check that the AC store path is ` +
-      `correct (a stale/un-deployed create-fastlane-worktree can return the ` +
-      `wrong ac_store_path) and that ${targetAc} exists on origin/main. ` +
+      `this is a failure, not an empty set. Check that ${targetAc} exists on origin/main. ` +
       `Resolver said: ${resolverMsg}`,
     failing_phase: "resolve",
     worktree_path: worktreePath,
@@ -928,7 +911,7 @@ if (acIds.length === 0) {
       (structuralParentExcluded
         ? `, with structural-parent prerequisites excluded from the dependency walk. `
         : `. NOTE: structural-parent prerequisites were NOT excluded on this run. `) +
-      `${resolverResult ? resolverResult.message || "" : ""}`,
+      "",
     worktree_path: worktreePath,
     branch,
     ac_ids: [],
@@ -943,7 +926,6 @@ if (acIds.length === 0) {
 const batchIds = acIds.join(" ");
 const batchIdsCsv = acIds.join(",");
 
-// ---------------------------------------------------------------------------
 // Producibility guard (BO-2400f-12 / -i / -ii) — consulted BEFORE any claim
 // or build-agent dispatch. An unproducible (or unreadable) verdict ends the
 // run in a distinct "refused" terminal outcome naming every unproducible
@@ -952,10 +934,9 @@ const batchIdsCsv = acIds.join(",");
 // this resolution. This dispatch fires on EVERY resolved (non-empty) set,
 // including a fully producible one, so the guard is provably consulted even
 // when it never blocks (BO-2400f-12-ii).
-// ---------------------------------------------------------------------------
 
 const producibilityInvocation =
-  `python3 ${gateScript} check_producibility --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}`;
+  `python ${gateScript} check_producibility --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}`;
 
 const producibilityResult = await agent(
   `You are the producibility-guard phase agent for a fast-lane build. Before ` +
@@ -984,6 +965,16 @@ const producibilityResult = await agent(
     phase: "Resolve",
   }
 );
+
+// BO-2400f-5-iii: classified before producibilityVerdictReadable, so a
+// decline never proceeds to claim — it is never read as "every member is
+// producible".
+const producibilityStepClassification = classifyStepReply(producibilityResult, {
+  step: "check-producibility", agent: "status-checker", isCommandStep: false,
+});
+if (producibilityStepClassification.kind === "declined") {
+  return buildDeclinedStepHalt("check-producibility", "status-checker", producibilityStepClassification.reason, declinedStepTarget, "producibility");
+}
 
 // Fail closed exactly like the review verdict / red-baseline gate_passed
 // checks elsewhere in this file: the verdict is read as a plain-falsy check
@@ -1070,7 +1061,7 @@ if (producibilityResult.producible !== true) {
  */
 const CLAIM_EXECUTOR_AGENT_TYPE = "command-step-runner";
 const claimInvocation =
-  `python3 ${gateScript} claim --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}`;
+  `python ${gateScript} claim --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}`;
 
 /**
  * The runner answers with one of two shapes that share NO mandatory key: a
@@ -1137,6 +1128,19 @@ const claimRunnerReply = await agent(
     phase: "Resolve",
   }
 );
+// BO-2400f-5-iii: the claim runs on command-step-runner, so the RAW runner reply
+// is classified as a command step BEFORE interpretClaimRunnerReply reads it.
+// classifyStepReply alone decides declined versus failed versus result;
+// interpretClaimRunnerReply then only reads the claim payload out of a result
+// (and still maps a non-zero exit or unreadable stdout to null, the existing
+// never-attempted halt of BO-2400f-7-iii, which carries no halt_kind). A
+// decline nothing was claimed on, so no release is dispatched.
+const claimStepClassification = classifyStepReply(claimRunnerReply, {
+  step: "claim-connected", agent: CLAIM_EXECUTOR_AGENT_TYPE, isCommandStep: true,
+});
+if (claimStepClassification.kind === "declined") {
+  return buildDeclinedStepHalt("claim-connected", CLAIM_EXECUTOR_AGENT_TYPE, claimStepClassification.reason, declinedStepTarget, "claim", "The claim was never attempted.");
+}
 const claimResult = interpretClaimRunnerReply(claimRunnerReply);
 /**
  * Three different facts have to be told apart here, and each has a different
@@ -1199,16 +1203,14 @@ if (claimResult.target_refused) {
  */
 const claimedIdsCsv = (claimResult.claimed || []).join(",");
 const releaseInvocation =
-  `python3 ${gateScript} release --ac-ids ${claimedIdsCsv} --ac-root ${acStoreRoot}`;
+  `python ${gateScript} release --ac-ids ${claimedIdsCsv} --ac-root ${acStoreRoot}`;
 
-// ---------------------------------------------------------------------------
 // Context Bundle — assemble the prompt-caching layer ONCE per run
 // (BO-2400c-1-ii/-iii/-iv). Obtained exactly once here and threaded verbatim,
 // unaltered, as the prefix of every later build-context-carrying dispatch
 // (Test Writer, Coder) — never re-assembled per phase, which is precisely how
 // a mid-run re-read of a stable source would bust the cache anchor without
 // anyone noticing.
-// ---------------------------------------------------------------------------
 
 const bundleScript = `${worktreePath}/{{config.output_root}}/scripts/injection_builders.py`;
 
@@ -1230,9 +1232,9 @@ const bundleResult = await agent(
   `Reaching for some other document instead would let two runs aimed at the ` +
   `same target compose different bundles, and then no comparison across runs ` +
   `means anything.\n\n` +
-  `Step 2 — Run this single Bash command:\n` +
-  `   python3 ${bundleScript} assemble-bundle --architecture <path> ` +
-  `--high-level <path> --prior-tests <path>\n\n` +
+  `Step 2 — Assemble the bundle with the repository's own assembler, ${bundleScript}, ` +
+  `using its assemble-bundle subcommand with --architecture, --high-level and --prior-tests ` +
+  `each pointing at the matching temp file from Step 1.\n\n` +
   `SIZE EXPECTATION: the assembled bundle is roughly twenty kilobytes (~20 KB) ` +
   `of text — small enough to return in full. The ask is to return that text ` +
   `ITSELF, as text, in the "bundle" field below — NOT a path to it, NOT a ` +
@@ -1254,9 +1256,20 @@ const bundleResult = await agent(
   }
 );
 
-// Four-state classification (BO-2400c-1-iii, 2026-08-25 amendment) — see
-// classifyContextBundle()'s own doc comment for the fail-closed reasoning and
-// why reference-rejection runs before the marker/incompleteness check.
+// BO-2400f-5-iii: a stated decline halts here, before the four-state
+// classification below (which would otherwise read it as CONTEXT_BUNDLE_
+// STATE_NOT_OBTAINED and lose the agent/reason). The claim already
+// succeeded, so this releases like every other post-claim halt (BO-2400f-10).
+const contextBundleStepClassification = classifyStepReply(bundleResult, {
+  step: "fastlane-context-bundle", agent: "python-coder", isCommandStep: false,
+});
+if (contextBundleStepClassification.kind === "declined") {
+  return await releaseOnDecline(
+    "fastlane-context-bundle", "python-coder", contextBundleStepClassification.reason,
+    declinedStepTarget, claimResult.claimed || [], releaseInvocation,
+    "context-bundle", "The context bundle was never obtained."
+  );
+}
 const contextBundleClassification = classifyContextBundle(
   bundleResult, CACHE_BREAKPOINT_MARKER
 );
@@ -1268,15 +1281,9 @@ const contextBundle =
     : "";
 
 if (!contextBundleUsable) {
-  const releaseReplyContextBundle = await agent(
-    `You are the release-phase agent. The context-bundle phase failed after claiming.\n\n` +
-    `Release all claimed ACs back to todo by running this single Bash command:\n` +
-    `   ${releaseInvocation}\n\n` +
-    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-context-bundle-fail", phase: "Resolve" }
-  );
-  const releaseOutcomeContextBundle = buildReleaseOutcomeFields(
-    releaseReplyContextBundle, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
+  const releaseOutcomeContextBundle = await releaseClaimed(
+    "The context-bundle phase failed after claiming.", "release-on-context-bundle-fail", "Resolve",
+    claimResult.claimed || [], releaseInvocation
   );
   return {
     status: "blocked",
@@ -1291,26 +1298,26 @@ if (!contextBundleUsable) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Gate invocations (inlined lean loop — scoped to the resolved ids)
-// ---------------------------------------------------------------------------
-
 // TQ-500f-3-i: --ac-root opts the ONE shared verify_red_baseline reader into
 // its declared-absence-only-red refusal rule. The AC store root is threaded
 // through unchanged (acStoreRoot, the same value every other gate/lifecycle
 // invocation in this file already passes) — never a second, independently
 // resolved path.
 const redBaselineInvocation =
-  `python3 ${gateScript} verify_red_baseline --ac-ids ${batchIds} --test-root ${worktreePath}` +
+  `python ${gateScript} verify_red_baseline --ac-ids ${batchIds} --test-root ${worktreePath}` +
   ` --ac-root ${acStoreRoot}`;
 
 const greenCoverageInvocation =
-  `python3 ${gateScript} verify_green_and_coverage` +
+  `python ${gateScript} verify_green_and_coverage` +
   ` --ac-ids ${batchIds} --test-root ${worktreePath} --ac-root ${acStoreRoot}`;
 
-// ---------------------------------------------------------------------------
+// BO-4400f-1: a shell step (ADR-030) creates this run's labelled scratch item, owned by $PPID; the
+// test-writer, coder and review dispatches get scratchEnvNote. Fail-open: no item, no note.
+const scratchItem = ((await agent(`Run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python "${worktreePath}/{{config.output_root}}/scripts/scratch.py" new-item "fast-lane-${slug}-$PPID" fast-lane --owner-pid $PPID`, { agentType: "status-checker", label: "scratch-item", phase: "Test Writer", schema: { "type": "object", "properties": { "item": { "type": ["string", "null"] } } } })) || {}).item;
+const scratchEnvNote = typeof scratchItem === "string" && scratchItem ? `\n\nSCRATCH (BO-4400f-1): start every process with TMPDIR, TEMP and TMP set to "${scratchItem}"; never write scratch into the project root, debugging/logs/, test-logs/ or the system temp folder.` : "";
+
 // Phase 3 — test-writer: red stubs for the resolved ids + red-baseline gate
-// ---------------------------------------------------------------------------
 
 phase("Test Writer");
 
@@ -1331,7 +1338,7 @@ const testWriterResult = await agent(
   `"reason": <string|null>, "green_at_baseline": [...], "message": "<summary>" }\n\n` +
   `CRITICAL: gate_passed and reason MUST reflect the real gate output — do NOT fabricate ` +
   `them. Fail closed: if the gate's JSON cannot be parsed or "gate_passed" is absent, ` +
-  `report gate_passed: false.`,
+  `report gate_passed: false.` + scratchEnvNote,
   {
     agentType: "test-writer",
     schema: TEST_WRITER_SCHEMA,
@@ -1340,16 +1347,23 @@ const testWriterResult = await agent(
   }
 );
 
-if (!testWriterResult || testWriterResult.status !== "ok") {
-  const releaseReplyTestWriter = await agent(
-    `You are the release-phase agent. The test-writer phase failed after claiming.\n\n` +
-    `Release all claimed ACs back to todo by running this single Bash command:\n` +
-    `   ${releaseInvocation}\n\n` +
-    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-test-writer-fail", phase: "Test Writer" }
+// BO-2400f-5-iii: classified before the generic "did not return ok" branch
+// below, so a decline is named (step/agent/reason) rather than folded into
+// that branch's own generic message. Post-claim, so it releases (BO-2400f-10).
+const testWriterStepClassification = classifyStepReply(testWriterResult, {
+  step: "test-writer-connected", agent: "test-writer", isCommandStep: false,
+});
+if (testWriterStepClassification.kind === "declined") {
+  return await releaseOnDecline(
+    "test-writer-connected", "test-writer", testWriterStepClassification.reason,
+    declinedStepTarget, claimResult.claimed || [], releaseInvocation, "test-writer"
   );
-  const releaseOutcomeTestWriter = buildReleaseOutcomeFields(
-    releaseReplyTestWriter, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
+}
+
+if (!testWriterResult || testWriterResult.status !== "ok") {
+  const releaseOutcomeTestWriter = await releaseClaimed(
+    "The test-writer phase failed after claiming.", "release-on-test-writer-fail", "Test Writer",
+    claimResult.claimed || [], releaseInvocation
   );
   return {
     status: "blocked",
@@ -1368,15 +1382,9 @@ if (!testWriterResult || testWriterResult.status !== "ok") {
 // skew between this workflow and an older/newer fast_lane.py) fails closed
 // exactly like an explicit gate_passed: false — never treated as passing.
 if (!testWriterResult.gate_passed) {
-  const releaseReplyRedBaseline = await agent(
-    `You are the release-phase agent. The red-baseline gate failed after claiming.\n\n` +
-    `Release all claimed ACs back to todo by running this single Bash command:\n` +
-    `   ${releaseInvocation}\n\n` +
-    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-red-baseline-fail", phase: "Test Writer" }
-  );
-  const releaseOutcomeRedBaseline = buildReleaseOutcomeFields(
-    releaseReplyRedBaseline, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
+  const releaseOutcomeRedBaseline = await releaseClaimed(
+    "The red-baseline gate failed after claiming.", "release-on-red-baseline-fail", "Test Writer",
+    claimResult.claimed || [], releaseInvocation
   );
   return {
     status: "blocked",
@@ -1394,9 +1402,7 @@ if (!testWriterResult.gate_passed) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Phase 4 — python-coder: make green + green+coverage gate
-// ---------------------------------------------------------------------------
 
 phase("Coder");
 
@@ -1419,7 +1425,7 @@ const coderResult = await agent(
   `Parse the JSON: { "green": <bool>, "coverage_ok": <bool>, "uncovered_ac_ids": [...] }.\n\n` +
   `Return JSON: { "status": "ok", "files_modified": ["<path>", ...], "green": <bool>, "coverage_ok": <bool>, "uncovered_ac_ids": [...], "message": "<summary>" }\n\n` +
   `CONSTRAINT: implement only what the failing tests require — no gold-plating.\n` +
-  `CRITICAL: green and coverage_ok MUST reflect the real gate output — do NOT fabricate them.`,
+  `CRITICAL: green and coverage_ok MUST reflect the real gate output — do NOT fabricate them.` + scratchEnvNote,
   {
     agentType: "python-coder",
     schema: CODER_SCHEMA,
@@ -1428,16 +1434,21 @@ const coderResult = await agent(
   }
 );
 
-if (!coderResult || coderResult.status !== "ok") {
-  const releaseReplyCoder = await agent(
-    `You are the release-phase agent. The coder phase failed after claiming.\n\n` +
-    `Release all claimed ACs back to todo by running this single Bash command:\n` +
-    `   ${releaseInvocation}\n\n` +
-    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-coder-fail", phase: "Coder" }
+// BO-2400f-5-iii: classified before the generic "did not return ok" branch.
+const coderStepClassification = classifyStepReply(coderResult, {
+  step: "coder-connected", agent: "python-coder", isCommandStep: false,
+});
+if (coderStepClassification.kind === "declined") {
+  return await releaseOnDecline(
+    "coder-connected", "python-coder", coderStepClassification.reason,
+    declinedStepTarget, claimResult.claimed || [], releaseInvocation, "python-coder"
   );
-  const releaseOutcomeCoder = buildReleaseOutcomeFields(
-    releaseReplyCoder, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
+}
+
+if (!coderResult || coderResult.status !== "ok") {
+  const releaseOutcomeCoder = await releaseClaimed(
+    "The coder phase failed after claiming.", "release-on-coder-fail", "Coder",
+    claimResult.claimed || [], releaseInvocation
   );
   return {
     status: "blocked",
@@ -1454,15 +1465,9 @@ if (!coderResult || coderResult.status !== "ok") {
 
 // Gate is the arbiter: no commit, no PR unless green AND coverage hold (BO-2400f-4).
 if (!coderResult.green || !coderResult.coverage_ok) {
-  const releaseReplyCoverage = await agent(
-    `You are the release-phase agent. The green+coverage gate failed after claiming.\n\n` +
-    `Release all claimed ACs back to todo by running this single Bash command:\n` +
-    `   ${releaseInvocation}\n\n` +
-    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-coverage-fail", phase: "Coder" }
-  );
-  const releaseOutcomeCoverage = buildReleaseOutcomeFields(
-    releaseReplyCoverage, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
+  const releaseOutcomeCoverage = await releaseClaimed(
+    "The green+coverage gate failed after claiming.", "release-on-coverage-fail", "Coder",
+    claimResult.claimed || [], releaseInvocation
   );
   return {
     status: "blocked",
@@ -1481,14 +1486,12 @@ if (!coderResult.green || !coderResult.coverage_ok) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Phase 4.5 — Review: pr-reviewer over the uncommitted working diff (BO-2400f-11)
 //
 // Runs BEFORE commit so a finding is a correction to the change about to be
 // delivered, never a follow-up commit stacked on a defect already in the
 // delivered history. The commit dispatch below is unreachable on any path
 // that has not first read a usable verdict from this dispatch.
-// ---------------------------------------------------------------------------
 
 phase("Review");
 
@@ -1499,10 +1502,10 @@ const reviewResult = await agent(
   `defect already in the delivered history.\n\n` +
   `Worktree: ${worktreePath}\n` +
   `Branch: ${branch}\n\n` +
-  `Run this single Bash command to see the actual uncommitted diff to review — do NOT ` +
+  `Read the actual uncommitted diff of the worktree below to review it — do NOT ` +
   `review a written summary, a files_modified list, or an account of what the coder ` +
   `believes it did:\n` +
-  `   git -C "${worktreePath}" diff\n\n` +
+  `   the uncommitted diff of the worktree at ${worktreePath}\n\n` +
   `Classify every finding as high, medium, or low confidence using your own judgement ` +
   `(escalate a medium cluster to a second opinion as usual — your own promotion rules ` +
   `apply unchanged).\n\n` +
@@ -1512,7 +1515,7 @@ const reviewResult = await agent(
   `If you cannot reach a classified verdict (the diff could not be read, or the review ` +
   `could not be completed), return { "verdict_obtained": false, "high_findings": [], ` +
   `"medium_findings": [], "low_suppressed_count": 0, "message": "<why no verdict>" } — ` +
-  `never fabricate a clean verdict.`,
+  `never fabricate a clean verdict.` + scratchEnvNote,
   {
     agentType: "pr-reviewer",
     schema: REVIEW_SCHEMA,
@@ -1521,18 +1524,23 @@ const reviewResult = await agent(
   }
 );
 
+// BO-2400f-5-iii: classified before reviewVerdictUsable's own generic
+// not-committed branch, so a decline is named rather than folded into it.
+const reviewStepClassification = classifyStepReply(reviewResult, {
+  step: "fastlane-review", agent: "pr-reviewer", isCommandStep: false,
+});
+if (reviewStepClassification.kind === "declined") {
+  return await releaseOnDecline(
+    "fastlane-review", "pr-reviewer", reviewStepClassification.reason,
+    declinedStepTarget, claimResult.claimed || [], releaseInvocation,
+    "review", "No review verdict was obtained before commit."
+  );
+}
+
 // Fail closed on an unusable verdict — the same plain-falsy read already used
 // for the red-baseline gate_passed key (BO-2400f-11). `verdict_obtained` is
 // the ONLY positive signal. A missing key, a null, an unparseable reply, or
-// any other shape takes the not-committed branch.
-//
-// Deliberately NOT accepted: a generic `passed: true`. An earlier cut allowed
-// it so that a test fixture which never stubbed this phase could still reach
-// the commit dispatch — the harness default reply carries `passed: true`. That
-// is a fail-open backdoor wearing a test-compatibility disguise: in production
-// it would let a reply carrying no verdict at all count as a clean review,
-// which is the exact defect this criterion exists to prevent. The fixture was
-// corrected to stub a real verdict instead.
+// any other shape takes the not-committed branch. A generic `passed: true` is NOT accepted (fail-open).
 const reviewVerdictUsable = !!(
   reviewResult && reviewResult.verdict_obtained === true
 );
@@ -1542,15 +1550,9 @@ const reviewHighFindings =
     : [];
 
 if (!reviewVerdictUsable) {
-  const releaseReplyReviewNoVerdict = await agent(
-    `You are the release-phase agent. No usable review verdict was obtained before commit.\n\n` +
-    `Release all claimed ACs back to todo by running this single Bash command:\n` +
-    `   ${releaseInvocation}\n\n` +
-    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-review-no-verdict-fail", phase: "Review" }
-  );
-  const releaseOutcomeReviewNoVerdict = buildReleaseOutcomeFields(
-    releaseReplyReviewNoVerdict, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
+  const releaseOutcomeReviewNoVerdict = await releaseClaimed(
+    "No usable review verdict was obtained before commit.", "release-on-review-no-verdict-fail", "Review",
+    claimResult.claimed || [], releaseInvocation
   );
   return {
     status: "blocked",
@@ -1569,15 +1571,9 @@ if (!reviewVerdictUsable) {
 }
 
 if (reviewHighFindings.length > 0) {
-  const releaseReplyReviewHighFindings = await agent(
-    `You are the release-phase agent. A high-confidence review finding blocked the run before commit.\n\n` +
-    `Release all claimed ACs back to todo by running this single Bash command:\n` +
-    `   ${releaseInvocation}\n\n` +
-    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-review-high-findings-fail", phase: "Review" }
-  );
-  const releaseOutcomeReviewHighFindings = buildReleaseOutcomeFields(
-    releaseReplyReviewHighFindings, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
+  const releaseOutcomeReviewHighFindings = await releaseClaimed(
+    "A high-confidence review finding blocked the run before commit.", "release-on-review-high-findings-fail", "Review",
+    claimResult.claimed || [], releaseInvocation
   );
   return {
     status: "blocked",
@@ -1603,13 +1599,11 @@ const reviewMediumFindings =
 const reviewLowSuppressedCount =
   (reviewResult && reviewResult.low_suppressed_count) || 0;
 
-// ---------------------------------------------------------------------------
 // Phase 4.6 — Changelog: emit_entry.py when the change owes one (KI-BO-001 /
 // BO-2400f-4-i..v). Runs BEFORE Commit so an emitted entry is written to disk
 // while still uncommitted and is picked up by the Commit phase's own
 // `git add -A`, landing inside the pull request's own diff rather than a
 // follow-up commit.
-// ---------------------------------------------------------------------------
 
 phase("Changelog");
 
@@ -1623,7 +1617,7 @@ let changelogResult = null;
 
 if (changelogRequired) {
   const changelogPayloadInvocation =
-    `python3 ${gateScript} changelog_payload --target-ac ${targetAc} ` +
+    `python ${gateScript} changelog_payload --target-ac ${targetAc} ` +
     `--built-ac-ids ${batchIdsCsv} --files-modified "${filesModified.join(",")}" ` +
     `--branch ${branch} --ac-root ${acStoreRoot}`;
 
@@ -1638,13 +1632,11 @@ if (changelogRequired) {
     `   ${changelogPayloadInvocation}\n` +
     `Parse the printed JSON payload verbatim — do not hand-edit any of its fields.\n\n` +
     `Step 2 — Write the entry through the repository's own emitter (never hand-compose a ` +
-    `markdown file):\n` +
-    `   python3 {{config.output_root}}/scripts/changelog/emit_entry.py ` +
-    `--changelog-dir "${worktreePath}/changelogs" --payload '<the JSON payload from Step 1>'\n\n` +
+    `markdown file): the emit_entry.py script under {{config.output_root}}/scripts/changelog/, ` +
+    `given --changelog-dir "${worktreePath}/changelogs" and --payload set to the JSON payload from Step 1.\n\n` +
     `Step 3 — Verify INDEPENDENTLY of your own report: re-read the delivered change (not ` +
     `your own memory of Step 2) to confirm an added changelogs/*.md file is actually present, ` +
-    `e.g.:\n` +
-    `   git -C "${worktreePath}" status --porcelain -- changelogs/\n\n` +
+    `by listing the worktree's changelogs/ folder for an added file.\n\n` +
     `Return JSON: { "status": "ok", "entry_added": <bool, from the Step 3 re-read, not from ` +
     `Step 2's own report>, "entry_path": "<path or null>", "message": "<summary>" }. ` +
     `If Step 1 or Step 2 errors, return { "status": "error", "entry_added": false, ` +
@@ -1657,15 +1649,23 @@ if (changelogRequired) {
     }
   );
 
+  // BO-2400f-5-iii: classified before changelogEntryOk's own generic branch.
+  const changelogStepClassification = classifyStepReply(changelogResult, {
+    step: "fastlane-changelog", agent: "python-coder", isCommandStep: false,
+  });
+  if (changelogStepClassification.kind === "declined") {
+    return await releaseOnDecline(
+      "fastlane-changelog", "python-coder", changelogStepClassification.reason,
+      declinedStepTarget, claimResult.claimed || [], releaseInvocation, "changelog"
+    );
+  }
+
   // Fail closed exactly like the review verdict above. entry_added must be
   // true from the same response for the entry to count as present — a status
   // "ok" with entry_added false/absent is the exact silent-failure mode
   // (changelog_entry_absent_from_change) KI-BO-001 exists to catch, and it
   // halts exactly like an outright emit error (changelog_emit_failed) — never
   // a warning alongside a reported success.
-  //
-  // A generic `passed: true` is deliberately NOT accepted here either; see the
-  // review guard above for why that escape hatch was removed.
   const changelogEntryOk = !!(
     changelogResult &&
     changelogResult.status === "ok" &&
@@ -1673,15 +1673,9 @@ if (changelogRequired) {
   );
 
   if (!changelogEntryOk) {
-    const releaseReplyChangelog = await agent(
-      `You are the release-phase agent. The changelog phase failed after claiming.\n\n` +
-      `Release all claimed ACs back to todo by running this single Bash command:\n` +
-      `   ${releaseInvocation}\n\n` +
-      `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-      { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-changelog-fail", phase: "Changelog" }
-    );
-    const releaseOutcomeChangelog = buildReleaseOutcomeFields(
-      releaseReplyChangelog, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
+    const releaseOutcomeChangelog = await releaseClaimed(
+      "The changelog phase failed after claiming.", "release-on-changelog-fail", "Changelog",
+      claimResult.claimed || [], releaseInvocation
     );
     const changelogHaltReason =
       changelogResult && changelogResult.status === "ok"
@@ -1706,57 +1700,84 @@ if (changelogRequired) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Knowledge Routing — dispatched once the phases that perform the work
-// (test-writer, coder, review, changelog) have returned, and BEFORE the
-// phase that publishes the unit of work's own output ("fastlane-commit"),
-// so its writes can ride the commit this path already makes (INF-700a-1's
-// ordering clause). Fail-open (INF-700a-1-ii): there is deliberately no halt
-// branch below — whatever this dispatch reports, the run's own outcome and
-// exit status proceed unaffected, and the figures are merged into the
-// terminal payload rather than discarded (INF-700a-1's anti-fire-and-forget
-// requirement).
-// ---------------------------------------------------------------------------
-
+// Knowledge Routing (INF-700a-1 ordering, INF-700a-5 durability), BEFORE "fastlane-commit": `stage`
+// writes learnings INTO THE WORKTREE and marks nothing routed; its manifest is staged by name below and
+// the post-commit `observe` decides the report. Fail-open: no halt branch on either step.
 phase("Knowledge Routing");
 
+const knowledgeRoutingCli = `python3 ${worktreePath.replace(/[^\w\/.:@%+=,-]/g, "\\$&")}/{{config.output_root}}/scripts/knowledge/completion_routing_cli.py`;
 const knowledgeRoutingReply = await agent(
-  `You are the knowledge-routing phase agent for a fast-lane build. Route any ` +
-  `knowledge records the phases that just ran emitted to the surface each one ` +
-  `names — nobody runs this by hand.\n\n` +
-  `Run this single Bash command from the repository root and read its JSON ` +
-  `summary and exit code:\n` +
-  `   python3 {{config.output_root}}/scripts/knowledge/harvest_learnings.py\n\n` +
-  `Classify the outcome as exactly one of three cases:\n` +
-  `  - "completed": the harvester ran to completion (exit 0 or 3 — some ` +
-  `records left unroutable is still a completed run).\n` +
-  `  - "could_not_complete": the declared sink could not be read, or a ` +
-  `destination file could not be written (exit 1, 2, or 4).\n` +
-  `  - "did_not_run": the command itself could not be run at all.\n\n` +
-  `Return JSON: { "case": "completed"|"could_not_complete"|"did_not_run", ` +
-  `"read": <records read>, "written": <records written to a surface>, ` +
-  `"unwritten": <records left unwritten>, "detail": "<what could not be done, ` +
-  `or null>" }.\n\n` +
-  `This step must never block, retry, or fail the build — always return a ` +
-  `best-effort classification, even on an unreadable sink or a failed write.`,
-  {
-    agentType: "python-coder",
-    schema: KNOWLEDGE_ROUTING_SCHEMA,
-    label: "knowledge-routing-step",
-    phase: "Knowledge Routing",
-  }
+  `You are the knowledge-routing phase agent for a fast-lane build. Stage the ` +
+  `knowledge records the phases that just ran emitted into this worktree, so the ` +
+  `commit that follows carries them — nobody runs this by hand.\n\n` +
+  `Run this single Bash command and return the ONE line of JSON it prints, verbatim:\n` +
+  `   ${knowledgeRoutingCli} stage --working-dir ${worktreePath}\n\n` +
+  `It always exits 0; its "case" says how the step went. If the command itself ` +
+  `cannot be run, return { "case": "did_not_run", "detail": "<why>" }. This step ` +
+  `must never block, retry, or fail the build.`,
+  { agentType: "python-coder", schema: KNOWLEDGE_ROUTING_SCHEMA, label: "knowledge-routing-step", phase: "Knowledge Routing" }
 );
+const knowledgeStaged = classifyKnowledgeRouting(knowledgeRoutingReply);
+const knowledgeStageStep = knowledgeStaged.manifest.length
+  ? `   git -C "${worktreePath}" add -- ${knowledgeStaged.manifest.map((p) => `"${p}"`).join(" ")}\n` +
+    `   (knowledge-routing writes: stage these BY NAME — they must ride this commit)\n`
+  : "";
 
-const knowledgeRouting = classifyKnowledgeRouting(knowledgeRoutingReply);
+// Wrong-version runs (TQ-500g-1-v): thin dispatches, fail-closed parses; the rules live in Python.
+phase("Wrong-Version Runs");
+const wvDir = `${worktreePath}/{{config.output_root}}/scripts/build_orchestration`;
+const wvIds = acIds.length ? `--ac-ids ${batchIdsCsv} ` : "";
+const wvFlags = `--ac-root ${acStoreRoot} --test-root ${worktreePath} --base-ref HEAD`;
+const wvParseLine = (line) => {
+  try { const out = JSON.parse(line.trim()); return out && typeof out === "object" && !Array.isArray(out) ? out : null; } catch { return null; }
+};
+const wvLastJsonObject = (stdout) => String(stdout || "").split(/\r?\n/).reverse().map(wvParseLine).find(Boolean) || null;
+const wvStep = async (label, command) => {
+  let reply = null;
+  try {
+    reply = await agent(JSON.stringify({ step: label, command, target: { workspace: worktreePath, branch, ac_id: targetAc } }),
+      { agentType: CLAIM_EXECUTOR_AGENT_TYPE, schema: CLAIM_RUNNER_SCHEMA, label, phase: "Wrong-Version Runs" });
+  } catch (err) { return { ok: false, error: `dispatch failed: ${String((err && err.message) || err)}` }; }
+  const out = wvLastJsonObject(reply && reply.stdout);
+  return out || { ok: false, error: `unparseable reply: ${JSON.stringify(reply)}` };
+};
+const wvHalt = async (step, detail) => {
+  const released = await releaseClaimed(`The wrong-version ${step} step stopped the run before commit.`, "release-on-wrong-version-fail", "Wrong-Version Runs", claimResult.claimed || [], releaseInvocation);
+  return { status: "blocked", message: `Wrong-version ${step} step did not pass: ${JSON.stringify(detail)} No PR is opened. ${released.note}`,
+    failing_phase: "wrong-version", gate: "wrong_version_gate", wrong_version_step: step, wrong_version_detail: detail,
+    worktree_path: worktreePath, branch, built_ac_ids: acIds, classification: "halt", ...released.fields };
+};
+if (workspaceCreated === false) {
+  const recovered = await wvStep("fastlane-wv-recover", `python ${wvDir}/wrong_version_runner.py recover`);
+  if (!recovered || recovered.ok !== true) return await wvHalt("recover", recovered);
+}
+let wvReply = "";
+if (acIds.length) {
+  const listed = await wvStep("fastlane-wv-list", `python ${wvDir}/wrong_version_writer.py list ${wvIds}${wvFlags}`);
+  if (!listed || !Array.isArray(listed.owed) || listed.error !== null) return await wvHalt("list", listed);
+  if (listed.owed.length) {
+    try {
+      const raw = await agent(
+        `Prepare the owed wrong versions. Input: ${JSON.stringify({ work_key: targetAc, repo_root: worktreePath, requirement_ids: acIds, wrong_versions: listed.owed })}`,
+        { agentType: "test-breaker", label: "fastlane-wv-test-breaker", phase: "Wrong-Version Runs" });
+      wvReply = typeof raw === "string" ? raw : raw ? JSON.stringify(raw) : "";
+    } catch { wvReply = ""; }
+  }
+}
+let wvDelim = "WV_REPLY_EOF";
+while (wvReply.includes(wvDelim)) wvDelim += "_X";
+const wvFinish = await wvStep("fastlane-wv-finish",
+  `python ${wvDir}/wrong_version_gate.py finish --work-key ${targetAc} --reply - ${wvIds}${wvFlags} <<'${wvDelim}'
+${wvReply}${wvReply ? "\n" : ""}${wvDelim}`);
+if (!wvFinish || typeof wvFinish.gate_passed !== "boolean" || !wvFinish.gate_passed) return await wvHalt("finish", wvFinish);
+const wvVerdict = wvFinish.verdict || {};
+const wvRan = wvVerdict.applicable === true;
 
-// ---------------------------------------------------------------------------
 // Phase 5 — Commit: mark ACs done + commit on the worktree branch (BO-2400f-4)
-// ---------------------------------------------------------------------------
-
 phase("Commit");
 
 const markDoneInvocation =
-  `python3 ${gateScript} mark_done --ac-ids ${batchIdsCsv}` +
+  `python ${gateScript} mark_done --ac-ids ${batchIdsCsv}` +
   ` --ac-root ${acStoreRoot} --test-root ${worktreePath}`;
 
 const commitResult = await agent(
@@ -1771,10 +1792,10 @@ const commitResult = await agent(
   `Parse the JSON: { "marked_done": [...], "all_done": <bool>, "stale": [...] }.\n` +
   `If it exits non-zero or all_done is false, STOP and return ` +
   `{ "status": "error", "message": "mark_done stale: <stale ids>" }.\n\n` +
-  `Step 2 — Stage everything on the worktree:\n` +
-  `   git -C "${worktreePath}" add -A\n\n` +
+  `Step 2 — Stage everything on the worktree:\n` + knowledgeStageStep +
+  `   Stage every change in the worktree at ${worktreePath} (add all).\n\n` +
   `Step 3 — Commit (set the COMMIT_AGENT_MODE token so the guardian allows it):\n` +
-  `   COMMIT_AGENT_MODE=1 git -C "${worktreePath}" commit -m "feat: fast-lane build of ${targetAc} connected set (${acIds.length} ACs)" -m "Built via /fast-lane-build: ${batchIds}. Gates: verify_red_baseline + verify_green_and_coverage green."\n` +
+  `   Commit it in that worktree with the subject "feat: fast-lane build of ${targetAc} connected set (${acIds.length} ACs)" and the body "Built via /fast-lane-build: ${batchIds}. Gates: verify_red_baseline + verify_green_and_coverage green${wvRan ? " + wrong-version runs" : ""}."\n` +
   `   Every claim in the commit message must be verifiable in the staged diff.\n` +
   `   If a pre-commit hook fails, fix the reported issue and retry once.\n\n` +
   `Return JSON: { "status": "ok", "branch": "${branch}", "message": "<summary>" } ` +
@@ -1787,21 +1808,36 @@ const commitResult = await agent(
   }
 );
 
-if (!commitResult || commitResult.status !== "ok") {
-  // The commit phase can fail AFTER mark_done flipped some/all claimed ACs to
-  // done on disk (e.g. a stale-todo mark_done, or a pre-commit hook rejecting
-  // the commit). Nothing was committed, so roll the whole run's claims back to
-  // todo — releasing done_ids=[] resets even already-done claims (BO-2400f-10).
-  const releaseReplyCommit = await agent(
-    `You are the release-phase agent. The commit phase failed after claiming and ` +
-    `marking done, but nothing was committed.\n\n` +
-    `Roll all claimed ACs back to todo by running this single Bash command:\n` +
-    `   ${releaseInvocation}\n\n` +
-    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-commit-fail", phase: "Commit" }
+// One observation per path, success AND failure: publication is observed, never inferred (INF-700a-5-i).
+const commitOk = Boolean(commitResult && commitResult.status === "ok");
+const knowledgeObserveReply = await agent(
+  `You are the knowledge-routing observer for a fast-lane build. Report, read-only, what ` +
+  `the commit phase actually carried. Run this single Bash command and return the ONE ` +
+  `line of JSON it prints, verbatim:\n` +
+  `   ${knowledgeRoutingCli} observe --working-dir ${worktreePath} --commit-status ${commitOk ? "ok" : "failed"}\n\n` +
+  `If it cannot be run, return { "case": "did_not_run", "detail": "<why>" }. Never block, retry, or fail the build.`,
+  { agentType: "python-coder", schema: KNOWLEDGE_ROUTING_SCHEMA, label: "knowledge-routing-observe", phase: "Commit" }
+);
+const knowledgeRouting = settleKnowledgeRouting(knowledgeStaged, knowledgeObserveReply);
+
+// BO-2400f-5-iii: classified before the generic "did not succeed" branch.
+const commitStepClassification = classifyStepReply(commitResult, {
+  step: "fastlane-commit", agent: "commit", isCommandStep: false,
+});
+if (commitStepClassification.kind === "declined") {
+  const commitDeclineHalt = await releaseOnDecline(
+    "fastlane-commit", "commit", commitStepClassification.reason,
+    declinedStepTarget, claimResult.claimed || [], releaseInvocation, "commit"
   );
-  const releaseOutcomeCommit = buildReleaseOutcomeFields(
-    releaseReplyCommit, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
+  return { ...commitDeclineHalt, knowledge_routing: knowledgeRouting };
+}
+
+if (!commitOk) {
+  // The commit can fail AFTER mark_done flipped claims to done; nothing was committed, so roll
+  // every claim back to todo (done_ids=[] resets even already-done claims, BO-2400f-10).
+  const releaseOutcomeCommit = await releaseClaimed(
+    "The commit phase failed after claiming and marking done, but nothing was committed.", "release-on-commit-fail", "Commit",
+    claimResult.claimed || [], releaseInvocation, "Roll"
   );
   return {
     status: "blocked",
@@ -1812,13 +1848,12 @@ if (!commitResult || commitResult.status !== "ok") {
     failing_phase: "commit",
     worktree_path: worktreePath,
     classification: "halt",
+    knowledge_routing: knowledgeRouting,
     ...releaseOutcomeCommit.fields,
   };
 }
 
-// ---------------------------------------------------------------------------
 // Phase 6 — Pull Request: open against main (gh + EMU fallback) (BO-2400f-4)
-// ---------------------------------------------------------------------------
 
 phase("Pull Request");
 
@@ -1852,24 +1887,23 @@ const prResult = await agent(
   `Worktree: ${worktreePath}\n` +
   `Base: main\n\n` +
   `Step 1 — Push the branch:\n` +
-  `   git -C "${worktreePath}" push --set-upstream origin ${branch}\n` +
+  `   Push ${branch} to origin from the worktree at ${worktreePath}, setting the upstream.\n` +
   `   If push exits non-zero, return { "status": "error", "message": "push failed: <stderr>" }.\n\n` +
   `Step 2 — Switch to the authorized account (EMU-tolerant):\n` +
-  `   gh auth switch --user urlmonitor\n` +
+  `   Switch the gh CLI to the account urlmonitor.\n` +
   `   If this exits non-zero, continue anyway (it may already be active).\n\n` +
   `Step 3 — Open the PR (with REST fallback for EMU accounts):\n` +
   `   Attempt A — gh pr create:\n` +
-  `     gh pr create --base main --head "${branch}" ` +
-  `--title "${prTitle.replace(/"/g, '\\"')}" ` +
-  `--body "$(cat <<'PREOF'\n${prBody}\nPREOF\n)"\n` +
+  `     Create the PR with base main and head "${branch}", ` +
+  `title "${prTitle.replace(/"/g, '\\"')}" and a body read from this text:\n${prBody}\n` +
   `     Capture the PR URL from stdout. On success, go to Step 4.\n` +
   `     If it fails with "Enterprise Managed User", "createPullRequest", or "GraphQL", ` +
   `fall through to Attempt B. Any other failure: return ` +
   `{ "status": "error", "message": "gh pr create failed: <stderr>" }.\n\n` +
   `   Attempt B — REST fallback:\n` +
-  `     Get org/repo: git -C "${worktreePath}" remote get-url origin (parse org/repo).\n` +
-  `     gh api -X POST repos/<org>/<repo>/pulls -f title="${prTitle.replace(/"/g, '\\"')}" ` +
-  `-f head="${branch}" -f base="main" -f body="<body>"\n` +
+  `     Get org/repo from the origin remote URL of the worktree at ${worktreePath} (parse org/repo).\n` +
+  `     Make the REST call (the gh CLI's api subcommand, POST to repos/<org>/<repo>/pulls) with title="${prTitle.replace(/"/g, '\\"')}", ` +
+  `head="${branch}", base="main", body="<body>"\n` +
   `     Parse .html_url from the JSON response. If gh api exits non-zero, return ` +
   `{ "status": "error", "message": "gh api REST fallback failed: <stderr>" }.\n\n` +
   `Step 4 — Return: { "status": "ok", "pr_url": "<full https url>", "message": "PR opened" }.`,
@@ -1880,6 +1914,16 @@ const prResult = await agent(
     phase: "Pull Request",
   }
 );
+
+// BO-2400f-5-iii: the commit already succeeded by this point (like the
+// existing PR-failure branch below, this never releases — there is nothing
+// left to roll back).
+const prStepClassification = classifyStepReply(prResult, {
+  step: "fastlane-pr", agent: "pull-request", isCommandStep: false,
+});
+if (prStepClassification.kind === "declined") {
+  return buildDeclinedStepHalt("fastlane-pr", "pull-request", prStepClassification.reason, declinedStepTarget, "pull-request");
+}
 
 if (!prResult || prResult.status !== "ok") {
   return {
@@ -1892,10 +1936,10 @@ if (!prResult || prResult.status !== "ok") {
     worktree_path: worktreePath,
     branch,
     ac_ids: acIds,
+    knowledge_routing: knowledgeRouting,
   };
 }
 
-// ---------------------------------------------------------------------------
 // Done — BO-2400f-4-vi: the terminal payload is built at the ONE site
 // (buildFastLaneDeliveryOutcome) that enforces "ok is reachable only when no
 // known required check is unsatisfied". Every required check this run can
@@ -1904,7 +1948,6 @@ if (!prResult || prResult.status !== "ok") {
 // here — but a future step that discovers another unsatisfied check reports
 // it through this same list rather than bypassing the invariant with its own
 // success payload.
-// ---------------------------------------------------------------------------
 
 const deliveryOutcome = buildFastLaneDeliveryOutcome(prResult.pr_url || null, []);
 
@@ -1923,6 +1966,7 @@ return {
   review_medium_findings: reviewMediumFindings,
   review_low_suppressed_count: reviewLowSuppressedCount,
   knowledge_routing: knowledgeRouting,
+  wrong_version_outcome: wvVerdict.outcome === undefined ? null : wvVerdict.outcome,
   changelog_required: changelogRequired,
   changelog_entry_path:
     (changelogResult && changelogResult.entry_path) || null,

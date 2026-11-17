@@ -10,7 +10,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a leaf code requirement whose test intent marks clauses (1) and (2) needs-test and
     clause (3) not needed, and whose declared files exist in the repository,
@@ -105,6 +105,7 @@ expects_from:
     reference_files: [{path: str, exists: bool, same_type: bool, same_area: bool}]}]}; paths repo-root-relative
     POSIX. Non-zero exit and no report on error.'
 test_required: false
+test_rationale: "Prompt-only deliverable (the test-design procedure in templates/agents/test-designer.md) whose behaviour is an LLM following instructions; the structural tests under unit_tests/ (paragraph-scoped rules, the prompt's examples validated against the real schema, the real render CLI) pin the instructions, and the requirement rule check enforces what the agent writes."
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by:
@@ -118,7 +119,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - ACD-2500c-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/29_TICKET-20261012-ACD-2500c-1.md
 change_target: prompt
 risk_surface: contract_boundary
 notes: |
@@ -135,3 +137,15 @@ notes: |
   IT-PO (2026-09-25): the code-aware agent is created and registered by ACD-2500d-5 (placed under
   ACD-2500d because ACD-2500c is at the 5-L2 cap). This AC writes the test-design procedure into
   that agent's template.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: testDesign
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

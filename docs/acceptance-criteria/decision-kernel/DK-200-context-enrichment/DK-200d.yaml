@@ -1,0 +1,32 @@
+id: DK-200d
+title: "Evaluate initial enrichment independently of final answers"
+component: decision-kernel
+components: [decision_kernel]
+level: L1
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given independently labelled examples that require context gathering or expose its limits,
+  When the enrichment-only evaluation runs,
+  Then it measures the production enrichment step without depending on intent or final-answer grading,
+  And a failed example or an empty evaluation cannot appear as a passing evaluation.
+depends_on: [DK-200]
+covered_by:
+  - DK-200d-1
+  - DK-200d-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: specified-by
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: specified-by
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: specified-by
+    status: exists
+origin_agent: Codex orchestrator (user-authorized BA and IT PO review)
+created: 2026-10-02
+notes: "Parent scope records the existing authorized feature; readiness is not an approval claim."

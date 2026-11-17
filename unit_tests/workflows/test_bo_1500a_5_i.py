@@ -29,6 +29,13 @@ DIAGNOSED BUG (quick-fix root-cause; live evidence: run wf_734389cf-248,
     (it-po) after the non-confirming 'worktree-setup' reply -- no halt
     occurs at all.
 
+RE-POINTED BY BO-4300c-3 / BO-4300a-1-ia: the 'worktree-setup' dispatch, its script-path resolution and the
+    swallowed-parse fallback no longer exist. The isolated-workspace setup step is the ONE ``workspace-ensure``
+    dispatch to the shell executor, and its reply goes through the shared acceptance check: anything but an ok
+    maker answer naming a workspace_path ends the run (status error) BEFORE any authoring agent, with a
+    message quoting what was received and stating which shape it was. The four shapes below are delivered as
+    that reply; the failure is told apart by the reason the message states.
+
 TICKET: quick-fix (no ticket file; red-phase authored ahead of the fix that
     templates/workflows-js/plan-feature.js still needs).
 AC: BO-1500a-5-i (docs/acceptance-criteria/build-orchestration/
@@ -44,7 +51,7 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import HarnessResult, run_workflow_under_e2, shell_step_reply  # noqa: E402
 from _plan_feature_gate_harness import load_real_registry, permits_shell  # noqa: E402
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -52,7 +59,7 @@ _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature
 
 _TIMEOUT = 30  # seconds; all agent() calls are synchronous mocks
 
-_WORKTREE_SETUP_LABEL = "worktree-setup"
+_WORKTREE_SETUP_LABEL = "workspace-ensure"
 
 # The five authoring-agent charters BO-1500a-5-i's Then-clause protects: NONE
 # of them may be dispatched once any of the four non-confirming shapes below
@@ -103,11 +110,11 @@ _PERMIT_OK = _granted_permission()
 # ---------------------------------------------------------------------------
 
 # (1) A reply declining the work as outside the responder's scope.
-_REFUSED_RESPONSE = (
-    "I can't help with that -- creating this worktree is outside my "
-    "defined scope as a status-checker; declines to run repository-"
-    "mutating commands."
-)
+_REFUSED_RESPONSE = {
+    "declined": True,
+    "agent": "shell-runner",
+    "reason": "creating this worktree is outside my defined scope",
+}
 
 # (2) A reply the workflow cannot interpret as a setup outcome at all --
 # deliberately free of any scope-refusal wording, so it is distinguishable
@@ -119,27 +126,25 @@ _UNINTERPRETABLE_RESPONSE = (
 
 # (3) An outcome shaped like a success but naming no workspace directory.
 # Live evidence: run wf_734389cf-248's journal recorded EXACTLY this shape --
-# the 'worktree-setup' dispatch returned the SCRIPT-PATH RESOLUTION command's
-# own stdout (a bare script path) under an explicit exit_code: 0, never the
-# create-ac-worktree JSON payload {worktree_path, ac_store_path, ...}.
-_NO_WORKSPACE_NAMED_RESPONSE = {
-    "output": "/c/Users/Hendrik/Code/leafcutter/.leafcutter/scripts/setup_ticket_worktree.py",
-    "exit_code": 0,
-}
+# the setup dispatch returned the SCRIPT-PATH RESOLUTION command's own stdout
+# (a bare script path) under an explicit exit status 0, never the maker's
+# JSON answer {workspace_path, ac_store_path, ...}.
+_NO_WORKSPACE_NAMED_RESPONSE = shell_step_reply(
+    "/c/Users/Hendrik/Code/leafcutter/.leafcutter/scripts/setup_ticket_worktree.py", exit_status=0
+)
 
 # (4) An outcome that reports no failure and names neither a directory nor a
-# branch -- no exit_code field at all (so the explicit-non-zero-exit-code
-# check can never fire) and no `output` field to attempt to parse.
+# branch -- no exit status at all (so no exit-status check can ever fire) and
+# no stdout to parse.
 _SILENT_SUCCESS_RESPONSE = {"message": "done"}
 
-# name -> (worktree-setup reply, expected setup_failure_kind per the AC's own
-# config_schema_fragment: "One of refused | uninterpretable |
-# no_workspace_named | silent_success.")
+# name -> (workspace-ensure reply, the phrase the halt message must state so the user can tell the four
+# apart: a refusal, an uninterpretable reply, a success naming no workspace, a silent success).
 _FOUR_SHAPES = {
-    "refused": (_REFUSED_RESPONSE, "refused"),
-    "uninterpretable": (_UNINTERPRETABLE_RESPONSE, "uninterpretable"),
-    "no_workspace_named": (_NO_WORKSPACE_NAMED_RESPONSE, "no_workspace_named"),
-    "silent_success": (_SILENT_SUCCESS_RESPONSE, "silent_success"),
+    "refused": (_REFUSED_RESPONSE, "the agent declined the workspace step"),
+    "uninterpretable": (_UNINTERPRETABLE_RESPONSE, "(not a JSON object)"),
+    "no_workspace_named": (_NO_WORKSPACE_NAMED_RESPONSE, "its output is not one JSON object"),
+    "silent_success": (_SILENT_SUCCESS_RESPONSE, "status is neither ok nor refused"),
 }
 
 
@@ -220,16 +225,15 @@ def test_halt_records_which_of_the_four_shapes_occurred():
     """Then: "the message for each case names which of the four it was, so
     the user can tell a refusal apart from an uninterpretable reply."
 
-    Asserts each halt's terminal payload carries the matching
-    `setup_failure_kind` value (refused / uninterpretable /
-    no_workspace_named / silent_success) named in the AC's own
-    `config_schema_fragment`, and that the four values obtained across the
-    four shapes are pairwise distinct -- so a fix that reports the SAME kind
-    (or no kind at all) for every failure, satisfying "a message exists"
-    without satisfying "distinguishable", is rejected.
+    Asserts each halt's message states the reason that identifies its shape
+    (declined / not a JSON object / output is not one JSON object / status
+    neither ok nor refused), quotes what was received, and that the four messages
+    are pairwise distinct -- so a fix that reports the SAME message (or none)
+    for every failure, satisfying "a message exists" without satisfying
+    "distinguishable", is rejected.
     """
-    observed_kinds = {}
-    for name, (response, expected_kind) in _FOUR_SHAPES.items():
+    observed = {}
+    for name, (response, expected_phrase) in _FOUR_SHAPES.items():
         result = _run_with_worktree_setup_response(
             response, run_id=f"test-bo1500a5i-kind-{name}"
         )
@@ -238,16 +242,15 @@ def test_halt_records_which_of_the_four_shapes_occurred():
             f"{name}: expected a structured halt payload naming which shape "
             f"occurred, got: {result.result!r}"
         )
-        actual_kind = result.result.get("setup_failure_kind")
-        assert actual_kind == expected_kind, (
-            f"{name}: expected setup_failure_kind={expected_kind!r}, got "
-            f"{actual_kind!r}. Full terminal payload: {result.result!r}"
+        assert result.result.get("status") == "error", f"{name}: {result.result!r}"
+        message = str(result.result.get("message"))
+        assert expected_phrase in message, (
+            f"{name}: the halt message must state {expected_phrase!r}. Got: {message!r}"
         )
-        observed_kinds[name] = actual_kind
+        assert "Received:" in message, f"{name}: the halt must quote what was received. Got: {message!r}"
+        observed[name] = message
 
-    distinct_kinds = set(observed_kinds.values())
-    assert len(distinct_kinds) == len(observed_kinds), (
-        "BO-1500a-5-i: the four shapes' setup_failure_kind values must be "
-        f"pairwise distinct so a refusal is distinguishable from an "
-        f"uninterpretable reply. Got: {observed_kinds!r}"
+    assert len(set(observed.values())) == len(observed), (
+        "BO-1500a-5-i: the four shapes' halt messages must be pairwise "
+        f"distinct so a refusal is distinguishable from an uninterpretable reply. Got: {observed!r}"
     )

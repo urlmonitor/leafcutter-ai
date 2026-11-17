@@ -1,0 +1,15 @@
+{
+  "agent_id": "/root/retrieval_host_round_b",
+  "root_spawn_fork_turns": "none",
+  "packet_manifest_sha256": "7a1cf81be86fe7accf638497a23fe61925467304d69f436ca64090c6f2d61ecc",
+  "no_gold_or_prior_outcomes_provided": true,
+  "model_id": null,
+  "dispatched_at": null,
+  "dispatch_observed_bounds": {
+    "before_request": "2026-10-09T21:25:05Z",
+    "after_acknowledgement": "2026-10-09T21:25:14Z"
+  },
+  "registered_at": "2026-10-09T21:25:45.095994+00:00",
+  "provenance": "Root orchestrator actual spawn and clock observations; these bounds are not an exact dispatch timestamp.",
+  "input_policy": "Fresh agent received only the current packet manifest and neutral operation instructions; it writes designated responses only. Token/model identity unknown."
+}

@@ -1,0 +1,20 @@
+{
+  "scope": "tests/kernel",
+  "strict_AC_enforcement": true,
+  "passed": 1621,
+  "subtests_passed": 437,
+  "skipped": 7,
+  "failed": 5,
+  "seconds": 585.12,
+  "baseline_report": "entity-context-baseline-2026-10-03.json",
+  "baseline_failures_unchanged": true,
+  "new_failures": [],
+  "failures": [
+    "tests.kernel.grounding.test_retrieval_live_misses.TestRealRepositoryMisses::test_the_design_folder_is_fully_considered_and_the_record_part_is_found",
+    "tests.kernel.interaction.test_host_end_to_end.TestEveryOperationThroughTheGraph::test_each_operation_completes_with_its_converted_result",
+    "tests.kernel.interaction.test_host_end_to_end.TestEveryOperationThroughTheGraph::test_the_packet_carries_the_compiled_statement_and_fingerprint",
+    "tests.kernel.interaction.test_host_end_to_end.TestEveryOperationThroughTheGraph::test_the_same_request_compiles_to_the_same_packet_text_in_two_runs",
+    "tests.kernel.interaction.test_host_end_to_end.TestHostTelemetry::test_each_operation_emits_its_event_with_the_packet_fingerprint"
+  ],
+  "source_note": "Full run overlapped final type annotations and equivalent error-policy cleanup; affected 21 tests and independent 78 tests were rerun on final sources."
+}

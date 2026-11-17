@@ -6,7 +6,7 @@ BUSINESS CONTEXT: The kernel skill is developer tooling that must never ship to 
     projects, so it lives in the package and is installed by an explicit, user-approved command
     (design part 5). It must not clobber a hand-written or build-managed skill of the same name.
 ARCHITECTURE: `render_skill` substitutes the skill name, the exact command line
-    (`PYTHONPATH=<repo> <python> -m kernel`), the client scratch directory
+    (`PYTHONPATH=<repo> <python> -P -m kernel`), the client scratch directory
     (`<run_root>/client`) and the fixed scope (`repository_root`, `workspace_id`) into SKILL.md; `allowed-tools` pre-approves only the kernel's run,
     resume and status subcommands, edits inside the scratch directory and reads under the run
     root. The marker comment
@@ -46,8 +46,12 @@ CLIENT_SUBDIR = "client"
 
 
 def command_line(repo: Path, python: str) -> str:
-    """Return the exact command prefix the skill uses to run the kernel."""
-    return f"PYTHONPATH={shell_path(repo)} {shell_path(python)} -m kernel"
+    """Return the exact command prefix the skill uses to run the kernel.
+
+    `-P` (safe path) keeps the current directory off `sys.path`, so PYTHONPATH wins even when the
+    shell sits in another checkout that has its own `kernel/` package.
+    """
+    return f"PYTHONPATH={shell_path(repo)} {shell_path(python)} -P -m kernel"
 
 
 def _rule_path(path: Path) -> str:

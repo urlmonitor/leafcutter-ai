@@ -24,7 +24,7 @@ criteria: |
   And the detection runs as part of the diagram classifier (Phase 2) —
     it fires on EVERY AC batch, not just during initial ticket creation.
   And follow-up ACs appear in the same feature folder as the triggering AC.
-depends_on: [ACS-600b, ACS-300f]
+depends_on: [TKT-200a, ACS-300g]
 doc_links: []
 assigned_agent: python-coder
 estimated_complexity: L
@@ -32,7 +32,8 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-04
-amended_by: []
+amended_by:
+  - "2026-10-01 [business-analyst]: Replaced unresolved ACS-600b and ACS-300f with existing prerequisite contracts TKT-200a (architecture diagrams generated from component relationships and data flow) and ACS-300g (complete component registry coverage). These provide the diagrams and component identities this stale-document detector consumes; this AC still owns invalidation detection, follow-up AC creation and ADR-conflict user decisions. ADR-009 identifies the missing ACS-300f as the intended unified registry requirement, while neither missing target has a canonical declaration in available Git history and both were unresolved at introduction in 0e73b077. No rename, completed implementation or weaker behavior is claimed; criteria and lifecycle are unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

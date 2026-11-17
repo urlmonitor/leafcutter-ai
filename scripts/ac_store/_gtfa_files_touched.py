@@ -41,6 +41,9 @@ _gtfa_seams = importlib.import_module(f"{_PKG}._gtfa_seams" if _PKG else "_gtfa_
 _gtfa_constants = importlib.import_module(
     f"{_PKG}._gtfa_constants" if _PKG else "_gtfa_constants"
 )
+_gtfa_declared_surface = importlib.import_module(
+    f"{_PKG}._gtfa_declared_surface" if _PKG else "_gtfa_declared_surface"
+)
 
 logger = logging.getLogger(_gtfa_seams.logger_name())
 
@@ -289,7 +292,7 @@ def _prose_edit_surface(it_req: list, suppressed: frozenset[str]) -> set[str]:
 
 
 def _build_files_touched(ac: dict[str, Any]) -> list[str]:
-    """Build the sorted, de-duplicated ``files_touched`` list for a generated ticket.
+    """Build the ``files_touched`` list (declared list, else sorted/de-duplicated derivation).
 
     The list is the union of:
 
@@ -314,12 +317,22 @@ def _build_files_touched(ac: dict[str, Any]) -> list[str]:
     The returned list is sorted deterministically so that regenerating the same
     AC always yields byte-identical output.
 
+    TKT-600a-3: a record that DECLARES its files (``declared_files``, read
+    only through the declared-files seam) short-circuits all of the above --
+    its ``files_touched`` is exactly the declared list in declared order, with
+    no harvesting, no sort and no de-duplication. The sources above apply only
+    to a record in the "no declared files" state (TKT-600a-3-i labels them).
+
     Args:
         ac: Parsed AC record dict.
 
     Returns:
-        Sorted list of unique local path strings (may be empty).
+        The declared paths in declared order, else the sorted list of unique
+        local path strings (may be empty).
     """
+    declared = _gtfa_declared_surface.declared_paths(ac)
+    if declared is not None:
+        return declared
     paths: set[str] = set()
     doc_links = ac.get("doc_links") or []
     suppressed = _paths_declared_non_edit_surface_only(doc_links)

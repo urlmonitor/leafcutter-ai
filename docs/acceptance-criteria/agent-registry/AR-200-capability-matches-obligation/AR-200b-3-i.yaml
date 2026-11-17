@@ -1,0 +1,124 @@
+id: AR-200b-3-i
+title: "A permission held only through the ticket-phase entry still requires the dispatch tool, an absent tools line is a shortfall, and an empty permission is not"
+component: agent-registry
+components:
+  - agent_registry
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an agent whose declaration permits sub-agents only through the "every
+    ticket-phase agent" entry and whose tools omit the dispatch tool,
+    And a second agent that permits a named sub-agent and declares no tools at
+      all,
+    And a third agent whose sub-agent declaration is present but empty, and
+      which does not hold the dispatch tool,
+    And a fourth agent that holds the dispatch tool and declares no sub-agents,
+  When the comparison of permissions against permitted tools runs,
+  Then the first agent is reported, because that entry counts as a permission
+    regardless of how many agents it resolves to on that build,
+    And the second agent is reported, because an absent tools declaration is
+      not read as permitting everything,
+    And the third agent is not reported, and is counted as holding no
+      permission rather than an unknown one,
+    And the fourth agent is not reported, because holding the means without a
+      permission is not a shortfall,
+  So the check cannot be escaped by expressing a permission as a rule or by
+    omitting the tools line, and it stays quiet on agents with no one to call.
+depends_on:
+  - AR-200b-3
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "Holds the ticket-phase macro on ticket-supervisor today, and agents with empty permissions."
+  - path: docs/acceptance-criteria/agent-registry/AR-200-capability-matches-obligation/AR-200b-2-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The abilities analogue for the absent-versus-empty boundary and its asymmetry."
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
+    relevance: "Documents the `tools:` and `spawn_allowlist:` keys whose absent-versus-empty semantics this criterion fixes."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "The macro entry `__ticket_phase_agents__` counts as a permission BY ITSELF, judged on the declaration as written -- never resolve the macro first and test the resolved list for emptiness (that makes the verdict depend on the rest of the tree)."
+  - "ASYMMETRY, not one normaliser: on the tools side an absent `tools:` line permits nothing (a finding when a permission exists); on the permission side an absent or empty `spawn_allowlist` holds nothing (never a finding, counted as holding no permission). If AR-200b-2-i's shared code already implements this asymmetry for skills, the spawn pair must go through the same code path, not a re-implementation."
+  - "Holding the Agent tool with no permission is not a finding."
+test_spec:
+  - name: test_macro_only_permission_without_agent_tool_is_reported
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "An agent whose spawn_allowlist is only `__ticket_phase_agents__` and whose tools omit Agent is reported, even when no agent is marked ticket-phase on that build."
+    must_catch:
+      - "the macro is resolved first and an empty resolution exempts the holder"
+  - name: test_absent_tools_line_with_a_permission_is_reported
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "An agent with a named sub-agent and no `tools:` line is reported."
+  - name: test_empty_spawn_allowlist_without_agent_tool_is_not_reported_and_counted_as_none
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "An agent with `spawn_allowlist: []` and no Agent tool produces no finding and is counted as holding no permission."
+  - name: test_agent_tool_without_permission_is_not_reported
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "An agent holding Agent with no spawn_allowlist produces no finding."
+test_rationale: >-
+  The four descriptors are the four Givens. The macro case carries must_catch
+  because resolve-then-check is the natural implementation and silently exempts
+  ticket-supervisor on an unlucky tree; the two absent/empty cases pin the asymmetry
+  a single 'missing means empty' normaliser gets wrong.
+delivers_to: null
+expects_from:
+  ac_id: AR-200b-3
+  contract: "The (spawn_allowlist, Agent) pair of the generalised grant-versus-invoking-tool check, whose boundary semantics this criterion fixes."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by:
+  - unit_tests/agents/test_ar_200b_3_i_macro_absent_empty.py
+  - unit_tests/agents/test_ar_200b_3_spawn_tool_grant.py
+implemented_by:
+  - scripts/skill_tool_grant_validator.py
+  - scripts/registry_validator.py
+notes: |
+  THE MACRO CLAUSE IS THE NEW EDGE. An implementation that resolves the
+  ticket-phase entry first and then asks "is the resolved list non-empty?" would
+  exempt the macro holder on any build where the entry happens to resolve to
+  nothing -- and would make the verdict depend on the rest of the tree rather
+  than on the agent's own definition. The entry is a permission by itself. (An
+  entry that resolves to no agents is separately reported by AR-300c-5-iii.)
+  Today ticket-supervisor holds the entry and holds the dispatch tool, so the
+  clause is a guard against regression, not a live finding.
+
+  THE ASYMMETRY CARRIES OVER FROM AR-200b-2-i. On the TOOLS side, absent means
+  permits nothing (a finding when a permission exists). On the PERMISSION side,
+  absent or empty means holds nothing (never a finding). A single
+  "missing means empty" normaliser applied to both sides gets the second clause
+  wrong. Two templates already carry an explicit empty sub-agent declaration
+  (ac-triage, onboard-config-section) -- the third clause's real instances.
+
+  THE NEGATIVE CLAUSES KEEP THE RULE USABLE. Most agents permit no sub-agents;
+  several hold the dispatch tool anyway. Reporting either group is the noisy-rule
+  failure AR-200b-1 records in this component.

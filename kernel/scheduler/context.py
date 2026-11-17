@@ -90,6 +90,12 @@ def constraint_texts(state: KernelState) -> tuple[str, ...]:
                  for c in task_input.constraints)
 
 
+def scope_revision(state: KernelState) -> dict[str, Any] | None:
+    """Return the task scope revision as a plain dict (or None)."""
+    revision = state["task"].scope.revision
+    return revision.model_dump() if revision else None
+
+
 def run_corr(state: KernelState, **updates: str | int | None) -> CorrelationIds:
     """Return run-level correlation ids from state, with optional per-call replacements."""
     base = CorrelationIds(run_id=state.get("run_id"), root_task_id=state.get("root_task_id"),
@@ -165,4 +171,5 @@ def flush_events(run_store: RunStorePort, state: KernelState) -> int:
 # - 2026-09-30 22:30 [python-coder]: max_scheduler_iterations is an explicit runtime parameter
 #   (not a config key) because P1 owns config; the needed `limits.max_scheduler_iterations` key
 #   is listed in the P4 report. (#KernelBootstrapV0/P4)
+# - 2026-10-06 18:00 [python-coder]: Make split config reachable from the scheduler context. (#TICKET-20261006-DK-400a-1)
 # ====================================================================

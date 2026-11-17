@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "original_question": "List only the declared test references on KM-500c-2; do not inspect their implementations or infer outcomes.",
+  "source_scope": {
+    "read_roots": [
+      "docs"
+    ],
+    "repository_id": "leafcutter",
+    "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+    "source_ids": [
+      "knowledge.graph"
+    ]
+  },
+  "selections": {
+    "entity_types": [
+      "ac"
+    ],
+    "target_ids": [
+      "KM-500c-2"
+    ],
+    "required_fields": [
+      "covered_by"
+    ],
+    "document_types": [
+      "ac_yaml"
+    ],
+    "relationships": [
+      "covered_by"
+    ]
+  },
+  "uncertain": {
+    "entity_types": [],
+    "target_ids": [],
+    "required_fields": [],
+    "document_types": [],
+    "relationships": []
+  },
+  "detail_mode": "fields",
+  "completeness": "single_entity",
+  "hierarchy_scope": "not_applicable",
+  "hierarchy_levels": [],
+  "scope_resolution": "sufficient",
+  "unresolved": [],
+  "rationale": "The requested facts are the complete declared test references on one criterion. The coverage relationship is requested, but test source and execution outcomes are excluded.",
+  "engine": "host_llm",
+  "status": "decided",
+  "model_id": null
+}

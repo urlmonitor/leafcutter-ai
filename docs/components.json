@@ -55,6 +55,20 @@
       "agent_affinity": [],
       "exposed_interfaces": []
     },
+    "atlas_frontend": {
+      "id": "atlas_frontend",
+      "name": "Frontend (Leafcutter Atlas)",
+      "type": "utility",
+      "description": "The Leafcutter frontend, called the Atlas: a Next.js 14 web app in leafcutter-web/ that reads the repo live on every request and renders it as views (Pulse, Now & Next, AC Atlas, Flows, Roadmap, Coverage, Pipeline, Architecture). It is the read surface over the AC store and the product-truth store. Run locally on http://localhost:4319 (npm run dev -- -p 4319); the Flows view is at /flows.",
+      "detail_ref": "docs/architecture/components/atlas-frontend.md",
+      "status": "active",
+      "primary_code": [
+        "leafcutter-web/",
+        "leafcutter-web/lib/data/"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
+    },
     "bootstrap_installer": {
       "id": "bootstrap_installer",
       "name": "Bootstrap Installer",
@@ -103,6 +117,19 @@
       "primary_code": [
         "scripts/changelog/"
       ]
+    },
+    "colony_memory": {
+      "id": "colony_memory",
+      "name": "Colony Memory",
+      "type": "infrastructure",
+      "description": "Optional cross-run learning layer: learned statistics as derived aggregates in Neo4j (ADR-065) behind the ColonyMemory port (ADR-059), fed by a learning evaluator from Langfuse traces and scores; statistics are off when no Neo4j store is configured, while decision records follow memory.backend (ADR-059).",
+      "detail_ref": "docs/architecture/components/colony-memory.md",
+      "status": "planned",
+      "primary_code": [
+        "kernel/memory"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
     },
     "commit_guardian": {
       "id": "commit_guardian",
@@ -288,13 +315,35 @@
       "id": "knowledge_management",
       "name": "Knowledge Management",
       "type": "analysis",
-      "description": "Cross-surface knowledge graph: surface ingestion from paths.json, node/edge derivation, AC-to-code traceability, the query layer, and graph visualisation.",
+      "description": "Cross-surface canonical graph assembly and traceability, plus optional immutable Git-to-Neo4j projection and bounded exact/graph/semantic retrieval. Knowledge owns infrastructure; the thin integrations adapter consumes existing kernel evidence/capability contracts.",
       "detail_ref": "docs/architecture/components/knowledge-management.md",
       "status": "active",
       "primary_code": [
         "scripts/knowledge_query.py",
         "scripts/visualise_knowledge_graph.py",
-        "templates/skills/knowledge-query/"
+        "templates/skills/knowledge-query/",
+        "knowledge/",
+        "integrations/"
+      ],
+      "exposed_interfaces": [
+        {
+          "name": "knowledge-cli",
+          "type": "cli_command",
+          "path": "knowledge/__main__.py",
+          "shape": "python -m knowledge <capabilities|retrieve|evaluate|validate|plan|sync|status|rollback|cleanup>. Versioned JSON requests/results, explicit immutable source SHA and repository scope; disabled by default, separate writer credentials for publication."
+        },
+        {
+          "name": "knowledge-retriever-port",
+          "type": "function_signature",
+          "path": "knowledge/ports.py",
+          "shape": "KnowledgeRetriever: async capabilities() -> dict; async retrieve(KnowledgeRetrievalRequest) -> KnowledgeRetrievalResult; async close(). Neutral versioned transport with bounded disclosure, generation/source provenance and typed readiness/failure status."
+        },
+        {
+          "name": "kernel-knowledge-adapter",
+          "type": "function_signature",
+          "path": "integrations/knowledge_capability.py",
+          "shape": "KnowledgeRetrievalExecutor.ainvoke(invocation, ctx) -> CapabilityResult via existing retrieve.repository binding. Canonical Evidence conversion and trusted scope checks; database resources remain outside kernel state."
+        }
       ]
     },
     "knowledge_system": {
@@ -609,11 +658,30 @@
       "id": "worktree_manager",
       "name": "Worktree Manager",
       "type": "infrastructure",
-      "description": "Git worktree lifecycle management for isolated epic and ticket branch environments.",
+      "description": "Per-feature clone workspaces made, found, listed and cleared through one maker: every route (long-running build, quick fix, requirements-authoring session, an agent following the workspace skill, a person at a terminal) gets an identically-shaped answer from templates/scripts/worktree.py's ensure/locate/list/verify/remove/where verbs (ADR-018 Amendment 1, BO-4300a-1).",
       "detail_ref": "docs/architecture/components/worktree-manager.md",
       "status": "active",
       "primary_code": [
-        "scripts/worktree/"
+        "scripts/worktree/",
+        "templates/scripts/worktree.py",
+        "templates/scripts/workspace_root.py",
+        "templates/scripts/worktree_git.py",
+        "templates/scripts/worktree_admin.py",
+        "templates/scripts/worktree_answer.py",
+        "templates/scripts/worktree_identity.py",
+        "templates/scripts/worktree_layout.py",
+        "templates/scripts/worktree_paths.py",
+        "templates/scripts/worktree_readiness.py",
+        "templates/scripts/worktree_log_root.py",
+        "templates/scripts/worktree_remove.py",
+        "templates/scripts/worktree_remove_checks.py",
+        "templates/scripts/worktree_remove_half.py",
+        "templates/scripts/worktree_ensure_state.py",
+        "templates/scripts/worktree_ensure_steps.py",
+        "templates/scripts/worktree_ticket_record.py",
+        "templates/scripts/worktree_migrate.py",
+        "templates/scripts/worktree_migrate_guards.py",
+        "templates/scripts/worktree_migrate_carry.py"
       ]
     }
   }

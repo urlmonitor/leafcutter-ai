@@ -112,7 +112,9 @@ def _backfill_file(
     """
     try:
         content = path.read_text(encoding="utf-8")
-        data = yaml.safe_load(content)
+        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): one-off
+        # backfill tool, not CI-wired -- no measured benefit (criterion 1).
+        data = yaml.load(content, Loader=yaml.SafeLoader)
     except (yaml.YAMLError, OSError) as exc:
         print(f"WARNING: cannot read {path}: {exc}", file=sys.stderr)
         return "error"

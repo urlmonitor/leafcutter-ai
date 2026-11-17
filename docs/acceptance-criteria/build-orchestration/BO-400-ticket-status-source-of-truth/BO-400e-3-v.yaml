@@ -1,0 +1,185 @@
+id: BO-400e-3-v
+title: "The closure commit contains the closed records' own files and nothing else -- never a whole folder, and never another record's uncommitted edits"
+component: build-orchestration
+components:
+  - build_orchestration
+  - finalize
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given finalization of "EPIC-Alpha" closed the ticket "alpha-02.md" and marked its source
+      acceptance criterion "BO-9100a-2" done
+    And the worktree also holds uncommitted edits to the ticket
+      "tickets/00_inbox/epics/EPIC-Beta/beta-01.md" and to the acceptance criterion
+      "BO-9200a-1", made by someone else and unrelated to the closure
+  When finalization records its closure commit
+  Then the commit contains exactly the files of "alpha-02.md" and "BO-9100a-2"
+    And neither "beta-01.md" nor "BO-9200a-1" is in the commit
+    And after the commit both of those files still carry their uncommitted edits, unstaged,
+      exactly as they were before the run
+
+  Given a closure in which a path outside the closed records -- a ticket or an acceptance
+      criterion alike -- ends up among the files about to be committed
+  When finalization checks the files before committing
+  Then no closure commit is made
+    And the run reports each out-of-set path by name
+    And the run does not report the closure as completed
+  Because whatever the closure commit carries is merged to main with the feature, so a commit
+    that sweeps up a folder publishes other people's half-finished edits and false "done"
+    states as if this feature had delivered them.
+depends_on:
+  - BO-400e-3
+  - BO-400e-3-ii
+  - BO-4500a-5-iv
+doc_links:
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Sub-step E: :1384 `git add tickets/`, :1385 `git add docs/acceptance-criteria/` stage whole folders; the scope guard at :1389-1394 then admits ANY path starting with docs/acceptance-criteria/ (:1391), so an out-of-set AC is never a violation."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5-iv.yaml
+    relationship: related
+    status: exists
+    relevance: "Moves finalize's closing commit onto the shared commit step with an explicit path list. Overlaps the first scenario here; see notes."
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    DECISION 2, ONE COMMIT MECHANISM: BO-4500a-5-iv's. The closure commit is made by the shared
+    commit step that BO-4500a-5-iv specifies: a commit-agent dispatch in supervised mode, an
+    explicit path list, and its answer read through the COMMIT-ANSWER block. This record builds NO
+    second staging or commit path. It contributes three things on top of that mechanism. (1) The
+    path list handed to the step is computed by the closing module
+    (scripts/build_orchestration/finalize_closable_set.py, BO-400e-3-ii/-iv): exactly the files of
+    the records whose close result is "closed". (2) A pre-commit out-of-set check, in the same
+    module, that refuses before the step is ever called. (3) Behavioural tests of both on the
+    closure path. BO-4500a-5-iv (todo, approved, not implemented as of 2026-10-15) and this record
+    are ONE change: whichever ticket is built first implements both, and the other is then
+    satisfied by it. If this record's ticket goes first, it builds BO-4500a-5-iv's shared-step
+    migration as specified there, not a local variant. The raw COMMIT_AGENT_MODE=1 git commit and
+    the `git add tickets/` / `git add docs/acceptance-criteria/` lines in today's sub-step E are
+    deleted, not kept as a fallback.
+  - >-
+    STAGING BY EXPLICIT PATH LIST, NEVER BY DIRECTORY. The commit carries only the listed paths,
+    with path-limited (only-these-paths) semantics, so an unrelated file that was already staged
+    by someone else is neither committed nor unstaged. After the commit, every path outside the
+    list keeps its pre-run working-tree content and its pre-run index state.
+  - >-
+    THE OUT-OF-SET CHECK IS A CLOSED ALLOW-LIST, with no prefix allowances. The candidate list is
+    exactly the paths that changed during the close step, found by comparing their content before
+    and after (unrelated pre-existing dirty files are excluded because their content did not change
+    during the close). It is checked against the closed records' own files, plus any structural
+    parent AC file that the closure edited without changing its status (see this record's notes and
+    BO-400e-3-iii). Any other path, whether ticket or AC, refuses the commit: no commit is made,
+    each out-of-set path is reported by name, and Step 3.5 is not recorded as completed. Today's
+    guard allowance "starts with docs/acceptance-criteria/" must not survive in any form. After the
+    commit, the module confirms that the commit's file list equals the handed list, and any
+    disagreement is reported as an out-of-set commit.
+  - >-
+    UNRELATED UNCOMMITTED EDITS MUST SURVIVE THE WHOLE RUN, NOT JUST THE COMMIT. Step 3.5 sub-step A
+    today runs `git reset --hard HEAD` in the worktree. That discards every uncommitted edit before
+    the closure starts, so this record's first scenario ("after the commit both of those files still
+    carry their uncommitted edits ... exactly as they were before the run") fails before the commit
+    mechanism is reached. Undoing Step 2's test merge must restore the pre-merge state without
+    discarding uncommitted edits to paths outside the merge. See the caveat in the IT-PO report:
+    this changes an existing Step 3.5 behaviour that unit_tests/workflows/test_finalize_step35_reset_after_abort.py
+    exercises, so that test's expectation has to be revisited in the same change.
+  - "On a refused commit (out-of-set path or any non-committed COMMIT-ANSWER), the run stops before the merge (BO-4500a-5-iv), and a re-run of finalize starts from an uncommitted closure with the list shown again (BO-400e-3-vii)."
+delivers_to:
+  agent: python-coder
+  contract: >-
+    commit_paths: [str] (repo-relative POSIX, sorted) in the close step's JSON reply. This is the
+    exact path list handed to BO-4500a-5-iv's shared commit step. Also out_of_set_paths: [str],
+    empty when the check passes. A non-empty out_of_set_paths means no commit dispatch.
+expects_from:
+  - ac_id: BO-4500a-5-iv
+    contract: "The shared commit step in supervised mode: it commits exactly the named paths, returns one COMMIT-ANSWER (status, reason_code, reason), and finalize proceeds only on committed."
+  - ac_id: BO-400e-3-iv
+    contract: "Per-record close results (closed / refused / left_open) that determine which files belong in the commit."
+test_required: true
+test_spec:
+  - name: test_closure_commit_contains_exactly_the_closed_records_files
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Real scratch repo: close alpha-02 and BO-9100a-2 with uncommitted edits present on EPIC-Beta/beta-01.md and BO-9200a-1's file; commit through the real shared commit step with the module's commit_paths; `git show --name-only HEAD` lists exactly the two closed files."
+    must_catch:
+      - "stage the whole tickets/ folder"
+      - "stage the whole docs/acceptance-criteria/ folder"
+  - name: test_unrelated_uncommitted_edits_survive_unstaged_and_byte_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "After the closure commit, beta-01.md and BO-9200a-1's file are byte-identical to their pre-run content and still unstaged. A variant pre-stages beta-01.md and asserts it is still staged and not in the commit."
+    must_catch:
+      - "git add -A before committing"
+      - "git commit -a"
+  - name: test_out_of_set_ac_path_refuses_the_commit_and_is_named
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Inject a closer side effect that also edits an unrelated AC file during the close step; no commit is created (HEAD unchanged), out_of_set_paths names that AC path, and the step is not completed. A second case does the same with a ticket path. NEGATIVE CONTROL: without the injection the commit is made."
+    must_catch:
+      - "allow any path that starts with docs/acceptance-criteria/"
+  - name: test_closure_survives_finalize_start_without_discarding_dirty_edits
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "Drive finalize-feature.js through run_workflow_under_e2 and assert that no Step 3.5 dispatch instructs `git reset --hard`, `git add tickets/`, `git add docs/acceptance-criteria/` or a raw git commit, and that the closure commit dispatch names exactly the module's commit_paths. The dirty-edit survival itself is proven by the scratch-repo test above."
+test_rationale: >-
+  Commit content can only be observed on a real commit in a real repository that contains the
+  unrelated dirt the criterion describes, so the tests make the commit through the real shared step
+  and read the commit back. The out-of-set check is proven by injecting the leak and by a negative
+  control showing that the commit happens without it. That rules out an always-refusing check
+  passing vacuously. The workflow test proves the directory staging, the reset --hard and the raw
+  commit are gone from the dispatched path. It runs the real workflow and inspects its recorded
+  dispatches, never the source file.
+origin_agent: BrainCandy
+created: 2026-10-15
+amended_by:
+  - date: '2026-10-15'
+    by: it-po
+    reason: "depends_on += BO-4500a-5-iv — closure commit builds on its shared commit step; approved by BrainCandy 2026-10-15"
+superseded_by: null
+covered_by:
+  - unit_tests/build_orchestration/test_bo_400e_3_v_closure_commit.py
+  - unit_tests/workflows/test_bo_400e_3_finalize_wiring.py
+  - unit_tests/workflows/test_finalize_step35_reset_after_abort.py
+implemented_by:
+  - scripts/build_orchestration/_fcs_close.py
+  - templates/workflows-js/finalize-feature.js
+notes: |
+  Requested by BrainCandy 2026-10-15 (KI-BO-20260930). Cause (3) of the KI as triaged on
+  2026-10-12, confirmed: :1384-1385 stage by directory, and the guard's first allowance
+  (:1391, "It starts with 'docs/acceptance-criteria/'") means every dirty AC file in the
+  worktree passes the guard. This record is the reason the second scenario says "a ticket or
+  an acceptance criterion alike".
+
+  OVERLAP WITH BO-4500a-5-iv, stated so the IT-PO can reconcile rather than build twice.
+  BO-4500a-5-iv (todo, approved) requires the closing commit to go through the shared commit
+  step naming exactly the records the workflow changed, with two unrelated-epic tickets
+  excluded. It explicitly scopes OUT "whether step 3.5 edits unrelated epics' tickets at all".
+  This record pins the same commit-content outcome from the Step 3.5 side and adds two things
+  BO-4500a-5-iv does not: unrelated uncommitted edits survive untouched, and an out-of-set AC
+  path aborts the commit. Whichever is built first should satisfy both; this record is
+  phrased to hold whatever commit mechanism is in use.
+
+  Parent records: if the closure legitimately edits a structural parent of a closed AC (per
+  the store's covered_by convention), that parent's file is one of "the closed records' own
+  files" for this purpose and is named in the run's list (BO-400e-3-vi). Its status still may
+  not change (BO-400e-3-iii).

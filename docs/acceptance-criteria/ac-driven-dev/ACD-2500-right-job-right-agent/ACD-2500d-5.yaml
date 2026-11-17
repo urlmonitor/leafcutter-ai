@@ -11,7 +11,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given the agent registry and the planning agents' templates after this change,
   When the code-aware planning agent's profile and registry entry are read,
@@ -127,6 +127,14 @@ test_spec:
 origin_agent: it-po
 created: '2026-09-25'
 amended_by:
+- reason: "expects_from contract on ACD-2500d-5-i restored after EPIC-RightJobRightAgent shipped (PR #1245); it had been removed on 2026-10-12 only so the epic could be ordered, and both records are now done"
+  date: '2026-10-15'
+  by: main-session
+  directed_by: user
+- reason: "ordering edge removed: it closed a dependency cycle with the child's parent link, so the epic could not be ordered; the contract stays on the producer's delivers_to and both ship in the same epic PR (with ACD-2500d-5-i)"
+  date: '2026-10-12'
+  by: main-session
+  directed_by: user
 - reason: "reconcile with main: must_catch exists (PR 911, TQ-500f-2). The 'Opus sub-call deferred until must_catch exists' constraint now records that the condition is met, that this agent is must_catch's only writer, and that the Opus sub-call is an open user decision (Sonnet-only until decided). Criteria unchanged."
   date: '2026-09-27'
   by: it-po
@@ -134,7 +142,8 @@ amended_by:
 superseded_by: null
 covered_by:
 - ACD-2500d-5-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/27_TICKET-20261012-ACD-2500d-5.md
 change_target:
 - prompt
 - config
@@ -152,3 +161,15 @@ notes: |
   ORDERING: build this AC and ACD-2500d-5-i before ACD-2500c-1 and ACD-2500d-1/-2/-3, which write
   their procedures into the template this AC creates. depends_on carries only the hierarchy link; the
   ordering is carried by those ACs' expects_from.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: testDesign
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

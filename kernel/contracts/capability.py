@@ -11,11 +11,13 @@ ARCHITECTURE: CapabilityDescriptor doubles as the JSON registry entry model; the
 
 from __future__ import annotations
 
+from kernel.contracts.verbatim import VerbatimJson
+
 import re
 from datetime import datetime
 from typing import Literal
 
-from pydantic import Field, JsonValue, field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from kernel.contracts import schema_ids
 from kernel.contracts.base import KernelModel, fail, utc_now
@@ -72,12 +74,12 @@ class CapabilityResult(KernelModel):
     work_item_id: str
     status: ResultStatus
     output_schema_id: str | None = None
-    output_payload: dict[str, JsonValue] | None = None
+    output_payload: dict[str, VerbatimJson] | None = None
     evidence: list[Evidence] = Field(default_factory=list)
     findings: list[Finding] = Field(default_factory=list)
     decisions: list[Decision] = Field(default_factory=list)
     requests: list[RequestProposal] = Field(default_factory=list)
-    continuation_state: dict[str, JsonValue] | None = None
+    continuation_state: dict[str, VerbatimJson] | None = None
     usage: list[Usage] = Field(default_factory=list)
     error: ErrorInfo | None = None
     limitations: list[str] = Field(default_factory=list)

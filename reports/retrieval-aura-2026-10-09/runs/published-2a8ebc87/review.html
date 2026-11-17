@@ -1,0 +1,111 @@
+<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Live Aura retrieval: what worked and what failed</title><style>body{font:17px system-ui,sans-serif;max-width:1100px;margin:40px auto;padding:0 24px;background:#f6f8fb;color:#16243a;line-height:1.55}h1{font-size:2.25rem;line-height:1.15}h2{margin-top:0}section,.card{background:#fff;border:1px solid #dce3ec;border-radius:14px;padding:24px;margin:22px 0}table{width:100%;border-collapse:collapse;font-size:15px}th,td{text-align:left;padding:12px 8px;border-bottom:1px solid #dce3ec}th{background:#eff3f9}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f2f5fa;padding:16px;border-radius:8px;font:14px ui-monospace,monospace}.meta{font-size:14px;color:#506078;overflow-wrap:anywhere}.bad{color:#9c2828}.good{color:#176144}li{margin:14px 0}summary{cursor:pointer;font-weight:600}a{color:#205abb}blockquote{border-left:4px solid #bccce2;margin-left:0;padding-left:16px}nav a{margin-right:16px}</style></head><body><h1>Live Aura retrieval: data returned, answer still incomplete</h1><p>The four frozen public questions ran against the published Aura graph. All three positive cases retrieved the selected acceptance criteria correctly. The interpretation step omitted the authored test requirements in every case, so <strong class="bad">0 of 3 answered the whole question</strong>. The stale-revision control passed.</p><nav><a href="review.json">Separated assessment</a><a href="index.html">Original scored report</a><a href="summary.json">Original score</a><a href="plan.json">Frozen plan</a><a href="interpretation-failures.json">Failure evidence</a></nav><section><h2>Four separate checks</h2><table><thead><tr><th>Case</th><th>Needs cover question</th><th>Chosen fields delivered</th><th>Public status</th><th>Complete answer</th></tr></thead><tbody><tr><td>KM-500c-2 / catalog off</td><td>No</td><td>Yes</td><td>partial</td><td>No</td></tr><tr><td>KM-500c-2 / catalog on</td><td>No</td><td>Yes</td><td>partial</td><td>No</td></tr><tr><td>KM-500c-1 / changed ID</td><td>No</td><td>Yes</td><td>completed</td><td>No</td></tr><tr><td>Nonexistent revision</td><td>No</td><td>No evidence</td><td>partial</td><td>Stale control passed</td></tr></tbody></table><p>The original scorer also requires public completion in its “chosen contract fulfilled” result. Here the delivered-field check is shown separately, so a correct database response is not confused with a complete answer.</p></section><section><h2>Why the answers were incomplete</h2><p>The blind host chose <code>required_fields: ["criteria"]</code> and explicitly called test specifications optional. Both pinned source files contain authored <code>test_spec</code>. The frozen question oracle required both fields before any model ran.</p><blockquote>The question asks for the acceptance obligations that tests must demonstrate for one explicitly named criterion. The complete criteria field supplies those obligations. Test specifications may provide optional supporting detail. No hierarchy traversal or population discovery is requested. The supplied source scope is preserved without validating source availability.</blockquote><p>A01 and A02 remained partial after Jev answerability scores of 0.53 and 0.54, below the unchanged 0.7 boundary. A03 scored 0.81 and completed, but still failed the independent full-answer check. A completion flag cannot replace a source-based check.</p></section><section id="A01"><h2>A01: partial</h2><ol><li><strong>Question supplied by the caller</strong><p>For KM-500c-2, what must tests demonstrate?</p><p class="meta">Requested revision: 2a8ebc87ce937a0a2fec65ab26220f79a72e4859; catalog off. The caller supplied no operation or answer fields.</p></li><li><strong>LLM interpreted the needs</strong><p>Target KM-500c-2; fields <code>criteria</code>; AC YAML; single entity; no relationships. Original question and trusted scope were preserved.</p><p><a href="A01/started/host/response.json">Exact accepted response</a> · <a href="A01/started/host/packet.json">Actual host packet</a></p></li><li><strong>Jev selected the registered query</strong><pre>[
+  {
+    &quot;operation&quot;: &quot;get_entities&quot;,
+    &quot;arguments&quot;: {
+      &quot;entity_ids&quot;: [
+        &quot;KM-500c-2&quot;
+      ]
+    },
+    &quot;status&quot;: &quot;ok&quot;,
+    &quot;retrieval_id&quot;: &quot;d6c855e3-a43a-4bc3-b44c-31651cddcb23&quot;,
+    &quot;source_sha&quot;: &quot;2a8ebc87ce937a0a2fec65ab26220f79a72e4859&quot;,
+    &quot;generation_id&quot;: &quot;72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887&quot;
+  }
+]</pre><p><a href="A01/resume-0002/trace.json">Actual decision and retrieval trace</a></p></li><li><strong>Source evidence returned</strong><p class="meta">knowledge://leafcutter@2a8ebc87ce937a0a2fec65ab26220f79a72e4859/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&amp;locator=%2Fcriteria</p><pre>Given the original research has obtained results from an existing or newly verified query
+When its existing evidence evaluation decides whether the question can be answered
+Then the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied
+And a successful build, successful query execution and successful answer assessment remain separate recorded outcomes
+And zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact
+And any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.
+</pre><details><summary>Authored test requirements missing from this answer</summary><p>This is the independent pinned source oracle, not text returned by retrieval.</p><pre>[
+  {
+    &quot;name&quot;: &quot;test_km500_c_2_behavior&quot;,
+    &quot;target_dir&quot;: &quot;tests/knowledge/&quot;,
+    &quot;framework&quot;: &quot;pytest&quot;,
+    &quot;type&quot;: &quot;integration&quot;,
+    &quot;angle&quot;: &quot;criterion&quot;,
+    &quot;description&quot;: &quot;Use actual research answer assessment to show relevant but insufficient evidence remains partial, contradictions persist, and newly retrieved evidence answers the original question without false certainty.&quot;,
+    &quot;covers&quot;: [
+      &quot;KM-500c-2&quot;
+    ],
+    &quot;requires_db&quot;: false
+  }
+]</pre><p class="meta">docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml · file SHA256 785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75</p></details></li><li><strong>Assessments and final outcome</strong><p>Neutral retrieval assessment: fulfilled. Public outcome: <strong>partial</strong>.</p><p>Jev answerability: 0.53; evaluable: 0.45.</p><ul><li>knowledge status: ok</li><li>retrieval choice: Jev selected a supported registered operation and authorized target</li><li>Retrieved evidence requires the existing research sufficiency assessment.</li><li>need need.question: the evidence matched the topic but did not answer the question (answer judgement 0.53, below 0.7)</li><li>required need need.question is partial</li></ul><p><a href="A01/resume-0007/envelope.json">Final public receipt</a></p></li></ol></section><section id="A02"><h2>A02: partial</h2><ol><li><strong>Question supplied by the caller</strong><p>For KM-500c-2, what must tests demonstrate?</p><p class="meta">Requested revision: 2a8ebc87ce937a0a2fec65ab26220f79a72e4859; catalog on. The caller supplied no operation or answer fields.</p></li><li><strong>LLM interpreted the needs</strong><p>Target KM-500c-2; fields <code>criteria</code>; AC YAML; single entity; no relationships. Original question and trusted scope were preserved.</p><p><a href="A02/started/host/response.json">Exact accepted response</a> · <a href="A02/started/host/packet.json">Actual host packet</a></p></li><li><strong>Jev selected the registered query</strong><pre>[
+  {
+    &quot;operation&quot;: &quot;get_entities&quot;,
+    &quot;arguments&quot;: {
+      &quot;entity_ids&quot;: [
+        &quot;KM-500c-2&quot;
+      ]
+    },
+    &quot;status&quot;: &quot;ok&quot;,
+    &quot;retrieval_id&quot;: &quot;7a4d520b-7859-42cd-8b12-09cf4fa2ad62&quot;,
+    &quot;source_sha&quot;: &quot;2a8ebc87ce937a0a2fec65ab26220f79a72e4859&quot;,
+    &quot;generation_id&quot;: &quot;72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887&quot;
+  }
+]</pre><p><a href="A02/resume-0002/trace.json">Actual decision and retrieval trace</a></p></li><li><strong>Source evidence returned</strong><p class="meta">knowledge://leafcutter@2a8ebc87ce937a0a2fec65ab26220f79a72e4859/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&amp;locator=%2Fcriteria</p><pre>Given the original research has obtained results from an existing or newly verified query
+When its existing evidence evaluation decides whether the question can be answered
+Then the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied
+And a successful build, successful query execution and successful answer assessment remain separate recorded outcomes
+And zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact
+And any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.
+</pre><details><summary>Authored test requirements missing from this answer</summary><p>This is the independent pinned source oracle, not text returned by retrieval.</p><pre>[
+  {
+    &quot;name&quot;: &quot;test_km500_c_2_behavior&quot;,
+    &quot;target_dir&quot;: &quot;tests/knowledge/&quot;,
+    &quot;framework&quot;: &quot;pytest&quot;,
+    &quot;type&quot;: &quot;integration&quot;,
+    &quot;angle&quot;: &quot;criterion&quot;,
+    &quot;description&quot;: &quot;Use actual research answer assessment to show relevant but insufficient evidence remains partial, contradictions persist, and newly retrieved evidence answers the original question without false certainty.&quot;,
+    &quot;covers&quot;: [
+      &quot;KM-500c-2&quot;
+    ],
+    &quot;requires_db&quot;: false
+  }
+]</pre><p class="meta">docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml · file SHA256 785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75</p></details></li><li><strong>Assessments and final outcome</strong><p>Neutral retrieval assessment: fulfilled. Public outcome: <strong>partial</strong>.</p><p>Jev answerability: 0.54; evaluable: 0.46.</p><ul><li>knowledge status: ok</li><li>retrieval choice: Jev selected a supported registered operation and authorized target</li><li>Retrieved evidence requires the existing research sufficiency assessment.</li><li>need need.question: the evidence matched the topic but did not answer the question (answer judgement 0.54, below 0.7)</li><li>required need need.question is partial</li></ul><p><a href="A02/resume-0007/envelope.json">Final public receipt</a></p></li></ol></section><section id="A03"><h2>A03: completed</h2><ol><li><strong>Question supplied by the caller</strong><p>For KM-500c-1, what must tests demonstrate?</p><p class="meta">Requested revision: 2a8ebc87ce937a0a2fec65ab26220f79a72e4859; catalog off. The caller supplied no operation or answer fields.</p></li><li><strong>LLM interpreted the needs</strong><p>Target KM-500c-1; fields <code>criteria</code>; AC YAML; single entity; no relationships. Original question and trusted scope were preserved.</p><p><a href="A03/started/host/response.json">Exact accepted response</a> · <a href="A03/started/host/packet.json">Actual host packet</a></p></li><li><strong>Jev selected the registered query</strong><pre>[
+  {
+    &quot;operation&quot;: &quot;get_entities&quot;,
+    &quot;arguments&quot;: {
+      &quot;entity_ids&quot;: [
+        &quot;KM-500c-1&quot;
+      ]
+    },
+    &quot;status&quot;: &quot;ok&quot;,
+    &quot;retrieval_id&quot;: &quot;22adc542-2659-4a7c-a63b-bb80f2aae009&quot;,
+    &quot;source_sha&quot;: &quot;2a8ebc87ce937a0a2fec65ab26220f79a72e4859&quot;,
+    &quot;generation_id&quot;: &quot;72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887&quot;
+  }
+]</pre><p><a href="A03/resume-0002/trace.json">Actual decision and retrieval trace</a></p></li><li><strong>Source evidence returned</strong><p class="meta">knowledge://leafcutter@2a8ebc87ce937a0a2fec65ab26220f79a72e4859/KM-500c-1?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-1.yaml&amp;locator=%2Fcriteria</p><pre>Given research is waiting on an attributable query-build child
+When a matching verified activation receipt is delivered through the existing continuation path
+Then the original run, question and evidence need resume with the newly available catalog version selected at that continuation boundary
+And the original repository, pinned source revision, input answers and remaining budget are preserved
+And the resumed research invokes the new registered query at most once for that completed build delivery
+And a foreign, stale, duplicate or self-certified child result cannot resume unrelated research or execute an unverified candidate
+And building or registering a query does not itself count as retrieved evidence or an answered question.
+</pre><details><summary>Authored test requirements missing from this answer</summary><p>This is the independent pinned source oracle, not text returned by retrieval.</p><pre>[
+  {
+    &quot;name&quot;: &quot;test_km500_c_1_behavior&quot;,
+    &quot;target_dir&quot;: &quot;tests/knowledge/&quot;,
+    &quot;framework&quot;: &quot;pytest&quot;,
+    &quot;type&quot;: &quot;integration&quot;,
+    &quot;angle&quot;: &quot;criterion&quot;,
+    &quot;description&quot;: &quot;Complete real KernelService missing-query host handoff, verified activation and retrieval in the same research, reopen checkpoint, then prove fresh-run reuse without a build handoff.&quot;,
+    &quot;covers&quot;: [
+      &quot;KM-500c-1&quot;
+    ],
+    &quot;requires_db&quot;: false
+  }
+]</pre><p class="meta">docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-1.yaml · file SHA256 dce8915674dbf33a45e27c1548e2fc84bdb0b8cf331e074bc8376b0e20493b03</p></details></li><li><strong>Assessments and final outcome</strong><p>Neutral retrieval assessment: fulfilled. Public outcome: <strong>completed</strong>.</p><p>Jev answerability: 0.81; evaluable: 0.71.</p><ul><li>knowledge status: ok</li><li>retrieval choice: Jev selected a supported registered operation and authorized target</li><li>Retrieved evidence requires the existing research sufficiency assessment.</li></ul><p><a href="A03/resume-0002/envelope.json">Final public receipt</a></p></li></ol></section><section id="A04"><h2>A04: partial</h2><ol><li><strong>Question supplied by the caller</strong><p>For KM-500c-2, what must tests demonstrate?</p><p class="meta">Requested revision: 0000000000000000000000000000000000000000; catalog off. The caller supplied no operation or answer fields.</p></li><li><strong>LLM interpreted the needs</strong><p>Target KM-500c-2; fields <code>criteria</code>; AC YAML; single entity; no relationships. Original question and trusted scope were preserved.</p><p><a href="A04/started/host/response.json">Exact accepted response</a> · <a href="A04/started/host/packet.json">Actual host packet</a></p></li><li><strong>Jev selected the registered query</strong><pre>[
+  {
+    &quot;operation&quot;: &quot;get_entities&quot;,
+    &quot;arguments&quot;: {
+      &quot;entity_ids&quot;: [
+        &quot;KM-500c-2&quot;
+      ]
+    },
+    &quot;status&quot;: &quot;stale&quot;,
+    &quot;retrieval_id&quot;: &quot;70b1f071-cfad-47a0-ac11-43b37a0c15e4&quot;,
+    &quot;source_sha&quot;: &quot;2a8ebc87ce937a0a2fec65ab26220f79a72e4859&quot;,
+    &quot;generation_id&quot;: &quot;72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887&quot;
+  }
+]</pre><p><a href="A04/resume-0002/trace.json">Actual decision and retrieval trace</a></p></li><li><strong>Source evidence returned</strong><p>No evidence returned: the requested revision was not published.</p></li><li><strong>Assessments and final outcome</strong><p>Neutral retrieval assessment: unresolved. Public outcome: <strong>partial</strong>.</p><ul><li>requested revision is not published</li><li>knowledge status: stale</li><li>retrieval choice: Jev selected a supported registered operation and authorized target</li><li>execution is stale</li><li>requested source revision is not established</li><li>requested identities are missing from returned evidence</li><li>no evidence for the requested facts</li><li>Original answer requirements remain unresolved</li><li>need need.question: conditional assessment remains unresolved</li><li>required need need.question is unavailable</li></ul><p><a href="A04/resume-0002/envelope.json">Final public receipt</a></p></li></ol></section><section><h2>Provenance and limits</h2><p>Production composition, real Aura, immutable Git source, actual TypeSafe Jev (<code>jev-1.13.0</code>), and a fresh blind host agent. The host model identity is unknown. <strong>7 Jev calls and 6 accepted host results</strong>; no retries to improve the outcome.</p><p class="meta">Runtime, writer and source SHA: 2a8ebc87ce937a0a2fec65ab26220f79a72e4859<br>Generation: 72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887<br>Aura database: 84379aa6; 10,174 nodes / 26,987 edges. Semantic/vector readiness: false.</p><p>All 10 start/resume readiness receipts match the frozen active source and generation. The stale case deliberately requests a nonexistent revision while retaining this same active graph.</p><p><a href="../../publication-receipt.json">Publication receipt</a> · <a href="source-oracles.json">Independent source oracle</a> · <a href="pre-execution-freeze-addendum.json">Pre-execution drift guard</a></p><ul><li>Only the four frozen exact retrieval cases were exercised. This is not full 29-scenario/persona coverage.</li><li>Authored test_spec retrieval was not exercised by this blind-host run because the host did not request it. Its omission does not establish source absence or an executor disclosure failure.</li><li>A01/A02 answer scores 0.53/0.54 were below the existing 0.7 boundary; normal synthesis did not change partial status. A03 scored 0.81 and completed despite the independently established missing field.</li><li>The host model identity and exact tool dispatch timestamps are unknown; fresh-agent supervision and packet hashes are retained.</li><li>No graph or catalog writes, telemetry export, provider retries, classifier threshold changes or gold changes occurred.</li><li>Generation identity was checked at start/resume; no claim is made about future active generations.</li><li>Jev trace stores template references, input fingerprints and outputs. Raw backend driver Cypher is not separately captured; the chosen registered operation and arguments are preserved.</li></ul></section></body></html>

@@ -47,14 +47,18 @@ estimated_complexity: L
 it_requirements:
   - "Re-dispatch must pass the full test failure context to the coder, not just a summary"
   - "Must re-dispatch the ORIGINAL work agent, not default to python-coder"
-  - "Rework loop must be bounded (see BO-530-3-i for retry cap)"
+  - "Rework loop must be bounded. The retry cap is no longer specified by BO-530-3-i (retired 2026-08-17); it is owned by ACD-2000a-2 (cap reached, stop and escalate), ACD-2000a-2-i (escalation payload) and ACD-2000a-3 (configurable budget)."
 delivers_to: null
 expects_from:
   ac_id: BO-530-2
   contract: "test-runner is placed after the coder in the chain and produces failure output"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by:
+  - it-po-v3
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Reviewed as one of the three composites KI-ACS-016 left with only retired children. Decision: no supersession and no new children. The rework hand-back this AC specifies (failure context passed back to the ORIGINAL work agent, full-suite re-run, sql-coder not defaulted to python-coder) is still live and is owned by no other AC (store-wide search 2026-10-16); only its bounded-retry sibling BO-530-3-i moved, to ACD-2000a-2 / ACD-2000a-2-i / ACD-2000a-3, none of which has this AC as its id-derived parent, so none can be listed in covered_by. Under the current done-proof source (ACS-900d-4-iv) a composite whose every child is retired falls back to its own covers tag, so this AC is provable as the leaf-sized L2 it is; splitting it into L3s would only manufacture children. BO-530-3-i stays in covered_by for the audit trail. The only edit is this it_requirements line, which pointed at the retired BO-530-3-i for the retry cap and now names its successors. work_status untouched."
 superseded_by: null
 covered_by: [BO-530-3-i]
 implemented_by: []

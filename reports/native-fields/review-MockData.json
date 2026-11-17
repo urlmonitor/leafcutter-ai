@@ -1,0 +1,78 @@
+{
+  "review_version": 1,
+  "kind": "MockData",
+  "reviewed_on": "2026-10-02",
+  "status": "reviewed_ready_for_coder",
+  "scope": "One canonical dataset artifact per *.mock.json file. Entity specifications and sample records inside that artifact remain owned nested data, not independent Leafcutter native kinds or assertions about actual ACs, tests or components.",
+  "authorities": [
+    {"path": "docs/product-truth/schemas/mock-data.schema.json", "role": "Complete native artifact schema: 15 top-level properties, five required, closed top-level and entity-envelope shapes but open sample record objects."},
+    {"path": "docs/product-truth/scripts/generate_product_truth.py#load_mocks", "role": "Canonical source discovery scans all mock-data/**/*.mock.json files, independently of manifest registration."},
+    {"path": "docs/product-truth/scripts/validate_product_truth.py#run_checks", "role": "Validates all discovered datasets against the schema and invariant checks before checking index metadata."},
+    {"path": "docs/product-truth/scripts/product_truth_index_checks.py#_check_index", "role": "Checks manifest entries against source status/readiness/version and entity vocabulary. It does not require every discovered dataset to have an artifacts entry."},
+    {"path": "docs/product-truth/scripts/product_truth_checks.py#_check_canonical_datasets", "role": "Enforces one dataset per entity name per component. Do not silently collapse duplicates or merge records."},
+    {"path": "docs/product-truth/index.json", "role": "Authoritative registration manifest and derived lookup context; not the complete file-discovery set."}
+  ],
+  "source_discovery": {
+    "root": "docs/product-truth/mock-data",
+    "include": "Recursively discover sorted *.mock.json files and emit one NativeRecord for each. Resolve every path within the supplied immutable repository root.",
+    "exclude": ["*.prompt.json classifier/authoring prompt fixtures", "schema files", "index.json and derived indexes", "rendered/generated views"],
+    "absent_directory": "Return an empty list for an absent canonical store. Existing malformed JSON, non-object roots, missing/non-string/empty id, and duplicate dataset IDs are explicit errors, never silent skips.",
+    "manifest_behavior": "If index.json exists, keep matching mock_data entry and its source locator in derived context without overwriting dataset metadata. An unlisted canonical file remains a dataset and has an explicit unregistered context. Missing optional manifest context does not erase datasets. Do not manufacture metadata fields from index defaults.",
+    "counts": {"canonical_files": 2, "manifest_mock_data_entries": 1, "non_dataset_prompt_files": 4, "entity_specifications": 8, "sample_records": 48},
+    "unregistered_canonical_files": ["docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"],
+    "inventory_correction": "inventory.json reports one manifest entry, which is correct for that count basis but incomplete for the canonical MockData population. Canonical file scan has two records in this checkout."
+  },
+  "record_identity": {
+    "native_id": "Exact artifact id string, such as fern-and-fig/catalog; no slug normalization or derivation from a manifest title.",
+    "source_path": "Repository-relative POSIX path to the actual *.mock.json file.",
+    "locator": "Empty string: the entire JSON document is the canonical artifact.",
+    "metadata": "Deeply preserve the complete original parsed JSON object. Do not filter fields using today's schema, infer defaults, or replace entities with their names.",
+    "title": "The dataset schema has no title. A matching manifest title may supply only the presentation title, with its manifest origin explicitly retained in derived context; otherwise use an empty title or native identity per the shared presentation policy.",
+    "description": "The dataset schema has no summary/description. Matching manifest summary may supply presentation text only; preserve its context separately.",
+    "derived": "Suggested keys: manifest_entry, manifest_source_path, manifest_locator, manifest_registered. Any source diagnostics and presentation fallbacks belong here rather than in authored metadata."
+  },
+  "fields": [
+    {"name": "id", "type": "string", "required": true, "meaning": "Path-stable <product>/<name> identity; schema describes this convention but imposes no regex."},
+    {"name": "component", "type": "string", "required": true, "meaning": "Product-truth component namespace. Preserve exact string; do not assume it equals the components.json snake_case registry vocabulary."},
+    {"name": "status", "type": "string", "required": true, "enum": ["active", "deprecated"]},
+    {"name": "readiness", "type": "string", "required": true, "enum": ["draft", "reviewed", "approved"]},
+    {"name": "superseded_by", "type": "string|null", "required": false, "meaning": "Replacement artifact identity; preserve explicit null independently of absence."},
+    {"name": "version", "type": "integer", "required": false, "minimum": 1},
+    {"name": "shape_version", "type": "integer", "required": false, "minimum": 1, "meaning": "Opt-in shape-bound version. Absence predates those bounds and must not be filled with a current/default version."},
+    {"name": "reusable", "type": "boolean", "required": false},
+    {"name": "example_product", "type": "string", "required": false, "pattern": "^[a-z0-9-]+$", "meaning": "Explicit example-product marker, not an ownership source. Preserve absence and never synthesize from the artifact id or entity names."},
+    {"name": "realization", "type": "string", "required": false, "enum": ["built", "spec", "mock"], "meaning": "Origin classification. Schema describes absent semantic default built but ingestion must retain the authored omission rather than add built."},
+    {"name": "tags", "type": "array<string>", "required": false},
+    {"name": "invariants", "type": "array<string>", "required": false, "meaning": "Authored rules and prose, not executable instructions to this importer or claims the importer has validated them."},
+    {"name": "entities", "type": "object<entity-name,entity-spec>", "required": true, "meaning": "Owned field descriptions and sample records; retain arbitrary entity names exactly, with escaped JSON pointer keys."},
+    {"name": "used_by", "type": "object", "required": false, "meaning": "Authored use references; not proof that a test executed or an implementation exists."},
+    {"name": "provenance", "type": "array<object>", "required": false, "meaning": "Ordered authoring history. Preserve each action/by/date/note tuple together by index."}
+  ],
+  "nested_shapes": [
+    {"pointer": "/entities/<entity-name>", "type": "object", "required_fields": ["fields", "records"], "additional_properties": false, "fields": {"fields": "object<field-name,string>", "records": "array<object>"}},
+    {"pointer": "/entities/<entity-name>/fields/<field-name>", "type": "string", "meaning": "An authored type/description string, not a machine type validator. Never coerce sample values based on it."},
+    {"pointer": "/entities/<entity-name>/records/<index>", "type": "object", "additional_properties": true, "meaning": "Arbitrary sample JSON keys and recursively nested values, arrays, objects, strings, numbers, booleans and nulls. There is no universal required id key and no fixed per-entity key allowlist. Preserve order and correlation."},
+    {"pointer": "/used_by", "type": "object", "required_fields": [], "additional_properties": false, "fields": {"mockups": "array<string>", "tests": "array<string>", "flows": "array<string>"}},
+    {"pointer": "/provenance/<index>", "type": "object", "required_fields": [], "additional_properties": false, "fields": {"action": "string enum authored/reviewed/approved/extended/deprecated/superseded", "by": "string", "date": "string, with no schema format restriction", "note": "string"}}
+  ],
+  "observed_records": [
+    {"id": "fern-and-fig/catalog", "source_path": "docs/product-truth/mock-data/fern-and-fig/catalog.mock.json", "registered": true, "entities": {"Plant": 5, "Customer": 2, "Order": 4, "Payment": 3}, "top_level_fields": ["id", "component", "example_product", "status", "readiness", "superseded_by", "version", "reusable", "tags", "invariants", "entities", "used_by", "provenance"]},
+    {"id": "guardrails/frontend-ac-declarations", "source_path": "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json", "registered": false, "entities": {"FrontendComponent": 10, "AcDeclaration": 7, "GuardrailFinding": 9, "Ac": 8}, "top_level_fields": ["id", "component", "status", "readiness", "superseded_by", "version", "reusable", "realization", "tags", "invariants", "entities", "used_by", "provenance"]}
+  ],
+  "native_property_exposure": {
+    "scalar_and_list": "Expose all authored scalar and homogeneous scalar-array values through the shared property encoder, subject to protected graph-bookkeeping collision rules.",
+    "nested_examples": ["/entities/Plant/fields/price", "/entities/Plant/records/0/price", "/entities/AcDeclaration/records/2/covering_test", "/provenance/0/action", "/provenance/0/note"],
+    "shape": "Shape metadata must retain absent versus null versus empty containers, native JSON types, object keys, array ordering, and each sample-record index. Never stringify an entire nested record as the only exposure.",
+    "no_inference": "Do not promote Plant, Customer, Ac, FrontendComponent or other nested entity specifications to native labels or actual repository records. Sample covered_by/declared_by/status values are dataset content, not real graph relationships or implementation evidence. Do not infer component registry membership from product-truth scalar component strings.",
+    "schema_drift": "Today's schema disallows unknown envelope fields but the extractor must not discard future/legacy fields. Source validity checks and field preservation are separate: report/reject invalid input explicitly where required, never silently filter it into a valid-looking record."
+  },
+  "required_test_cases": [
+    "Discover both manifest-listed and unlisted canonical *.mock.json sources while excluding adjacent *.prompt.json fixtures.",
+    "Assert complete parsed metadata equality and shared encoder round-trip for all 15 fields, nested entities/field specs/records, typed numbers and booleans, nested arrays/maps, and provenance ordering.",
+    "Distinguish omitted optional values, explicit superseded_by/record-field null, empty used_by arrays, empty entities/spec fields and empty sample record lists. Do not apply realization or shape_version defaults.",
+    "Retain raw dataset fields when a manifest entry has different component/status/readiness/version/title/summary context; expose context separately and never merge it into the dataset.",
+    "Keep nested Ac records as owned sample data and verify no extra AcceptanceCriterion/Component/Test nodes are produced.",
+    "Reject unreadable/malformed JSON, invalid root/id, duplicate native identity and a discovered symlink or manifest reference escaping the immutable repository root, with a useful source path.",
+    "Use a process-local mutation that omits an unlisted dataset or drops a nested sample value to prove those field-coverage assertions fail, then restore and rerun."
+  ]
+}

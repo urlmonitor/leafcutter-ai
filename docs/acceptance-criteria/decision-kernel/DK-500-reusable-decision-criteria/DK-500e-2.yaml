@@ -1,0 +1,120 @@
+id: DK-500e-2
+title: Criteria are drafted only for the gap Jev named, and not at all when nothing is missing
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given Jev's verdict names one missing concern, readability into the knowledge graph, beside five reused criteria,
+  When criteria are drafted for the decision,
+  Then every drafted criterion addresses that concern,
+  And no drafted criterion repeats the wording of a reused criterion,
+  And the person can still add criteria of their own at the approval of proposals,
+  And when Jev's verdict states that nothing is missing, no criterion is drafted and no drafting request is made.
+depends_on:
+- DK-500e
+- DK-500e-1
+covered_by:
+- DK-500e-2-i
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: 'Gap criteria [{wording, criterion_id, priority, kind, gap_concern, proposal_status: proposed}] beside the reused criteria, plus removed_repeats: [{wording, category_id}]. Consumed by in-run grouping (DK-500b-4) and the approval of proposals.'
+expects_from:
+  ac_id: DK-500e-1
+  contract: Gap verdict with missing_concerns (DK-500e-1 delivers_to).
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+- The host request (host.generate_options, compiled by the kernel's invocation compiler, ADR-052) asks only for criteria for the missing concerns named in the verdict, and passes the reused criteria as already covered. The kernel checks that every returned criterion names one of those concerns (gap_concern) and drops the others with a stated reason.
+- No host drafting request is made when the verdict is no_gap. With not_judged the fallback of DK-500e-1-i applies; with no reuse (an empty library) the request is exactly today's (DK-500e-3).
+- Drafted criteria stay proposals (proposal_status proposed) and pass through in-run grouping (DK-500b-4) and the approval.
+- The prompt text is compiled by kernel code, so this stays python-coder work; no agent template or skill changes.
+test_required: true
+test_spec:
+- name: test_every_drafted_criterion_addresses_named_concern
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: With one missing concern, every drafted criterion carries that gap_concern; others returned by the host are dropped with a reason.
+- name: test_no_drafted_criterion_repeats_reused_wording
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: No drafted criterion repeats the wording of a reused criterion.
+- name: test_person_can_still_add_criteria
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The approval still accepts criteria the person adds.
+- name: test_no_drafting_request_when_no_gap
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: With a no-gap verdict, the recording host port receives no drafting request and no criterion is drafted.
+test_rationale: Run the decision capability through the public run/resume boundary with a scripted Jev provider and a recording host port over a fixture category library; assert the approval payload, the run report, trace events and call counts rather than internal helpers.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
+- path: docs/architecture/adrs/ADR-052-capabilities-replace-agents-prompts-are-compiled.md
+  relationship: constrains
+  status: exists
+  relevance: Host requests are compiled by the kernel's invocation compiler, so gap-only drafting is kernel code, not a prompt template.
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  Flow: decision-forming branch draft-for-gap and the edited propose step ("It drafts no new criteria unless Jev found a gap or no category fits"). The drafting itself is done by the host (Claude Code, generate_options); the kernel bounds what it asks for and checks what comes back. The IT PO may split a prompt part to llm-expert.
+  Feedback loop (DK-500e): drafted and person-added criteria that end in a PUBLISHED decision become published-record input to the mining (DK-500a-1); draft-only wordings are seen through run history only.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: draft-for-gap, propose.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: draft-for-gap
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-04'
+  - flow: leafcutter/decision-forming
+    node: propose
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-04'

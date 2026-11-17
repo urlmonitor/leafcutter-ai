@@ -1,0 +1,57 @@
+id: KM-500g
+title: Understand why an answer is missing or out of date
+component: knowledge-management
+components:
+- knowledge_management
+level: L1
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: in_progress
+criteria: 'Find out what went wrong and what a useful next step would be.
+
+
+  People can connect an unsuccessful or incomplete answer to the evidence available for that attempt and the
+  project version it used. They can tell an information gap from an unavailable service or stale source, and
+  see when the cause remains unknown.
+
+  '
+parent: KM-500
+depends_on:
+- KM-500
+doc_links:
+- path: docs/analysis/2026-10-01-repository-query-catalog.md
+  relationship: context
+  status: exists
+  relevance: Preserves all 25 persona questions, eight shared families and explicit current capability limits.
+- path: docs/analysis/2026-10-01-repository-query-evaluation-cases.json
+  relationship: context
+  status: exists
+  relevance: Twelve planned positive/control cases, not executed acceptance proof.
+- path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+  relationship: context
+  status: exists
+  relevance: Inherited standing coverage and denominator honesty; not duplicated.
+documentation_triggers:
+- reference-doc
+- how-to
+origin_agent: product-owner
+created: '2026-10-01'
+amended_by:
+- '2026-10-01: User explicitly approved the new ACs and directed implementation with agents and an independent evaluator. Approval records authorization, not implementation or execution proof.'
+superseded_by: null
+covered_by:
+- KM-500g-1
+- KM-500g-2
+- KM-500g-3
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: RQ8; ITPO-04, ITPO-05, QA-05. First batch RQE-06; standalone request correlation and honest telemetry
+  availability are new obligations, not proof that a trace already exists. Reuse KM-400e-4 failure distinctions
+  and KM-500d-2 publication timing; no duplicate deployment workflow or runtime-event database. Later deployment/provider
+  cases remain pending their actual evidence and authorization. Never replace actual tool output with a source-inspected
+  oracle. Draft authored under explicit user request to put planning agents to work. Existing parent approval
+  does not approve these new children. Reuse KM-500d-3 for evaluation extensions; no roadmap edit, provider
+  call, deployment or implementation is authorized by this authoring pass.

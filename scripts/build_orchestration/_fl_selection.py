@@ -33,6 +33,7 @@ from _fl_common import (
     _matches_work_status,
     _sort_ready,
     _walk_ac_yamls,
+    derive_parent_id,
 )
 
 # ---------------------------------------------------------------------------
@@ -140,6 +141,18 @@ def select_batch(*, ac_root: Path, limit: int) -> list[str]:
 
     ready = _sort_ready(ready)
     return [ac.get("id", "") for ac in ready[:limit]]
+
+
+def _is_structural_parent(dep: str, dep_rec: dict | None, node: str) -> bool:
+    """Return True when *dep* is *node*'s structural parent.
+
+    Either the id shape shows the link (``derive_parent_id``) or the dep's own
+    ``covered_by`` records *node* as its child (BO-2600b-4).
+    """
+    if dep == derive_parent_id(node):
+        return True
+    covered = dep_rec.get("covered_by") if dep_rec else None
+    return isinstance(covered, list) and node in covered
 
 
 def _topo_order_build_set(

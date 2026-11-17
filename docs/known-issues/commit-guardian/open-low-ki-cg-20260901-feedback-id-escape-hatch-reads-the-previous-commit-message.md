@@ -22,8 +22,8 @@ related_docs:
 
 - **Severity:** medium
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Occurrences:** 2
+- **First seen:** 2026-09-01 · **Last seen:** 2026-10-12
 - **Where:** `templates/scripts/commit_guardian/check_feedback_id.py` — the "Fourth source"
   `COMMIT_EDITMSG` read (~`:100-120`) and the `_ESCAPE_TOKEN` check at `:53` / `:276`
 
@@ -73,6 +73,16 @@ message ⇒ skip" passes against this defect.
 where the headings are not phase-agent sign-offs at all — write them outside the sign-off
 heading grammar the parser matches, which is the honest fix when no agent ran and no
 feedback was submitted.
+
+**Also `-F` (2026-10-12).** `COMMIT_AGENT_MODE=1 git commit -F msgfile`, with
+`[NO-FEEDBACK-CHECK]` in the message file, was still blocked: pre-commit runs before git
+writes `COMMIT_EDITMSG`, so `-F` fails the same way `-m` does. What worked was passing the
+message file's path in the environment, which the hook reads as its second source
+(`GIT_COMMIT_MSG`):
+
+```
+GIT_COMMIT_MSG=/path/to/msgfile git commit -F /path/to/msgfile
+```
 
 **Related.** `KI-CG-018` (a hook's own "did I look?" diagnostic that cannot fire).
 `KI-CG-20260831-hook-scripts-never-invoked` (the family's other reachability defects).

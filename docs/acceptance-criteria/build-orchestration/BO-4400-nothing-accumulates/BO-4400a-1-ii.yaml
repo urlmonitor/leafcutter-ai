@@ -1,0 +1,96 @@
+id: BO-4400a-1-ii
+title: "An epic's shared workspace is cleared once, after its last ticket is delivered, never mid-drive"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given the build of an epic of three tickets that share one workspace, where the first
+    ticket's delivery step opens the epic's pull request and the second and third
+    tickets' delivery steps push further commits to that same pull request,
+  When the first and second tickets have been delivered and the third is still being
+    built,
+  Then the epic's workspace still exists and the third ticket's build continues in it,
+  And when the third ticket's commits have been pushed and the epic run returns, no
+    folder remains at the location the epic's workspace occupied,
+  And the one shared clearing door was asked to clear that workspace exactly once
+    during the whole run.
+depends_on: [BO-4400a-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2700-defer-epic-pr/BO-2700.yaml
+    relationship: related
+    status: exists
+    relevance: The epic pull request may be opened late; the clearing point is the end of the epic, not the first push.
+  - path: docs/how-to/drive-epic-manually.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400a-1
+  contract: "The route-end clearing call."
+package_surface: false
+it_requirements:
+  - >-
+    The epic's clearing step sits at the epic run's end -- after the last ticket's delivery step
+    and before build-epic.js / build-feature.js returns -- never inside the per-ticket
+    pull-request or commit phase. Opening the epic PR late (BO-2700) or early does not move it.
+  - >-
+    Over the whole epic run the clearing request is issued exactly once; parallel ticket batches
+    inside the epic never issue it.
+  - >-
+    Clearing uses the route-end step BO-4400a-1 delivers (one maker remove request via an E2
+    shell-agent dispatch, ADR-030; no discard authorisation).
+  - >-
+    PROOF as BO-4400a-1 (deployed workflow under unit_tests/_workflow_engine_harness.py, maker run
+    for real, assertions on the recorded dispatch list and disk; isolation and no-build.py rules).
+    The mid-drive observation is taken by the scripted reply of the third ticket's coder step,
+    which records whether the workspace folder exists at that moment.
+test_required: true
+test_spec:
+  - name: test_epic_workspace_exists_while_third_ticket_builds
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "When the third ticket's build step runs, after tickets one and two delivered, the epic workspace folder still exists."
+    must_catch:
+      - "clear hooked onto the per-ticket pull-request phase"
+  - name: test_epic_workspace_absent_after_epic_returns
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "After the third ticket's commits are pushed and the run returns, no folder remains at the epic workspace location."
+  - name: test_epic_run_asks_the_door_exactly_once
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The recorded dispatch list contains exactly one clearing request for the epic workspace."
+test_rationale: >-
+  The failure this guards is a clear placed one level too deep, which a single-ticket run cannot
+  see. Only a three-ticket deployed run observed at the third ticket's step distinguishes route end
+  from per-ticket PR events.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  "At the latest right after the PR is opened" read per ticket would destroy an epic's
+  workspace after its first ticket. The trigger is the ROUTE's end state, not any
+  intermediate pull-request event. Named wrong version: hooking the clear onto the
+  per-ticket pull-request phase -- the third ticket loses its workspace and this record goes
+  red while BO-4400a-1 (single ticket) stays green.

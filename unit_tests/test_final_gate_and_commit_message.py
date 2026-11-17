@@ -137,7 +137,6 @@ def _final_gate_resume_answer(action: str) -> dict:
     }
 
 
-# `_make_strategic_mock_with_final_action` REMOVED (dead live-gate dispatch, ACD-2100c-1).
 class TestFinalGateEditFallthrough(unittest.TestCase):
     """
     Behavioral tests for Defect 1: a user who requests "edit" at the final gate
@@ -179,24 +178,19 @@ class TestFinalGateEditFallthrough(unittest.TestCase):
         deliberately never invoked. The ONLY channel that can still resolve
         the gate is a genuine, person-attributed args.resume_answer.
 
-        "edit" is one of resolveGate()'s valid enum options (verified
-        empirically: unlike an out-of-enum action, it passes
-        validateAnswerShape and is genuinely applied) AND resolveGate()
-        deliberately does NOT clear the durable pause record for an "edit"
-        decision (see resolveGate()'s own comment: "'edit' does NOT move
-        past the gate -- it re-dispatches the step with feedback"). So a
-        SINGLE supplied args.resume_answer of "edit" is reapplied by
-        resolveGate() on EACH pass through the pipeline's own
-        `while (!approved)` loop within this one process invocation: pass 1
-        increments editRetries and `continue`s; pass 2 re-presents
-        final-gate, resolveGate() reapplies the SAME "edit" answer again,
-        and the pipeline's own exhausted-retries branch (editRetries >=
-        MAX_EDIT_RETRIES) now genuinely fires — no second process/resume
-        round-trip needed.
+        BO-2300d-1-iii: a person's resume answer now applies at most once per
+        run, so one "edit" answer can no longer be replayed until the retry
+        limit (that replay was the defect). The exhausted-retries branch is
+        still reached the legitimate way: the person approves, but the
+        stage's check keeps failing (the mocked design pre-pass never gives
+        a readable report), so every pass is
+        forced to an edit -- pass 1 increments editRetries and `continue`s,
+        pass 2 re-presents final-gate, the forced edit recurs, and
+        editRetries >= MAX_EDIT_RETRIES fires.
 
         Returns (run_result, side_channel).
         """
-        resume_answer = _final_gate_resume_answer("edit")
+        resume_answer = _final_gate_resume_answer("approve")
         mock_js = textwrap.dedent("""
             async function mockAgent(call) {
                 const agentType = call.agentType || '';
@@ -227,6 +221,12 @@ class TestFinalGateEditFallthrough(unittest.TestCase):
                 if (label === 'read-pause-record') {
                     return { exists: true, stale: false };
                 }
+                // The test-design stage's check fails on every pass (its
+                // pre-pass gives no readable report), so each approval is
+                // forced to an edit until retries run out.
+                if (label === 'design-prepass') {
+                    return { output: '', exit_code: 1, stderr: 'pre-pass failed' };
+                }
 
                 return { status: 'ok' };
             }
@@ -250,6 +250,8 @@ class TestFinalGateEditFallthrough(unittest.TestCase):
         condition and add an explicit exhausted-retries abort branch.
 
         AC: ACD-300g-4 — workflow aborts without approval when retries exhausted.
+        # covers: ACD-300c-3
+        # covers: ACD-300g-4
         """
         self.assertEqual(
             self.run_result.get("status"),
@@ -274,6 +276,8 @@ class TestFinalGateEditFallthrough(unittest.TestCase):
         RED until fix is applied.
 
         AC: ACD-300g-4 — draft ACs remain on disk uncommitted.
+        # covers: ACD-300c-3
+        # covers: ACD-300g-4
 
         The technical pipeline has only one stage (it-po -> final gate). With
         edit exhaustion, NO commit call should be made at all -- the defect
@@ -281,15 +285,15 @@ class TestFinalGateEditFallthrough(unittest.TestCase):
         """
         commit_calls = self.side.get("commitCalls", [])
         self.assertEqual(
-            len(commit_calls),
-            0,
+            [", final" in c.get("instructions", "") for c in commit_calls],
+            [False],  # only the auto-approved itpo commit (ACD-2500c-2)
             msg=(
                 "DEFECT: commitStageOutput() was called despite edit retries being "
                 "exhausted at the final gate. The `|| finalAction === 'edit'` "
                 "fallthrough on ~line 645 is committing unreviewed ACs.\n"
                 "Fix: remove `|| finalAction === 'edit'` from the approve condition "
                 "and add an explicit abort branch.\n"
-                f"Captured commit calls: {len(commit_calls)} (expected 0)"
+                f"Captured commit calls: {len(commit_calls)} (expected only itpo's)"
             ),
         )
 
@@ -304,6 +308,8 @@ class TestFinalGateEditFallthrough(unittest.TestCase):
         RED until fix is applied.
 
         AC: ACD-300g-4 — readiness is NOT set to approved without user consent.
+        # covers: ACD-300c-3
+        # covers: ACD-300g-4
         """
         self.assertNotIn(
             "acs_approved",
@@ -493,7 +499,6 @@ class TestCommitMessageShape(unittest.TestCase):
             self.fail(f"Node.js failed unexpectedly: {exc}")
 
         commit_calls = side.get("commitCalls", [])
-        # Strategic pipeline: po → ba → itpo (final). Expect at least 3 commits.
         self.assertGreaterEqual(
             len(commit_calls),
             1,
@@ -505,7 +510,7 @@ class TestCommitMessageShape(unittest.TestCase):
         final_commit_msg = self._extract_commit_message(final_instructions)
 
         self.assertIn(
-            "IT-PO",
+            "plan-feature(TEST-DESIGN, final)",
             final_commit_msg,
             msg=(
                 "DEFECT: The final (IT-PO) commit message does not contain 'IT-PO'.\n"
@@ -881,12 +886,12 @@ class TestFinalGateTerminalElse(unittest.TestCase):
 
         commit_calls = side.get("commitCalls", [])
         self.assertEqual(
-            len(commit_calls),
-            0,
+            [", final" in c.get("instructions", "") for c in commit_calls],
+            [False],  # only the auto-approved itpo commit (ACD-2500c-2)
             msg=(
                 "The commit agent was dispatched despite the final-gate action "
                 "being out-of-enum and therefore never applied.\n"
-                f"Captured commit calls: {len(commit_calls)} (expected 0)"
+                f"Captured commit calls: {len(commit_calls)} (expected only itpo's)"
             ),
         )
 
@@ -927,7 +932,7 @@ class TestFinalGateTerminalElse(unittest.TestCase):
         commit_calls = side.get("commitCalls", [])
         final_stage_commits = [
             c for c in commit_calls
-            if "ACD-UNRECOG" in c.get("instructions", "")
+            if ", final" in c.get("instructions", "")
             or "final commit" in c.get("instructions", "").lower()
         ]
         self.assertEqual(
@@ -996,11 +1001,6 @@ class TestFinalGateTerminalElse(unittest.TestCase):
             ),
         )
 
-
-# Template parity test — REMOVED (TestRunFunctionParityWithTemplate): it
-# byte-diffed run() against the legacy scripts/workflows/plan-feature.js,
-# which foundation cleanup deleted, leaving one canonical E2 file and
-# nothing to compare.
 
 
 if __name__ == "__main__":

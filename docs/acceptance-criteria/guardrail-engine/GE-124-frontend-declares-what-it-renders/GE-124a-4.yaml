@@ -92,7 +92,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Required the five example blocks to be complete and executable so the test contract can feed them to the real reader — the only test shape that keeps a how-to honest — and derived the coverage assertion from GE-124a-2's framework map rather than the literal five. Named the doc path and the frontmatter/length gates. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/09_TICKET-20261022-GE-124a-4.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -121,3 +122,4 @@ notes: |
   the example blocks are executed against the real reader — but if the user ever
   reclassifies these nine records to `docs`, the test contracts can be
   reconsidered at the same time.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

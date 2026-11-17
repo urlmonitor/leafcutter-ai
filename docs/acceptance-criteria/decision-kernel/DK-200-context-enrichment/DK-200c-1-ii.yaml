@@ -1,0 +1,56 @@
+id: DK-200c-1-ii
+title: "An unreadable source is distinguished from a successfully searched empty source"
+component: decision-kernel
+components: [decision_kernel]
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given an allowed source cannot be read,
+  When initial enrichment attempts to consult it,
+  Then the result reports the unavailable source and its limitation,
+  And the failure is not represented as a successful search with no matches.
+depends_on: [DK-200c-1]
+covered_by:
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_failed_source_is_reported_as_unavailable_not_as_a_successful_empty_search"
+implemented_by:
+  - "kernel/enrichment_sources.py"
+  - "kernel/context_enrichment.py"
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Read failures must remain explicit unavailable or partial context with their source limitation, rather than successful empty search results."
+  - "An unreadable source must not trigger a broader read permission or an invented evidence result."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_failed_source_is_reported_as_unavailable_not_as_a_successful_empty_search
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "An actual search boundary PermissionError produces unavailable context, zero examined files/evidence and the failure reason in limitations."
+test_rationale: "A deliberate I/O failure proves failure classification; a missing keyword in a readable source would exercise a different branch."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.

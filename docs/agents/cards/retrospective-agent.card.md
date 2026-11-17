@@ -92,11 +92,14 @@ flowchart TD
 | `Read` |
 | `Write` |
 | `Agent` |
+| `Skill` |
 ---
 
 ## Skills Used
 
-*No skills declared.*
+| Skill | Mode | Condition |
+|-------|------|-----------|
+| `route-knowledge` | conditional | Use in Step 5 to classify each proposed Knowledge Item and rule update into its target surface. |
 ---
 
 ## Configuration

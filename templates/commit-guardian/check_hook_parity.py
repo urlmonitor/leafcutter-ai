@@ -500,4 +500,10 @@ if __name__ == "__main__":
 #   L-2: Changed deployed_dir.exists() → deployed_dir.is_dir() so a file at that
 #   path is treated as absent rather than causing a false block.
 #   L-3: Omitted runtime-manifest comparison; documented rationale in ARCHITECTURE.
+# - 2026-10-12 [python-coder/GE-132a-1]: NOT mirrored on purpose. The remedy-
+#   declaration leg (check-hook-parity's GE-132a-1 rule) lives in the canonical
+#   templates/scripts/commit_guardian/check_hook_parity.py plus its sibling
+#   modules _remedy_registration_parity.py and _remedy_declarations.py. This
+#   legacy-dir copy is not registered or deployed and has no sibling modules, so
+#   copying the leg here would only create an unrunnable import.
 # ====================================================================

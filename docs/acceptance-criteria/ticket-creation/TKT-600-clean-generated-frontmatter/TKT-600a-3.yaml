@@ -7,7 +7,7 @@ component: ticket-creation
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -116,7 +116,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - TKT-600a-3-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/46_TICKET-20261012-TKT-600a-3.md
 change_target: code
 risk_surface: contract_boundary
 notes: |

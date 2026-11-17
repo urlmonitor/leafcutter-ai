@@ -86,7 +86,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Required the at-most-one rule to be structural (a collection keyed on the (subject, code) pair) rather than a de-duplication pass that a later refactor can misplace, and added the counter-case that two different codes on one file must NOT be collapsed — the natural over-correction. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/18_TICKET-20261022-GE-124c-1-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -102,3 +103,4 @@ notes: |
   Double-reporting is how a guardrail becomes noise, and noise is how it gets
   turned off — the PO calls this load-bearing and it is the reason this is an
   L3 with its own test rather than a clause inside GE-124c-1.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

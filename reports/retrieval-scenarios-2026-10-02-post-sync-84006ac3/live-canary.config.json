@@ -1,0 +1,45 @@
+{
+  "paths": {
+    "run_root": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-retrieval-scenarios-post-sync-84006ac3\\runs",
+    "registry": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\knowledge-retrieval-v01\\config\\capability_registry.json"
+  },
+  "knowledge": {
+    "backend": "neo4j",
+    "repository_id": "leafcutter",
+    "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\knowledge-retrieval-v01",
+    "query_catalog_root": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-retrieval-scenarios-post-sync-84006ac3\\readonly-catalog",
+    "embeddings_enabled": false
+  },
+  "sources": [
+    {
+      "id": "knowledge.graph",
+      "kind": "graph_query",
+      "categories": [
+        "task_context",
+        "existing_patterns",
+        "prior_decisions",
+        "internal_principles"
+      ]
+    }
+  ],
+  "langfuse": {
+    "enabled": false
+  },
+  "limits": {
+    "max_jev_calls": 12,
+    "max_active_seconds": 120,
+    "max_host_operations": 0,
+    "max_retries": 0,
+    "max_concurrent_native": 1,
+    "max_concurrent_host": 1
+  },
+  "jev": {
+    "max_state_chars": 30000,
+    "max_questions_per_call": 20,
+    "timeout_seconds": 30
+  },
+  "data_policy": {
+    "send_repo_excerpts_to_jev": true,
+    "telemetry_excerpts": "none"
+  }
+}

@@ -31,6 +31,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 _THIS_DIR = Path(__file__).resolve().parent
 if str(_THIS_DIR) not in sys.path:
     sys.path.insert(0, str(_THIS_DIR))
@@ -46,6 +48,23 @@ from _bp1500g1_harness import (  # noqa: E402
     run_build,
     run_build_with_symlink_disabled,
 )
+
+
+@pytest.fixture(scope="module")
+def _shared_default_build_survival(tmp_path_factory):
+    """Produce the ONE real default (no-flag) build the two read-only
+    survival tests below share (TQ-600a-9): both plant the identical
+    adopter capability via `plant_capability_at_discoverable_location`
+    and run the identical no-flag `run_build` -- one asserting the
+    content survives byte-identical, the other asserting it is still
+    discoverable by name -- so one real build safely serves both
+    instead of each repeating its own `fresh_scratch_adopter` + plant +
+    `run_build` sequence."""
+    root = tmp_path_factory.mktemp("bp1500g1_default_build_survival")
+    target_root = fresh_scratch_adopter(root)
+    planted = plant_capability_at_discoverable_location(target_root)
+    result = run_build(target_root)
+    return target_root, planted, result
 
 
 def _scratch_adopter_with_config(tmp_path: Path, config: dict) -> Path:
@@ -73,7 +92,7 @@ def _scratch_adopter_with_config(tmp_path: Path, config: dict) -> Path:
 
 
 def test_bp_1500g_1_a_default_no_flag_build_leaves_a_real_adopter_authored_capability_byte_identical(
-    tmp_path: Path,
+    _shared_default_build_survival,
 ) -> None:
     # covers: BP-1500g-1
     # angle: real_artifact
@@ -82,11 +101,11 @@ def test_bp_1500g_1_a_default_no_flag_build_leaves_a_real_adopter_authored_capab
     adopter-authored SKILL.md the package has never shipped, record its
     bytes, run build.py as a real subprocess with NO flags, and assert the
     file is present with identical bytes. Must be RED against today's
-    build.py -- this is KI-BP-009's confirmed reproduction."""
-    target_root = fresh_scratch_adopter(tmp_path)
-    planted = plant_capability_at_discoverable_location(target_root)
+    build.py -- this is KI-BP-009's confirmed reproduction.
 
-    result = run_build(target_root)
+    Reads the ONE shared default-build survival build (TQ-600a-9) -- see
+    `_shared_default_build_survival`'s own docstring."""
+    _target_root, planted, result = _shared_default_build_survival
 
     assert planted["skill_md"].is_file(), (
         f"Adopter capability at {planted['skill_md']} no longer exists "
@@ -100,18 +119,18 @@ def test_bp_1500g_1_a_default_no_flag_build_leaves_a_real_adopter_authored_capab
 
 
 def test_bp_1500g_1_the_surviving_capability_is_still_discovered_by_name_after_the_same_run(
-    tmp_path: Path,
+    _shared_default_build_survival,
 ) -> None:
     # covers: BP-1500g-1
     # angle: reachability
     """SECOND Then CLAUSE, which the byte-identity entry above cannot reach.
     After the same no-flag run, the adopter's capability resolves BY ITS OWN
     NAME at the location the consuming tool discovers capabilities from --
-    present AND reachable, not present somewhere the tool no longer looks."""
-    target_root = fresh_scratch_adopter(tmp_path)
-    planted = plant_capability_at_discoverable_location(target_root)
+    present AND reachable, not present somewhere the tool no longer looks.
 
-    result = run_build(target_root)
+    Reads the ONE shared default-build survival build (TQ-600a-9) -- see
+    `_shared_default_build_survival`'s own docstring."""
+    target_root, planted, result = _shared_default_build_survival
 
     assert is_discoverable(target_root, planted["name"]), (
         f".claude/skills/{planted['name']}/SKILL.md does not resolve to a "

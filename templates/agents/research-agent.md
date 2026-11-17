@@ -22,7 +22,12 @@ tools: Bash, Read, Grep, Glob, mcp__jcodemunch__get_blast_radius, mcp__jcodemunc
   mcp__jcodemunch__get_ranked_context, mcp__plugin_serena_serena__find_symbol, mcp__plugin_serena_serena__find_declaration,
   mcp__plugin_serena_serena__find_implementations, mcp__plugin_serena_serena__find_referencing_symbols,
   mcp__plugin_serena_serena__search_for_pattern, mcp__plugin_serena_serena__get_symbols_overview,
-  mcp__plugin_context7_context7__resolve-library-id, mcp__plugin_context7_context7__query-docs
+  mcp__plugin_context7_context7__resolve-library-id, mcp__plugin_context7_context7__query-docs,
+  Skill
+skills:
+- skill_id: knowledge-query
+  mode: conditional
+  condition: Use when the question is about cross-surface knowledge graph queries (nodes, edges, surfaces) rather than code search.
 portable: true
 signoff: false
 domain: null
@@ -116,7 +121,7 @@ decision logic in `CLAUDE.md` § "jCodeMunch MCP Server".
 | Question type | Preferred tool | When to fall back |
 |---|---|---|
 | Blast radius of a rename / deletion | `mcp__jcodemunch__get_blast_radius` | — |
-| What imports a file / who calls a function | `mcp__jcodemunch__find_importers`, `mcp__jcodemunch__find_references` | `Grep` for short, literal-string lookups |
+| What imports a file / which Python files import a specific symbol / who calls a function | `mcp__jcodemunch__find_importers`, `mcp__jcodemunch__find_references` | `Grep` for short, literal-string lookups |
 | Class hierarchy / inheritance chain | `mcp__jcodemunch__get_class_hierarchy` | — |
 | Single function body without reading the whole file | `mcp__jcodemunch__get_context_bundle` | `Read` with line range |
 | Cross-file symbol search by name | `mcp__jcodemunch__search_symbols` | `Grep` with a tight pattern |
@@ -134,18 +139,14 @@ already know what you are looking for and jcodemunch would be heavier.
 
 ## Delegate to Existing Skills Instead
 
-Do **not** reimplement these skills — invoke them via Bash when they are the
-right tool:
+Do **not** reimplement this skill — load it when it is the right tool:
 
 | When the question is about… | Use this skill |
 |---|---|
-| Which Python files import a specific symbol | `.claude/skills/import-scanner/SKILL.md` — invoke via `Bash` |
-| The latest 1-minute candle near a price level (find-context-candle) | `.claude/skills/find-context-candle/SKILL.md` — invoke via `Bash` |
-| Why a trade fired, what triggered the signal | `.claude/skills/trade-analysis/SKILL.md` — invoke via `Bash` |
 | Cross-surface knowledge graph queries (nodes, edges, surfaces) | load the `knowledge-query` skill via `.claude/skills/knowledge-query/SKILL.md` |
 
-These skills encapsulate domain-specific query logic that would take longer to
-reconstruct with raw Grep/Glob. Use them.
+This skill encapsulates query logic that would take longer to reconstruct with
+raw Grep/Glob. Use it.
 
 ## Searching
 

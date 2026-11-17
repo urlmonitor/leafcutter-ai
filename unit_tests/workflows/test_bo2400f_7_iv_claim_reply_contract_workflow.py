@@ -72,7 +72,12 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    HarnessResult,
+    resolve_connected_reply,
+    run_workflow_under_e2,
+    workspace_ensure_from_opened,
+)
 
 import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
 
@@ -125,8 +130,8 @@ def _run_lane(claim_response: Any) -> HarnessResult:
         worktree_root = Path(tmp.name)
         (worktree_root / "docs" / "acceptance-criteria").mkdir(parents=True)
         label_responses = {
-            "fastlane-worktree": _opened_worktree_payload(str(worktree_root)),
-            "resolve-connected": {"ac_ids": [_AC_ID], "message": "1 to build"},
+            "workspace-ensure": workspace_ensure_from_opened(_opened_worktree_payload(str(worktree_root))),
+            "resolve-connected": resolve_connected_reply({"ac_ids": [_AC_ID], "message": "1 to build"}),
             "claim-connected": claim_response,
         }
         return run_workflow_under_e2(
@@ -354,12 +359,12 @@ class TestGenuineContentionStillReportedWithMembers(unittest.TestCase):
         # covers: BO-2400f-7-iv
         # angle: criterion
         held = ["BO-STUB-1", "BO-STUB-2"]
-        contention_reply = {
-            "claimed": [],
-            "excluded_claimed": held,
-            "target_refused": True,
-            "message": "members already in_progress",
-        }
+        contention_reply = _claim_fx.claim_ran(
+            [],
+            excluded_claimed=held,
+            target_refused=True,
+            message="members already in_progress",
+        )
         result = _run_lane(contention_reply)
 
         self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")

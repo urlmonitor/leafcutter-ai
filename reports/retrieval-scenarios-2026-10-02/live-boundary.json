@@ -1,0 +1,53 @@
+{
+  "status": "completed_waiting_human",
+  "provider": "TypeSafe",
+  "model": "jev-latest",
+  "host": "api.typesafe.ai",
+  "scenarios": [
+    "RS-02",
+    "RS-03"
+  ],
+  "maximum_calls_per_case": 12,
+  "maximum_calls_total": 24,
+  "maximum_active_seconds_per_case": 120,
+  "maximum_state_chars_per_call": 30000,
+  "maximum_questions_per_call": 20,
+  "transport_timeout_seconds": 30,
+  "provider_token_limit": null,
+  "limits_note": "No hard provider token cap exposed by this classifier configuration. Host/human waits are retained without fabricated responses.",
+  "transmitted_categories": [
+    "original questions",
+    "offered capability/query contracts",
+    "scoped IDs and source identity",
+    "bounded retrieved repository excerpts and assessment context"
+  ],
+  "excluded": [
+    "credentials and env-file contents",
+    "remote Langfuse export",
+    "embeddings",
+    "query activation",
+    "graph writes"
+  ],
+  "active_source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+  "active_generation_id": "20c370b99a39e0939e985846c9132986f8dc3052007b0dec5b43c19ddda7c28f",
+  "consent": {
+    "source": "Explicit user reply conveyed by coordinator",
+    "user_reply": "Allow the two live Jev checks",
+    "recorded_at": "2026-10-02T12:21:07.3989723Z",
+    "scope": "Only prepared RS-02 and RS-03; maximum 24 actual classifier calls total; no graph writes or Langfuse"
+  },
+  "completed_at": "2026-10-02T12:26:15.937274+00:00",
+  "actual_calls_total": 2,
+  "actual_calls_by_case": {
+    "RS-02": 1,
+    "RS-03": 1
+  },
+  "actual_input_tokens": 1104,
+  "actual_output_tokens": 119,
+  "actual_cost_usd_estimated": 4.6368e-05,
+  "resolved_models": [
+    "jev-1.13.0"
+  ],
+  "retrieval_reached": false,
+  "resumes_performed": 0
+}

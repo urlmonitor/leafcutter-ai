@@ -46,13 +46,14 @@ class RegistryCase(unittest.TestCase):
 
 
 class TestCommittedRegistry(unittest.TestCase):
-    """The committed registry holds exactly the seven V0 native and host-handoff entries."""
+    """The committed registry holds the explicit admitted native and host entries."""
 
     def test_committed_registry_is_valid_and_lists_the_v0_capabilities(self) -> None:
         snapshot = load_registry(CONFIG / "capability_registry.json")
         self.assertEqual([d.id for d in snapshot.descriptors], [
-            "decision", "host.formulate_question", "host.generate_options", "host.research",
-            "host.synthesize", "research", "retrieve.repository"])
+            "decision", "host.decompose_goal", "host.formulate_question", "host.generate_options", "host.query_build",
+            "host.research", "host.retrieval_needs",
+            "host.synthesize", "knowledge.activate_query", "research", "retrieve.repository"])
         self.assertEqual(snapshot.registry_id, "leafcutter.capabilities")
 
     def test_component_ids_load_from_components_json(self) -> None:

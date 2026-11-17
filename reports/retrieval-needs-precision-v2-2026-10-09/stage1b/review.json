@@ -1,0 +1,118 @@
+{
+  "closed_at": "2026-10-09T21:47:02.913981+00:00",
+  "mode": "Fresh blind host; production catalog and compiled packet; existing isolated durable host ledger. No retrieval executed.",
+  "accepted_host_results": 16,
+  "finite_contract_passes": 16,
+  "manual_explanation_reviews": {
+    "IP11": {
+      "passed": true,
+      "reason": "The actual unresolved explanation identifies latest CI outcomes, run reference and tested commit as unavailable. It explicitly refuses source revision, work/lifecycle status and authored test plans as substitutes. No optional coverage lead becomes a required field or relationship."
+    },
+    "H04": {
+      "passed": true,
+      "reason": "The actual unresolved explanation identifies the unavailable latest CI verdict, run reference and tested commit. Required fields and relationships are empty, retaining the literal AC anchor; optional discovery leads remain rationale only."
+    }
+  },
+  "semantic_gate_passes": 16,
+  "total_cases": 16,
+  "original_cases_passed": 12,
+  "original_case_count": 12,
+  "new_holdouts_passed": 4,
+  "new_holdout_count": 4,
+  "jev_calls": 0,
+  "graph_calls": 0,
+  "host_model_id": null,
+  "host_tokens": null,
+  "underlying_host_model_call_count": null,
+  "no_model_regeneration": true,
+  "no_threshold_or_gold_changes": true,
+  "runtime_fingerprint": "900be6a02ade81be0144e00f9890bc100d0ca892fdfbf6e4dab039adfab98059",
+  "runtime_base_revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "frozen_plan_sha256": "7c36fd8157d0038ecee48f06c4227ac616a596bda643a1f691d18eeeb93b22ab",
+  "manifest_sha256": "1bf068f19e4269e790b8523d3e1aa05c91dd39f54cd2a71eaf90b7ae262dd102",
+  "failures": [],
+  "meaning_review": "Verification questions select criteria plus test_spec. Narrow field questions remain narrow. Declared-reference values differ from related Test records and complete linked populations. Missing execution evidence remains explicitly unavailable without proxy obligations.",
+  "execution_limits": "This batch proves only these sixteen interpretation outcomes. It does not establish retrieval execution, CI outcomes, full-document or exhaustive-relationship support. The earlier Aura 0/3 whole-question baseline and v1 10/12 interpretation result are unchanged. A separate four-case Aura retest is required.",
+  "responses": [
+    {
+      "id": "IP01",
+      "sha256": "d9b06a12a9c4751b97e83702b4bed9acda8684346d37687546570a1701ca28ce",
+      "result_sha256": "0d07797d208ebac93d7c77a188ca7b0a8ce615d0ddca2d078392fcc706b14e1c"
+    },
+    {
+      "id": "IP02",
+      "sha256": "429f908bcde002bda801f86eebd19add5e5d7b90780323ec26351e226b4b4a13",
+      "result_sha256": "d7f017b48df0a256650cfa0b05c5e795c9fdbb7a643cd8f05e69c30d59c425c2"
+    },
+    {
+      "id": "IP03",
+      "sha256": "ecc8ca90bea98fcd57deca39c2947e2fe29fd3004a6f2cb84f6a82a01d4f9b38",
+      "result_sha256": "a5095ee08e17aa066685513b85791212d18b5a9aa12198edfa34d24f01a1e564"
+    },
+    {
+      "id": "IP04",
+      "sha256": "1d915ba2b4c69386215d348643ff981ebcd58ed10f2804a3fb2de7d46c3b3b2c",
+      "result_sha256": "ad418efdeb5d48910688e01779dd18967f8ba03537c2d1fa4b1cddcd89ce15c0"
+    },
+    {
+      "id": "IP05",
+      "sha256": "b4a8b3032cf0221b3b6f1c740f81f9d52012074500e261382f72cc813d6988d3",
+      "result_sha256": "1901a7dd6084786efa9d262ec946b2b077158ea097ee980f31d1875c20b6f621"
+    },
+    {
+      "id": "IP06",
+      "sha256": "30eb02cc11992663a8b3405001f25816d478b7c226ddae8c4cf337bc56d97d04",
+      "result_sha256": "9b042ed458016d8c5bc050b4f5b3e2843766bb3bcf067d8398752948c7232d2f"
+    },
+    {
+      "id": "IP07",
+      "sha256": "727bb1e6dfee204dc307f88d1f28451f25f75c64f7d0032aa97c69c28c9d5812",
+      "result_sha256": "ccd9380285bdc93835d7e3d835ddf1bb5ae9d0ff24686d1741e09687d702b67f"
+    },
+    {
+      "id": "IP08",
+      "sha256": "1b9b6f8af1d91df1e28b05f3f963a1e6276852b19e936928ccb1586c2d2ab4fe",
+      "result_sha256": "6b74f1ea2893b95d4dafba0135c658d4a6d13a0402257eef9c8eec04c22296a8"
+    },
+    {
+      "id": "IP09",
+      "sha256": "9d837a59ff8fea15027a1f58489379417c9c865e41cf98f51ef9ce23c0861065",
+      "result_sha256": "74475067a3e2d3111e11c3d2d026b5f0a5f7a4d7403b8aa476dd86c3c0920ee1"
+    },
+    {
+      "id": "IP10",
+      "sha256": "e285a1048348743cba3e7a612f31ce7298eb6c8e6fb05b273ec193e6d984917b",
+      "result_sha256": "b4e70a0fe4419f54c6b0a0170323f6dbf4450ed9502eb3231874471740b9681a"
+    },
+    {
+      "id": "IP11",
+      "sha256": "74908cc095a349c430252431efd681271e783bdede038c994172717989e40d35",
+      "result_sha256": "08fc718a60caaa2176aca31631f9d6ae15e1a322e52da8157ce7bf20aae884bd"
+    },
+    {
+      "id": "IP12",
+      "sha256": "36df777b6f617008062c9ff2bc9f2dde0b19edfbbd9011d737463197627dc67f",
+      "result_sha256": "9c75ab8013997618b8ecf8903404e32338088a539d307ea2cde4d8014c629b82"
+    },
+    {
+      "id": "H01",
+      "sha256": "0109736c35e3dc440c99e8ea48791edaf1205dbb99cdb652b21942cc869f5ba7",
+      "result_sha256": "f70e00b14669f2720ced3eb1d4132fe4dc100712421e03dbbc52f55e498c693c"
+    },
+    {
+      "id": "H02",
+      "sha256": "2e8b8f4a0d9c74605e77f93f57c84ac7033cc7f40ebcbffc8911b3d53fb6730b",
+      "result_sha256": "9f3b4a09aec3f11b7ca1eb6d914bb9dfb66c884dee20d20c3157920e6890d6e5"
+    },
+    {
+      "id": "H03",
+      "sha256": "31e20d30a0e6be2cd0a36341e2cd0fd8ee9bcb6ddc366162695e0c45dc5159b6",
+      "result_sha256": "ee6904b25a18f23868da9b2ded9857b3d6c1e2cc1a523162a8d9a7be3eab3d49"
+    },
+    {
+      "id": "H04",
+      "sha256": "f60137f908d17ad723601231aaf048ea28bf507957de28564599bbd7a01bac32",
+      "result_sha256": "7fdd172c865f7a7673b11b1f77566bf68bf5ca22cdfa308b9dbbafbb187b575d"
+    }
+  ]
+}

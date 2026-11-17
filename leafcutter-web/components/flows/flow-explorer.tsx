@@ -35,7 +35,6 @@ import {
   type PngEdge,
 } from "@/lib/png-export";
 import { WORK_STATUS_TONE } from "@/lib/status";
-import { cn } from "@/lib/utils";
 import type { Flow, GraphEdge, MockData, SelfRel, WorkStatus } from "@/lib/data/types";
 
 interface XY {
@@ -43,15 +42,14 @@ interface XY {
   y: number;
 }
 import { flowNodeTypes } from "./flow-nodes";
+import { buildFlowEdges } from "./parts/flow-explorer-edges";
+import { cardLabel } from "@/lib/flow-finder/actor";
 import { artifactEdgeTypes } from "./self-loop-edge";
-import {
-  edgeStyle,
-  artifactEdgeStyle,
-  INGESTABILITY_LEGEND,
-  ARTIFACT_GROUP_HSL,
-  ARTIFACT_GROUP_LABEL,
-} from "@/components/atlas/edges";
-import { FlowDrawer, type StepView } from "./flow-drawer";
+import { artifactEdgeStyle } from "@/components/atlas/edges";
+import { FlowDrawer } from "./flow-drawer";
+import { ArtifactLegend } from "./artifact-legend";
+import { FlowLegend } from "./flow-legend";
+import { buildStepViews, useStepSelection } from "./flow-step-view";
 
 const COL_GAP = 340;
 const AC_DROP = 210;
@@ -61,10 +59,6 @@ const BRANCH_DROP = 430;
 // at identical coordinates and hide each other. A lane clears the branch card
 // plus its AC row (AC_DROP) beneath it.
 const BRANCH_LANE = AC_DROP + 180;
-
-const STATUS_LEGEND: WorkStatus[] = ["done", "in_progress", "not_started"];
-const EDGE_LEGEND_ALL = ["flow", "implements"] as const;
-type EdgeLegendKind = (typeof EDGE_LEGEND_ALL)[number];
 
 // ---------------------------------------------------------------------------
 // ArtifactExplorerInner — React Flow canvas for the authored artifact graph.
@@ -344,122 +338,7 @@ function ArtifactExplorerInner({ flow }: { flow: Flow }) {
       </div>
 
       {/* Artifact graph legend */}
-      <div className="pointer-events-none absolute right-4 top-4 z-10">
-        <div className="pointer-events-auto panel max-w-xs p-3.5">
-          <div className="eyebrow mb-2">Legend</div>
-          <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
-            Node group
-          </div>
-          <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1.5">
-            {Object.entries(ARTIFACT_GROUP_LABEL).map(([group, label]) => (
-              <span
-                key={group}
-                className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground"
-              >
-                <span
-                  className="h-2 w-[3px] rounded-full"
-                  style={{ background: `hsl(${ARTIFACT_GROUP_HSL[group]})` }}
-                />
-                {label}
-              </span>
-            ))}
-          </div>
-          <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
-            Edge trust
-          </div>
-          <div className="flex flex-col gap-1">
-            {INGESTABILITY_LEGEND.map((row) => (
-              <span
-                key={row.key}
-                className="inline-flex items-baseline gap-1.5 text-[11px] text-muted-foreground"
-              >
-                <svg width="20" height="6" className="shrink-0 overflow-visible">
-                  <line
-                    x1="0" y1="3" x2="20" y2="3"
-                    stroke={`hsl(${row.hsl})`}
-                    strokeWidth="2"
-                    strokeDasharray={
-                      row.key === "absent"
-                        ? "2 7"
-                        : row.key === "untrusted"
-                          ? "4 3"
-                          : undefined
-                    }
-                  />
-                </svg>
-                <span className="text-foreground/85">{row.label}</span>
-                <span className="text-[9px] text-muted-foreground/70">{row.hint}</span>
-              </span>
-            ))}
-          </div>
-          <p className="mt-2.5 text-[9px] leading-relaxed text-muted-foreground/70">
-            Labels show the <span className="font-mono">field</span> that encodes each edge.
-            ⚠ ambiguous · ~ freetext · ∅ often-empty — these need partitioning before
-            ingestion even when enforced. Dashes mark derived or untrusted links.
-            A red ✗ line is a relation the repo does NOT have — recorded so a gap
-            is distinguishable from an omission, never traversable.
-            Click an edge for its full trust record; ↺ on a card lists
-            self-referencing relationships.
-          </p>
-
-          {selectedEdge && (() => {
-            const spec = artifactEdgeStyle(
-              selectedEdge.enforcement ?? "none",
-              selectedEdge.shape ?? "clean",
-              selectedEdge.status ?? "present",
-            );
-            return (
-              <div className="mt-3 border-t border-border/40 pt-2.5">
-                <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <span
-                    className="text-[11px] font-semibold"
-                    style={{ color: `hsl(${spec.hsl})` }}
-                  >
-                    {selectedEdge.rel}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedEdge(null)}
-                    className="text-[10px] text-muted-foreground hover:text-foreground"
-                  >
-                    close
-                  </button>
-                </div>
-                <dl className="space-y-1 text-[9.5px] leading-relaxed">
-                  <div>
-                    <dt className="inline text-muted-foreground/70">field </dt>
-                    <dd className="inline font-mono text-foreground/85">
-                      {selectedEdge.field ?? "—"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="inline text-muted-foreground/70">trust </dt>
-                    <dd className="inline text-foreground/85">
-                      {selectedEdge.status === "absent"
-                        ? "no such link"
-                        : `${selectedEdge.enforcement} · ${selectedEdge.shape}`}{" "}
-                      <span style={{ color: `hsl(${spec.hsl})` }}>
-                        ({spec.ingestability})
-                      </span>
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="inline text-muted-foreground/70">cardinality </dt>
-                    <dd className="inline text-foreground/85">
-                      {selectedEdge.cardinality ?? "—"}
-                    </dd>
-                  </div>
-                  {selectedEdge.note && (
-                    <div className="pt-0.5 text-muted-foreground">
-                      {selectedEdge.note}
-                    </div>
-                  )}
-                </dl>
-              </div>
-            );
-          })()}
-        </div>
-      </div>
+      <ArtifactLegend selectedEdge={selectedEdge} onClose={() => setSelectedEdge(null)} />
     </div>
   );
 }
@@ -477,7 +356,7 @@ function ExplorerInner({
   screenTitles: Record<string, string>;
   onDrill?: (childFlowId: string) => void;
 }) {
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [selectedId, setSelectedId] = useStepSelection();
 
   // "Show ACs in graph" toggle — default OFF; persisted as a simple view preference.
   const [showAcNodes, setShowAcNodes] = React.useState<boolean>(() => {
@@ -505,53 +384,10 @@ function ExplorerInner({
   );
 
   // Step-view lookup for the drawer, keyed by the graph node id (`step:<id>`).
-  const stepViews = React.useMemo(() => {
-    const m = new Map<string, StepView>();
-    for (const s of flow.steps) {
-      m.set(`step:${s.id}`, {
-        id: s.id,
-        label: s.label,
-        human: s.human,
-        screen: s.screen,
-        screenTitle: screenTitleFor(s.screen),
-        realization: flow.realization,
-        variant: "step",
-        status: s.implStatus,
-        agent: s.agent,
-        produces: s.produces,
-        consumes: s.consumes,
-        reads: s.reads,
-        writes: s.writes,
-        acs: s.acs,
-        scenarios: flow.scenarios.filter((sc) => sc.for === s.id),
-        expandsTo: s.expandsTo,
-        expandsToName: nameFor(s.expandsTo),
-      });
-    }
-    for (const b of flow.branches) {
-      m.set(`step:${b.id}`, {
-        id: b.id,
-        label: b.label,
-        human: b.human,
-        screen: b.screen,
-        screenTitle: screenTitleFor(b.screen),
-        realization: flow.realization,
-        variant: "branch",
-        condition: b.condition,
-        status: b.implStatus,
-        agent: b.agent,
-        produces: b.produces,
-        consumes: b.consumes,
-        reads: b.reads,
-        writes: b.writes,
-        acs: b.acs,
-        scenarios: flow.scenarios.filter((sc) => sc.for === b.id),
-        expandsTo: b.expandsTo,
-        expandsToName: nameFor(b.expandsTo),
-      });
-    }
-    return m;
-  }, [flow, nameFor, screenTitleFor]);
+  const stepViews = React.useMemo(
+    () => buildStepViews(flow, screenTitleFor, nameFor),
+    [flow, nameFor, screenTitleFor],
+  );
 
   /* ---------- positions ---------- */
   const positions = React.useMemo(() => {
@@ -589,6 +425,10 @@ function ExplorerInner({
   }, [graph]);
 
   /* ---------- nodes + edges ---------- */
+  const nodeSource = React.useMemo(
+    () => new Map([...flow.steps, ...flow.branches].map((x) => [x.id, x])),
+    [flow],
+  );
   const nodes = React.useMemo<Node[]>(
     () =>
       graph.nodes.map((n) => {
@@ -627,18 +467,24 @@ function ExplorerInner({
         const acDone = (n.meta?.acDone as number) ?? 0;
         const expandsTo = (n.meta?.expandsTo as string | null) ?? null;
         const screen = (n.meta?.screen as string | null) ?? null;
+        const variant = (n.meta?.variant as "step" | "branch") ?? "step";
+        const actorKind = nodeSource.get(n.id.replace(/^step:/, ""))?.actorKind ?? null;
         return {
           id: n.id,
           type: "flowStepNode",
           position: p,
+          focusable: false, // the card itself is the focusable, named button
           data: {
+            actorKind,
+            cardName: cardLabel({ variant, label: n.label, order: n.meta?.order as number | undefined, stepCount: flow.steps.length, actorKind }),
+            onOpen: () => setSelectedId(n.id),
             label: n.label,
             order: n.meta?.order as number | undefined,
             screen,
             screenTitle: screenTitleFor(screen),
             realization: flow.realization,
             status: (n.status as WorkStatus) ?? "unknown",
-            variant: (n.meta?.variant as "step" | "branch") ?? "step",
+            variant,
             acCount: acIds.length,
             acDone,
             drillable: Boolean(expandsTo && flowNames[expandsTo]),
@@ -647,52 +493,10 @@ function ExplorerInner({
           draggable: false,
         };
       }),
-    [graph, positions, selectedId, flowNames, screenTitleFor, flow.realization],
+    [graph, positions, selectedId, flowNames, screenTitleFor, flow, nodeSource, setSelectedId],
   );
 
-  const edges = React.useMemo<Edge[]>(
-    () =>
-      graph.edges.map((e) => {
-        const spec = edgeStyle(e.kind);
-        const isFlow = e.kind === "flow";
-        const base: Edge = {
-          id: e.id,
-          source: e.source,
-          target: e.target,
-          animated: isFlow,
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: `hsl(${spec.hsl})`,
-            width: 15,
-            height: 15,
-          },
-          style: {
-            stroke: `hsl(${spec.hsl})`,
-            strokeWidth: isFlow ? 2 : 1.4,
-            opacity: isFlow ? 0.85 : 0.55,
-            strokeDasharray: spec.dashed ? "5 4" : undefined,
-          },
-        };
-        // Decision edge label (yes / no / else / continue)
-        if (e.label) {
-          base.label = e.label;
-          base.labelStyle = {
-            fill: "hsl(155 7% 78%)",
-            fontSize: 10,
-            fontWeight: 600,
-          };
-          base.labelBgStyle = {
-            fill: "hsl(158 12% 11%)",
-            fillOpacity: 0.88,
-          };
-          base.labelBgPadding = [3, 5] as [number, number];
-        }
-        // Source handle routing for decision diamond edges ("yes" | "no")
-        if (e.sourceHandle) base.sourceHandle = e.sourceHandle;
-        return base;
-      }),
-    [graph],
-  );
+  const edges = React.useMemo<Edge[]>(() => buildFlowEdges(graph.edges), [graph]);
 
   const onNodeClick = React.useCallback(
     (evt: React.MouseEvent, node: Node) => {
@@ -708,7 +512,7 @@ function ExplorerInner({
       }
       setSelectedId(node.id);
     },
-    [stepViews, onDrill],
+    [stepViews, onDrill, setSelectedId],
   );
 
   const selectedStep = selectedId ? stepViews.get(selectedId) ?? null : null;
@@ -755,98 +559,7 @@ function ExplorerInner({
         />
       </ReactFlow>
 
-      {/* legend */}
-      <div className="pointer-events-none absolute right-4 top-4 z-10">
-        <div className="pointer-events-auto panel max-w-xs p-3.5">
-          <div className="eyebrow mb-2">Legend</div>
-          <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
-            Step status
-          </div>
-          <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1.5">
-            {STATUS_LEGEND.map((st) => {
-              const tone = WORK_STATUS_TONE[st];
-              return (
-                <span
-                  key={st}
-                  className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground"
-                >
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ background: `hsl(${tone.hsl})` }}
-                  />
-                  {tone.label}
-                </span>
-              );
-            })}
-          </div>
-          <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
-            Edge type
-          </div>
-          <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1.5">
-            {(showAcNodes ? EDGE_LEGEND_ALL : (["flow"] as EdgeLegendKind[])).map((kind) => {
-              const spec = edgeStyle(kind);
-              return (
-                <span
-                  key={kind}
-                  className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground"
-                >
-                  <svg width="20" height="6" className="overflow-visible">
-                    <line
-                      x1="0"
-                      y1="3"
-                      x2="20"
-                      y2="3"
-                      stroke={`hsl(${spec.hsl})`}
-                      strokeWidth="2"
-                      strokeDasharray={spec.dashed ? "4 3" : undefined}
-                    />
-                  </svg>
-                  {spec.label}
-                </span>
-              );
-            })}
-          </div>
-          {/* Feature-level AC rollup + "Show ACs in graph" toggle */}
-          <div className="border-t border-border/50 pt-2.5">
-            {flow.implSummary.acTotal > 0 && (
-              <div className="mb-2 text-[11px] text-muted-foreground">
-                Feature:{" "}
-                <span
-                  className="font-mono font-semibold tabular-nums"
-                  style={{ color: `hsl(${WORK_STATUS_TONE.done.hsl})` }}
-                >
-                  {flow.implSummary.acDone}
-                </span>
-                <span className="font-mono tabular-nums">
-                  /{flow.implSummary.acTotal}
-                </span>{" "}
-                ACs done
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={handleToggleShowAcNodes}
-              className={cn(
-                "inline-flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-[11px] transition-colors",
-                showAcNodes
-                  ? "bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
-              )}
-              title={showAcNodes ? "Hide AC nodes from graph" : "Show AC nodes in graph"}
-            >
-              <span>Show ACs in graph</span>
-              <span
-                className={cn(
-                  "h-2.5 w-2.5 rounded-full border transition-colors",
-                  showAcNodes
-                    ? "border-primary/60 bg-primary"
-                    : "border-muted-foreground/40 bg-transparent",
-                )}
-              />
-            </button>
-          </div>
-        </div>
-      </div>
+      <FlowLegend flow={flow} showAcNodes={showAcNodes} onToggleAcNodes={handleToggleShowAcNodes} />
 
       <FlowDrawer
         step={selectedStep}

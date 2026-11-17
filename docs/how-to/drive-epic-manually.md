@@ -1,19 +1,19 @@
 ---
-title: "How to drive an epic manually when epic-supervisor is unavailable"
+title: How to drive an epic manually when epic-supervisor is unavailable
 type: how-to
 status: active
 created: 2026-05-29
 last_updated: 2026-05-29
 components:
-  - build_pipeline
+- build_pipeline
 related_docs:
-  - docs/agents/supervisor/epic-supervisor.md
-  - docs/agents/supervisor/ticket-supervisor.md
-  - docs/build-pipeline.md
-  - templates/skills/build-feature-ops-notes/SKILL.md
-  - templates/skills/building-epics/SKILL.md
+- docs/agents/supervisor/epic-supervisor.md
+- docs/agents/supervisor/ticket-supervisor.md
+- docs/build-pipeline.md
+- templates/skills/build-feature-ops-notes/SKILL.md
+- templates/skills/building-epics/SKILL.md
+description: Overview of How to drive an epic manually when epic-supervisor is unavailable.
 ---
-
 # How to drive an epic manually when epic-supervisor is unavailable
 
 This guide explains how to orchestrate an epic by hand when `epic-supervisor`
@@ -31,7 +31,7 @@ exactly this procedure.
 
 ## Prerequisites
 
-- You have a git worktree for the epic branch, or you are about to create one.
+- You have a workspace for the epic, or you are about to ask the workspace maker (see [get-a-workspace](get-a-workspace.md)) for one.
 - The epic folder exists in `tickets/00_inbox/epics/<EPIC-Name>/` and contains
   a `Master_Plan.md` with a dependency graph and sub-ticket table.
 - `ticket-supervisor` is functional (only `epic-supervisor` is unavailable).
@@ -62,9 +62,9 @@ arrows.
 
 ### Step 2 — Push any unpushed local commits (KI-1 prevention)
 
-Before creating the worktree, verify that every commit your epic folder depends
+Before creating the workspace, verify that every commit your epic folder depends
 on is on `origin/main`. If commits exist locally but are not yet pushed, the
-worktree will be created from `origin/main` and will not contain the epic files.
+workspace made by the workspace maker (see [get-a-workspace](get-a-workspace.md)) will start from `origin/main` and will not contain the epic files.
 
 ```bash
 git log --oneline origin/main..main
@@ -84,25 +84,24 @@ git log --oneline origin/main..main
 
 Expected output: no lines (empty). If lines appear, push again and re-check.
 
-### Step 3 — Create the worktree via EnterWorktree
+### Step 3 — Ask for the workspace
 
-Use the `EnterWorktree` tool to create a fresh worktree for the epic branch.
-Do not use any shell script that may not exist.
+Ask the workspace maker (see [get-a-workspace](get-a-workspace.md)) for a workspace of kind `epic`; do not use any other way to make one.
 
-The tool creates a worktree at the path it returns. Note the exact path — you
+The answer names the workspace path. Note it (`<WORKTREE_PATH>` below) — you
 will need it in every subsequent step.
 
-### Step 4 — Verify the epic folder is reachable in the worktree
+### Step 4 — Verify the epic folder is reachable in the workspace
 
-After `EnterWorktree` returns, confirm the epic folder is present in the new
-worktree:
+After the maker answers, confirm the epic folder is present in the new
+workspace:
 
 ```bash
 ls "<WORKTREE_PATH>/tickets/00_inbox/epics/<EPIC-Name>/Master_Plan.md"
 ```
 
 Expected output: the filename is printed with no error. If the file is absent,
-the worktree was created from a commit that predates the epic folder commit.
+the workspace was made from a commit that predates the epic folder commit.
 Resolve with a cherry-pick (see Troubleshooting §1) before continuing.
 
 ### Step 5 — Identify the first ready ticket
@@ -199,8 +198,9 @@ status: done
 Commit this change:
 
 ```bash
-git -C "<WORKTREE_PATH>" add tickets/00_inbox/epics/<EPIC-Name>/Master_Plan.md
-git -C "<WORKTREE_PATH>" commit -m "chore: mark <EPIC-Name> Master_Plan done"
+cd "<WORKTREE_PATH>"
+git add tickets/00_inbox/epics/<EPIC-Name>/Master_Plan.md
+git commit -m "chore: mark <EPIC-Name> Master_Plan done"
 ```
 
 ### Step 12 — Run the changelog and retrospective
@@ -253,9 +253,9 @@ appear, commit or discard them before pushing.
 
 ## Troubleshooting
 
-1. **Epic folder absent from worktree after EnterWorktree**
+1. **Epic folder absent from the workspace after asking for it**
 
-   The worktree was created from a commit that predates the epic folder commit.
+   The workspace made by the workspace maker (see [get-a-workspace](get-a-workspace.md)) started from a commit that predates the epic folder commit.
    Identify the missing commit on the host repo:
 
    ```bash

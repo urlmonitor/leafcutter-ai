@@ -86,7 +86,7 @@ def make_agent(agent_id: str = "fixture-agent", step_kinds: list | None = None, 
         "spawned_by": ["user"],
         "is_ticket_phase": False,
         "template_path": None,
-        "skills_used": [],
+        "skills_invoked": [],
         "produces": "configuration",
     }
     if step_kinds is not None:

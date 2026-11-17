@@ -1,0 +1,35 @@
+{
+  "description": "Labelled single and bundled requests for the opt-in live eval of the bundle question (DK-400a-3-i). `label` is single (one question, even with alternatives or constraints) or bundled (several separate questions).",
+  "cases": [
+    {
+      "id": "retention-period",
+      "goal": "Which retention period should the kernel's Langfuse traces use?",
+      "label": "single"
+    },
+    {
+      "id": "node-or-subgraph",
+      "goal": "Should this new capability be an atomic node or an encapsulated subgraph, given that it must be resumable and traced?",
+      "label": "single"
+    },
+    {
+      "id": "reusable-criteria",
+      "goal": "For the kernel we often use similar decision basis and we should also reuse them. So it would be cool to not only store decisions, but also to be able to reuse categories. As a start we can probably mine them from langfuse, and we can should put them into a new file type (needs evaluation), and then also into neo4j. And we must make sure that we are able to cluster them somehow. That way we only need LLMs to generate further categories if jev thinks some are missing to make better decision",
+      "label": "bundled"
+    },
+    {
+      "id": "decision-records",
+      "goal": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+      "label": "bundled"
+    },
+    {
+      "id": "trace-analyzers",
+      "goal": "Decide which recent kernel traces the trace analyzers read and how often they run, so their findings reach the next decision run.",
+      "label": "bundled"
+    },
+    {
+      "id": "reuse-threshold-research",
+      "goal": "Find where the kernel reads memory.reuse_threshold, which tests cover the reuse offer, and whether an ADR fixes the 0.8 value.",
+      "label": "bundled"
+    }
+  ]
+}

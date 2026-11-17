@@ -270,7 +270,7 @@ from build_phases_agents_skills import (  # noqa: E402, F401  # re-exported for 
     build_skills,
 )
 from build_phases_workflows import (  # noqa: E402, F401  # re-exported for callers
-    _emit_workflow_variant,
+    _emit_workflow_variant, _workflow_source_bytes,
     build_workflow_scripts,
     build_workflows,
     build_workflow_tools,
@@ -327,6 +327,7 @@ from build_phases_clean import (  # noqa: E402, F401  # re-exported for callers
     _MANAGED_ARTIFACT_DIRS,
     clean_stale_artifacts,
 )
+from build_phases_feedback_writers import run_feedback_writer_check  # noqa: E402, F401  # re-exported (INF-100c-5)
 
 
 def _compute_phase_mappings(
@@ -488,7 +489,7 @@ def _compute_phase_mappings(
 #   (#EPIC-TruthfulProjectRecord/04)
 # - 2026-09-13 [python-coder/BP-1000a-7]: Fixed _write()'s compare-before-write
 #   guard and the write itself to operate on raw UTF-8 bytes instead of text
-#   mode. Previously target.write_text(content, encoding="utf-8") let Python's
+#   mode. Previously target.write_text(content, encoding="utf-8", newline="\n") let Python's
 #   text-mode newline translation widen every LF in content to os.linesep, so
 #   on Windows every deployed text artifact landed CRLF while its source
 #   template stayed LF, producing check-hook-parity / check-output-drift

@@ -76,7 +76,7 @@ flowchart TD
 
 | Name | Type | Description |
 |------|------|-------------|
-| `none` | — | Read-only agent — no filesystem mutations |
+| `requirement_records` | — | Authors L2/L3 requirement records, one AC YAML file each, with id, title, component, components, level, criteria, depends_on, assigned_agent, delivers_to, expects_from and doc_links |
 ---
 
 ## Tools Available
@@ -88,14 +88,15 @@ flowchart TD
 | `Edit` |
 | `Bash` |
 | `Skill` |
+| `Agent` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `ac-tree-split` | — | — |
-| `knowledge-query` | — | — |
+| `knowledge-query` | conditional | Use when you need to search a keyword across agents, skills, docs and ADRs for component context. |
+| `ac-tree-split` | conditional | When a split L1 is overcrowded, load ac-tree-split to redistribute its L2s (Pattern C). |
 ---
 
 ## Configuration
@@ -111,15 +112,3 @@ flowchart TD
 |---------|---------|----------|---------------|
 | Conditional Behavior | a file is absent | unreadable, binary, or exceeds 50 KB | `None` |
 | Conditional Behavior | it exists and is ≤ 50 KB of readable text | absorb its contents into your | `None` |
----
-
-## AC Assignments
-
-### business-analyst
-
-- ACS-500g-6: The first pattern produced is the three-round seeded-gap agent-evaluation protocol
-- ACS-500g-6-i: An agent passes evaluation only when it catches every seeded item in all three rounds
-- ACS-500g-6-ii: The agent under test is never told which items are seeded, or how many
-- ACS-500g-7: The first pattern gets its first consumer, closing the producer-to-consumer loop
-- UXP-402: On approval, acceptance criteria are generated from the flow's steps
-- UXP-402a: If the person rejects the drafted flow at review, no acceptance criteria are generated

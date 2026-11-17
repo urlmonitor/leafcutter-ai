@@ -1,0 +1,125 @@
+{
+  "kind": "Ticket",
+  "status": "implemented",
+  "date": "2026-10-02",
+  "review": "reports/native-fields/review-Ticket.json",
+  "files": [
+    "knowledge/native_types/ticket.py",
+    "tests/knowledge/test_native_ticket.py"
+  ],
+  "source_fidelity": {
+    "records": 1532,
+    "distinct_frontmatter_fields": 44,
+    "epic_subtypes": 92,
+    "full_frontmatter_equality": true,
+    "body_equality": true,
+    "identity": "repository-relative path",
+    "raw_defaults_added": false
+  },
+  "test_evidence": {
+    "red": {
+      "receipt": "reports/native-fields/ticket-red.xml",
+      "failed": 9,
+      "reason": "Ticket native reader did not exist"
+    },
+    "green": {
+      "receipt": "reports/native-fields/ticket-green.xml",
+      "passed": 9
+    },
+    "mutation_imported_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\ticket.py",
+    "mutation_scope": "in-memory replacement of the production module that tests import; no source file mutation",
+    "mutation_results": [
+      {
+        "test": "test_ticket_excludes_readme_generic_notes_and_missing_frontmatter",
+        "alteration": "Admit README epic as a Ticket by deleting both filename guards",
+        "result": "RED",
+        "failure_type": "AssertionError",
+        "restored": "GREEN"
+      },
+      {
+        "test": "test_ticket_excludes_readme_generic_notes_and_missing_frontmatter",
+        "alteration": "Admit generic frontmatter notes as tickets",
+        "result": "RED",
+        "failure_type": "AssertionError",
+        "restored": "GREEN"
+      },
+      {
+        "test": "test_ticket_excludes_readme_generic_notes_and_missing_frontmatter",
+        "alteration": "Admit ticket-like file without YAML frontmatter",
+        "result": "RED",
+        "failure_type": "AssertionError",
+        "restored": "GREEN"
+      },
+      {
+        "test": "test_ticket_never_defaults_missing_fields_or_normalizes_historical_values",
+        "alteration": "Invent missing depends_on default",
+        "result": "RED",
+        "failure_type": "AssertionError",
+        "restored": "GREEN"
+      },
+      {
+        "test": "test_ticket_never_defaults_missing_fields_or_normalizes_historical_values",
+        "alteration": "Normalize historical open status to done",
+        "result": "RED",
+        "failure_type": "AssertionError",
+        "restored": "GREEN"
+      },
+      {
+        "test": "test_ticket_never_defaults_missing_fields_or_normalizes_historical_values",
+        "alteration": "Convert explicit nullable decision into false",
+        "result": "RED",
+        "failure_type": "AssertionError",
+        "restored": "GREEN"
+      },
+      {
+        "test": "test_ticket_absent_store_returns_no_records",
+        "alteration": "Invent a Ticket for an absent store",
+        "result": "RED",
+        "failure_type": "AssertionError",
+        "restored": "GREEN"
+      },
+      {
+        "test": "test_ticket_distinct_paths_and_epic_subtype_provenance",
+        "alteration": "Use basenames and collapse different source identities",
+        "result": "RED",
+        "failure_type": "AssertionError",
+        "restored": "GREEN"
+      },
+      {
+        "test": "test_ticket_distinct_paths_and_epic_subtype_provenance",
+        "alteration": "Mark all children inside EPIC folders as epic",
+        "result": "RED",
+        "failure_type": "AssertionError",
+        "restored": "GREEN"
+      },
+      {
+        "test": "test_ticket_invalid_frontmatter_is_explicit_failure",
+        "alteration": "Swallow malformed frontmatter '---\\ntitle: x\\n'",
+        "result": "RED",
+        "failure_type": "Failed",
+        "restored": "GREEN"
+      },
+      {
+        "test": "test_ticket_invalid_frontmatter_is_explicit_failure",
+        "alteration": "Swallow malformed frontmatter '---\\n[bad, mapping]\\n---\\n'",
+        "result": "RED",
+        "failure_type": "Failed",
+        "restored": "GREEN"
+      },
+      {
+        "test": "test_ticket_invalid_frontmatter_is_explicit_failure",
+        "alteration": "Swallow malformed frontmatter '---\\na: [\\n---\\n'",
+        "result": "RED",
+        "failure_type": "Failed",
+        "restored": "GREEN"
+      }
+    ]
+  },
+  "integration_notes": [
+    "Registry should register Ticket -> knowledge.native_types.ticket.extract.",
+    "Each metadata mapping is exact and may include date objects; use shared lossless property projection.",
+    "Native ID is the complete source path; qualify it by kind in graph identity.",
+    "derived.body, derived.subtype, derived.subtype_source, and conditional derived.title_source are separate from source metadata.",
+    "Component links may use explicit components only; this reader does not invent dependency, signoff, completion or fulfillment evidence."
+  ]
+}

@@ -1,0 +1,104 @@
+id: DK-500e-3
+title: With no fitting published category, a decision is framed exactly as without the library
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the published criteria library is empty,
+  When a design decision is framed,
+  Then options and criteria are proposed exactly as in a run without the library, through the same request to the host,
+  And no gap judgement is made and no Jev call is spent on reuse, grouping or a gap,
+  And the run reaches the approval of proposals with the same number of Jev calls and host requests as a run without the library,
+  And when one published category fits the same decision, it is offered.
+depends_on:
+- DK-500e
+- DK-500d-1
+covered_by:
+- DK-500e-3-i
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-500d-1
+  contract: Reuse step returning no fitting category.
+change_target: code
+risk_surface: internal
+it_requirements:
+- 'Cold-start parity: with no fitting published category, the forming path makes exactly the same host requests (the same payload apart from run identifiers) and the same number of Jev calls as the forming path without the library, measured with a recording host port and Jev provider.'
+- No gap judgement, no grouping call (dec-a070edfb6465bced, cold start) and no reuse Jev call are made.
+- Wall-clock time is not asserted.
+test_required: true
+test_spec:
+- name: test_empty_library_frames_as_today
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: With an empty library, options and criteria are proposed through the same host request as in a run without the library.
+- name: test_no_jev_call_on_reuse_grouping_or_gap
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: No Jev call is spent on reuse, grouping or a gap.
+- name: test_same_call_counts_as_without_library
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Jev call and host request counts at the approval equal those of a run without the library.
+- name: test_one_fitting_category_is_offered
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: With one fitting published category, it is offered (positive control).
+test_rationale: Run the decision capability through the public run/resume boundary with a scripted Jev provider and a recording host port over a fixture category library; assert the approval payload, the run report, trace events and call counts rather than internal helpers.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  COLD START regression guard (DK-500e notes): an empty library must not block, degrade or slow a decision. "Not slowed" is measured as zero extra Jev calls and zero extra host requests, which a test can count; wall-clock time is not asserted.
+  The last clause is the anti-vacuity control: a reuse step that never offers anything passes every other clause.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: empty-library.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: empty-library
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-04'

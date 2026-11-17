@@ -1,0 +1,331 @@
+id: GE-118g-3
+title: "Where no repository can be established, each numbering tool says which situation it is in instead of answering about the directory it was started in"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - doc_compliance
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a directory that is not inside any git work tree and has no git work tree
+    beneath it, which contains a decision record claiming the number 68 and
+    nothing else,
+  When the author runs the collision pre-flight with that directory as the
+    working directory and no argument naming a repository,
+  Then it does not complete successfully, and what it reports states that no
+    repository could be established and names the directory it was asked from,
+  And it does not report a verdict about the number 68.
+
+  And when the author runs the unclaimed-number audit from that same directory
+    with no argument naming a scan root,
+  Then it does not complete successfully, and what it reports states that no
+    repository could be established and names the directory it was asked from,
+  And it reports no claimed set and no unclaimed set — in particular it does not
+    report 68 as claimed on the strength of the record sitting in that
+    directory.
+
+  And given a path that is named explicitly as the repository and that is not a
+    git work tree,
+  When either tool is run with that path named,
+  Then it does not complete successfully and what it reports names that path and
+    states that it is not a repository — it does not substitute the working
+    directory, and it does not substitute the tree the program's own files live
+    in.
+
+  And given the same explicitly-named path, now a genuine checkout of this
+    repository, run with a working directory that is a different checkout of the
+    same repository,
+  When either tool is run,
+  Then the answer it reports is about the explicitly-named checkout — so an
+    explicit instruction is honoured over the working directory rather than
+    merged with it.
+depends_on:
+  - GE-118g
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-118-hooks-work-in-worktrees/GE-118g.yaml
+    relationship: parent
+    status: exists
+  - path: templates/scripts/commit_guardian/check_adr_collision.py
+    relationship: modifies
+    status: exists
+  - path: scripts/adr_refs.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/commit_guardian/_resolve_root.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The established resolver, and the place the no-repository condition has to become
+      distinguishable. The fourth arm above — an explicit instruction outranks the working
+      directory — is the property that keeps a test harness able to point either tool at a
+      throwaway checkout, which is the practical reason it is stated rather than assumed.
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260914-ac-hooks-resolve-root-from-cwd.md
+    relationship: context
+    status: exists
+    relevance: >-
+      Records that 31 hooks already route through the shared resolver while six AC gates
+      default to the working directory, and that an instruction to "always run from the
+      repo root" has already failed to prevent three recurrences. That is the recorded
+      reason no clause here may be discharged by documentation.
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-022.md
+    relationship: context
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "A check that examined nothing must not look like a check that found nothing" is the
+      passage the first two arms enforce for this pair of tools, and the paragraph
+      beginning "the mirror image also occurred" is the specific prior instance — guard
+      tools returning FAILED with zero inspected, read as real findings. Behavioural
+      verification is binding: each arm is a real invocation from a real directory,
+      asserted on what the tool reported.
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The unresolvable condition must be representable. Neither tool can express it today:
+    find_project_root() in templates/scripts/commit_guardian/_resolve_root.py always
+    returns a Path — working-directory git read, then a __file__ ancestor walk keyed on
+    .git OR CLAUDE.md, then 'two levels up' — and adr_refs.py's _repo_root() returns the
+    directory it was asked from. Both terminal fallbacks must be replaced by a
+    distinguishable unresolvable outcome; a function whose return type cannot express
+    failure cannot satisfy any arm here."
+  - "Add the failable behaviour as a NEW entry point rather than changing
+    find_project_root() in place. 43 modules under templates/scripts/commit_guardian/
+    call it (measured 2026-10-09); altering its terminal fallback would change the
+    verdict of gates no criterion here mentions, including gates that are required status
+    checks."
+  - "THE TWO ENTRY POINTS MUST NOT SILENTLY DIVERGE, AND THE PART THAT MUST BE IDENTICAL
+    IS NARROW AND NAMED. They must differ in FAILURE REPRESENTATION — that is the entire
+    reason the second one is being added, so a blanket 'must behave identically'
+    requirement would be wrong and unimplementable. What must be identical is the SUCCESS
+    PATH: for every input on which a repository CAN be established, the two must return
+    the same repository, resolved through the same anchor, in the same order. The division
+    is therefore: identical on every input where resolution succeeds; required to differ
+    only on inputs where it does not, where find_project_root() keeps its present
+    fallback chain for its 43 existing callers and the new entry point reports
+    unresolvable."
+  - "THE MECHANISM FOR THAT, STATED BECAUSE THE OBVIOUS SHAPE IS THE WRONG ONE. The new
+    entry point must not be implemented as a wrapper that calls find_project_root() and
+    then inspects the returned Path to decide whether it looks resolved. That return value
+    is LOSSY: a Path from the git read, a Path from the .git-or-CLAUDE.md ancestor walk,
+    and a Path from the 'two levels up' terminal fallback are indistinguishable once
+    returned, so a post-filter cannot tell success from substitution and would have to
+    re-derive the answer it was given. Instead the shared ordered resolution must live in
+    ONE internal routine that reports BOTH the resolved root and the anchor that produced
+    it; find_project_root() keeps its present signature by discarding the anchor and
+    applying its legacy fallback, and the new entry point surfaces the anchor and reports
+    unresolvable. One resolution, two presentations."
+  - "A decision-history note stating that the two are kept in step does NOT discharge the
+    requirement above. GE-118c is the recorded instance of exactly that substitution — a
+    file asserting in its own comment that it was the single source of truth while nothing
+    read it. The agreement on the success path must be asserted by something that runs;
+    this record's parity entry is that something."
+  - "The CLAUDE.md ancestor-marker in that fallback walk is specifically why this record
+    is reachable rather than theoretical: this workspace's parent directory is not a git
+    work tree and DOES contain a CLAUDE.md, so a __file__-anchored walk from a deployed
+    copy resolves to it and then fails every git read against it. Any replacement must
+    not treat the presence of a project marker file as evidence that a repository was
+    established."
+  - "An explicitly named path must be honoured as given and never merged with, widened
+    by, or overridden by the working directory — including when the named path is not a
+    repository, where the refusal must name that path rather than silently falling back."
+  - "Both refusal reports must name the directory or path the tool was asked about. A
+    refusal that states only that resolution failed is the condition CLAUDE.md records
+    being misread as a real finding three separate times."
+  - "The two refusing conditions must stay separable from the two completing ones in the
+    audit's output: it must be possible to tell 'no repository could be established'
+    from 'a repository was established and claims nothing', because an implementation
+    that reports an empty claimed set on an unresolvable repository satisfies every other
+    arm here."
+  - "Must handle errors gracefully per the project error handling policy, and must not
+    present an absent answer as a clean answer."
+  - "If the failable resolver is a new module it must live in
+    templates/scripts/commit_guardian/ for the pre-flight side (deployed wholesale by
+    build_commit_guardian()) and as a tracked sibling under scripts/ for the audit side
+    (per GE-118g-2's import-boundary requirement). A module placed anywhere else needs an
+    explicit deploy-map entry in the SAME change, or the deployed hook raises
+    ModuleNotFoundError at hook runtime while source-tree tests stay green."
+test_spec:
+  - name: test_pre_flight_refuses_rather_than_judging_a_record_in_a_non_repository_directory
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    surface_invoked: templates/scripts/commit_guardian/check_adr_collision.py
+    description: >-
+      Arm 1. A directory that is not inside any work tree and has NO work tree beneath it,
+      containing one ADR-068 file and nothing else. Run the pre-flight there with no
+      repository argument. Three assertions, kept separate: non-zero exit; the output
+      states no repository could be established AND names that directory; the output
+      contains no verdict about 68 either way. No build.py spawn, no layout fixture, so
+      no marker.
+    must_catch:
+      - "when no repository can be established, treat the working directory as the repository and report the result"
+      - "refuse without naming the directory asked about"
+  - name: test_audit_refuses_and_reports_no_sets_in_a_non_repository_directory
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: failure
+    surface_invoked: scripts/adr_refs.py
+    description: >-
+      Arm 2, the narrowest in the record. Same directory, the audit instead. Assert
+      non-zero exit; that the report states no repository could be established and names
+      the directory; and — separately — that NO claimed set and NO unclaimed set is
+      reported, in particular that 68 is not reported as claimed on the strength of the
+      file sitting there. The separation matters: an implementation that refuses while
+      still printing an empty-or-populated set passes the first two assertions. No marker.
+    must_catch:
+      - "on an unestablishable repository, report an empty claimed set and complete successfully"
+      - "when no repository can be established, fall back to the working directory and report the result"
+  - name: test_explicitly_named_non_repository_is_refused_by_name_by_both_tools
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: >-
+      Arm 3, parameterised over both tools so neither can be half-fixed. Name a path
+      explicitly that is not a work tree, with the working directory set to a real
+      checkout so a fallback would succeed and be invisible. Assert non-zero exit and
+      that the report names the given path and states it is not a repository — and that
+      the answer is NOT about the working directory's checkout and NOT about the tree the
+      program's own files live in. No marker.
+    must_catch:
+      - "substitute the working directory when the named path is not a repository"
+      - "substitute the tree the program's own files live in"
+  - name: test_explicit_instruction_outranks_the_working_directory_for_both_tools
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 4. Two genuine checkouts of the repository with DIFFERENT claimed sets. Name
+      checkout X explicitly while the working directory is checkout Y, parameterised over
+      both tools. Assert the answer is about X alone — not Y, and not the union of the
+      two. The different claimed sets are the point: with identical content a union is
+      indistinguishable from honouring the instruction. No marker.
+    must_catch:
+      - "when a repository is named explicitly, union its contents with the working directory's"
+      - "prefer the working directory over an explicit instruction"
+  - name: test_legacy_and_failable_resolvers_agree_wherever_resolution_succeeds
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: seam
+    surface_invoked: templates/scripts/commit_guardian/check_adr_collision.py
+    description: >-
+      THE ENTRY-POINT PARITY TEST, for this record's divergence requirement. Over a table
+      of inputs on which a repository CAN be established — a plain checkout as the working
+      directory, a linked worktree, an explicitly named checkout, a deployed copy with a
+      declared anchor — exercise BOTH resolver entry points in one subprocess and assert
+      they return the SAME repository and name the SAME anchor in every case. Then, over
+      inputs where resolution CANNOT succeed, assert only that they differ in the expected
+      direction: the new entry point reports unresolvable while find_project_root() still
+      returns its legacy fallback Path. The two halves are asserted separately and
+      differently on purpose — identical on the success path, required to differ on the
+      failure path — because a blanket identity assertion would forbid the very behaviour
+      this record exists to add. No build.py spawn and no layout fixture, so no marker.
+    must_catch:
+      - "implement the new entry point as a post-filter over find_project_root()'s returned Path, which cannot distinguish a git-resolved root from the two-levels-up fallback"
+      - "let the two entry points resolve through different anchors, or through the same anchors in a different order"
+      - "change find_project_root()'s own fallback chain, altering the verdict of its 43 existing callers"
+      - "make the new entry point identical to find_project_root() on the failure path too, so the unresolvable condition is still unrepresentable"
+test_rationale: >-
+  Each entry is a real invocation from a real directory with the verdict read out of exit
+  status and output, and each of the record's four arms gets its own entry because the
+  record's three named mutations redden disjoint subsets of them — the fallback reddens
+  the first two, the silent success reddens the second alone, the merge reddens the third
+  and fourth. Collapsing any pair would make a mutation undetectable. Two shaping
+  decisions. First, arms 3 and 4 are PARAMETERISED over both tools rather than written
+  for one: this record exists because the promise is shared, and a test written for only
+  the pre-flight would let the audit ship with the same substitution. Second, arm 4's two
+  checkouts must carry DIFFERENT claimed sets, and arm 3 must be run with a working
+  directory that WOULD resolve successfully — in both cases so that a fallback or a union
+  produces a visibly wrong answer rather than an accidentally right one. The fixture for
+  arms 1 and 2 must satisfy the record's own qualifier, 'no git work tree beneath it':
+  a pytest tmp_path under /tmp satisfies it, whereas a temporary directory created inside
+  the repository does not and would reproduce a different condition.
+  THE FIFTH ENTRY IS ENRICHMENT'S OWN AND IS THE ONLY ONE THAT WATCHES THE TWO RESOLVER
+  ENTRY POINTS. This record requires a second entry point to exist — find_project_root()
+  cannot represent failure and has 43 callers, several backing required status checks, so
+  it cannot be changed in place — and two entry points are two things that can drift. The
+  entry is shaped by what must and must not be identical: identical on every input where
+  resolution SUCCEEDS (same repository, same anchor), required to DIFFER on inputs where
+  it does not, since the differing failure representation is the whole point of adding one.
+  Those two halves are therefore asserted separately and with different assertions; a
+  single blanket identity check would forbid the behaviour being added, and a single
+  blanket difference check would permit them to disagree about which repository they found.
+  The entry's first must_catch is the shape most likely to ship: a wrapper that calls
+  find_project_root() and inspects the Path it returns. That cannot work and the test must
+  prove it cannot — a Path from the git read, one from the .git-or-CLAUDE.md ancestor walk,
+  and one from the 'two levels up' terminal fallback are indistinguishable once returned,
+  so a post-filter silently reports success for a substitution. Markers: no entry on this
+  record requests shared_reference_layout and none spawns build.py, so all five sit outside
+  the marker-routing mechanism and pay no build cost; the deployed-layout import chain is
+  proved once by GE-118g-1's deployed entry and the deployed-versus-tracked resolver
+  agreement once by GE-118g's, and neither is re-paid here.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS AN L2 UNDER THE L1 AND NOT AN L3 UNDER EITHER SIBLING. It constrains BOTH
+  tools. An L3 hangs off exactly one parent, so filing it under GE-118g-1 would leave the
+  audit uncovered and filing it under GE-118g-2 would leave the pre-flight uncovered. The
+  two tools share one promise here and it is stated once.
+
+  WHY IT IS NOT A DUPLICATE OF ITS SIBLINGS, EXPRESSED AS THE ASYMMETRY. GE-118g-1 and
+  GE-118g-2 both have a repository to find; every arm of each is about finding the right
+  one. This record's first three arms are about there being none. An implementation that
+  resolves correctly whenever resolution is possible satisfies both siblings completely
+  and fails every arm here if it falls back to the working directory when resolution
+  fails — which is the most likely shape of a hasty fix, because a working-directory
+  fallback looks like robustness.
+
+  THE FOURTH ARM IS NOT A NO-REPOSITORY CLAUSE AND IS HERE ON PURPOSE. Both siblings
+  require the tools to work from a directory that is not the repository; a test harness
+  therefore needs a way to point a tool at a repository other than the one it is standing
+  in. If an explicit instruction were merged with, or overridden by, the working
+  directory, the siblings' harnesses would be untestable and any green they reported would
+  be about the harness rather than the tool. Stating the precedence here once keeps that
+  out of three records.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM.
+
+  (1) THE FALLBACK. MUTATION: when no repository can be established, treat the working
+      directory as the repository and report the result.
+      MUST GO RED: the first and second arms — the pre-flight would report a verdict about
+      68, and the audit would report 68 as claimed.
+      MUST STAY GREEN: every arm of GE-118g-1 and GE-118g-2.
+
+  (2) THE SILENT SUCCESS. MUTATION: on an unestablishable repository, report an empty
+      claimed set and complete successfully.
+      MUST GO RED: the second arm only.
+      MUST STAY GREEN: the first, third and fourth, and both siblings. This is the
+      narrowest mutation here and the reason the "reports no claimed set and no unclaimed
+      set" clause is stated separately from "does not complete successfully".
+
+  (3) THE MERGE. MUTATION: when a repository is named explicitly, union its contents with
+      the working directory's.
+      MUST GO RED: the third and fourth arms.
+      MUST STAY GREEN: the first and second. A union looks harmless and is the shape that
+      would make every other record in this subtree unverifiable.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect.

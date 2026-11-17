@@ -1,0 +1,655 @@
+id: TQ-500g-1-x
+components:
+  - testing_quality
+  - build_orchestration
+title: "A wrong version whose test entries declare no in-scope file may alter only the non-test files the work itself changed"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of work on requirement TQ-9101 whose base ref is the state
+    before the work began, and which, committed or not, has changed
+    refresh_config.py (the refresh gate now reads
+    "if refresh_due and retry_due"), added retry_policy.py, changed
+    tests/test_refresh_config.py and deleted legacy_refresh.py, and has not
+    touched settings.py, an ordinary source file of the repository,
+    and the test entries guarding TQ-9101 owe four named wrong versions —
+      "drop the retry_due condition", whose entry declares in-scope files
+        settings.py and refresh_config.py,
+      "retry only once", named on two entries, one declaring in-scope file
+        settings.py and the other declaring none,
+      "ignore retry_due" and "refresh from the settings file", whose
+        entries declare no in-scope file at all,
+  When the writer is asked to list what is owed for TQ-9101 with that base
+    ref,
+  Then "drop the retry_due condition" is listed with exactly settings.py and
+      refresh_config.py, the files its entry declares, although the work did
+      not touch settings.py and did add retry_policy.py,
+    And "retry only once" is listed with exactly settings.py; a file declared
+      on any entry naming it means its scope is declared, and nothing is
+      derived for it,
+    And "ignore retry_due" and "refresh from the settings file" are each
+      listed with exactly refresh_config.py and retry_policy.py, the non-test
+      files the work changed or added; settings.py, which the work did not
+      touch, is not listed for either, tests/test_refresh_config.py, which
+      the work changed, is not listed for either, and legacy_refresh.py,
+      which the work deleted, is not listed for either,
+    And the list shows, next to each name, whether its files were declared
+      by the test entries or derived from the work's changes: "declared" for
+      "drop the retry_due condition" and "retry only once", "derived" for
+      "ignore retry_due" and "refresh from the settings file",
+    And when the preparer then replies with a replacement in
+      refresh_config.py for "ignore retry_due" and a replacement in
+      settings.py for "refresh from the settings file", the write step
+      records "ignore retry_due" as prepared and records "refresh from the
+      settings file" as "could not be prepared" with the reason
+      "settings.py is not in scope for \"refresh from the settings file\"",
+      and makes no altered copy for that name,
+    And a replacement for a name with derived scope that is aimed at a test
+      file, at a path outside the repository or at a path inside the
+      version-control folder is refused exactly as it is for a name with
+      declared scope,
+    And for the same requirement ids, test root and base ref, the list, the
+      write step and the runner give every name the same in-scope files: the
+      write step accepts for a name exactly the files the list shows for it,
+      and none of the three takes a name's files from the route, from the
+      preparer's reply or from an earlier list,
+    And listing changes no file in the working tree.
+
+  Given the same test entries guarding TQ-9101, and a piece of work whose
+    only change relative to its base ref is to tests/test_refresh_config.py,
+  When the writer lists what is owed for TQ-9101 and the work's wrong-version
+    runs are made,
+  Then "ignore retry_due" and "refresh from the settings file" are each
+      listed with no file at all, marked "derived",
+    And "drop the retry_due condition" is still listed with exactly
+      settings.py and refresh_config.py, marked "declared",
+    And a replacement in refresh_config.py for "ignore retry_due" is
+      recorded as "could not be prepared" because refresh_config.py is not in
+      scope for "ignore retry_due", so the work does not go on to commit; an
+      empty derived scope never widens to the whole repository and never
+      lets the work through as having nothing owed,
+    And when the files the work changed cannot be worked out at all,
+      because the base ref does not exist, the list stops with an error
+      naming the base ref and lists no name, rather than giving the unscoped
+      names an empty scope or the whole repository.
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-1-ix
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-ix.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The writer's list and write steps and the per-name scope rule (in_scope_files, union over entries, minus test files) that this AC extends with the fallback; the R9 out-of-scope refusal it keeps."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-i.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The shared runner: its declared-scope reader (one reading for list, write and runner), its test-file rule, and the base ref the routes pass to it."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-v.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The fast-lane route that calls the list step and passes the base ref; the first route this fallback unblocks."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The optional test_spec item field in_scope_files; its description gains the fallback when the field is absent."
+  - path: docs/reference/wrong-version-runs.md
+    relationship: describes
+    status: planned
+    relevance: "Reference page produced by TQ-500g-5; the declared-or-derived scope rule belongs there."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The component the writer CLI and the runner belong to. Decision logic stays in the Python CLIs; the route JS only passes --base-ref and parses fail-closed."
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  - ac_id: TQ-500g-1-v
+    agent: python-coder
+    contract: >-
+      Extended writer CLI (this AC). List step: python scripts/build_orchestration/wrong_version_writer.py
+      list --ac-ids <ids> --ac-root <path> --test-root <path> --base-ref <ref>. --base-ref defaults
+      to HEAD, and an empty value means HEAD, as on the runner. Pass the same value the route passes
+      to the runner's --base-ref. stdout is exactly one JSON object {owed: [{name: str, files: [str],
+      scope: "declared"|"derived"}], error: str|null}. name and files keep their TQ-500g-1-ix meaning
+      and order. scope is a new third key; "derived" means files are the non-test files the work
+      changed relative to the base ref (sorted repo-relative POSIX paths, possibly []). Exit 0 when the
+      list was printed (also when owed is [] or a derived files list is []). Exit 1, with owed [] and
+      error set, when the AC store or test root cannot be read, or when an owed name has no declared
+      scope and the work's changed files cannot be worked out (the error names the base ref verbatim;
+      for a ref that does not resolve it says the ref does not exist). Write step: the TQ-500g-1-ix
+      flags plus --base-ref <ref> (the same value). Its stdout and the alterations manifest are
+      unchanged from TQ-500g-1-ix. When the changed files cannot be worked out it stops with written
+      false, manifest_path null, the base-ref error and exit 1. The gate wrapper's finish step passes
+      its --base-ref to the write step as well as to the runner. The route passes owed to test-breaker
+      unchanged; the scope key is informational for the preparer.
+  - ac_id: TQ-500g-1-vi
+    agent: python-coder
+    contract: >-
+      Same list step, write step and JSON as for TQ-500g-1-v, reached through TQ-500g-1-v's gate
+      wrapper for the write step. On the per-ticket routes the list runs with --base-ref HEAD before the
+      commit, so the derived scope is the uncommitted changes, both tracked and untracked (non-ignored).
+  - ac_id: TQ-500g-1-vii
+    agent: llm-expert
+    contract: >-
+      Same list step, write step and JSON as for TQ-500g-1-v. The supervisor calls list with
+      --base-ref, using the value it passes to the gate wrapper (HEAD before the ticket's commit), and
+      hands owed to test-breaker unchanged.
+expects_from:
+  - ac_id: TQ-500g-1-ix
+    contract: >-
+      The writer CLI (on main): list and write steps (wrong_version_writer.py, _wvw_list.derive_owed /
+      list_payload, _wvw_write.run_write, _wvw_prepare.alter with its path, test-file and
+      not-in-scope refusals and reason wording) and the shared per-name reader _wvr_scope.owed_names
+      over resolve_scope. This AC extends owed_names in place with the derived fallback and the scope
+      marker, never a second reader. Every TQ-500g-1-ix rule other than "scope is never inferred" is kept.
+  - ac_id: TQ-500g-1-i
+    contract: >-
+      The runner (on main): its --base-ref flag (default HEAD, empty means HEAD), _wvr_scope._git_bytes,
+      is_test_path, path_refusal, the AC-store exclusion (_under with ac_root_rel), and the name-status
+      read inside prepare_fix_undone (git diff --name-status -z --no-renames <base> --). That read is
+      factored into one shared helper that both the fix undone and the derived scope use. Its results
+      for the fix undone stay byte-identical.
+it_requirements:
+  - >-
+    Supersedes one TQ-500g-1-ix clause (cross-reference). TQ-500g-1-ix it_requirements "Per-name scope"
+    says scope is never inferred from changed files, and that an owed name with no in_scope_files on any
+    of its entries has files []. From this AC on, that holds only for names WITH a declaration. A name
+    without one takes the derived scope defined here. Every other TQ-500g-1-ix rule is unchanged: the
+    union over entries, order of first declaration, minus test files, the R9 out-of-scope refusal and its
+    wording, the path checks and their order, and all-or-nothing per name. TQ-500g-1-ix is done and is
+    not edited; this entry and the notes are the cross-reference.
+  - >-
+    (a) Base ref. Both writer steps, list and write, gain --base-ref <ref>, default HEAD. An empty value
+    means HEAD, exactly as wrong_version_runner.py run --base-ref (base_ref or "HEAD"). The route passes
+    the value it passes to the runner. The base ref reaches the steps only through this flag, never from
+    the reply, an earlier list output or an environment variable. Existing calls without the flag stay
+    valid.
+  - >-
+    Reuse, never fork, the runner's git diff. The name-status read that prepare_fix_undone does today
+    (git diff --name-status -z --no-renames <base> -- in the worktree root, through _git_bytes) becomes one
+    helper in _wvr_scope, used by both prepare_fix_undone and the derived scope. prepare_fix_undone's
+    (files, state, detail) stay byte-identical for every input, including the "cannot be undone" error for
+    other statuses and the created count. There is no second git-diff parser, no second test-file rule and
+    no second AC-store exclusion anywhere: not in the writer, the list, the runner or the route JS.
+  - >-
+    (c) Changed non-test files of the work. These are the paths the shared diff of the working tree
+    against the base ref reports with status A (added) or M (modified), committed or not, plus the
+    untracked files git does not ignore (git ls-files --others --exclude-standard -z; a new file the work
+    has not staged is added). From that set, drop: deleted paths (D); every path is_test_path counts as a
+    test file, with the same test_root_rel as TQ-500g-1-ix; every path under the AC store (the ac_root_rel
+    exclusion prepare_fix_undone already applies); and anything path_refusal refuses. Renames: the diff
+    runs with --no-renames, so a rename counts as the new path added and the old path deleted. The new
+    path is in scope and the old one is not. Any other status (T, U) is left out of the derived scope,
+    with a stderr warning naming the path. It never stops the list and never widens the scope. The result
+    is sorted by repo-relative POSIX path, with duplicates dropped, so it is deterministic and the same
+    list for every derived name.
+  - >-
+    Declared or derived, per name. A name's scope is "declared" when at least one in-scope test entry
+    naming it carries a non-empty in_scope_files. Matching uses the same key owed_names already uses. The
+    name stays "declared" even if every declared path is then dropped as a test file (files []: fail
+    closed, never derived). Its files are then the TQ-500g-1-ix union, unchanged; nothing is derived and
+    nothing is added. Otherwise the scope is "derived" and the files are the changed non-test files above.
+    An empty derived list stays []. It never becomes the whole repository, and the name is never dropped
+    from the owed list or treated as owing nothing.
+  - >-
+    (b) Owed-list shape, additive. list prints {owed: [{name: str, files: [str], scope:
+    "declared"|"derived"}], error: str|null}, with fixed key order name, files, scope. name and files keep
+    their TQ-500g-1-ix meaning, order and position, and error keeps its shape. The write step's stdout and
+    the alterations manifest are unchanged (no scope key in either), so the runner's manifest reader and
+    test-breaker's wrong_versions input ({name, files}, TQ-500g-1-iv) need no change. A consumer that
+    ignores scope sees exactly the TQ-500g-1-ix contract.
+  - >-
+    (d) A missing base ref. The changed files are needed when at least one owed name has no declaration.
+    If the base ref then does not resolve to a commit, the list prints {owed: [], error: <message>} and
+    exits 1. The message names the ref verbatim and says it does not exist, for example 'the base ref
+    "no-such-ref" does not exist, so the files the work changed cannot be worked out'. Any other failure
+    to read the changed files (git cannot run, or the diff or the untracked listing fails) also stops the
+    step, with an error naming the base ref and exit 1. The write step stops the same way: written false,
+    manifest_path null, no manifest on disk, exit 1. The TQ-500g-1-ix stale-manifest removal still runs
+    first. The step never falls back to an empty scope, the whole repository or a partial list.
+  - >-
+    Lazy and shared. The changed files are worked out only when at least one owed name has no declaration,
+    at most once per invocation, and every derived name shares the one result. A list or write whose owed
+    names are all declared, or that owes nothing, runs no git diff and does not need the base ref to
+    resolve. That keeps TQ-500g-1-ix's callers and fixtures unaffected.
+  - >-
+    (g) Performance. At most one git diff per list, write or runner invocation, plus one untracked-files
+    listing when the diff is needed (not a diff). In the runner, the single name-status diff result is
+    shared, cached on the run context, between the fix undone and the per-name scope check, so the runner
+    still runs at most one git diff. The TQ-500g-1-ix budgets stand: list within 2 seconds for up to 50
+    ids, and write within 5 seconds for 50 names. The list-speed fix itself belongs to TQ-500g-1-v and is
+    not done here.
+  - >-
+    (e) Runner agreement. One function gives every name its files and scope: owed_names in _wvr_scope,
+    extended in place. The list step, the write step and the runner call it with the same ids, AC store,
+    test root and base ref. The runner (wrong_version_runner.py run) applies it. Before a prepared
+    manifest entry is applied, any file in it that lies outside that name's in-scope files is refused:
+    the name's rows are invalid with the detail 'not prepared: <path> is not in scope for "<name>"'
+    (TQ-500g-1-ix's reason wording, name quoted verbatim). So a manifest written by hand, by an older
+    writer or against another base ref never runs an out-of-scope alteration, and the gate does not pass.
+    The fix undone is not scope-checked; it is prepared from git, not from the manifest. When the scope
+    of a derived name cannot be worked out (missing base ref), that name's manifest entry is invalid with
+    the base-ref error. No step takes a name's files from the route, the reply, the manifest's own file
+    list or an earlier list output. Run the TQ-200d-1-i eval and the existing runner tests. If a fixture's
+    manifest alters a file outside its name's scope, declare in_scope_files in that fixture; never add an
+    exemption by path or by name.
+  - >-
+    (f) Placement. Extend _wvr_scope in place: the shared changed-files helper, owed_names with the
+    fallback and the scope marker, and OwedName gaining scope. _wvw_list.derive_owed takes the base ref and
+    list_payload emits scope. wrong_version_writer.py adds --base-ref to both steps. _wvw_write.run_write
+    passes the base ref to derive_owed. wrong_version_runner.py passes its base_ref and shares the one
+    diff. Every new or changed Python file stays at or under 400 content lines as count_content_lines
+    (scripts/commit_guardian/_file_size_ratchet.py) counts them. Today: _wvr_scope.py 258,
+    wrong_version_runner.py 258, _wvw_write.py 132, _wvw_prepare.py 113, wrong_version_writer.py 69,
+    _wvw_list.py 40. If _wvr_scope.py would pass 400, move the changed-files helper into one private
+    sibling that both prepare_fix_undone and owed_names import. It stays one helper, never a copy.
+  - >-
+    Listing still writes nothing. git status --porcelain, the index and git stash list are identical
+    before and after list. The untracked listing must not use git add or intent-to-add, and no work
+    folder is created.
+  - >-
+    Documentation in the same change. Rewrite the in_scope_files description in
+    docs/reference/ac-schema.md and in config/ac_store_schema.json. A name whose entries carry no
+    in_scope_files now takes the non-test files the work changed relative to the base ref, instead of
+    "no in-scope file"; a declaration still wins; the list marks each name declared or derived. The field
+    shape and additionalProperties false are unchanged. Update the docstrings of _wvr_scope (owed_names,
+    and the shared helper's module-level description), _wvw_list and wrong_version_writer: the list shape
+    and --base-ref.
+  - >-
+    Observability. Per list or write, log at INFO on stderr the base ref used and how many names are
+    declared and how many derived. The derived file list goes to stderr at DEBUG only. stdout stays
+    exactly one JSON object.
+  - >-
+    Route wiring is not tested here. TQ-500g-1-v, -vi and -vii prove that the routes pass --base-ref to
+    list and write and hand the owed array on unchanged. This AC proves what the CLI steps and the runner
+    do with the flag.
+test_spec:
+  - name: test_list_declared_name_keeps_exactly_its_declared_files
+    angle: criterion
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      "drop the retry_due condition" is listed with exactly [settings.py, refresh_config.py], marked
+      "declared", although the work did not touch settings.py and did add retry_policy.py.
+    must_catch:
+      - the derived changed files merged into a declared scope
+      - a declared scope narrowed to the files the work changed
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_scope.py
+      - scripts/build_orchestration/_wvw_list.py
+  - name: test_list_name_declared_on_any_entry_derives_nothing
+    angle: boundary
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      "retry only once", named on one entry declaring settings.py and one declaring nothing, is listed
+      with exactly [settings.py], marked "declared".
+    must_catch:
+      - scope decided per entry, so the undeclared entry adds the changed files
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_scope.py
+  - name: test_list_unscoped_names_take_the_changed_non_test_files
+    angle: criterion
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      "ignore retry_due" and "refresh from the settings file" are each listed with exactly
+      [refresh_config.py, retry_policy.py], marked "derived". settings.py (untouched),
+      tests/test_refresh_config.py (changed test file) and legacy_refresh.py (deleted) are not listed.
+    must_catch:
+      - a deleted file listed in the derived scope
+      - a test file the work changed listed in the derived scope
+      - every non-test file of the repository used as the derived scope
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_scope.py
+      - scripts/build_orchestration/_wvw_list.py
+  - name: test_derived_scope_counts_committed_uncommitted_and_untracked_changes
+    angle: boundary
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      refresh_config.py changed in a commit after the base ref, retry_policy.py never staged
+      (untracked), and an extra source file modified but not committed are all in the derived scope. A
+      git-ignored new file is not.
+    must_catch:
+      - only committed changes counted (base ref to HEAD instead of the working tree)
+      - an untracked new file left out of the derived scope
+      - a git-ignored file listed in the derived scope
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_scope.py
+  - name: test_derived_scope_rename_counts_new_path_only_and_excludes_the_ac_store
+    angle: boundary
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      A file renamed by the work puts its new path in the derived scope and not its old path. AC store
+      files the work added or changed under the AC root are not listed.
+    must_catch:
+      - a renamed file's old path listed in the derived scope
+      - AC store files listed as in scope for a wrong version
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_scope.py
+  - name: test_list_marks_each_name_declared_or_derived_additively
+    angle: criterion
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      Every owed item has exactly the keys name, files, scope in that order. scope is "declared" for
+      "drop the retry_due condition" and "retry only once", and "derived" for "ignore retry_due" and
+      "refresh from the settings file". The top-level keys are still exactly owed and error.
+    must_catch:
+      - every name marked declared whatever its entries carry
+      - the scope marker replacing or renaming the name or files key
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_scope.py
+      - scripts/build_orchestration/_wvw_list.py
+  - name: test_write_refuses_a_replacement_outside_the_derived_scope
+    angle: failure
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      With the same base ref, a replacement in refresh_config.py for "ignore retry_due" is recorded
+      prepared. A replacement in settings.py for "refresh from the settings file" is could_not_prepare with
+      the reason 'settings.py is not in scope for "refresh from the settings file"', and no altered copy
+      exists for that name.
+    must_catch:
+      - any non-test file of the repository accepted for a name with derived scope
+      - the write step ignoring --base-ref and deriving scope against HEAD
+    in_scope_files:
+      - scripts/build_orchestration/_wvw_write.py
+      - scripts/build_orchestration/_wvw_list.py
+      - scripts/build_orchestration/_wvr_scope.py
+      - scripts/build_orchestration/wrong_version_writer.py
+  - name: test_derived_scope_still_refuses_test_outside_and_vcs_paths
+    angle: failure
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      For "ignore retry_due" (derived), replacements aimed at tests/test_refresh_config.py (changed by the
+      work), ../shared/refresh_config.py and .git/hooks/pre-commit are each could_not_prepare, with the
+      same reasons and the same check order as for a declared name. No copy is made.
+    must_catch:
+      - a test file the work changed accepted for a name with derived scope
+      - the path checks skipped when the scope is derived
+    in_scope_files:
+      - scripts/build_orchestration/_wvw_prepare.py
+      - scripts/build_orchestration/_wvr_scope.py
+  - name: test_list_write_and_runner_give_every_name_the_same_files
+    angle: seam
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      For the same ids, test root and base ref, the write step accepts for each name exactly the files
+      the list shows for it. A hand-edited manifest that adds settings.py to "ignore retry_due" makes the
+      runner report that name invalid, 'not prepared: settings.py is not in scope for "ignore retry_due"',
+      and the gate does not pass. A change to the work between list and write is reflected in the write
+      step; it never reuses the earlier list.
+    must_catch:
+      - the runner applying a manifest entry whose file is outside the name's scope
+      - the write step reusing an earlier list output for scope
+      - the runner deriving scope against HEAD instead of its --base-ref
+    in_scope_files:
+      - scripts/build_orchestration/wrong_version_runner.py
+      - scripts/build_orchestration/_wvr_scope.py
+      - scripts/build_orchestration/_wvw_write.py
+  - name: test_list_changes_no_file_index_or_stash
+    angle: criterion
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      With unscoped names and an untracked retry_policy.py, git status --porcelain, the index (git
+      ls-files --stage) and git stash list are identical before and after listing, and no work folder
+      exists.
+    must_catch:
+      - untracked files made visible to the diff with git add or intent-to-add
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_scope.py
+  - name: test_only_a_test_file_changed_gives_unscoped_names_an_empty_derived_scope
+    angle: boundary
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      The work's only change is to tests/test_refresh_config.py. "ignore retry_due" and "refresh from the
+      settings file" are listed with files [] and scope "derived"; "drop the retry_due condition" is still
+      [settings.py, refresh_config.py], "declared".
+    must_catch:
+      - an empty derived scope widened to the whole repository
+      - a name with an empty derived scope dropped from the owed list
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_scope.py
+      - scripts/build_orchestration/_wvw_list.py
+  - name: test_empty_derived_scope_refuses_and_the_gate_does_not_pass
+    angle: failure
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      In the test-file-only work, a replacement in refresh_config.py for "ignore retry_due" is
+      could_not_prepare with the reason 'refresh_config.py is not in scope for "ignore retry_due"'. The
+      runner, given that manifest, reports the name unfinished, and gate_passed is false.
+    must_catch:
+      - a name with an empty derived scope treated as owing nothing so the gate passes
+    in_scope_files:
+      - scripts/build_orchestration/_wvw_write.py
+      - scripts/build_orchestration/wrong_version_runner.py
+      - scripts/build_orchestration/_wvr_scope.py
+  - name: test_missing_base_ref_stops_list_and_write_with_an_error_naming_it
+    angle: failure
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      list --base-ref no-such-ref, with unscoped names owed, exits 1 with owed [] and an error containing
+      "no-such-ref" and "does not exist". write with the same ref exits 1 with written false,
+      manifest_path null and no manifest on disk.
+    must_catch:
+      - a missing base ref read as no changed files
+      - a missing base ref read as the whole repository
+      - names with declared scope still listed when the base ref is missing
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_scope.py
+      - scripts/build_orchestration/_wvw_list.py
+      - scripts/build_orchestration/_wvw_write.py
+      - scripts/build_orchestration/wrong_version_writer.py
+  - name: test_at_most_one_git_diff_per_invocation
+    angle: boundary
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      Counting the git diff subprocess calls: list with two unscoped names runs exactly one; list with
+      every name declared runs none (and succeeds with a base ref that does not resolve); a runner run that
+      needs both the fix undone and a derived-scope check runs exactly one.
+    must_catch:
+      - one git diff per unscoped name
+      - the runner diffing once for the fix undone and again for the scope check
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_scope.py
+      - scripts/build_orchestration/_wvw_list.py
+      - scripts/build_orchestration/wrong_version_runner.py
+  - name: test_fix_undone_unchanged_by_the_shared_diff_helper
+    angle: seam
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      prepare_fix_undone on the TQ-9101 work returns refresh_config.py and legacy_refresh.py at their
+      base content, leaves retry_policy.py (added and untracked) in place, and keeps its not_applicable
+      detail and created count for an all-new work, as before the helper was shared.
+    must_catch:
+      - the fix undone treating untracked files as changed files to restore
+      - the fix undone dropping a deleted file once deletions leave the shared helper's output
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_scope.py
+  - name: test_list_cli_takes_base_ref_and_defaults_to_head
+    angle: reachability
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    surface_invoked: python scripts/build_orchestration/wrong_version_writer.py list
+    description: >-
+      Runs the list step as a subprocess on a temp git repo and a temp AC store, once with --base-ref
+      <base commit> and once without (HEAD). Asserts exit 0, exactly one JSON object {owed, error} with
+      scope on each item, and derived files matching the ref given.
+  - name: test_write_cli_takes_base_ref_and_feeds_the_runner
+    angle: reachability
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    surface_invoked: python scripts/build_orchestration/wrong_version_writer.py write
+    description: >-
+      Runs the write step as a subprocess with --base-ref and a reply fixture for a derived name. Asserts
+      exit 0, the TQ-500g-1-ix stdout shape unchanged, and that wrong_version_runner.py run with the same
+      --base-ref accepts the printed manifest path.
+  - name: test_declared_only_list_matches_the_ix_contract
+    angle: seam
+    framework: pytest
+    type: integration
+    target_dir: unit_tests/build_orchestration/
+    description: >-
+      On TQ-500g-1-ix's fixture, where every owed name is declared, list without --base-ref gives the same
+      names and files as before, each marked "declared", and needs no resolvable base ref.
+    must_catch:
+      - the list failing when every name is declared and the base ref cannot be resolved
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_scope.py
+      - scripts/build_orchestration/_wvw_list.py
+test_required: true
+test_rationale: >-
+  Every clause is deterministic, so every entry runs the real writer (and, where the criteria say so,
+  the real runner) on a temp git repo. No LLM is involved. The fixture: a base commit holding
+  refresh_config.py, settings.py, legacy_refresh.py and tests/test_refresh_config.py. After the base, the
+  work commits a change to refresh_config.py (the gate reads "if refresh_due and retry_due"), then leaves
+  uncommitted a change to tests/test_refresh_config.py, the deletion of legacy_refresh.py and a new,
+  never-staged retry_policy.py. A temp AC store for TQ-9101, outside the repo or under an AC root the
+  derived scope excludes, has covers-tagged entries owing the four names of the criteria, with
+  in_scope_files exactly as the Given states. The base ref passed is the base commit, so committed and
+  uncommitted changes both count. A second fixture changes only the test file. The criterion entries pin
+  the four listed scopes and the marker. The boundary entries carry the decisions the criteria leave to the
+  IT-PO: untracked and uncommitted changes count, git-ignored files and the AC store do not, a rename
+  scopes only its new path, and an empty derived scope stays empty. The failure entries pin the
+  out-of-scope refusal for derived names, the unchanged path refusals, the fail-closed empty scope and the
+  missing base ref. The seam entries pin the one function shared by list, write and runner, the unchanged
+  fix undone and the unchanged TQ-500g-1-ix contract for declared-only stores. The diff-count entry pins
+  the performance budget by counting git diff subprocess calls. Two reachability entries go through the
+  CLI steps the routes call, and the write one hands its manifest to the runner with the same --base-ref.
+  Route wiring (passing --base-ref, handing owed on unchanged) is tested by TQ-500g-1-v, -vi and -vii.
+  Red baseline: the modules exist, so these entries go red on behaviour (the missing scope key, --base-ref
+  rejected by argparse, derived names listed with []), never on ImportError.
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by:
+  - at: 2026-10-15
+    by: it-po
+    reason: "IT-PO technical enrichment of a new BA draft; criteria unchanged; readiness reviewed (user gate next)"
+    note: >-
+      Decided the BA's open points: --base-ref on list and write (default HEAD, as on the runner); the
+      additive scope key "declared"|"derived" on each owed item; changed files = A/M from the runner's own
+      name-status diff (factored out of prepare_fix_undone, never forked) plus untracked non-ignored files,
+      minus deletions, test files and the AC store; rename = new path only; missing base ref stops list and
+      write with an error naming it; the runner also enforces the per-name scope on manifest entries; at
+      most one git diff per invocation. Added the cross-reference that this AC supersedes TQ-500g-1-ix's
+      "scope never inferred" clause for names without a declaration. estimated_complexity M to L.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  USER GATE (2026-10-15): the user approved this AC as written, including
+  the runner's own scope check (IT-PO decision e), at the review gate.
+
+  USER DECISION (2026-10-15). TQ-500g-1-ix (done, merged) makes the
+  writer's list and write steps take each owed name's in-scope files from
+  the in_scope_files of the AC test entries naming it. Only 23 of the 738
+  declared test entries carry that field. Without a fallback every unscoped
+  name has no in-scope file, the preparer can prepare nothing for it, and
+  every work whose ACs carry such names stops before commit once the routes
+  are wired (TQ-500g-1-v, -vi, -vii). The user chose:
+    - When no in-scope file is declared for a name on any entry naming it,
+      its scope is the non-test files the work changed relative to the base
+      ref, worked out by code from version control.
+    - Never from the route or from the preparer.
+    - Declared in_scope_files still wins whenever present.
+    - Test files, paths outside the repository and the version-control
+      folder stay refused.
+    - A name with no declared scope in a work that changed no non-test file
+      has an empty scope (fail closed).
+
+  THIS REVERSES ONE TQ-500g-1-ix it_requirement. Its "Per-name scope" entry
+  says scope is never inferred from changed files and an unscoped name has
+  files []. That stays true for names with declared files; for unscoped
+  names this AC replaces it. TQ-500g-1-ix is done and is not edited here.
+
+  CLAUSES THE BA ADDED BEYOND THE BRIEF, with reasons.
+    - "Declared" means declared on ANY entry naming the name ("retry only
+      once"). The -ix scope rule is a union over entries; mixing declared
+      and derived files for one name would make its scope depend on which
+      entry happens to carry the field.
+    - A file the work added counts as changed (retry_policy.py); a file it
+      deleted does not (legacy_refresh.py), since there is nothing left to
+      alter. Changes count whether committed or not, because the per-ticket
+      routes run the gate before their commit with HEAD as the base ref.
+    - The list shows "declared" or "derived" per name, so a reader of a
+      stopped work can tell a missing declaration from a missing change.
+    - An unknown base ref stops the list with an error. Silently treating
+      the changed set as empty would fail closed but hide the cause;
+      treating it as the whole repository would fail open.
+
+  OPEN POINTS FOR THE IT-PO (the BA did not decide these):
+    1. How the base ref reaches the list and write steps (a new flag taking
+       the value the route passes to the runner) and the JSON field that
+       carries "declared" / "derived" in the owed list.
+    2. Renamed files: whether a rename counts as the new path changed.
+    3. Whether the runner itself needs the derived scope, or only agrees
+       with it through the shared reader.
+    4. test_spec, test_rationale and the matching TQ-500g-1-ix contract text
+       (delivers_to says the write step derives scope "itself"; still true).
+
+  CROSS-REFERENCE. This AC supersedes the "scope is never inferred from
+  changed files" clause of TQ-500g-1-ix it_requirements "Per-name scope", for
+  owed names with no in_scope_files on any entry naming them. Names with a
+  declaration keep the -ix rule unchanged. -ix is done and stays unedited; a
+  reader of -ix should follow this AC for unscoped names.
+
+  IT-PO ENRICHMENT (2026-10-15). python-coder, L. The open points, decided
+  (details in it_requirements):
+    1. Base ref: a new --base-ref flag on both list and write, default HEAD,
+       the value the route passes to the runner. Owed-list field: an
+       additive third key, scope: "declared" | "derived", on each owed item.
+       The write stdout and the manifest are unchanged.
+    2. Renames: --no-renames, as in the runner's fix undone. The new path is
+       added (in scope) and the old path deleted (not in scope).
+    3. The runner enforces the scope too. It computes each name's files
+       through the same owed_names and refuses a manifest entry that alters a
+       file outside them. Without that, "the runner gives every name the same
+       in-scope files" would hold only by convention, and a hand-made or
+       stale manifest could run an out-of-scope alteration. This is the one
+       runner behaviour change; the TQ-200d-1-i eval fixtures must still pass.
+    4. TQ-500g-1-ix's write contract ("derives each name's in-scope files
+       itself") stays true. The route now also passes --base-ref.
+  Additional decisions: untracked non-ignored files count as added (the
+  per-ticket routes run before the commit with base HEAD, so a new file is
+  often not staged yet); the AC store is excluded, as in the fix undone; a
+  name whose declaration lists only test files stays "declared" with [];
+  the changed files are worked out lazily, only when some name is
+  unscoped, so declared-only stores need no resolvable base ref. Route
+  follow-up: TQ-500g-1-v's gate wrapper must forward its --base-ref to the
+  write step, not only to the runner.

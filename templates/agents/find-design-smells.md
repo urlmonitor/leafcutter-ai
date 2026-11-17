@@ -12,6 +12,11 @@ description: |
 model: opus
 name: find-design-smells
 tools: Bash, Read, Skill
+skills:
+- skill_id: review-for-code-smells
+  mode: always
+- skill_id: review-for-design-code-smells
+  mode: always
 portable: true
 signoff: false
 requires_verification: false

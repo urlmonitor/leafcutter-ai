@@ -1,0 +1,107 @@
+id: DK-500b-1-i
+title: A broader category a person sets never loops back and never names a retired category
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the category cat-6c3eb4f2af148922 already has cat-d6ce5f78c181ebd1 as its broader category,
+  And cat-40cc613f737e3323 is retired with replaced_by cat-d15d52392d7aa94c,
+  When a person sets cat-6c3eb4f2af148922 as the broader category of cat-d6ce5f78c181ebd1, or sets cat-40cc613f737e3323 as the broader category of another category,
+  Then the change is refused,
+  And the reason names the loop cat-d6ce5f78c181ebd1 -> cat-6c3eb4f2af148922 -> cat-d6ce5f78c181ebd1, or names the retired category and its replacement,
+  And the same change naming the live replacement cat-d15d52392d7aa94c as the broader category is accepted.
+depends_on:
+- DK-500b-1
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-500b-1
+  contract: A grouping suggestion, candidate or category whose broader a person sets or changes in a criteria.review run (category id or null).
+change_target: code
+risk_surface: internal
+it_requirements:
+- 'The broader check runs wherever a person can set a broader value: when a person sets or changes broader on a candidate, a grouping suggestion or a published category in a criteria.review run, and again at publish (DK-500c-2, DK-500c-3-ii).'
+- A loop is detected over the whole broader chain across published records, staged records and the new value. The refusal names the full loop path in order.
+- A retired broader target is refused, naming the retired id and its replaced_by ids; the same change naming the live replacement is accepted.
+- dec-a070edfb6465bced never suggests a broader category, so every broader value checked here is set by a person. No Jev or LLM call decides broader, and a refused change leaves the item exactly as it was before the change.
+test_required: true
+test_spec:
+- name: test_person_set_broader_loop_refused_naming_loop
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A person setting cat-6c3eb4f2af148922 as the broader category of cat-d6ce5f78c181ebd1 is refused; the reason names cat-d6ce5f78c181ebd1 -> cat-6c3eb4f2af148922 -> cat-d6ce5f78c181ebd1.
+- name: test_person_set_retired_broader_refused_naming_replacement
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A person setting the retired cat-40cc613f737e3323 as the broader category of another category is refused; the reason names cat-40cc613f737e3323 and its replacement cat-d15d52392d7aa94c.
+- name: test_person_set_live_replacement_broader_accepted
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: The same change naming the live replacement cat-d15d52392d7aa94c as the broader category is accepted.
+test_rationale: Drive the change through the criteria.review run's public resume boundary, with a human answer that sets broader, over a fixture library. Assert the refusal or acceptance, the reason text the person sees, and that a refused item is unchanged. A recording Jev provider and host port assert zero calls, because no model decides broader. A unit test of a cycle helper alone would not prove that the review run refuses the person's change.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+- reason: method decided in dec-a070edfb6465bced
+  date: '2026-10-05'
+  by: business-analyst
+  summary: 'Title only. Was: "A suggested broader category never loops back and never names a retired category". The decided method makes no broader-link suggestions, so the broader value checked is one a person sets. Criteria and the IT PO fields unchanged.'
+- reason: method decided in dec-a070edfb6465bced
+  date: '2026-10-05'
+  by: business-analyst
+  summary: 'When and Then clauses reworded from a suggestion to a broader value a person sets. Was: "When a suggestion would make cat-6c3eb4f2af148922 the broader category of cat-d6ce5f78c181ebd1, or would name cat-40cc613f737e3323 as a broader category, Then that suggestion is not offered, ... And the same suggestion naming the live replacement cat-d15d52392d7aa94c as the broader category is offered." Now a person setting either value is refused with the reason, and the same change naming the live replacement is accepted. The Given clauses, the reason clause and the IT PO fields unchanged.'
+- reason: it-po-closure-after-ba-rewording
+  date: '2026-10-05'
+  by: it-po
+  summary: 'After the BA rewording to a broader value a person sets: test_spec names and descriptions changed from ''not offered'' / ''is offered'' to refused / accepted, test_rationale now drives the person''s change through the criteria.review run, and it_requirements and the expects_from contract use the person-set framing. Criteria unchanged.'
+superseded_by: null
+notes: |
+  Mock invariant: broader is null or names a staged or published category (never a retired one), and following broader never leads back to the start.
+  The last clause is the positive control: a check that withholds every suggestion with a broader category passes the first two clauses and fails this one.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: suggest-grouping.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: suggest-grouping
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+    source: mock
+    asof: '2026-10-04'

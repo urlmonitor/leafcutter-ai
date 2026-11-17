@@ -1,0 +1,79 @@
+{
+  "recorded_at": "2026-10-09T20:59:23.586379+00:00",
+  "authorized_by": "root orchestrator before any model calls",
+  "rationale": "Require the currently active source and generation to match the frozen publication; drift is inconclusive, not a successful retained-revision proof.",
+  "changed_harness_files": {
+    "reports/retrieval-aura-2026-10-09/controller.py": {
+      "before": "0593aecb5e47345490f9d18307e341cd6b50c38fd6afc9891b4cafd943b6639d",
+      "after": "b2ea5887e507ffb8f21224ce7fc37fa22a07dbdca10b113cd88599cfb337d827"
+    },
+    "reports/retrieval-aura-2026-10-09/proof_support.py": {
+      "before": "0dbbf1c03b2961dc966a9bb085b5257a03128824d9d12efc2811a3696cfac03c",
+      "after": "46f37ff05609a04278d3efc50c740fde00ac0683ce3fc36318c8a2a9c71f4978"
+    }
+  },
+  "initial_freeze_sha256": "82207d4c6ce0ce44803b6c075bc5f08f4f04a2ff8c11a1d677fb6e6fd82a4b84",
+  "updated_code_aggregate_sha256": "32a3b2aaa5a351da3b7ec55874231fd574cac4ae9b83f6e984deff1f29ca50f4",
+  "source_oracle_sha256_unchanged": "c1db6ff91ab52e1b835e810e4ddb2537f321aacf431501444ff6d411e17d69c6",
+  "plan_sha256_unchanged": "5a0277cbca586dbe12722dfbec0eb8ba340fc48f0f5f02615b30c37bc2f6d91d",
+  "case_hashes_unchanged": {
+    "A01": {
+      "config.json": "2ae464fdea4bccf0db4381d618eff5d76ef0d69bf07f16e8e30da683d2f9e22c",
+      "request.json": "38d7f26f10e867eeeb703e5d059bb889c8472b5e7b92a634b58969d0a77a60f0"
+    },
+    "A02": {
+      "config.json": "40e5516fe84fe666a8c12b17b74b58faf09ff617e54042f0a93d161fd78e504a",
+      "request.json": "38d7f26f10e867eeeb703e5d059bb889c8472b5e7b92a634b58969d0a77a60f0"
+    },
+    "A03": {
+      "config.json": "fb5847e1296e054d49dca0904acf717d4eaeac604ddbb181c0f26b2144f42f5f",
+      "request.json": "08c34a306c07e36a1170982e5d8952a5b7f2be18de35b34706255dabfcb99e5f"
+    },
+    "A04": {
+      "config.json": "9f4cc3167f3aacb53f821b0e79dfc5dee7426d903455947921b16ee9f2ab9445",
+      "request.json": "b8540e71b96f6b4ae1c5353fffddda39196bd453accde524ae499cd8bb60ea4a"
+    }
+  },
+  "controlled_offline_guard_checks": [
+    {
+      "control": "matching",
+      "result": "ready",
+      "controlled_reads": [
+        "active",
+        "revision",
+        "capabilities"
+      ],
+      "actual_backend_calls": 0,
+      "provider_calls": 0
+    },
+    {
+      "control": "changed_source",
+      "result": "inconclusive_drift",
+      "controlled_reads": [
+        "active"
+      ],
+      "actual_backend_calls": 0,
+      "provider_calls": 0
+    },
+    {
+      "control": "changed_generation",
+      "result": "inconclusive_drift",
+      "controlled_reads": [
+        "active"
+      ],
+      "actual_backend_calls": 0,
+      "provider_calls": 0
+    },
+    {
+      "control": "missing_active",
+      "result": "inconclusive_drift",
+      "controlled_reads": [
+        "active"
+      ],
+      "actual_backend_calls": 0,
+      "provider_calls": 0
+    }
+  ],
+  "provider_calls": 0,
+  "question_or_expected_outcome_changes": false
+}

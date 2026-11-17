@@ -1,0 +1,298 @@
+{
+  "reviewed_at": "2026-10-09T21:51:14.652528+00:00",
+  "rule": "ENTROPY_HIGH",
+  "entries": 70,
+  "classification": {
+    "closed_stage1b_path_and_hash": 70
+  },
+  "exact_rule_path_line_only": true,
+  "credential_rules_unchanged": true,
+  "locations": [
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/closure-integrity.json",
+      "category": "closed_stage1b_path_and_hash",
+      "lines": [
+        {
+          "line": 28,
+          "line_sha256": "d13bfcb8c5d63936257724125e8a86cda962b9af6313caaaf7ecb9292f1ea860"
+        },
+        {
+          "line": 46,
+          "line_sha256": "af403857dd04e27216601ecf3886783d5da7a75c91f58b8df29a8e4f61aabe7a"
+        },
+        {
+          "line": 49,
+          "line_sha256": "7a62dec5b008ba4260d37314cd9659738d0084b09fb37dfcb9f495d0d588f48d"
+        },
+        {
+          "line": 51,
+          "line_sha256": "f3127ffef32def43ae40b61c48b132cf3a87fb9d0d256ba224d1a46da5529765"
+        },
+        {
+          "line": 54,
+          "line_sha256": "6d89c5ae0df4a9eacf9c297f506b4bc1cc0bcc0bf7c67698f4d50fd9e5520da2"
+        },
+        {
+          "line": 67,
+          "line_sha256": "32a022ce81dbc2594152f5044bd5033f46337b6fc674409e6a44a3568fbbd06e"
+        },
+        {
+          "line": 70,
+          "line_sha256": "e0e46b75d66e740b84d6e709f659b9078e084fa593b767c90f208c23e1552f2c"
+        },
+        {
+          "line": 72,
+          "line_sha256": "1a476b0ba994600be0c6a24145726ea6463956f434554d483d6caeaf7a668b37"
+        },
+        {
+          "line": 75,
+          "line_sha256": "bcb762c39b89ce5f3cb8ec30cc960912e30e1ba6dcd37c7d099a71c5c9525598"
+        },
+        {
+          "line": 88,
+          "line_sha256": "15ac2bc2390281d28a5695fb4a46c8fe2cfd31c8f4c020444780f58d018d787e"
+        },
+        {
+          "line": 91,
+          "line_sha256": "daadf4f8be2b5db24499773b84d5e674554a7aa1b1b58c68133d687beeef5319"
+        },
+        {
+          "line": 93,
+          "line_sha256": "4138690b26992a717f2fbcd759918f1a7299d38917dffc34120e5540a71f40ff"
+        },
+        {
+          "line": 96,
+          "line_sha256": "f2b0279198ec51225302b0992a225c20db9cce1b5d3f1922bfc8fb8b7e563693"
+        },
+        {
+          "line": 108,
+          "line_sha256": "8049061bac315f0630d66e495c6f0bd7f5a0362267268b9698eeb7cc752a9218"
+        },
+        {
+          "line": 110,
+          "line_sha256": "38775d971501ef6787fee307f7f8b0966a4038f478f85b0c900595f159b3e05e"
+        },
+        {
+          "line": 113,
+          "line_sha256": "b82b6721269189e8e2b39ecb4210747cb686c249716e36ee58896b1f6016958a"
+        },
+        {
+          "line": 115,
+          "line_sha256": "51c8dd50b6c441f4345221eadaca292d1f6a8bad53af0c7525a14ff24d4309ea"
+        },
+        {
+          "line": 118,
+          "line_sha256": "2c9aa049d47aaa79e29dca0afae011687fdb2ed9974b087aa9cb9420d8b41910"
+        },
+        {
+          "line": 129,
+          "line_sha256": "6b321f7fc6e7b8f3de07503e43b3bdb3dbb45a7db95356f92b269479e8c79467"
+        },
+        {
+          "line": 131,
+          "line_sha256": "bc70fa7e82683d9efaeca8c4a6014887faba69760248a3f738a7ee79f48d34ed"
+        },
+        {
+          "line": 134,
+          "line_sha256": "6034a6230bfec9d9de2a399be5c09032050198368a734919d58e14c255a4125a"
+        },
+        {
+          "line": 136,
+          "line_sha256": "06f2b1677f925b2431473e99ea1c96795dd6141a20a11a039ee443ac486b4833"
+        },
+        {
+          "line": 139,
+          "line_sha256": "7f3c8ec0e0c020769da67e062109e6ff3dbe8a1568a2e21d6aea0826e1c584f2"
+        },
+        {
+          "line": 152,
+          "line_sha256": "77e02579b84fa4a550043b3d58ea3ac0b5072f380b2cf6702389aa8b86b23b98"
+        },
+        {
+          "line": 153,
+          "line_sha256": "7cea8eca91715898491e6cacfffb32257ed2425d3907debd7cfa7c1bc61747e3"
+        },
+        {
+          "line": 154,
+          "line_sha256": "bf53fef1601a61b798d25fd538b5a9d7c0d1f61a2490e0e4a7f1dd07b5fb7aec"
+        },
+        {
+          "line": 155,
+          "line_sha256": "e375450a87511e0631fa210e4a93afb7e475e5d5c29f2dd4c3442d6de7750f05"
+        },
+        {
+          "line": 157,
+          "line_sha256": "9a302c089c64319059432be33e764e7cf9af195ddc726281ff710b60f634d847"
+        },
+        {
+          "line": 160,
+          "line_sha256": "85c6c09408df4cd26754611cec33507aaab8f11c943425aa78210ea829479e54"
+        },
+        {
+          "line": 171,
+          "line_sha256": "ff8c0b6b4f025ca61169badd5ccb5ea24eee3d610161bff4d06c526d96b95316"
+        },
+        {
+          "line": 173,
+          "line_sha256": "80e35e606875bf4d754a090833b075b56f3be6e914b058108e9361f8ead36d96"
+        },
+        {
+          "line": 176,
+          "line_sha256": "c5b7a5e97e3637ddd39328b3a6cf9d2e45d1800cdd8e83e16049ca43c0ecaf84"
+        },
+        {
+          "line": 178,
+          "line_sha256": "fdeced44fd9cb84e47c60dc1bee8c8c4685b928af93d653f651a20b2cdc0ff05"
+        },
+        {
+          "line": 181,
+          "line_sha256": "4bf05997845f25513984ab7b0a546746ece63d3039ae20f4fade48f440e21dc5"
+        },
+        {
+          "line": 194,
+          "line_sha256": "b270477e6cf30554554eaa07f2a8e7b57bb016d7fe6b2a90317b649667efd40c"
+        },
+        {
+          "line": 197,
+          "line_sha256": "f18718ac0453f8c1c2a13d8899dd84a02a2bca52a9dbfda96ed8c6bd64c7440f"
+        },
+        {
+          "line": 199,
+          "line_sha256": "4aaa73e22588e9956680ccfcf6b6dceafdb6adcb25f7c5132af23833fbdb78e3"
+        },
+        {
+          "line": 202,
+          "line_sha256": "3c689b9a22900b4d6755c048204f59fa274a75c7f26ec6622b64ec7adb7f0eb3"
+        },
+        {
+          "line": 215,
+          "line_sha256": "dbe08520f30f9398bb5138a1c423e15e060109923a90de35c3f940a3c5b1b866"
+        },
+        {
+          "line": 218,
+          "line_sha256": "26a5628d8737417051bc39b47c655f7122f9b3923b35dbdd5e43aea7b059d7ec"
+        },
+        {
+          "line": 220,
+          "line_sha256": "593ac54c43b3f9074eb910f5f47cb8e4c867a8297c5735af30ccdab9af3a9dd5"
+        },
+        {
+          "line": 223,
+          "line_sha256": "4e23ca9cc88c25f62369b6b7b6077fcad1c1c5867c4c4520cad96c47877b3d32"
+        },
+        {
+          "line": 234,
+          "line_sha256": "3bc50b72410ecf6341469796d7ace7c83bcc5fcf99df1889dc829a12c48b562b"
+        },
+        {
+          "line": 236,
+          "line_sha256": "784db74c7d39573d3c69b3d79c38b1ec182dda2e9765908ab1109d8858c92a51"
+        },
+        {
+          "line": 239,
+          "line_sha256": "41d206a37a858681a77a8370b88ba1616e2f1b8d4dee687e5828544e89d2988f"
+        },
+        {
+          "line": 241,
+          "line_sha256": "92036629ff4b7df403465fbaa905e9d4507cfe43e8bc8a2a4a45eb170310c8da"
+        },
+        {
+          "line": 244,
+          "line_sha256": "2d6d3287059dc2b3eb45c75ec66baf4dfa11708c28cf6dea998413127c8ecb77"
+        },
+        {
+          "line": 255,
+          "line_sha256": "ae9f8fd80a0e80b98a4b75eb634c687357a98932e481db3723e3cd91f249b47d"
+        },
+        {
+          "line": 257,
+          "line_sha256": "b7d98cfd4a1d295bf0db66b0cb77b7ceac6ded36c902150ecb700a69c72bdc4b"
+        },
+        {
+          "line": 258,
+          "line_sha256": "d4c5c47292ee37dc374129ac4fae365e3ce809fb0dfe04c98c7d9422b7b12dd5"
+        },
+        {
+          "line": 259,
+          "line_sha256": "0c134f11cdc3fd10a0237577581479fe36aad3e7ade8a9d3b9820ef1450124f3"
+        },
+        {
+          "line": 260,
+          "line_sha256": "b2d0d9907c6ca88bd2663a2990b4e092afc2707e1e1782a195f29c6ac7b707b3"
+        },
+        {
+          "line": 262,
+          "line_sha256": "3fc31600bb75356be891a8031a3aaf492c9dbf98f7052712de6d84d44d2056c6"
+        },
+        {
+          "line": 265,
+          "line_sha256": "54cb4c6402146360b137e4eaa26f84e2cd4801e727a082b26f54991406fedead"
+        },
+        {
+          "line": 276,
+          "line_sha256": "7177bb1ff8321a427beaab777090feaaae8ed25d682b853471a650ed0c300a3c"
+        },
+        {
+          "line": 281,
+          "line_sha256": "5aa06096baeceb725f06c901af77cd0520f57c82b126355df31a07df94424cfc"
+        },
+        {
+          "line": 283,
+          "line_sha256": "bb2489bfaad3ef5404aca0b132f61a52d8b4dd0abdd3db66fb62709d4202f369"
+        },
+        {
+          "line": 286,
+          "line_sha256": "44c0712e9aaff6760df70fd0d93484c301e1068a4c3f7c12aa8a4cbdb7bcbe31"
+        },
+        {
+          "line": 297,
+          "line_sha256": "0e7e7ff36f37faab13567232d53bfc654f9edba2e6d8891b53847fd3965e4598"
+        },
+        {
+          "line": 299,
+          "line_sha256": "64d15b6a1ddcab9b324325609ee7dcc9bfac20e9baf75f91802d6897457ab19d"
+        },
+        {
+          "line": 300,
+          "line_sha256": "8b0ec633d1fd9fca2b7ff94b9e1828b9792d2c01699f74a0687b6e8f688b68cd"
+        },
+        {
+          "line": 301,
+          "line_sha256": "c3d8bd49242ff23ead7a3ced97df270f25d7298282e1e17d091fc0cf341fd5a8"
+        },
+        {
+          "line": 302,
+          "line_sha256": "87c9c0cc79fcd1019303f620455dfbdf7d37d46f0e406dd8afe5006d0a42f3b5"
+        },
+        {
+          "line": 318,
+          "line_sha256": "d4cae70af49afdfd6e5114790ad907bed002388fcb2531ea4de807741209a620"
+        },
+        {
+          "line": 323,
+          "line_sha256": "ed91c591db31872bf12c77db1c5678cc20f55c0349124687f96570459b09de9b"
+        },
+        {
+          "line": 339,
+          "line_sha256": "bb04fcb36e248910ded598b9dabd18ba2892aa2c8829d49142517c8b924c23b8"
+        },
+        {
+          "line": 341,
+          "line_sha256": "3f7b49676b7d0abb7dad383ff533dfee3b577367c8e1e4728f4fbd997da6d597"
+        },
+        {
+          "line": 344,
+          "line_sha256": "8e17dfd44b6b241e73053e4e4c18c09fdf4e7ad2022734117a61005eb19bd568"
+        },
+        {
+          "line": 346,
+          "line_sha256": "9363d3184a0b1006dbd859667a6d898f799c7008b90cd68d4d1965fbb9ff5fb3"
+        },
+        {
+          "line": 349,
+          "line_sha256": "37df4b2c36982b090d25a436fe3612e264dc70c40090e40705c5f65af82b560b"
+        }
+      ]
+    }
+  ]
+}

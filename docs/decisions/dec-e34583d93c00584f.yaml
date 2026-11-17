@@ -1,0 +1,317 @@
+schema_version: '1.0'
+kind: decision
+id: dec-e34583d93c00584f
+repository_id: leafcutter-ai
+title: build GE-133 with both stores declared, then commit the E1 merge
+description: The merge of main into DK-400 E1 passes every pre-commit hook except check-folder-density ...
+decision_type: design
+question: The merge of main into DK-400 E1 passes every pre-commit hook except check-folder-density on docs/decisions/ (16
+  files, limit 15, over the limit in neither parent). How should the E1 merge be committed with every hook running, and how
+  do E1's two decision records reach main? Judge each criterion as if the option is carried out exactly as described.
+components: []
+change_target: []
+risk_surface: []
+roadmap_phase: []
+file_globs: []
+repository_wide: true
+selected_option_id: opt.declare_then_merge
+supersedes: []
+superseded_by: []
+related: []
+task_context:
+  goal: The merge of main into DK-400 E1 passes every pre-commit hook except check-folder-density on docs/decisions/ (16 files,
+    limit 15, over the limit in neither parent). How should the E1 merge be committed with every hook running, and how do
+    E1's two decision records reach main? Judge each criterion as if the option is carried out exactly as described.
+  component_ids: []
+  technologies: []
+  constraints:
+    - '[must] requirement: Every code change is driven by a ticket (CLAUDE.md ticket mandate).'
+    - '[must] requirement: No hook is skipped and no permission denial is routed around.'
+rationale:
+  text: 'Design decision settled by a human. Kernel ranking (Jev''s per-criterion judgement, evidence not authority; stopped
+    researching because design_judgement after 1 research round(s)): 1. [opt.declare_then_merge] build GE-133 with both stores
+    declared, then commit the E1 merge (required mean 0.77, 1/3 passed); 2. [opt.shard_by_prefix] shard the decision store
+    by id prefix, then merge (required mean 0.57, 0/3 passed); 3. [opt.hold_and_defer] commit the merge now without the records,
+    re-publish them in a later tracked PR (required mean 0.47, 0/3 passed); 4. [opt.hold_then_restore] commit the merge now
+    without E1''s two records, restore them inside the E1 PR (required mean 0.45, 0/3 passed); 5. [opt.exempt_index_file]
+    exempt the generated index.json by filename, then merge (required mean 0.41, 0/3 passed). user chose option [opt.declare_then_merge]
+    build GE-133 with both stores declared, then commit the E1 merge (kernel rank 1 of 5).'
+  origin: template
+assumptions: []
+unresolved_risks: []
+assessment:
+  basis: kernel_ranking
+  design_reason: design_judgement
+  confidence: 0.77
+  selected_rank: 1
+  ranking:
+    - option_id: opt.declare_then_merge
+      rank: 1
+      required_passed: 1
+      required_total: 3
+      required_mean: 0.77
+      scores:
+        crit.all_hooks_run: 0.71
+        crit.few_prereqs: 0.31
+        crit.headroom: 0.7
+        crit.not_contradict_ge133: 0.83
+        crit.records_eventually: 0.77
+        crit.records_in_e1_pr: 0.59
+    - option_id: opt.shard_by_prefix
+      rank: 2
+      required_passed: 0
+      required_total: 3
+      required_mean: 0.5667
+      scores:
+        crit.all_hooks_run: 0.61
+        crit.few_prereqs: 0.22
+        crit.headroom: 0.58
+        crit.not_contradict_ge133: 0.55
+        crit.records_eventually: 0.54
+        crit.records_in_e1_pr: 0.51
+    - option_id: opt.hold_and_defer
+      rank: 3
+      required_passed: 0
+      required_total: 3
+      required_mean: 0.4667
+      scores:
+        crit.all_hooks_run: 0.65
+        crit.few_prereqs: 0.5
+        crit.headroom: 0.39
+        crit.not_contradict_ge133: 0.41
+        crit.records_eventually: 0.34
+        crit.records_in_e1_pr: 0.08
+    - option_id: opt.hold_then_restore
+      rank: 4
+      required_passed: 0
+      required_total: 3
+      required_mean: 0.4533
+      scores:
+        crit.all_hooks_run: 0.64
+        crit.few_prereqs: 0.48
+        crit.headroom: 0.42
+        crit.not_contradict_ge133: 0.25
+        crit.records_eventually: 0.47
+        crit.records_in_e1_pr: 0.43
+    - option_id: opt.exempt_index_file
+      rank: 5
+      required_passed: 0
+      required_total: 3
+      required_mean: 0.4067
+      scores:
+        crit.all_hooks_run: 0.68
+        crit.few_prereqs: 0.59
+        crit.headroom: 0.07
+        crit.not_contradict_ge133: 0.06
+        crit.records_eventually: 0.48
+        crit.records_in_e1_pr: 0.66
+final_outcome:
+  status: pending
+  observed_at: null
+  note: ''
+options:
+  - id: opt.declare_then_merge
+    title: build GE-133 with both stores declared, then commit the E1 merge
+    description: 'Approve GE-133 with GE-133a-1 amended to declare two entries: docs/acceptance-criteria/ and docs/decisions/,
+      each with its stated ground. Build GE-133a-1 and GE-133a-2 on main in one PR. Then E1 rebuilds, merges main again, and
+      commits with every hook running; its two records ship in the E1 PR.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.hold_then_restore
+    title: commit the merge now without E1's two records, restore them inside the E1 PR
+    description: One E1 commit removes the two records and regenerates the index, so the merge commits today with every hook.
+      In parallel, GE-133 is built with both stores declared (as above). When it lands, E1 merges main and puts the two records
+      back before the E1 PR merges.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.hold_and_defer
+    title: commit the merge now without the records, re-publish them in a later tracked PR
+    description: As above for the merge. A tracked ticket re-publishes both records to main in a separate PR once the store
+      has room (by GE-133 or another change); the E1 PR merges without them.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.exempt_index_file
+    title: exempt the generated index.json by filename, then merge
+    description: A small change on main adds index.json to exempt_filenames. The merge then holds 15 counted files and passes;
+      main's next record is refused again.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.shard_by_prefix
+    title: shard the decision store by id prefix, then merge
+    description: Correct dec-ef8ddcb79d668a67 and change the kernel to store records as docs/decisions/<first id hex>/<id>.yaml
+      (index, file_store, validate, publish and their tests); then E1 moves its two records and merges.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+criteria:
+  - id: crit.all_hooks_run
+    question: If carried out as described, does the commit that lands E1's merge run every configured hook, with none skipped,
+      disabled or evaded (no server-side-only merge, no hidden or name-skipped folder)? A declared, approved set-aside counts
+      as the hook running.
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-1b74e408a5859af5
+      - ev-930569b472ce563b
+      - ev-ebc0f6c5eced4cf2
+      - ev-b61ba11671cfe1f5
+      - ev-d85f2297bf1b7eac
+  - id: crit.records_eventually
+    question: Does a tracked step guarantee that both E1 records reach main?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-ebc0f6c5eced4cf2
+      - ev-0b5ba54b10f9da2a
+      - ev-d85f2297bf1b7eac
+      - ev-1b74e408a5859af5
+      - ev-930569b472ce563b
+  - id: crit.not_contradict_ge133
+    question: Does it avoid every mechanism GE-133 rules out (skip, name or prefix match, silent exemption), so that anything
+      set aside is a declared path with a stated ground?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-093aaea9fba67db5
+      - ev-b61ba11671cfe1f5
+      - ev-1b74e408a5859af5
+      - ev-a40032c890bd28f9
+      - ev-930569b472ce563b
+  - id: crit.records_in_e1_pr
+    question: Are both records in main's docs/decisions/ when the E1 PR merges?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-d85f2297bf1b7eac
+      - ev-ebc0f6c5eced4cf2
+      - ev-0b5ba54b10f9da2a
+      - ev-1b74e408a5859af5
+      - ev-093aaea9fba67db5
+  - id: crit.headroom
+    question: Can main keep publishing decision records without the next refusal?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-1b74e408a5859af5
+      - ev-ebc0f6c5eced4cf2
+      - ev-0b5ba54b10f9da2a
+      - ev-d85f2297bf1b7eac
+  - id: crit.few_prereqs
+    question: Do few ACs or PRs have to land on main before E1's merge commit?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-1b74e408a5859af5
+      - ev-ebc0f6c5eced4cf2
+      - ev-d85f2297bf1b7eac
+      - ev-b61ba11671cfe1f5
+      - ev-a40032c890bd28f9
+evidence:
+  - id: ev-ebc0f6c5eced4cf2
+    locator: E1 worktree dry run; templates/scripts/commit_guardian/check_folder_density.py:298
+    category: task_context
+    content_hash: 3dc2681389ef904d959aa23fae4f6449eb918b0fc44a1dc75c5959ffb400e8a1
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-0b5ba54b10f9da2a
+    locator: git grep dec-b10271ebb40b9eaa origin/main -- docs
+    category: task_context
+    content_hash: ce737b26fdd2cd32c129a63cfe6af10c73dfa80fbc44e4fbaddbdd4c20ee3115
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-093aaea9fba67db5
+    locator: docs/acceptance-criteria/guardrail-engine/GE-133-directories-stay-findable/GE-133.yaml:77-78, GE-133a.yaml:99-111,
+      GE-133a-1.yaml:147
+    category: prior_decisions
+    content_hash: 37cde0fd9c6695767180374b401e3def606119a7b0defcd289d182c34e2a6f38
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-b61ba11671cfe1f5
+    locator: templates/scripts/commit_guardian/check_folder_density.py; kernel/memory/index.py
+    category: existing_patterns
+    content_hash: 94bf3f1bf52f52d05f121cec84703db8adf6f0f61916ab4a3730df9f7f233e99
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-6e6c28e1b6aa6674
+    locator: docs/decisions/dec-ef8ddcb79d668a67.yaml:179; kernel/memory/
+    category: prior_decisions
+    content_hash: 627f20dc23dea33436dfd1153f2da4f4b4764fc581835d4358c073fe73035fd0
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-d85f2297bf1b7eac
+    locator: docs/known-issues/commit-guardian/open-high-ki-cg-20261010-folder-density-refuses-merges-of-main.md
+    category: task_context
+    content_hash: a04d4d29145356d9b5cbe2ed3c56441fa030ccb4f001374fe602293a8689bae5
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-1b74e408a5859af5
+    locator: docs/known-issues/commit-guardian/open-high-ki-cg-20261010-folder-density-refuses-merges-of-main.md#L20-L45 (§KI-CG-20261010-folder-density-refuses-merges-of-main
+      — a me…)
+    category: existing_patterns
+    content_hash: e7fd51bca7537b8ff7238c8d13b062b3cb5f41c1adcfa239ec0a3499213fb28e
+    verification: source_verified
+    relevance: 0.9
+    source_version:
+      commit: 6611f18712b2ac00e6928cefd60b034e78b3aa23
+      dirty: false
+  - id: ev-a40032c890bd28f9
+    locator: docs/known-issues/commit-guardian/open-low-ki-cg-20260909-gate-folder-density.md#L17-L38 (§KI-CG-20260909-gate-folder-density
+      — `check-folder-density`…)
+    category: existing_patterns
+    content_hash: ff0c8418c1cb6663a19d8a14363b4fbb5e0f0234dcad9fbca340c4016db9c95b
+    verification: source_verified
+    relevance: 0.65
+    source_version:
+      commit: 6611f18712b2ac00e6928cefd60b034e78b3aa23
+      dirty: false
+  - id: ev-930569b472ce563b
+    locator: docs/architecture/components/commit-guardian.md#L58-L74 (§Merge-Aware Checks (Authorship, Not Operation, Is the
+      Discr…)
+    category: existing_patterns
+    content_hash: 3852310926a4428d1eed96e7ed0caff3c41fad1494af597f7cd6c5c8c688be03
+    verification: source_verified
+    relevance: 0.58
+    source_version:
+      commit: 6611f18712b2ac00e6928cefd60b034e78b3aa23
+      dirty: false
+precedents_considered: []
+approval:
+  approval_status: approved
+  approved_by: human:user
+  approved_at: '2026-10-12T12:52:47Z'
+  note: ''
+provenance:
+  origin: learned
+  created_by_capability: decision
+  created_at: '2026-10-12T12:52:47Z'
+  run_id: run-762ddcf6f40d4b52
+  root_task_id: task-48949992e6194440
+  langfuse_trace_id: 9aa5278017cbe31b040fd1254a05842b
+  langfuse_trace_url: null
+  repository_revision:
+    commit: null
+    dirty: false
+  policy_version: null
+  template_version: decision.assess@1
+  model_version: jev-latest
+  kernel_version: 0.1.0.dev0
+  decision_versions:
+    options: 0524e132e33f
+    criteria: 30a4d0062c2b
+    templates: decision.assess@1
+corrections: []

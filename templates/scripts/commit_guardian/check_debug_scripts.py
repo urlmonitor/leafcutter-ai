@@ -24,6 +24,24 @@ from config import (
     DEBUG_EXEMPT_DIRS,
 )
 
+try:
+    from check_outcome import (  # type: ignore[import]
+        OUTCOME_NOTHING_TO_INSPECT,
+        emit_result,
+    )
+except ImportError:
+    # check_outcome.py is deployed alongside this file in every real layout
+    # (build.py copies the whole templates/scripts/commit_guardian/ tree), so
+    # this fallback exists only for a working copy that exposes this check
+    # script in isolation (e.g. a test fixture) -- same pattern as
+    # check_contract_shrinking.py / check_doc_frontmatter.py. The value here
+    # MUST stay in sync with check_outcome.py.
+    OUTCOME_NOTHING_TO_INSPECT = "nothing_to_inspect"
+
+    def emit_result(outcome: str) -> None:
+        """Fallback RESULT-line emitter used when check_outcome is absent."""
+        print(f"RESULT: {outcome}", file=sys.stdout)
+
 # Local aliases for backwards compatibility within this file
 VALID_CATEGORIES = DEBUG_VALID_CATEGORIES
 REQUIRED_TAGS = DEBUG_REQUIRED_TAGS
@@ -226,7 +244,7 @@ def validate_debug_script(filepath: str) -> list[str]:
 
     try:
         content = path.read_text(encoding="utf-8", errors="replace")
-    except Exception as e:
+    except OSError as e:
         return [f"Could not read file: {e}"]
 
     tags = _parse_tags_for_ext(content, path.suffix.lower())
@@ -264,6 +282,7 @@ def main() -> int:
         files_to_check = get_staged_debug_scripts()
 
     if not files_to_check:
+        emit_result(OUTCOME_NOTHING_TO_INSPECT)
         return 0
 
     failed_checks = []
@@ -305,6 +324,11 @@ def main() -> int:
 
     if passed_count > 0:
         print(f"✅ PASSED: {passed_count} debug script(s) have proper metadata")
+    else:
+        # Every staged path under debugging/scripts/ was filtered out (deleted,
+        # non-script suffix, or exempt) -- this check had no real subject to
+        # examine, distinct from a genuine clean pass.
+        emit_result(OUTCOME_NOTHING_TO_INSPECT)
 
     return 0
 

@@ -1,0 +1,776 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="25" skipped="0" tests="25" time="0.511" timestamp="2026-10-02T08:39:46.934798+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_phase_fields_context_order_and_future_fields_are_lossless" time="0.010"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_phase_fields_context_orde0')
+
+    def test_phase_fields_context_order_and_future_fields_are_lossless(tmp_path):
+        # covers: KM-400a-3-i; type: unit; angle: criterion
+        phases = [
+            _phase(description="", status="active", components=["finalize", "ac", "finalize"],
+                   exit_criteria=["Second", "First"], tickets_advancing_outcome=["", "T2", "T2"],
+                   future={"nested": [None, {}, [True, 4]]}),
+            _phase(id="phase_2", status="active"),
+        ]
+        source = _write(tmp_path, phases, last_updated="authored update text", _comment="Keep as data", future_root={"x": []})
+&gt;       records = _extract(tmp_path)
+                  ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_roadmap_phase.py:44: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_optional_fields_remain_absent_and_empty_lists_remain_present" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_optional_fields_remain_ab0')
+
+    def test_optional_fields_remain_absent_and_empty_lists_remain_present(tmp_path):
+        # covers: KM-400a-3-i; type: unit; angle: boundary
+        source = _write(tmp_path)
+&gt;       record, = _extract(tmp_path)
+                  ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_roadmap_phase.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_configured_source_and_nonempty_description" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_configured_source_and_non0')
+
+    def test_configured_source_and_nonempty_description(tmp_path):
+        # covers: KM-400a-3-i; type: unit; angle: seam
+        _config(tmp_path, "plans/custom.json")
+        source = _write(tmp_path, [_phase(description="Exact description")], path="plans/custom.json")
+&gt;       record, = _extract(tmp_path)
+                  ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_roadmap_phase.py:76: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_absent_optional_source_returns_no_records" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_absent_optional_source_re0')
+
+    def test_absent_optional_source_returns_no_records(tmp_path):
+        # covers: KM-400a-3-i; type: unit; angle: boundary
+&gt;       assert _extract(tmp_path) == []
+               ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_roadmap_phase.py:84: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_malformed_source_fails[{]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_malformed_source_fails___0')
+contents = '{'
+
+    @pytest.mark.parametrize("contents", ["{", "[]", "{}", '{"phases": []}', '{"phases": [42]}'])
+    def test_malformed_source_fails(tmp_path, contents):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path)
+        (tmp_path / "docs/roadmap.json").write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:95: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_malformed_source_fails[[]]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_malformed_source_fails___1')
+contents = '[]'
+
+    @pytest.mark.parametrize("contents", ["{", "[]", "{}", '{"phases": []}', '{"phases": [42]}'])
+    def test_malformed_source_fails(tmp_path, contents):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path)
+        (tmp_path / "docs/roadmap.json").write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:95: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_malformed_source_fails[{}]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_malformed_source_fails___2')
+contents = '{}'
+
+    @pytest.mark.parametrize("contents", ["{", "[]", "{}", '{"phases": []}', '{"phases": [42]}'])
+    def test_malformed_source_fails(tmp_path, contents):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path)
+        (tmp_path / "docs/roadmap.json").write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:95: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_malformed_source_fails[{&quot;phases&quot;: []}]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_malformed_source_fails___3')
+contents = '{"phases": []}'
+
+    @pytest.mark.parametrize("contents", ["{", "[]", "{}", '{"phases": []}', '{"phases": [42]}'])
+    def test_malformed_source_fails(tmp_path, contents):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path)
+        (tmp_path / "docs/roadmap.json").write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:95: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_malformed_source_fails[{&quot;phases&quot;: [42]}]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_malformed_source_fails___4')
+contents = '{"phases": [42]}'
+
+    @pytest.mark.parametrize("contents", ["{", "[]", "{}", '{"phases": []}', '{"phases": [42]}'])
+    def test_malformed_source_fails(tmp_path, contents):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path)
+        (tmp_path / "docs/roadmap.json").write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:95: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_invalid_phase_shape_fails[changes0]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_invalid_phase_shape_fails0')
+changes = {'id': ''}
+
+    @pytest.mark.parametrize("changes", [
+        {"id": ""}, {"id": 1}, {"id": "Phase-1"}, {"title": ""}, {"exit_criteria": [""]},
+        {"tickets_advancing_outcome": [1]}, {"components": None}, {"description": None}, {"status": "unknown"},
+    ])
+    def test_invalid_phase_shape_fails(tmp_path, changes):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, [_phase(**changes)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:106: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_invalid_phase_shape_fails[changes1]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_invalid_phase_shape_fails1')
+changes = {'id': 1}
+
+    @pytest.mark.parametrize("changes", [
+        {"id": ""}, {"id": 1}, {"id": "Phase-1"}, {"title": ""}, {"exit_criteria": [""]},
+        {"tickets_advancing_outcome": [1]}, {"components": None}, {"description": None}, {"status": "unknown"},
+    ])
+    def test_invalid_phase_shape_fails(tmp_path, changes):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, [_phase(**changes)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:106: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_invalid_phase_shape_fails[changes2]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_invalid_phase_shape_fails2')
+changes = {'id': 'Phase-1'}
+
+    @pytest.mark.parametrize("changes", [
+        {"id": ""}, {"id": 1}, {"id": "Phase-1"}, {"title": ""}, {"exit_criteria": [""]},
+        {"tickets_advancing_outcome": [1]}, {"components": None}, {"description": None}, {"status": "unknown"},
+    ])
+    def test_invalid_phase_shape_fails(tmp_path, changes):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, [_phase(**changes)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:106: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_invalid_phase_shape_fails[changes3]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_invalid_phase_shape_fails3')
+changes = {'title': ''}
+
+    @pytest.mark.parametrize("changes", [
+        {"id": ""}, {"id": 1}, {"id": "Phase-1"}, {"title": ""}, {"exit_criteria": [""]},
+        {"tickets_advancing_outcome": [1]}, {"components": None}, {"description": None}, {"status": "unknown"},
+    ])
+    def test_invalid_phase_shape_fails(tmp_path, changes):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, [_phase(**changes)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:106: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_invalid_phase_shape_fails[changes4]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_invalid_phase_shape_fails4')
+changes = {'exit_criteria': ['']}
+
+    @pytest.mark.parametrize("changes", [
+        {"id": ""}, {"id": 1}, {"id": "Phase-1"}, {"title": ""}, {"exit_criteria": [""]},
+        {"tickets_advancing_outcome": [1]}, {"components": None}, {"description": None}, {"status": "unknown"},
+    ])
+    def test_invalid_phase_shape_fails(tmp_path, changes):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, [_phase(**changes)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:106: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_invalid_phase_shape_fails[changes5]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_invalid_phase_shape_fails5')
+changes = {'tickets_advancing_outcome': [1]}
+
+    @pytest.mark.parametrize("changes", [
+        {"id": ""}, {"id": 1}, {"id": "Phase-1"}, {"title": ""}, {"exit_criteria": [""]},
+        {"tickets_advancing_outcome": [1]}, {"components": None}, {"description": None}, {"status": "unknown"},
+    ])
+    def test_invalid_phase_shape_fails(tmp_path, changes):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, [_phase(**changes)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:106: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_invalid_phase_shape_fails[changes6]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_invalid_phase_shape_fails6')
+changes = {'components': None}
+
+    @pytest.mark.parametrize("changes", [
+        {"id": ""}, {"id": 1}, {"id": "Phase-1"}, {"title": ""}, {"exit_criteria": [""]},
+        {"tickets_advancing_outcome": [1]}, {"components": None}, {"description": None}, {"status": "unknown"},
+    ])
+    def test_invalid_phase_shape_fails(tmp_path, changes):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, [_phase(**changes)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:106: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_invalid_phase_shape_fails[changes7]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_invalid_phase_shape_fails7')
+changes = {'description': None}
+
+    @pytest.mark.parametrize("changes", [
+        {"id": ""}, {"id": 1}, {"id": "Phase-1"}, {"title": ""}, {"exit_criteria": [""]},
+        {"tickets_advancing_outcome": [1]}, {"components": None}, {"description": None}, {"status": "unknown"},
+    ])
+    def test_invalid_phase_shape_fails(tmp_path, changes):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, [_phase(**changes)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:106: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_invalid_phase_shape_fails[changes8]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_invalid_phase_shape_fails8')
+changes = {'status': 'unknown'}
+
+    @pytest.mark.parametrize("changes", [
+        {"id": ""}, {"id": 1}, {"id": "Phase-1"}, {"title": ""}, {"exit_criteria": [""]},
+        {"tickets_advancing_outcome": [1]}, {"components": None}, {"description": None}, {"status": "unknown"},
+    ])
+    def test_invalid_phase_shape_fails(tmp_path, changes):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, [_phase(**changes)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:106: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_duplicate_ids_fail" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_duplicate_ids_fail0')
+
+    def test_duplicate_ids_fail(tmp_path):
+        # covers: KM-400a-3-i; type: unit; angle: failure
+        _write(tmp_path, [_phase(), _phase(title="A second title")])
+        with pytest.raises(ValueError, match="duplicate"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:113: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_configured_path_escape_fails_even_when_target_absent[../outside.json]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_configured_path_escape_fa0')
+path = '../outside.json'
+
+    @pytest.mark.parametrize("path", ["../outside.json", "C:/outside.json", "C:outside.json", "/outside.json", "\\\\server\\outside.json"])
+    def test_configured_path_escape_fails_even_when_target_absent(tmp_path, path):
+        # covers: KM-400a-3-i; type: unit; angle: boundary
+        _config(tmp_path, path)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_configured_path_escape_fails_even_when_target_absent[C:/outside.json]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_configured_path_escape_fa1')
+path = 'C:/outside.json'
+
+    @pytest.mark.parametrize("path", ["../outside.json", "C:/outside.json", "C:outside.json", "/outside.json", "\\\\server\\outside.json"])
+    def test_configured_path_escape_fails_even_when_target_absent(tmp_path, path):
+        # covers: KM-400a-3-i; type: unit; angle: boundary
+        _config(tmp_path, path)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_configured_path_escape_fails_even_when_target_absent[C:outside.json]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_configured_path_escape_fa2')
+path = 'C:outside.json'
+
+    @pytest.mark.parametrize("path", ["../outside.json", "C:/outside.json", "C:outside.json", "/outside.json", "\\\\server\\outside.json"])
+    def test_configured_path_escape_fails_even_when_target_absent(tmp_path, path):
+        # covers: KM-400a-3-i; type: unit; angle: boundary
+        _config(tmp_path, path)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_configured_path_escape_fails_even_when_target_absent[/outside.json]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_configured_path_escape_fa3')
+path = '/outside.json'
+
+    @pytest.mark.parametrize("path", ["../outside.json", "C:/outside.json", "C:outside.json", "/outside.json", "\\\\server\\outside.json"])
+    def test_configured_path_escape_fails_even_when_target_absent(tmp_path, path):
+        # covers: KM-400a-3-i; type: unit; angle: boundary
+        _config(tmp_path, path)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_configured_path_escape_fails_even_when_target_absent[\\\\server\\outside.json]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-11/test_configured_path_escape_fa4')
+path = '\\\\server\\outside.json'
+
+    @pytest.mark.parametrize("path", ["../outside.json", "C:/outside.json", "C:outside.json", "/outside.json", "\\\\server\\outside.json"])
+    def test_configured_path_escape_fails_even_when_target_absent(tmp_path, path):
+        # covers: KM-400a-3-i; type: unit; angle: boundary
+        _config(tmp_path, path)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_roadmap_phase.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_roadmap_phase" name="test_real_roadmap_all_fields_and_context_match_source" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'">def test_real_roadmap_all_fields_and_context_match_source():
+        # covers: KM-400a-3-i; type: integration; angle: real_artifact
+        root = Path(__file__).resolve().parents[2]
+        source = json.loads((root / "docs/roadmap.json").read_text(encoding="utf-8"))
+&gt;       records = _extract(root)
+                  ^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_roadmap_phase.py:128: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_roadmap_phase.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.roadmap_phase").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.roadmap_phase'
+import_ = &lt;function _gcd_import at 0x000002051BABBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.roadmap_phase'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase></testsuite></testsuites>

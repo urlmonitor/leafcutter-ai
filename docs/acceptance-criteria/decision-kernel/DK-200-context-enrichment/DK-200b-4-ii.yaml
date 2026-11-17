@@ -1,0 +1,65 @@
+id: DK-200b-4-ii
+title: "Repository excerpts forbidden by data policy stay out of external judgments"
+component: decision-kernel
+components: [decision_kernel]
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given saved initial context contains repository excerpts,
+  And data policy forbids sending repository excerpts to the judgment provider,
+  When intent or a later capability prepares its judgment,
+  Then the transmitted context excludes those excerpts,
+  And the local saved context retains them.
+depends_on: [DK-200b-4]
+covered_by:
+  - "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_data_policy_withholds_repository_context_from_intent"
+  - "tests/kernel/enrichment/test_projection.py::TestContextProjection::test_data_policy_removes_evidence_from_projection_but_not_checkpoint"
+implemented_by:
+  - "kernel/enrichment_projection.py"
+  - "kernel/intent/step.py"
+  - "kernel/capabilities/decision/jev_support.py"
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "data_policy.send_repo_excerpts_to_jev must govern both intent and native capability projections without deleting local checkpoint evidence."
+  - "A withheld excerpt must not remain elsewhere in the external provider state as copied context."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_data_policy_withholds_repository_context_from_intent
+    target_dir: tests/kernel/intent/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "A real intent batch contains no repository evidence or source sentinel when sharing is forbidden, while the checkpoint retains the evidence."
+  - name: test_data_policy_removes_evidence_from_projection_but_not_checkpoint
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "The policy-controlled projection omits evidence with a withholding limitation, while allowed projection retains five excerpts and the checkpoint is unchanged."
+test_rationale: "The real intent seam and shared projection's allow/deny pair verify policy application without falsely treating an empty local snapshot as a privacy success."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.

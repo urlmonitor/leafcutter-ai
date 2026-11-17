@@ -1,0 +1,8 @@
+{
+  "actual_hosted_source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+  "previous_hosted_source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+  "same_source": true,
+  "oracle_path": "docs/analysis/2026-10-02-retrieval-active-source-oracle.json",
+  "oracle_file_sha256": "31aa3f0deffa58ffb2a1b69b0521a6e0bb0a0881678ea18a46aec5a234f37bd9",
+  "new_oracle_needed": false
+}

@@ -1,0 +1,73 @@
+{
+  "entity_kind": "ChangelogEntry",
+  "implemented_on": "2026-10-02",
+  "review": "reports/native-fields/review-ChangelogEntry.json",
+  "implementation": "knowledge/native_types/changelog_entry.py",
+  "tests": "tests/knowledge/test_native_changelog_entry.py",
+  "api": "extract(root: Path) -> list[NativeRecord]",
+  "identity_contract": "Complete repository-relative source path, including directory and extension; one record per file, empty locator.",
+  "metadata_contract": "Full parsed authored mapping, including all extension fields, native scalar types, maps, list positions, explicit nulls, and empty collections. Historical missing fields remain absent. No current-writer validation or defaults are applied to historical sources.",
+  "discovery_contract": "Configured changelogs_dir from deployed commit_guardian.json, then development template fallback, then changelogs default; docs/changelog remains a legacy store. Stores and files must resolve inside root, shared sources are deduplicated, and README.md/index.md plus nested generated files are excluded.",
+  "derived_contract": [
+    "Exact Markdown body after the whole-line closing delimiter",
+    "Raw frontmatter text preserving original scalar spelling and quoting",
+    "Strict-versus-compatibility parsing mode",
+    "For recoveries: failing field, named rule, exact raw field fragment, and original YAML text/line/column diagnostic"
+  ],
+  "recovery_contract": {
+    "strict_first": true,
+    "rules": ["emitter_literal_description", "emitter_literal_migration_list"],
+    "description": "Only a single whole-line double-quoted description with an actual invalid YAML escape is recovered by reversing the writer's quote escaping while preserving literal backslashes.",
+    "migration_steps": "Only an actually failing simple two-space dash list is recovered as literal ordered lines. Valid YAML mappings remain mappings, and ambiguous continuation, nested, tagged, quoted or block shapes fail.",
+    "siblings": "All sibling fields must parse strictly and retain their values.",
+    "deterministic": "Derived provenance contains no temporary checkout path. Two separate checkout locations produce identical records.",
+    "source_files_modified": false
+  },
+  "red": {
+    "failed": 19,
+    "cause": "ModuleNotFoundError before implementation",
+    "receipt": "reports/native-fields/changelog-red.xml"
+  },
+  "green": {
+    "passed": 20,
+    "strict_ac_enforcement": true,
+    "receipt": "reports/native-fields/changelog-green.xml"
+  },
+  "mutation_proofs": {
+    "count": 10,
+    "all_rejected_by_assertion": true,
+    "errors": 0,
+    "method": "Process-local mutations to the exact imported reader; no implementation files were mutated. Every subprocess exited 1 with target assertion failures.",
+    "receipt": "reports/native-fields/changelog-mutations.json",
+    "injections": [
+      "Drop extension metadata",
+      "Invent missing description default",
+      "Duplicate discovered records",
+      "Ignore configured current directory",
+      "Silently accept invalid or escaping directory configuration",
+      "Strip literal backslashes during description recovery",
+      "Coerce a valid migration mapping into a string",
+      "Silently swallow malformed source records",
+      "Discard original recovery error provenance",
+      "Leak absolute checkout path into derived metadata"
+    ]
+  },
+  "real_corpus": {
+    "records": 531,
+    "current_records": 526,
+    "legacy_records": 5,
+    "strict_parses": 528,
+    "compatibility_parses": 3,
+    "distinct_authored_fields": 22,
+    "native_property_round_trip_records": 531,
+    "recovered_sources": [
+      "changelogs/2026-05-27-0000-epic-consolidatedoutputroot-all-build-outputs-consolidated-into-leafcutter.md",
+      "changelogs/2026-09-07-1215-windows-contributors-can-commit-again-and-the-product-truth-record-gets-criteria-for-staying-true.md",
+      "changelogs/2026-09-07-1305-a-gate-that-had-nothing-to-match-yet-stops-being-treated-as-one-that-never-could-and-the-known-issue-this-only-half-closes-is-reopened-in-the-same-commit.md"
+    ]
+  },
+  "verification": {"ruff_check": "passed", "ruff_format": "passed"},
+  "integration_owner": "Root integrates this reader into native metadata projection and publishes the validated snapshot.",
+  "aura_writes": false,
+  "commits": false
+}

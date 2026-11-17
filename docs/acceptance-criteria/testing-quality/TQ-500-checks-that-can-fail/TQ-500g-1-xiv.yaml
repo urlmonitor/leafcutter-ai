@@ -1,0 +1,332 @@
+id: TQ-500g-1-xiv
+components:
+  - testing_quality
+  - build_orchestration
+title: "A test held to a wrong version that changes no line the test runs is reported not executed and unfinished, never as a survivor"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given tests T1 and T2 both name must_catch
+    "naive chain re-invokes the previous sitecustomize", whose alteration,
+    whether pinned, freshly prepared or declared on the requirement, changes
+    one line inside chain_sitecustomize(),
+    and on the run on the code as written T1 runs that line and T2 never calls
+    chain_sitecustomize(),
+    and T2 passes under the alteration,
+    and a second wrong version, "the migration leaves the column nullable",
+    changes one line of a SQL migration file, whose lines cannot be traced as
+    run or not run,
+  When the wrong-version runs are read,
+  Then T1's row is decided by its run as before, caught or survived,
+    And T2's row reads "not executed: the test runs none of the changed
+      lines", T2 is not counted as a survivor, and the work stops with the
+      reason unfinished rather than survivor,
+    And the report tells T2's row apart from a test that ran a changed line
+      and still passed, so a reader sees that the wrong version could not
+      reach T2 rather than that T2 is weak,
+    And for the SQL alteration the row says that run-or-not-run could not be
+      traced for that file, and its verdict comes from the run as before; it
+      is never reported not executed for that reason alone,
+    And a line run inside a test counts as run by that test only when that
+      test itself ran it on the run on the code as written; another test
+      running it does not count,
+    And a line run at import or collection time, before any test starts (for
+      example a module-level constant in the file that defines
+      chain_sitecustomize()), counts as run by every test of that run, so a
+      wrong version that changes only such a line is decided for T1 and T2 by
+      their runs and is never reported not executed for either.
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-1-i
+  - TQ-500g-1-ii
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20261023-test-breaker-no-op-alterations.md
+    relationship: describes
+    status: exists
+    relevance: "Suggested fix 'Runner, optional': refuse an alteration that changes no line executed by the tests in scope, reported unfinished as not_executed, not as a survivor. This AC is that fix, made per test."
+  - path: docs/analysis/2026-10-23-the-wrong-version-gate-tests-a-different-guess-each-run.md
+    relationship: describes
+    status: exists
+    relevance: "Section 3(d): the round-III naive-chain survivor against a test that never calls chain_sitecustomize; recommendation item 4 (effect check, shared with the no-op KI)."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-i.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The runner's per-test, per-wrong-version rule and its result values, which gain not executed as an unfinished result."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-2.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Database tests in the runs: SQL wrong versions whose lines cannot be traced must keep their run-decided verdict."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The shared runner and its siblings; the trace plugin joins the pytest child the same way the kind and database plugins do."
+  - path: docs/reference/wrong-version-runs.md
+    relationship: describes
+    status: planned
+    relevance: "TQ-500g-5 reference page; the new unfinished result not_executed and the 'could not be traced' note are documented there."
+assigned_agent: python-coder
+estimated_complexity: L
+declared_files:
+  - path: scripts/build_orchestration/_wvr_trace_plugin.py
+    state: to_be_created
+  - path: scripts/build_orchestration/_wvr_trace.py
+    state: to_be_created
+  - path: scripts/build_orchestration/_wvr_effect.py
+    state: to_be_created
+  - path: scripts/build_orchestration/_wvr_pytest.py
+    state: existing
+  - path: scripts/build_orchestration/_wvr_verdict.py
+    state: existing
+  - path: scripts/build_orchestration/wrong_version_runner.py
+    state: existing
+it_requirements:
+  - >-
+    Line tracing uses the standard library only (coverage.py is not a dependency of the package or of a
+    consumer project and must not become one): a new pytest plugin,
+    scripts/build_orchestration/_wvr_trace_plugin.py, loaded with -p into the SAME single baseline pytest
+    run the runner already makes, beside the kind plugin and, when present, the database plugin. It uses
+    sys.monitoring LINE events where the interpreter has it and sys.settrace otherwise, and records only
+    the absolute paths it is given (through an environment variable, like the kind plugin's output path).
+    Output: one JSON file {<pytest nodeid>: {<absolute path>: [line numbers]}, "": {...}} written to a
+    temporary path the runner deletes afterwards.
+  - >-
+    Attribution: lines executed during a test's setup, call and teardown (pytest_runtest_protocol) belong
+    to that test only, so a line run by another test never counts. Lines executed outside any test's
+    protocol (module import during collection) are recorded under "" and count as run by every test of the
+    run (IT-PO decision: a module-level change reaches every test that imported the module; confirmed by
+    the user, BrainCandy, 2026-10-24, and now a criteria clause).
+  - >-
+    _wvr_pytest.run_selected takes a list of extra plugins (module, environment) instead of one, so the
+    database plugin (TQ-500g-2-i) and the trace plugin share one run; the existing single-extra callers
+    keep working unchanged. The trace plugin's directory joins the child's PYTHONPATH exactly as the
+    database plugin's does.
+  - >-
+    Reading the trace (new module scripts/build_orchestration/_wvr_trace.py): run_traced(nodes, files)
+    returns, per test identity (the same identity the kind rule uses, parametrised cases folded), {repo-relative
+    path: set of executed lines}, and the set of altered files that are not traceable. A file is traceable
+    only when it ends in .py and lies inside the repository; any other file (SQL, JS, YAML, ...) is not
+    traceable. An unreadable or missing trace output makes every file of that run not traceable (fail
+    safe: verdicts then come from the run as before), and is logged at WARNING.
+  - >-
+    Changed lines (new module scripts/build_orchestration/_wvr_effect.py, pure functions): the as-written line
+    numbers a wrong version changes, from the as-written bytes and the altered bytes of each file (difflib
+    opcodes on the LF form: every as-written line of a replace or delete opcode; for an insert opcode the
+    as-written line just before the insertion point, or line 1 at the top). reached(test, files) gives
+    "reached" when the test ran at least one changed line of a traceable file, "not reached" when every
+    altered file is traceable and it ran none, and "not traceable" otherwise.
+  - >-
+    Runner (wrong_version_runner.py, kept at or under 400 counted lines; it is at 309): the baseline run
+    traces the union of the files any named wrong version alters (from the prepared alterations, the fix
+    undone excluded). For every named wrong version (pinned, freshly prepared or declared) and every test
+    whose own entry names it, a "not reached" test gets the row result not_executed with detail exactly
+    "not executed: the test runs none of the changed lines", whatever its outcome under the alteration;
+    a "not traceable" test keeps its run-decided result and its detail gains
+    "; run-or-not-run could not be traced for <file>". "The fix undone" is judged by its group rule as
+    today and is never reported not_executed. The runner may skip the pytest run of a wrong version that
+    no holder reaches.
+  - >-
+    Verdict (_wvr_verdict.py): not_executed is an unfinished result (UNFINISHED gains it; it is blocking),
+    its unfinished entry carries result "not_executed", it never appears in survivors, and the verdict
+    reason is "unfinished" when no blocking survivor exists (a survivor still outranks it). A to-run-later
+    extra's not_executed row is demoted to non-blocking like its other rows (_wvr_extras.demote).
+  - >-
+    Cost: tracing is limited to the altered files, so the baseline run takes at most 1.5 x its untraced
+    time on the refresh fixture; measured as a relative check, never an absolute budget.
+  - >-
+    Deploy manifest: the three new modules sit in scripts/build_orchestration/, deployed by
+    build_build_orchestration_scripts' directory glob, so no deploy-list edit is needed. Because the
+    plugin is loaded by module name inside a pytest child, prove it from the deployed layout (the
+    shared_reference_layout fixture, shared_layout_reader marker): the deployed runner's baseline loads
+    the deployed plugin, never the source tree's.
+test_spec:
+  - name: test_unreached_test_reads_not_executed_never_survivor
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: python scripts/build_orchestration/wrong_version_runner.py run
+    description: >-
+      Temp repo with chain_sitecustomize() and two real tests that both name "naive chain re-invokes the
+      previous sitecustomize": T1 calls it, T2 never does and passes under the alteration. T1's row is
+      caught or survived from its run; T2's row is not_executed with the exact detail, T2 is not in
+      survivors, and when T1 is caught the verdict's reason is unfinished with an unfinished entry of result
+      not_executed.
+    must_catch:
+      - a test that never ran the changed line counted as a survivor
+      - reachability judged per name rather than per test, so T1 reaching it covers T2
+      - a line run by another test counted for T2
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_effect.py
+      - scripts/build_orchestration/_wvr_trace.py
+      - scripts/build_orchestration/_wvr_trace_plugin.py
+      - scripts/build_orchestration/wrong_version_runner.py
+  - name: test_not_executed_row_is_told_apart_from_a_weak_test
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: >-
+      In the same verdict, a third test T3 that runs the changed line and still passes reads survived
+      (reason survivor), while T2 reads not_executed; the two rows carry different result words and
+      details.
+    must_catch:
+      - not_executed folded into survived in the report
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_verdict.py
+      - scripts/build_orchestration/wrong_version_runner.py
+  - name: test_untraceable_sql_alteration_keeps_its_run_verdict
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: >-
+      "the migration leaves the column nullable" alters one line of a .sql file. Its rows are decided by the
+      run as before, and their detail says run-or-not-run could not be traced for that file; no row is
+      not_executed.
+    must_catch:
+      - an untraceable file treated as not executed
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_trace.py
+      - scripts/build_orchestration/_wvr_effect.py
+  - name: test_module_level_change_counts_as_reached
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: >-
+      A wrong version that changes a module-level constant executed at import: every test whose entry
+      names it is reached (its row decided by its run), never not_executed.
+    must_catch:
+      - import-time lines attributed to no test
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_trace_plugin.py
+  - name: test_changed_lines_of_replace_delete_and_insert
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: >-
+      _wvr_effect.changed_lines on a CRLF and an LF file: a one-line replace gives that line, a two-line
+      delete gives both lines, a pure insert gives the line before the insertion point (line 1 at the
+      top).
+    must_catch:
+      - changed lines taken from the altered side's numbering
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_effect.py
+  - name: test_trace_and_database_plugins_share_one_run
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: >-
+      A requires_db test in scope beside a traced Python alteration: one baseline pytest run carries both
+      plugins, the database findings still arrive and the trace output is read.
+    must_catch:
+      - the trace plugin replacing the database plugin in the child
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_pytest.py
+  - name: test_deployed_runner_loads_the_deployed_trace_plugin
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: >-
+      Using the shared deployed reference layout (shared_layout_reader), the deployed
+      wrong_version_runner.py run on the T1/T2 fixture reports T2 not_executed, proving the deployed
+      plugin was found by module name.
+    must_catch:
+      - the plugin missing from the deployed layout, so every run silently loses the check
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_pytest.py
+      - scripts/build_orchestration/_wvr_trace_plugin.py
+test_required: true
+test_rationale: >-
+  Reachability is only real when measured on a real run, so every entry runs real pytest tests through the
+  runner's CLI on a temp git repo (the TQ-500g-1-i refresh fixture pattern) with the trace plugin in the
+  child, and asserts on the verdict rows. The discrimination entry is the round-III case: T1 and T2 share a
+  name and only one reaches it. The SQL entry proves "cannot trace" never becomes "not executed". The
+  deployed entry runs the deployed copy, because a plugin loaded by name in a child process is exactly the
+  dependency the source-tree tests mask.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500g-1-xiii
+    contract: >-
+      _wvr_trace.run_traced(nodes, files) -> per test identity {repo-relative path: set[int]} plus the set
+      of untraceable files; _wvr_effect.changed_lines(as_written: bytes, altered: bytes) -> set[int] and
+      reached(...) -> "reached" | "not reached" | "not traceable".
+expects_from:
+  - ac_id: TQ-500g-1-i
+    contract: >-
+      The runner's baseline run on the code as written (one pytest run over the in-scope tests, the kind
+      plugin in the child) and the per-test result rows {test, wrong_version, result, blocking, detail}
+      with the unfinished set of _wvr_verdict.
+origin_agent: business-analyst-v3
+created: 2026-10-23
+amended_by:
+  - reason: "User decision (BrainCandy, 2026-10-24, approved) recorded in the criteria: a line executed at import / collection time counts as executed by every test in that run. The last clause now reads 'a line run inside a test counts as run by that test only when that test itself ran it' (before: 'a line counts as run by a test only when that test itself ran it'), and a new clause states the import-time rule with its observable effect (never not executed for a module-level-only change). it_requirements (attribution) and notes record the decision. All other clauses unchanged."
+    date: '2026-10-24'
+    by: business-analyst
+    directed_by: user
+  - action: approved
+    agent: approve_acs
+    date: '2026-10-24'
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-OnceANamedWrongVersionIsPreparedAnd/04_TICKET-20261024-TQ-500g-1-xiv.md
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY ITS OWN AC. It applies to every alteration (pinned, fresh or declared),
+  not only to pins, and it is the KI's runner fix. TQ-500g-1-xiii uses it as
+  one of the checks a pin must pass; the per-test row here is what a reviewer
+  reads.
+
+  PER TEST, NOT PER NAME. A name held by two tests can be reachable from one
+  and not the other (T1 and T2). TQ-500g-1-i holds each test to the names its
+  own entry lists, so reachability is judged per test too. Consequence: T2's
+  entry is mis-assigned for that name, and the gate says so (unfinished,
+  not executed) instead of calling T2 weak. This is exactly the round-III
+  case: the "naive chain" claim was moved to a test that never generates a
+  sitecustomize.
+
+  NOT TRACEABLE != NOT EXECUTED. Database wrong versions (TQ-500g-2) change SQL
+  files, and other non-Python files may be altered too. Treating "cannot
+  trace" as "not executed" would make every such wrong version unfinished and
+  stop all database work. So an untraceable file keeps today's behaviour, with
+  the row saying the check could not be made.
+
+  WHAT THIS DOES NOT CATCH. An alteration whose changed line runs but whose
+  effect is equivalent on the test's inputs (analysis 3(d), propagation round
+  III) still reads as a survivor. That is the KI's "Triage, optional"
+  direction and is out of scope here.
+
+  RESULT VOCABULARY. TQ-500g-1-i's result list gains one unfinished value
+  (working name not_executed); IT-PO to amend that contract and the TQ-500g-5
+  reference page.
+
+  IT-PO ENRICHMENT (2026-10-23)
+  The working name not_executed is kept as the result word. TQ-500g-1-i's
+  delivers_to result enum and TQ-500g-5's it_requirements were amended in this
+  pass; the reference page docs/reference/wrong-version-runs.md does not exist
+  yet (planned by TQ-500g-5), so it is written with the new word from the
+  start. templates/agents/sql-test-writer.md lists the runner's result words
+  and needs not_executed added (documentation follow-up).
+  TRACING: standard library only (no coverage.py), via a pytest plugin in the
+  runner's existing baseline run.
+  DECISION FOR THE BA (caveat): a line run at import time (collection) counts
+  as run by every test of the run. Otherwise every module-level wrong version
+  would read not_executed for every test. The criteria's "another test running
+  it does not count" is kept for lines run inside a test.
+
+  USER DECISION (BrainCandy, 2026-10-24, "approved")
+  d. IMPORT-TIME LINES COUNT FOR EVERY TEST. A line executed at import or
+     collection time counts as executed by every test in that run. The caveat
+     above is accepted and is now a criteria clause; the per-test rule applies
+     only to lines run inside a test.

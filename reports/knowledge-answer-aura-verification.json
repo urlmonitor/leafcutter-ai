@@ -1,0 +1,2780 @@
+{
+  "recorded_at_utc": "2026-10-01T21:50:20.814564+00:00",
+  "independent_evaluator": "qa_queries",
+  "repository_id": "leafcutter",
+  "source_revision": "59269e024e4d0290b68b03d0d382745966e67e29",
+  "generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+  "reviewed_oracle_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+  "source_oracle_verification": [
+    {
+      "canonical_id": "TQ-500f",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f.yaml",
+      "sha256": "f40607e4b000142cf233c12f47995ded1aaed589cc55d8248c2e75697f59c959"
+    },
+    {
+      "canonical_id": "TQ-500f-1",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-1.yaml",
+      "sha256": "7d0479fc40c2a16cc2f3a1758163fe587bd5665135cd5c2ecb8a354e43da546e"
+    },
+    {
+      "canonical_id": "TQ-500f-1-i",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-1-i.yaml",
+      "sha256": "9bf022807769361d8629224c848c371d6b8a8660b91939554b23bc9afde2fb37"
+    },
+    {
+      "canonical_id": "TQ-500f-2",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2.yaml",
+      "sha256": "c29fe38077176f0dccdd8d5ebc9c30a21658b81182c81cdc10312e4ec5da0f94"
+    },
+    {
+      "canonical_id": "TQ-500f-2-i",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-i.yaml",
+      "sha256": "9979c6f46ac018c287e8fdb3dc005c3ca98c04af8d126b3ca5529be285c92121"
+    },
+    {
+      "canonical_id": "TQ-500f-2-ii",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml",
+      "sha256": "047233b38c07b25dabffa3aba4137efb7cdb4b0441fe7ce5563ab5ad5e4ebdba"
+    },
+    {
+      "canonical_id": "TQ-500f-3",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3.yaml",
+      "sha256": "7fd54dd1212e05d91c2e6dc07d45e5039a73b01c1d022eb98d5f4edac7880a57"
+    },
+    {
+      "canonical_id": "TQ-500f-3-i",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-i.yaml",
+      "sha256": "fc775fe8646a55fdbb8436819a78a318afe50570565190fda3a07ac934ac3b07"
+    },
+    {
+      "canonical_id": "TQ-500f-3-ii",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-ii.yaml",
+      "sha256": "011f72dcda2fc9fba449e5a8d2aa2875fac5cf0833b5184eab6caf0e8c92a2d5"
+    },
+    {
+      "canonical_id": "TQ-500f-3-iii",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-iii.yaml",
+      "sha256": "6a08f63d69b52350f2b2a536fdf9049611c0caf4dc8714676675dd1743eac9bf"
+    },
+    {
+      "canonical_id": "TQ-500f-3-iv",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-iv.yaml",
+      "sha256": "6434fbe21e66f0a539b1e6a2764448faaa6a923672b2195f66105ad98a44b03b"
+    },
+    {
+      "canonical_id": "TQ-500f-4",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-4.yaml",
+      "sha256": "3618fe0b5fd3eafc1f239696cd623460944651ade6f047e75e989ac204b1af73"
+    },
+    {
+      "canonical_id": "TQ-500f-4-i",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-4-i.yaml",
+      "sha256": "ac7c0bd5dc6f646e5a9901988df3ca9e8e927b95b78ec3245bd3644082a632a2"
+    },
+    {
+      "canonical_id": "TQ-500f-4-ii",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-4-ii.yaml",
+      "sha256": "ad6209a1f1bfd76d7bda22171718d8f31920969c9b0072dbb0af2d8ce755b904"
+    },
+    {
+      "canonical_id": "TQ-500f-5",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-5.yaml",
+      "sha256": "38b63e91583ea4ed24b6d44d674ad698b54ef994f1f59141bfea2ba168d7a6fe"
+    },
+    {
+      "canonical_id": "TQ-500f-6",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-6.yaml",
+      "sha256": "827dc2dc0d45a485f6c5ad016abe91c777ef9b44108e40839192b667c77e9ec5"
+    }
+  ],
+  "interface_note": "Separate real CLI processes for ordinary requests; one public KnowledgeService instance for process-local continuation. No cross-process continuation claim.",
+  "live_jev": "not_run",
+  "remote_langfuse": "not_run",
+  "embeddings": "disabled",
+  "database_mutations": "none",
+  "saved_output": "Compact sanitized summaries derived from actual responses. Opaque continuation values, credentials, endpoints and raw stderr are never saved.",
+  "cases": [
+    {
+      "id": "hosted-root-excluded-15",
+      "interface": "python -m knowledge retrieve",
+      "request": {
+        "request_id": "independent-hosted-root_excluded",
+        "repository_id": "leafcutter",
+        "revision": "59269e024e4d0290b68b03d0d382745966e67e29",
+        "operation": "get_ac_descendants",
+        "mode": "graph",
+        "arguments": {
+          "root_id": "TQ-500f"
+        },
+        "disclosure_level": 1,
+        "budget": {
+          "max_results": 100,
+          "max_candidates": 100,
+          "max_content_bytes": 131072,
+          "max_estimated_tokens": 16000,
+          "deadline_ms": 30000
+        },
+        "answer_requirements": {
+          "original_question": "How many TQ-500f ACs are in the specified scope and what are their work statuses?",
+          "required_fields": [
+            "work_status",
+            "level"
+          ],
+          "require_complete": true,
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "root_excluded"
+          }
+        }
+      },
+      "verdict": "passed",
+      "error": null,
+      "seconds": 2.117,
+      "actual_summary": {
+        "execution_status": "ok",
+        "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+        "generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+        "returned_ids": [
+          "TQ-500f-1",
+          "TQ-500f-1-i",
+          "TQ-500f-2",
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii",
+          "TQ-500f-3",
+          "TQ-500f-3-i",
+          "TQ-500f-3-ii",
+          "TQ-500f-3-iii",
+          "TQ-500f-3-iv",
+          "TQ-500f-4",
+          "TQ-500f-4-i",
+          "TQ-500f-4-ii",
+          "TQ-500f-5",
+          "TQ-500f-6"
+        ],
+        "answer_status": "fulfilled",
+        "completeness": {
+          "complete": true,
+          "known_count": 15,
+          "exact_total": 15,
+          "limitations": []
+        },
+        "work_status_counts": {
+          "done": 5,
+          "todo": 10
+        },
+        "known_work_status_counts": {
+          "done": 5,
+          "todo": 10
+        },
+        "scope": {
+          "population": "ac_descendants",
+          "root_id": "TQ-500f",
+          "levels": [
+            "L2",
+            "L3"
+          ],
+          "inclusion": "root_excluded"
+        },
+        "truncated": false,
+        "continuation_present": false,
+        "continuation_original_character_length": 0,
+        "observation_state": "disabled",
+        "field_evidence": [
+          {
+            "canonical_id": "TQ-500f-1",
+            "values": {
+              "work_status": "done",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-1-i",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-2",
+            "values": {
+              "work_status": "todo",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-2-i",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-2-ii",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3",
+            "values": {
+              "work_status": "todo",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-i",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-ii",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-iii",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-iv",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-4",
+            "values": {
+              "work_status": "todo",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-4-i",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-4-ii",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-5",
+            "values": {
+              "work_status": "todo",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-6",
+            "values": {
+              "work_status": "todo",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "hosted-terminal-leaves-11",
+      "interface": "python -m knowledge retrieve",
+      "request": {
+        "request_id": "independent-hosted-terminal_leaves",
+        "repository_id": "leafcutter",
+        "revision": "59269e024e4d0290b68b03d0d382745966e67e29",
+        "operation": "get_ac_descendants",
+        "mode": "graph",
+        "arguments": {
+          "root_id": "TQ-500f"
+        },
+        "disclosure_level": 1,
+        "budget": {
+          "max_results": 100,
+          "max_candidates": 100,
+          "max_content_bytes": 131072,
+          "max_estimated_tokens": 16000,
+          "deadline_ms": 30000
+        },
+        "answer_requirements": {
+          "original_question": "How many TQ-500f ACs are in the specified scope and what are their work statuses?",
+          "required_fields": [
+            "work_status",
+            "level"
+          ],
+          "require_complete": true,
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "terminal_leaves"
+          }
+        }
+      },
+      "verdict": "passed",
+      "error": null,
+      "seconds": 2.063,
+      "actual_summary": {
+        "execution_status": "ok",
+        "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+        "generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+        "returned_ids": [
+          "TQ-500f-1-i",
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii",
+          "TQ-500f-3-i",
+          "TQ-500f-3-ii",
+          "TQ-500f-3-iii",
+          "TQ-500f-3-iv",
+          "TQ-500f-4-i",
+          "TQ-500f-4-ii",
+          "TQ-500f-5",
+          "TQ-500f-6"
+        ],
+        "answer_status": "fulfilled",
+        "completeness": {
+          "complete": true,
+          "known_count": 11,
+          "exact_total": 11,
+          "limitations": []
+        },
+        "work_status_counts": {
+          "done": 4,
+          "todo": 7
+        },
+        "known_work_status_counts": {
+          "done": 4,
+          "todo": 7
+        },
+        "scope": {
+          "population": "ac_descendants",
+          "root_id": "TQ-500f",
+          "levels": [
+            "L2",
+            "L3"
+          ],
+          "inclusion": "terminal_leaves"
+        },
+        "truncated": false,
+        "continuation_present": false,
+        "continuation_original_character_length": 0,
+        "observation_state": "disabled",
+        "field_evidence": [
+          {
+            "canonical_id": "TQ-500f-1-i",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-2-i",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-2-ii",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-i",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-ii",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-iii",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-iv",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-4-i",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-4-ii",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-5",
+            "values": {
+              "work_status": "todo",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-6",
+            "values": {
+              "work_status": "todo",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "hosted-fields-and-locators",
+      "interface": "python -m knowledge retrieve",
+      "request": {
+        "request_id": "independent-hosted-root_excluded",
+        "repository_id": "leafcutter",
+        "revision": "59269e024e4d0290b68b03d0d382745966e67e29",
+        "operation": "get_ac_descendants",
+        "mode": "graph",
+        "arguments": {
+          "root_id": "TQ-500f"
+        },
+        "disclosure_level": 1,
+        "budget": {
+          "max_results": 100,
+          "max_candidates": 100,
+          "max_content_bytes": 131072,
+          "max_estimated_tokens": 16000,
+          "deadline_ms": 30000
+        },
+        "answer_requirements": {
+          "original_question": "How many TQ-500f ACs are in the specified scope and what are their work statuses?",
+          "required_fields": [
+            "work_status",
+            "level",
+            "priority"
+          ],
+          "require_complete": true,
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "root_excluded"
+          }
+        }
+      },
+      "verdict": "passed",
+      "error": null,
+      "seconds": 2.035,
+      "actual_summary": {
+        "execution_status": "ok",
+        "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+        "generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+        "returned_ids": [
+          "TQ-500f-1",
+          "TQ-500f-1-i",
+          "TQ-500f-2",
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii",
+          "TQ-500f-3",
+          "TQ-500f-3-i",
+          "TQ-500f-3-ii",
+          "TQ-500f-3-iii",
+          "TQ-500f-3-iv",
+          "TQ-500f-4",
+          "TQ-500f-4-i",
+          "TQ-500f-4-ii",
+          "TQ-500f-5",
+          "TQ-500f-6"
+        ],
+        "answer_status": "fulfilled",
+        "completeness": {
+          "complete": true,
+          "known_count": 15,
+          "exact_total": 15,
+          "limitations": []
+        },
+        "work_status_counts": {
+          "done": 5,
+          "todo": 10
+        },
+        "known_work_status_counts": {
+          "done": 5,
+          "todo": 10
+        },
+        "scope": {
+          "population": "ac_descendants",
+          "root_id": "TQ-500f",
+          "levels": [
+            "L2",
+            "L3"
+          ],
+          "inclusion": "root_excluded"
+        },
+        "truncated": false,
+        "continuation_present": false,
+        "continuation_original_character_length": 0,
+        "observation_state": "disabled",
+        "field_evidence": [
+          {
+            "canonical_id": "TQ-500f-1",
+            "values": {
+              "work_status": "done",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level",
+              "priority": "/priority"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-1-i",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level",
+              "priority": "/priority"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-2",
+            "values": {
+              "work_status": "todo",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level",
+              "priority": "/priority"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-2-i",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level",
+              "priority": "/priority"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-2-ii",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level",
+              "priority": "/priority"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3",
+            "values": {
+              "work_status": "todo",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level",
+              "priority": "/priority"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-i",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level",
+              "priority": "/priority"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-ii",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level",
+              "priority": "/priority"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-iii",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level",
+              "priority": "/priority"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-iv",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level",
+              "priority": "/priority"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-4",
+            "values": {
+              "work_status": "todo",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level",
+              "priority": "/priority"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-4-i",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level",
+              "priority": "/priority"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-4-ii",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level",
+              "priority": "/priority"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-5",
+            "values": {
+              "work_status": "todo",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level",
+              "priority": "/priority"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-6",
+            "values": {
+              "work_status": "todo",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level",
+              "priority": "/priority"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "hosted-constrained-partial",
+      "interface": "python -m knowledge retrieve",
+      "request": {
+        "request_id": "independent-hosted-root_excluded",
+        "repository_id": "leafcutter",
+        "revision": "59269e024e4d0290b68b03d0d382745966e67e29",
+        "operation": "get_ac_descendants",
+        "mode": "graph",
+        "arguments": {
+          "root_id": "TQ-500f"
+        },
+        "disclosure_level": 1,
+        "budget": {
+          "max_results": 2,
+          "max_candidates": 2,
+          "deadline_ms": 30000
+        },
+        "answer_requirements": {
+          "original_question": "How many TQ-500f ACs are in the specified scope and what are their work statuses?",
+          "required_fields": [
+            "work_status",
+            "level"
+          ],
+          "require_complete": true,
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "root_excluded"
+          }
+        }
+      },
+      "verdict": "passed",
+      "error": null,
+      "seconds": 1.386,
+      "actual_summary": {
+        "execution_status": "partial",
+        "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+        "generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+        "returned_ids": [
+          "TQ-500f-1"
+        ],
+        "answer_status": "partial",
+        "completeness": {
+          "complete": false,
+          "known_count": 1,
+          "exact_total": null,
+          "limitations": [
+            "execution is partial",
+            "enumeration or disclosure is incomplete",
+            "complete population enumeration is not established"
+          ]
+        },
+        "work_status_counts": null,
+        "known_work_status_counts": {
+          "done": 1
+        },
+        "scope": {
+          "population": "ac_descendants",
+          "root_id": "TQ-500f",
+          "levels": [
+            "L2",
+            "L3"
+          ],
+          "inclusion": "root_excluded"
+        },
+        "truncated": true,
+        "continuation_present": false,
+        "continuation_original_character_length": 0,
+        "observation_state": "disabled",
+        "field_evidence": [
+          {
+            "canonical_id": "TQ-500f-1",
+            "values": {
+              "work_status": "done",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "hosted-default-disclosure-partial",
+      "interface": "python -m knowledge retrieve",
+      "request": {
+        "request_id": "independent-hosted-root_excluded",
+        "repository_id": "leafcutter",
+        "revision": "59269e024e4d0290b68b03d0d382745966e67e29",
+        "operation": "get_ac_descendants",
+        "mode": "graph",
+        "arguments": {
+          "root_id": "TQ-500f"
+        },
+        "disclosure_level": 1,
+        "budget": {
+          "max_results": 100,
+          "max_candidates": 100,
+          "deadline_ms": 30000
+        },
+        "answer_requirements": {
+          "original_question": "How many TQ-500f ACs are in the specified scope and what are their work statuses?",
+          "required_fields": [
+            "work_status",
+            "level"
+          ],
+          "require_complete": true,
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "root_excluded"
+          }
+        }
+      },
+      "verdict": "passed",
+      "error": null,
+      "seconds": 2.047,
+      "actual_summary": {
+        "execution_status": "partial",
+        "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+        "generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+        "returned_ids": [
+          "TQ-500f-1",
+          "TQ-500f-1-i",
+          "TQ-500f-2",
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii",
+          "TQ-500f-3",
+          "TQ-500f-3-i",
+          "TQ-500f-3-ii",
+          "TQ-500f-3-iii",
+          "TQ-500f-3-iv",
+          "TQ-500f-4",
+          "TQ-500f-4-i"
+        ],
+        "answer_status": "partial",
+        "completeness": {
+          "complete": false,
+          "known_count": 12,
+          "exact_total": null,
+          "limitations": [
+            "execution is partial",
+            "enumeration or disclosure is incomplete"
+          ]
+        },
+        "work_status_counts": null,
+        "known_work_status_counts": {
+          "done": 5,
+          "todo": 7
+        },
+        "scope": {
+          "population": "ac_descendants",
+          "root_id": "TQ-500f",
+          "levels": [
+            "L2",
+            "L3"
+          ],
+          "inclusion": "root_excluded"
+        },
+        "truncated": true,
+        "continuation_present": false,
+        "continuation_original_character_length": 0,
+        "observation_state": "disabled",
+        "field_evidence": [
+          {
+            "canonical_id": "TQ-500f-1",
+            "values": {
+              "work_status": "done",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-1-i",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-2",
+            "values": {
+              "work_status": "todo",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-2-i",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-2-ii",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3",
+            "values": {
+              "work_status": "todo",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-i",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-ii",
+            "values": {
+              "work_status": "done",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-iii",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-3-iv",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-4",
+            "values": {
+              "work_status": "todo",
+              "level": "L2",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          },
+          {
+            "canonical_id": "TQ-500f-4-i",
+            "values": {
+              "work_status": "todo",
+              "level": "L3",
+              "priority": "high"
+            },
+            "locators": {
+              "work_status": "/work_status",
+              "level": "/level"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "hosted-final-page-is-not-population",
+      "interface": "one actual public KnowledgeService instance using configured Neo4j backend",
+      "verdict": "passed",
+      "error": null,
+      "seconds": 3.785,
+      "pages": [
+        {
+          "execution_status": "partial",
+          "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+          "generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+          "returned_ids": [
+            "TQ-500f-1",
+            "TQ-500f-1-i",
+            "TQ-500f-2",
+            "TQ-500f-2-i",
+            "TQ-500f-2-ii"
+          ],
+          "answer_status": "partial",
+          "completeness": {
+            "complete": false,
+            "known_count": 5,
+            "exact_total": null,
+            "limitations": [
+              "execution is partial",
+              "enumeration or disclosure is incomplete"
+            ]
+          },
+          "work_status_counts": null,
+          "known_work_status_counts": {
+            "done": 3,
+            "todo": 2
+          },
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "root_excluded"
+          },
+          "truncated": true,
+          "continuation_present": true,
+          "continuation_original_character_length": 432,
+          "observation_state": "disabled",
+          "field_evidence": [
+            {
+              "canonical_id": "TQ-500f-1",
+              "values": {
+                "work_status": "done",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-1-i",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-2",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-2-i",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-2-ii",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            }
+          ]
+        },
+        {
+          "execution_status": "partial",
+          "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+          "generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+          "returned_ids": [
+            "TQ-500f-3",
+            "TQ-500f-3-i",
+            "TQ-500f-3-ii",
+            "TQ-500f-3-iii",
+            "TQ-500f-3-iv"
+          ],
+          "answer_status": "partial",
+          "completeness": {
+            "complete": false,
+            "known_count": 5,
+            "exact_total": null,
+            "limitations": [
+              "execution is partial",
+              "enumeration or disclosure is incomplete",
+              "continuation page is not an aggregate population",
+              "complete population enumeration is not established"
+            ]
+          },
+          "work_status_counts": null,
+          "known_work_status_counts": {
+            "todo": 3,
+            "done": 2
+          },
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "root_excluded"
+          },
+          "truncated": true,
+          "continuation_present": true,
+          "continuation_original_character_length": 435,
+          "observation_state": "disabled",
+          "field_evidence": [
+            {
+              "canonical_id": "TQ-500f-3",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-i",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-ii",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-iii",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-iv",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            }
+          ]
+        },
+        {
+          "execution_status": "ok",
+          "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+          "generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+          "returned_ids": [
+            "TQ-500f-4",
+            "TQ-500f-4-i",
+            "TQ-500f-4-ii",
+            "TQ-500f-5",
+            "TQ-500f-6"
+          ],
+          "answer_status": "partial",
+          "completeness": {
+            "complete": false,
+            "known_count": 5,
+            "exact_total": null,
+            "limitations": [
+              "continuation page is not an aggregate population",
+              "complete population enumeration is not established"
+            ]
+          },
+          "work_status_counts": null,
+          "known_work_status_counts": {
+            "todo": 5
+          },
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "root_excluded"
+          },
+          "truncated": false,
+          "continuation_present": false,
+          "continuation_original_character_length": 0,
+          "observation_state": "disabled",
+          "field_evidence": [
+            {
+              "canonical_id": "TQ-500f-4",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-4-i",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-4-ii",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-5",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-6",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "initial_verification_attempt": {
+    "cases": [
+      {
+        "id": "hosted-root-excluded-15",
+        "interface": "python -m knowledge retrieve",
+        "request": {
+          "request_id": "independent-hosted-root_excluded",
+          "repository_id": "leafcutter",
+          "revision": "59269e024e4d0290b68b03d0d382745966e67e29",
+          "operation": "get_ac_descendants",
+          "mode": "graph",
+          "arguments": {
+            "root_id": "TQ-500f"
+          },
+          "disclosure_level": 1,
+          "budget": {
+            "max_results": 100,
+            "max_candidates": 100,
+            "max_content_bytes": 131072,
+            "max_estimated_tokens": 16000,
+            "deadline_ms": 30000
+          },
+          "answer_requirements": {
+            "original_question": "How many TQ-500f ACs are in the specified scope and what are their work statuses?",
+            "required_fields": [
+              "work_status",
+              "level"
+            ],
+            "require_complete": true,
+            "scope": {
+              "population": "ac_descendants",
+              "root_id": "TQ-500f",
+              "levels": [
+                "L2",
+                "L3"
+              ],
+              "inclusion": "root_excluded"
+            }
+          }
+        },
+        "verdict": "passed",
+        "error": null,
+        "seconds": 2.117,
+        "actual_summary": {
+          "execution_status": "ok",
+          "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+          "generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+          "returned_ids": [
+            "TQ-500f-1",
+            "TQ-500f-1-i",
+            "TQ-500f-2",
+            "TQ-500f-2-i",
+            "TQ-500f-2-ii",
+            "TQ-500f-3",
+            "TQ-500f-3-i",
+            "TQ-500f-3-ii",
+            "TQ-500f-3-iii",
+            "TQ-500f-3-iv",
+            "TQ-500f-4",
+            "TQ-500f-4-i",
+            "TQ-500f-4-ii",
+            "TQ-500f-5",
+            "TQ-500f-6"
+          ],
+          "answer_status": "fulfilled",
+          "completeness": {
+            "complete": true,
+            "known_count": 15,
+            "exact_total": 15,
+            "limitations": []
+          },
+          "work_status_counts": {
+            "done": 5,
+            "todo": 10
+          },
+          "known_work_status_counts": {
+            "done": 5,
+            "todo": 10
+          },
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "root_excluded"
+          },
+          "truncated": false,
+          "continuation_present": false,
+          "continuation_original_character_length": 0,
+          "observation_state": "disabled",
+          "field_evidence": [
+            {
+              "canonical_id": "TQ-500f-1",
+              "values": {
+                "work_status": "done",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-1-i",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-2",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-2-i",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-2-ii",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-i",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-ii",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-iii",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-iv",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-4",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-4-i",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-4-ii",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-5",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-6",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "hosted-terminal-leaves-11",
+        "interface": "python -m knowledge retrieve",
+        "request": {
+          "request_id": "independent-hosted-terminal_leaves",
+          "repository_id": "leafcutter",
+          "revision": "59269e024e4d0290b68b03d0d382745966e67e29",
+          "operation": "get_ac_descendants",
+          "mode": "graph",
+          "arguments": {
+            "root_id": "TQ-500f"
+          },
+          "disclosure_level": 1,
+          "budget": {
+            "max_results": 100,
+            "max_candidates": 100,
+            "max_content_bytes": 131072,
+            "max_estimated_tokens": 16000,
+            "deadline_ms": 30000
+          },
+          "answer_requirements": {
+            "original_question": "How many TQ-500f ACs are in the specified scope and what are their work statuses?",
+            "required_fields": [
+              "work_status",
+              "level"
+            ],
+            "require_complete": true,
+            "scope": {
+              "population": "ac_descendants",
+              "root_id": "TQ-500f",
+              "levels": [
+                "L2",
+                "L3"
+              ],
+              "inclusion": "terminal_leaves"
+            }
+          }
+        },
+        "verdict": "passed",
+        "error": null,
+        "seconds": 2.063,
+        "actual_summary": {
+          "execution_status": "ok",
+          "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+          "generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+          "returned_ids": [
+            "TQ-500f-1-i",
+            "TQ-500f-2-i",
+            "TQ-500f-2-ii",
+            "TQ-500f-3-i",
+            "TQ-500f-3-ii",
+            "TQ-500f-3-iii",
+            "TQ-500f-3-iv",
+            "TQ-500f-4-i",
+            "TQ-500f-4-ii",
+            "TQ-500f-5",
+            "TQ-500f-6"
+          ],
+          "answer_status": "fulfilled",
+          "completeness": {
+            "complete": true,
+            "known_count": 11,
+            "exact_total": 11,
+            "limitations": []
+          },
+          "work_status_counts": {
+            "done": 4,
+            "todo": 7
+          },
+          "known_work_status_counts": {
+            "done": 4,
+            "todo": 7
+          },
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "terminal_leaves"
+          },
+          "truncated": false,
+          "continuation_present": false,
+          "continuation_original_character_length": 0,
+          "observation_state": "disabled",
+          "field_evidence": [
+            {
+              "canonical_id": "TQ-500f-1-i",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-2-i",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-2-ii",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-i",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-ii",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-iii",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-iv",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-4-i",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-4-ii",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-5",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-6",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "hosted-fields-and-locators",
+        "interface": "python -m knowledge retrieve",
+        "request": {
+          "request_id": "independent-hosted-root_excluded",
+          "repository_id": "leafcutter",
+          "revision": "59269e024e4d0290b68b03d0d382745966e67e29",
+          "operation": "get_ac_descendants",
+          "mode": "graph",
+          "arguments": {
+            "root_id": "TQ-500f"
+          },
+          "disclosure_level": 1,
+          "budget": {
+            "max_results": 100,
+            "max_candidates": 100,
+            "max_content_bytes": 131072,
+            "max_estimated_tokens": 16000,
+            "deadline_ms": 30000
+          },
+          "answer_requirements": {
+            "original_question": "How many TQ-500f ACs are in the specified scope and what are their work statuses?",
+            "required_fields": [
+              "work_status",
+              "level",
+              "priority"
+            ],
+            "require_complete": true,
+            "scope": {
+              "population": "ac_descendants",
+              "root_id": "TQ-500f",
+              "levels": [
+                "L2",
+                "L3"
+              ],
+              "inclusion": "root_excluded"
+            }
+          }
+        },
+        "verdict": "passed",
+        "error": null,
+        "seconds": 2.035,
+        "actual_summary": {
+          "execution_status": "ok",
+          "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+          "generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+          "returned_ids": [
+            "TQ-500f-1",
+            "TQ-500f-1-i",
+            "TQ-500f-2",
+            "TQ-500f-2-i",
+            "TQ-500f-2-ii",
+            "TQ-500f-3",
+            "TQ-500f-3-i",
+            "TQ-500f-3-ii",
+            "TQ-500f-3-iii",
+            "TQ-500f-3-iv",
+            "TQ-500f-4",
+            "TQ-500f-4-i",
+            "TQ-500f-4-ii",
+            "TQ-500f-5",
+            "TQ-500f-6"
+          ],
+          "answer_status": "fulfilled",
+          "completeness": {
+            "complete": true,
+            "known_count": 15,
+            "exact_total": 15,
+            "limitations": []
+          },
+          "work_status_counts": {
+            "done": 5,
+            "todo": 10
+          },
+          "known_work_status_counts": {
+            "done": 5,
+            "todo": 10
+          },
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "root_excluded"
+          },
+          "truncated": false,
+          "continuation_present": false,
+          "continuation_original_character_length": 0,
+          "observation_state": "disabled",
+          "field_evidence": [
+            {
+              "canonical_id": "TQ-500f-1",
+              "values": {
+                "work_status": "done",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level",
+                "priority": "/priority"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-1-i",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level",
+                "priority": "/priority"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-2",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level",
+                "priority": "/priority"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-2-i",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level",
+                "priority": "/priority"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-2-ii",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level",
+                "priority": "/priority"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level",
+                "priority": "/priority"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-i",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level",
+                "priority": "/priority"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-ii",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level",
+                "priority": "/priority"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-iii",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level",
+                "priority": "/priority"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-iv",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level",
+                "priority": "/priority"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-4",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level",
+                "priority": "/priority"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-4-i",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level",
+                "priority": "/priority"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-4-ii",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level",
+                "priority": "/priority"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-5",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level",
+                "priority": "/priority"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-6",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level",
+                "priority": "/priority"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "hosted-constrained-partial",
+        "interface": "python -m knowledge retrieve",
+        "request": {
+          "request_id": "independent-hosted-root_excluded",
+          "repository_id": "leafcutter",
+          "revision": "59269e024e4d0290b68b03d0d382745966e67e29",
+          "operation": "get_ac_descendants",
+          "mode": "graph",
+          "arguments": {
+            "root_id": "TQ-500f"
+          },
+          "disclosure_level": 1,
+          "budget": {
+            "max_results": 2,
+            "max_candidates": 2,
+            "deadline_ms": 30000
+          },
+          "answer_requirements": {
+            "original_question": "How many TQ-500f ACs are in the specified scope and what are their work statuses?",
+            "required_fields": [
+              "work_status",
+              "level"
+            ],
+            "require_complete": true,
+            "scope": {
+              "population": "ac_descendants",
+              "root_id": "TQ-500f",
+              "levels": [
+                "L2",
+                "L3"
+              ],
+              "inclusion": "root_excluded"
+            }
+          }
+        },
+        "verdict": "failed",
+        "error": "AssertionError: retrieval execution not ok",
+        "seconds": 1.407,
+        "actual_summary": {
+          "execution_status": "partial",
+          "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+          "generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+          "returned_ids": [
+            "TQ-500f-1"
+          ],
+          "answer_status": "partial",
+          "completeness": {
+            "complete": false,
+            "known_count": 1,
+            "exact_total": null,
+            "limitations": [
+              "execution is partial",
+              "enumeration or disclosure is incomplete",
+              "complete population enumeration is not established"
+            ]
+          },
+          "work_status_counts": null,
+          "known_work_status_counts": {
+            "done": 1
+          },
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "root_excluded"
+          },
+          "truncated": true,
+          "continuation_present": false,
+          "continuation_original_character_length": 0,
+          "observation_state": "disabled",
+          "field_evidence": [
+            {
+              "canonical_id": "TQ-500f-1",
+              "values": {
+                "work_status": "done",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "hosted-default-disclosure-partial",
+        "interface": "python -m knowledge retrieve",
+        "request": {
+          "request_id": "independent-hosted-root_excluded",
+          "repository_id": "leafcutter",
+          "revision": "59269e024e4d0290b68b03d0d382745966e67e29",
+          "operation": "get_ac_descendants",
+          "mode": "graph",
+          "arguments": {
+            "root_id": "TQ-500f"
+          },
+          "disclosure_level": 1,
+          "budget": {
+            "max_results": 100,
+            "max_candidates": 100,
+            "deadline_ms": 30000
+          },
+          "answer_requirements": {
+            "original_question": "How many TQ-500f ACs are in the specified scope and what are their work statuses?",
+            "required_fields": [
+              "work_status",
+              "level"
+            ],
+            "require_complete": true,
+            "scope": {
+              "population": "ac_descendants",
+              "root_id": "TQ-500f",
+              "levels": [
+                "L2",
+                "L3"
+              ],
+              "inclusion": "root_excluded"
+            }
+          }
+        },
+        "verdict": "failed",
+        "error": "AssertionError: retrieval execution not ok",
+        "seconds": 2.02,
+        "actual_summary": {
+          "execution_status": "partial",
+          "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+          "generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+          "returned_ids": [
+            "TQ-500f-1",
+            "TQ-500f-1-i",
+            "TQ-500f-2",
+            "TQ-500f-2-i",
+            "TQ-500f-2-ii",
+            "TQ-500f-3",
+            "TQ-500f-3-i",
+            "TQ-500f-3-ii",
+            "TQ-500f-3-iii",
+            "TQ-500f-3-iv",
+            "TQ-500f-4",
+            "TQ-500f-4-i"
+          ],
+          "answer_status": "partial",
+          "completeness": {
+            "complete": false,
+            "known_count": 12,
+            "exact_total": null,
+            "limitations": [
+              "execution is partial",
+              "enumeration or disclosure is incomplete"
+            ]
+          },
+          "work_status_counts": null,
+          "known_work_status_counts": {
+            "done": 5,
+            "todo": 7
+          },
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "root_excluded"
+          },
+          "truncated": true,
+          "continuation_present": false,
+          "continuation_original_character_length": 0,
+          "observation_state": "disabled",
+          "field_evidence": [
+            {
+              "canonical_id": "TQ-500f-1",
+              "values": {
+                "work_status": "done",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-1-i",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-2",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-2-i",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-2-ii",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-i",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-ii",
+              "values": {
+                "work_status": "done",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-iii",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-3-iv",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-4",
+              "values": {
+                "work_status": "todo",
+                "level": "L2",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            },
+            {
+              "canonical_id": "TQ-500f-4-i",
+              "values": {
+                "work_status": "todo",
+                "level": "L3",
+                "priority": "high"
+              },
+              "locators": {
+                "work_status": "/work_status",
+                "level": "/level"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "hosted-final-page-is-not-population",
+        "interface": "one actual public KnowledgeService instance using configured Neo4j backend",
+        "verdict": "failed",
+        "error": "AssertionError: retrieval execution not ok",
+        "seconds": 1.487,
+        "pages": [
+          {
+            "execution_status": "partial",
+            "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+            "generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+            "returned_ids": [
+              "TQ-500f-1",
+              "TQ-500f-1-i",
+              "TQ-500f-2",
+              "TQ-500f-2-i",
+              "TQ-500f-2-ii"
+            ],
+            "answer_status": "partial",
+            "completeness": {
+              "complete": false,
+              "known_count": 5,
+              "exact_total": null,
+              "limitations": [
+                "execution is partial",
+                "enumeration or disclosure is incomplete"
+              ]
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {
+              "done": 3,
+              "todo": 2
+            },
+            "scope": {
+              "population": "ac_descendants",
+              "root_id": "TQ-500f",
+              "levels": [
+                "L2",
+                "L3"
+              ],
+              "inclusion": "root_excluded"
+            },
+            "truncated": true,
+            "continuation_present": true,
+            "continuation_original_character_length": 432,
+            "observation_state": "disabled",
+            "field_evidence": [
+              {
+                "canonical_id": "TQ-500f-1",
+                "values": {
+                  "work_status": "done",
+                  "level": "L2",
+                  "priority": "high"
+                },
+                "locators": {
+                  "work_status": "/work_status",
+                  "level": "/level"
+                }
+              },
+              {
+                "canonical_id": "TQ-500f-1-i",
+                "values": {
+                  "work_status": "done",
+                  "level": "L3",
+                  "priority": "high"
+                },
+                "locators": {
+                  "work_status": "/work_status",
+                  "level": "/level"
+                }
+              },
+              {
+                "canonical_id": "TQ-500f-2",
+                "values": {
+                  "work_status": "todo",
+                  "level": "L2",
+                  "priority": "high"
+                },
+                "locators": {
+                  "work_status": "/work_status",
+                  "level": "/level"
+                }
+              },
+              {
+                "canonical_id": "TQ-500f-2-i",
+                "values": {
+                  "work_status": "done",
+                  "level": "L3",
+                  "priority": "high"
+                },
+                "locators": {
+                  "work_status": "/work_status",
+                  "level": "/level"
+                }
+              },
+              {
+                "canonical_id": "TQ-500f-2-ii",
+                "values": {
+                  "work_status": "todo",
+                  "level": "L3",
+                  "priority": "high"
+                },
+                "locators": {
+                  "work_status": "/work_status",
+                  "level": "/level"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "reason": "Three negative controls incorrectly required ok execution in the grading helper; actual partial responses were truthful. Positive actual results retained; only negative controls replayed."
+  },
+  "passed": 6,
+  "failed": 0,
+  "local_fixture_cleanup": {
+    "container": "leafcutter-query-contract-qa",
+    "verified_owner_label": "query-answer-independent-qa",
+    "removed": true,
+    "exclusive_anonymous_volumes_removed": 2,
+    "all_other_existing_containers_preserved": true,
+    "other_container_count": 17,
+    "locked_pytest_directory": "untouched"
+  },
+  "verification_summary": {
+    "final_cases": 6,
+    "passed": 6,
+    "failed": 0,
+    "cli_cases": 5,
+    "same_service_pagination_cases": 1,
+    "root_excluded_descendants": 15,
+    "work_status_counts": {
+      "done": 5,
+      "todo": 10
+    },
+    "terminal_leaves": 11,
+    "required_fields_verified": [
+      "work_status",
+      "level",
+      "priority"
+    ],
+    "supporting_locators_verified": true,
+    "bounded_controls": "partial answers with null exact_total; third page is a fragment despite execution ok",
+    "first_attempt_note": "Three negative controls initially failed only because the QA grading helper incorrectly required execution ok. Their actual partial output was preserved; exact negative expectations were corrected and only those three controls replayed."
+  }
+}

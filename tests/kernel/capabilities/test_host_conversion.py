@@ -89,11 +89,12 @@ class TestSynthesisConversion(unittest.TestCase):
 
     KNOWN = {"ev-00000000000000aa"}
 
-    def findings(self, known: set[str] | None = None, **request: object):
+    def findings(self, known: set[str] | None = None,
+                 second: tuple[str, ...] = ("ev-00000000000000aa",), **request: object):
         body = {"findings": [
             finding_json(supporting_evidence_ids=["ev-00000000000000aa"]),
             finding_json("Another claim", kind="human_input",
-                         supporting_evidence_ids=["ev-00000000000000bb"])],
+                         supporting_evidence_ids=list(second))],
             "agreements": ["both agree"], "disagreements": ["they differ on cost"]}
         return convert("host.synthesize", {**SYNTHESIS_REQUEST, **request}, body,
                        known=self.KNOWN if known is None else known)
@@ -116,10 +117,49 @@ class TestSynthesisConversion(unittest.TestCase):
         self.assertEqual(len({f.id for f in first.findings}), 2)
 
     def test_a_citation_of_unknown_evidence_is_dropped_with_a_limitation(self) -> None:
-        result = self.findings(limits={"max_findings": 5})
-        self.assertEqual(result.findings[0].supporting_evidence_ids, ["ev-00000000000000aa"])
-        self.assertEqual(result.findings[1].supporting_evidence_ids, [])
+        # covers: DK-600a-3
+        # angle: failure
+        result = self.findings(second=("ev-00000000000000aa", "ev-00000000000000bb"),
+                               evidence_ids=["ev-00000000000000aa"], limits={"max_findings": 5})
+        self.assertEqual([f.supporting_evidence_ids for f in result.findings],
+                         [["ev-00000000000000aa"]])
         self.assertIn("ev-00000000000000bb", " ".join(result.limitations))
+
+    def test_with_no_handed_ids_an_unknown_citation_is_dropped_and_the_finding_kept(self) -> None:
+        # covers: DK-600a-3
+        # angle: boundary
+        result = self.findings(second=("ev-00000000000000aa", "ev-00000000000000bb"),
+                               limits={"max_findings": 5})
+        self.assertEqual([f.supporting_evidence_ids for f in result.findings],
+                         [["ev-00000000000000aa"], ["ev-00000000000000aa"]])
+        self.assertIn("ev-00000000000000bb", " ".join(result.limitations))
+
+    def test_a_finding_citing_other_evidence_is_not_accepted(self) -> None:
+        # covers: DK-600a-3
+        # angle: failure
+        """A finding citing any id outside the handed evidence, or none, is not accepted."""
+        cases = {"mixed": ("ev-00000000000000aa", "ev-00000000000000bb"),
+                 "unknown only": ("ev-00000000000000bb",), "no citation": ()}
+        for label, second in cases.items():
+            with self.subTest(label):
+                result = self.findings(second=second, evidence_ids=["ev-00000000000000aa"],
+                                       limits={"max_findings": 5})
+                self.assertEqual(len(result.findings), 1)  # control: the first finding stays
+                for finding in result.findings:
+                    self.assertTrue(finding.supporting_evidence_ids)
+                    self.assertLessEqual(set(finding.supporting_evidence_ids), self.KNOWN)
+                self.assertEqual(len(payload_of(result)["findings"]), 1)
+                self.assertIn("finding 1 was not accepted", " ".join(result.limitations))
+
+    def test_only_the_evidence_handed_to_the_synthesis_counts_as_known(self) -> None:
+        # covers: DK-600a-3
+        # angle: boundary
+        result = self.findings(known={"ev-00000000000000aa", "ev-00000000000000cc"},
+                               second=("ev-00000000000000cc",),
+                               evidence_ids=["ev-00000000000000aa"], limits={"max_findings": 5})
+        self.assertEqual([f.supporting_evidence_ids for f in result.findings],
+                         [["ev-00000000000000aa"]])
+        self.assertIn("ev-00000000000000cc", " ".join(result.limitations))
 
     def test_findings_beyond_the_requested_maximum_are_dropped(self) -> None:
         result = self.findings(limits={"max_findings": 1})

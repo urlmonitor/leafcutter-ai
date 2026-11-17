@@ -35,18 +35,20 @@ The six-step loop from the spec (§6.1). This is the outer driver: it walks an e
 Before entering the main epic loop (`/build-feature` step 1), verify that the feedback
 sink is reachable and writable. This prevents silent telemetry loss for the entire drive.
 
-**Check (POSIX):**
+**Check (POSIX):** read-only. It asks the install where the declared telemetry
+stream is and checks that the location is writable. It creates nothing, and it never
+falls back to a path of its own: if the install declares no location, the probe reports that.
 
 ```bash
-SINK_PATH="debugging/logs/agent_telemetry.jsonl"
-mkdir -p "$(dirname "$SINK_PATH")"
-if echo '{"probe":"pre-drive-reachability-check"}' >> "$SINK_PATH" 2>/dev/null; then
+# pre-drive-reachability-check
+SINK_PATH="$(python3 {{config.output_root}}/scripts/knowledge/sink_resolution.py --print-location telemetry)"
+LOG_DIR="$(dirname "$SINK_PATH")"; HOLDER="$(dirname "$LOG_DIR")"; [ "$(basename "$HOLDER")" != debugging ] || HOLDER="$(dirname "$HOLDER")"
+WRITE_AT="$LOG_DIR"; while [ ! -d "$WRITE_AT" ] && [ "$WRITE_AT" != "$HOLDER" ]; do WRITE_AT="$(dirname "$WRITE_AT")"; done
+if [ -n "$SINK_PATH" ] && [ -d "$HOLDER" ] && [ -w "$WRITE_AT" ]; then
   echo "Feedback sink OK: $SINK_PATH"
   SINK_OK=1
 else
-  echo "## Warning: Feedback sink unreachable"
-  echo "Path: $SINK_PATH"
-  echo "Telemetry events will not be recorded for this drive."
+  printf '%s\n' "## Warning: Feedback sink unreachable or undeclared" "Path: ${SINK_PATH:-(no declared telemetry stream)}" "Telemetry events will not be recorded for this drive."
   SINK_OK=0
 fi
 ```
@@ -58,7 +60,7 @@ If the write fails (`SINK_OK=0`):
 1. Emit the structured warning block to the user:
    ```
    ## Warning: Feedback sink unreachable
-   Path: debugging/logs/agent_telemetry.jsonl
+   Path: <the declared telemetry stream printed by the probe, or "(no declared telemetry stream)">
    All telemetry for this drive will be lost (submit-failed events will not be recorded).
    Fix the sink path or confirm before proceeding.
    ```
@@ -79,9 +81,9 @@ retrospective. This pre-flight step closes that gap.
 ### §1.0.1 Pre-Commit Hook Probe Pre-flight (runs after §1.0)
 
 Before entering the main epic loop (§1.1), verify that the pre-commit hooks
-are active and wired up in the epic worktree. This prevents the scenario where
-a hook silently skips for the entire drive because the config was lost between
-the worktree bootstrap and the drive start.
+are active and wired up in the epic workspace. This prevents the scenario where
+a hook silently skips for the entire drive. The epic workspace comes only from the
+workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`; the maker builds its install and hook config itself.
 
 **Check (POSIX):**
 
@@ -99,18 +101,16 @@ If `failing_checks` is non-empty OR the script exits non-zero:
 1. Emit the structured warning block to the user, listing each failing check:
    ```
    ## Warning: Pre-commit hook probe failed
-   Worktree: <worktree_root>
+   Workspace: <worktree_root>
    Failing checks: <list>
    Pre-commit hooks may silently skip during this drive.
    ```
 2. Offer the user **three options**:
-   a. **Fix and retry** — resolve the config/hooks issue (the probe describes what to fix), then re-invoke `/build-feature`. Typical fix: `build.py` wasn't run, or `.pre-commit-config.yaml` is absent.
-   b. **Investigate** — inspect `probe_pre_drive.txt` and the worktree hook installation manually before deciding.
-   c. **Override** — proceed despite the failing probe, accepting the risk that hooks may silently skip. This requires an explicit confirmation: "I understand hooks may skip — proceed".
-3. On option (a) or (b): halt with `{status: "blocked", blocker_summary: "pre-commit hook probe failed — user must fix or override"}`.
-4. On option (c) only: log `[probe-override] User accepted hook-skip risk for this drive` and continue to §1.1.
+   a. **Fix and retry** — ask the workspace maker for the workspace again (`scripts/worktree.py ensure`, see `docs/how-to/get-a-workspace.md`); it finishes a half-made workspace in place. Never repair the config or hooks by hand. Then re-invoke `/build-feature`.
+   b. **Investigate** — inspect `probe_pre_drive.txt` before deciding.
+3. On either option: halt with `{status: "blocked", blocker_summary: "pre-commit hook probe failed — ask the workspace maker again"}`. There is no override: a failing probe always halts the drive.
 
-Do NOT silently continue when `failing_checks` is non-empty — the warning must be surfaced.
+Do NOT continue when `failing_checks` is non-empty — the failure must be surfaced and the drive halted.
 
 If `verify_precommit_active.py` is absent (graceful_skip_if_incomplete pattern), emit:
 ```
@@ -118,9 +118,8 @@ INFO: verify_precommit_active.py not found — probe skipped (incomplete guardia
 ```
 and continue to §1.1 without blocking.
 
-**Why this gate exists:** A worktree bootstrap can succeed (config file copied/symlinked)
-but the hooks can still fail to fire if the binary is missing, the hook is not installed,
-or the config is malformed. This probe checks all four conditions simultaneously.
+**Why this gate exists:** A workspace can be made yet the hooks can still fail to fire if
+the binary is missing, the hook is not installed, or the config is malformed. This probe checks all four conditions simultaneously.
 (Source: EPIC-WorktreeQualityGateGuard, BO-1700d-2)
 
 ---
@@ -172,8 +171,7 @@ or the config is malformed. This probe checks all four conditions simultaneously
     ```bash
     python .claude/skills/agent-telemetry/scripts/emit_event.py \
       --agent "build-feature" --event supervisor_dispatch \
-      --ticket "<ticket_path>" \
-      --log debugging/logs/agent_telemetry.jsonl || true
+      --ticket "<ticket_path>" || true
     ```
 
 5.  WAIT for the entire batch to complete (barrier).
@@ -191,8 +189,7 @@ or the config is malformed. This probe checks all four conditions simultaneously
         ```bash
         python .claude/skills/agent-telemetry/scripts/emit_event.py \
           --agent "build-feature" --event epic_halted \
-          --outcome blocked \
-          --log debugging/logs/agent_telemetry.jsonl || true
+          --outcome blocked || true
         ```
       ELSE-IF any child returned "blocked" but the blocker is local
               to that ticket (other tickets remain independent):
@@ -205,8 +202,7 @@ or the config is malformed. This probe checks all four conditions simultaneously
         ```bash
         python .claude/skills/agent-telemetry/scripts/emit_event.py \
           --agent "build-feature" --event epic_complete \
-          --outcome ok \
-          --log debugging/logs/agent_telemetry.jsonl || true
+          --outcome ok || true
         ```
       ELSE:
         → GOTO 3.
@@ -240,10 +236,12 @@ Both conditions must hold. The file-touch set is authoritative — it is populat
 - The commit-phase lock (§5) cannot be released after a child crash (lock-recovery requires user intervention).
 
 In all other blocker scenarios, the epic continues with the remaining independent tickets while the blocked ticket awaits user input. See §6.
+
+**Workflow driver (`build-feature.js`, BO-100e-4).** A halted ticket no longer ends the run. Later batches and looks still build every ticket that does not depend on it (transitively) and does not list a file it left modified in `files_touched`. Dependants are withheld (`withheld_by`) and tickets sharing a leftover file are withheld (`withheld_by_shared_files`); both appear in `unbuilt`. Only two further conditions stop the run early, because the commit agent commits whatever is staged: the halted ticket left **staged** changes (the stop names the paths), or the worktree's dirty state **could not be read** (fail closed). The run then ends with `status: "blocked"`, `epic_complete: false`, `ended_because: "halted"` and `halted_at_batch` set to the first halt. The legacy `build-epic.js` still halts the whole run at the first halt.
 ### §1.4 Worktree lifecycle — close-worktree prohibition
 
-`/build-feature` **MUST NOT** invoke `close-worktree`, `git worktree remove`, or
-`git branch -D` until **every sub-ticket in the epic is in `done/` status**.
+`/build-feature` **MUST NOT** invoke `close-worktree`, ask the maker to clear the epic workspace (workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`), or
+run `git branch -D` until **every sub-ticket in the epic is in `done/` status**.
 
 Premature invocation of `close-worktree` destroys the branch ref while in-progress commits
 survive as unreachable orphan objects in the object database. This failure mode was observed
@@ -500,7 +498,7 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
            GOTO top of loop (pick next pending agent from updated map).
       IF block is PRESENT but tests array is EMPTY (`tests: []`):
         LET has_code_producer = any agent in ticket agents: map whose
-            produces trait (from config/agent_registry.json) is "production_code"
+            produces trait (from {{config.output_root}}/config/agent_registry.json) is "production_code"
         IF NOT has_code_producer:
           → SKIP test-writer (same actions as absent block above).
           GOTO top of loop.
@@ -514,6 +512,12 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
     # If block is present with empty tests but a code producer exists, dispatch normally.
 
 2.  SPAWN next_agent with input { ticket_path: <absolute path> }.
+    IF next_agent IN {"python-coder", "sql-coder"} or its produces trait is
+    "production_code", and no coder has been spawned yet in this drive: run the
+    red-baseline reader (§5.10.1) first; on a halt, spawn no coder.
+    IF next_agent == "commit": spawn it through §5.9 (lock, wrong-version gate
+    §5.10.2, routing stage, commit staging the manifest by name, one observe,
+    release), on EVERY commit spawn including after a retry, handoff or remedy agent.
     The agent invokes the `signoff` skill as its final action;
     on return, the ticket file has a new `## Comments` heading
     and updated `agents:` + `## Sign-offs` rows.
@@ -522,8 +526,7 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
     ```bash
     python .claude/skills/agent-telemetry/scripts/emit_event.py \
       --agent "ticket-supervisor" --event agent_start \
-      --ticket "<ticket_path>" --phase "<next_agent>" \
-      --log debugging/logs/agent_telemetry.jsonl || true
+      --ticket "<ticket_path>" --phase "<next_agent>" || true
     ```
 
     # post-coder contract-shrinking check (supervisor-side warn, not block)
@@ -558,8 +561,7 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
     python .claude/skills/agent-telemetry/scripts/emit_event.py \
       --agent "ticket-supervisor" --event agent_signoff \
       --ticket "<ticket_path>" --phase "<next_agent>" \
-      --outcome ok \
-      --log debugging/logs/agent_telemetry.jsonl || true
+      --outcome ok || true
     ```
 
 5.  After routing, GOTO 1 unless routing produced a terminal outcome
@@ -582,6 +584,7 @@ read happens once per agent dispatch, before the agent is spawned.
 | `test_artifact` | NO | Wrapping a test-producing agent in test-writer/test-runner would be circular. |
 | `review_verdict` | NO | Review agents produce verdicts, not executable code. |
 | `analysis` | NO | Analysis agents produce reports/recommendations, not executable logic. |
+| `requirement_records` | NO | Planners that enrich requirement records in the AC store produce records, not executable logic. |
 | `orchestration` | NO | Orchestrators drive other agents; TDD guardrails do not apply. |
 | `configuration` | CONDITIONAL | Apply TDD guardrails only if the configuration change is consumed by tested code (supervisor judgment). Default: NO. |
 | `null` | WARN + NO | Log a warning that the agent has an ambiguous or missing produces trait, then treat as `documentation` (no TDD guardrails). Do NOT block the dispatch. |
@@ -637,8 +640,12 @@ The priority column is the authoritative ordering for dispatch ties. Lower numbe
 | 12 | `commit` | Atomic commit phase |
 | 13 | `pull-request` | Pushes branch and opens PR |
 
+Knowledge routing is not a phase and has no row: it is not an agent, so a row or a
+`phaseOrder` entry would route nothing (ADR-040 §3). The supervisor runs it around the
+`commit` phase (priority 12) as part of that spawn. See §5.9.
+
 **Flow-change pair ordering note:** For tickets generated from (change_target,
-risk_surface) pairs listed in `config/guardrail_gates.yaml` `flow_change_gates:`
+risk_surface) pairs listed in `{{config.output_root}}/config/guardrail_gates.yaml` `flow_change_gates:`
 (e.g. `code/production`, `code/all`, `schema/production`, `schema/all`),
 the computed agents map will include both `architect-review` (priority 4) and
 `documentation-expert` (priority 10). This table's ordering guarantees that
@@ -668,6 +675,18 @@ breakdown, ambiguous by construction whenever more than one agent has a section 
 ticket, and inferring a target from it would re-dispatch an agent on a handoff that named
 nobody deliberately. Every phase agent template must set `handoff_target` on the
 machine-parsed dispatch path for this reason — see `signoff` §3.
+
+A valid `handoff_target` does not end the run. The driver queues the target next, runs it
+through the normal phase loop (pointer block, test guard, red-baseline gate before a coder,
+record read-back), and re-queues the handing phase after it if that phase is still `needed`
+or `failed` in the record. Chains A→B→C re-queue B, then A. An epic ticket whose handoff
+resolves completes in the same run. The driver refuses, dispatching nobody and naming the
+case: a self-handoff, a target that is not a key in the ticket's `agents` map (a
+`not_needed` key is honoured), and a deferred target such as `pull-request`. Confirmation
+fails closed: the target must leave a new sign-off entry after the handoff, since an older
+passing entry does not count. Otherwise the ticket stops as `cross_agent` and no later phase
+runs. A repeated (from→to) pair, or a fourth handoff on one ticket, halts with
+classification `handoff_loop`, naming the chain.
 
 ### §2.3 Completion Manifest Validation (post-comment-parse step)
 
@@ -713,8 +732,7 @@ Emit `agent_retry` before the respawn (non-blocking):
 python .claude/skills/agent-telemetry/scripts/emit_event.py \
   --agent "ticket-supervisor" --event agent_retry \
   --ticket "<ticket_path>" --phase "<failing_agent>" \
-  --retry-count 1 \
-  --log debugging/logs/agent_telemetry.jsonl || true
+  --retry-count 1 || true
 ```
 
 ### §3.2 Case 2 — Cross-agent rework
@@ -728,8 +746,7 @@ Emit `agent_respawn` before the sibling respawn (non-blocking):
 python .claude/skills/agent-telemetry/scripts/emit_event.py \
   --agent "ticket-supervisor" --event agent_respawn \
   --ticket "<ticket_path>" --phase "<named_sibling>" \
-  --retry-count 1 \
-  --log debugging/logs/agent_telemetry.jsonl || true
+  --retry-count 1 || true
 ```
 
 ### §3.3 Case 3 — Open-ended design choice
@@ -750,8 +767,7 @@ python .claude/skills/agent-telemetry/scripts/emit_event.py \
    python .claude/skills/agent-telemetry/scripts/emit_event.py \
      --agent "ticket-supervisor" --event agent_failure \
      --ticket "<ticket_path>" --phase "<failing_agent>" \
-     --outcome failed \
-     --log debugging/logs/agent_telemetry.jsonl || true
+     --outcome failed || true
    ```
 3. Build the user-escalation payload (§6).
 4. Return `{status: "blocked", payload: ...}` to `epic-supervisor`.
@@ -774,7 +790,7 @@ EPIC-AcPipelineDeployGaps). Re-sending "yes" via SendMessage will not resolve it
    `AskUserQuestion` answer or a direct message).
 2. The parent then performs the gated action **directly** from the main loop — e.g. the
    `commit` agent's job is done by a direct (delegated) commit; the merge gate by
-   `gh pr merge`; worktree removal by `git worktree remove`. (Note: a direct `git commit`
+   `gh pr merge`; workspace clearing by the maker's `remove` verb (workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`). (Note: a direct `git commit`
    is blocked by `enforce_commit_delegation`; satisfy it by dispatching a FRESH `commit`
    agent with the user's approval stated as a pre-authorization in the initial dispatch
    prompt — gated agents accept their *initial* task, only relayed *follow-ups* deadlock.)
@@ -787,6 +803,17 @@ EPIC-AcPipelineDeployGaps). Re-sending "yes" via SendMessage will not resolve it
 that gated agents accept as sanctioned without an interactive user turn. See KI-2 from
 the EPIC-PrecommitSafetyNet retrospective and `feedback_no_gated_agent_for_interactive.md`.
 
+### §3.6 `Post-merge suite status` — an external hold, not your failure (canonical rule)
+
+**Applies to** any runbook that reads pull-request checks. Other runbooks point here; this is the only copy.
+
+1. **Recognise it by its exact name**, `Post-merge suite status`. It holds every PR while main's post-merge correctness lane is not green or has no fresh verdict. Its description is one of six held states, each ending "This is not caused by this pull request. To restore a verdict: …".
+2. **Report it as an external hold**: quote the check's description (the held state), the run link from the check, and the open `post-merge-red` notice link (read-only: `gh issue list --label post-merge-red --state open`; say "no open notice" if none). Then stop work on that check.
+3. **Never** edit your own diff to make it pass, push an empty or no-op commit, or re-run it in a loop (one re-check after the user says main was fixed is fine).
+4. **Never edit** the post-merge workflows, `scripts/ci/`, `scripts/ci/post_merge_tunables.json`, the ruleset, or the notice issues. The owner-only break-glass (TQ-600a-13-xvii) is not yours to use.
+5. **Fix declaration**: add `Fixes #<notice>` to the PR description only when your change touches a test in the notice's failing set, or code those tests exercise. Never add it as a way to pass.
+6. **Every other failing check** on the same PR (e.g. `Test suite (pytest)`) is handled exactly as before: it is your own failure unless shown otherwise. The hold never excuses it, and it never hides it.
+
 ---
 
 ## §4 Retry Caps (numeric)
@@ -797,6 +824,7 @@ Every cap below is a hard ceiling enforced per-ticket. When exceeded, the superv
 |---|---|---|
 | **Coder respawn after own failure** (§3.1) | **1 per phase per ticket** | A second consecutive failure of the same coder agent on the same phase → fall through to §3.4. |
 | **Sibling respawn from review** (§3.2) | **1 per phase pair per ticket** | A "phase pair" is the (reviewer, coder) tuple, e.g. (pr-reviewer, python-coder). After one round-trip, a second blocker from the same reviewer against the same coder → fall through to §3.4. |
+| **Handoff continuation** (BO-3000a, workflow drivers) | **1 per (from→to) pair, 3 per ticket** | Honoured `handoff_target` re-dispatches. A repeat of a pair, or a fourth handoff, halts with classification `handoff_loop` naming the chain; no later phase runs. Counted by the drivers per drive, separate from the §3.2 sibling respawn. |
 | **test-failure rework** (BO-530-3-i) | **2 per ticket (configurable)** | When test-runner returns a blocker, the originating coder is re-dispatched for rework. After 2 rework attempts on the same ticket the loop is exhausted — fall through to §3.4. The default of 2 is configurable per-ticket via `test_failure_rework_cap:` in the ticket frontmatter; if absent, 2 applies. |
 | **brainstorm-lead invocations** (§3.3) | **1 per ticket** | A ticket gets at most one brainstorm. A second design-class blocker on the same ticket → fall through to §3.4 directly (do not spawn brainstorm-lead again). |
 | **Commit hook autofix loop** | inherited from `precommit-autofix` skill (1 retry) | Owned by the commit phase agent itself; supervisor does not retry commits. |
@@ -931,13 +959,21 @@ if (-not $parentAlive -and $cpuPct -lt 2) {
 captures the original user correction that prompted this rule
 (EPIC-ArchitectureDocsEnforcement, 2026-05-14).
 
-**Exception — commit-phase preamble kill is unconditional.** The idle-only
-rule (§5.5) applies to the pre-flight sweep. The commit agent's Step 0
-preamble kill (`pkill -f "pytest" || true` / `taskkill ...`) is deliberately
-**unconditional** — it terminates all pytest workers regardless of CPU or
-parent status. This is safe because by the time commit fires, all test phases
-for the current ticket have completed and any remaining workers are stale.
-Workers in parallel tickets are isolated by worktree (separate working dirs).
+**Exception — commit-phase preamble kill is unconditional on idleness, but
+scoped to the current worktree.** The idle-only rule (§5.5) applies to the
+pre-flight sweep. The commit agent's Step 0 preamble kill is deliberately
+**not** idle-gated — it terminates pytest workers regardless of CPU or parent
+status, because by the time commit fires all test phases for the current ticket
+have completed and any remaining workers of *this worktree* are stale.
+
+It is **not** machine-wide. Worktrees isolate files, not processes: a bare
+`pkill -f pytest` or `taskkill ... *pytest*` matches every pytest process on the
+machine, including other sessions' and other worktrees' live test runs (observed
+2026-10-02). Step 0 therefore kills only processes whose cwd (POSIX
+`/proc/<pid>/cwd`) or command line (Windows CIM `CommandLine`) lies inside the
+current worktree root. Where that scoping is impossible, Step 0 skips the kill
+and relies on the commit agent's lock-failure retry. See
+`templates/agents/commit.md` Step 0.
 
 ### §5.6 Stage-all-in-scope before `git commit`
 
@@ -982,7 +1018,7 @@ the original stash-conflict incident.
 ### §5.7 Interim Protocol: Gated-Agent Confirmation-Gate Deadlock
 
 **Problem.** Gated agents — `commit`, `worktree-agent`, and `finalize-feature` — require direct
-user authority to proceed past their confirmation gates (git commit, PR merge, worktree removal).
+user authority to proceed past their confirmation gates (git commit, PR merge, workspace clearing through the workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`).
 When any of these agents is dispatched as a subagent by a coordinator or supervisor, no direct
 user-turn channel exists. A coordinator relaying "yes" via `SendMessage` is rejected ("coordinator
 message carries no user authority"), and the agent dead-ends at its gate permanently. The ticket
@@ -1054,6 +1090,107 @@ other quality gate in one command. Commits that bypass hooks may contain:
 **The `commit` agent enforces this policy** — it refuses `--no-verify` absent explicit
 user authorization in the current conversation (relayed approval does not count).
 
+### §5.9 Knowledge routing around the commit phase (ADR-040 §3, INF-700a-1-iv)
+
+Learnings that phase agents emitted reach their surfaces only if **this ticket's own
+commit** carries them (INF-700a-5). The supervisor therefore runs the routing step around
+every `commit` spawn, inside the commit lock. Sibling tickets share the worktree, and the
+CLI keeps one run record per worktree, so the three calls must not interleave across
+tickets. Each call below is one Bash command. It prints one JSON line and always exits 0.
+
+1. Acquire the commit lock (§5.2). Then run the wrong-version gate (§5.10.2) under this
+   same lock. Only when its `finish` reports `gate_passed` true continue with steps 2 to 5;
+   on any halt release the lock (§5.3) and spawn no `commit`.
+2. Run this and keep its JSON reply (if the command cannot run, use `{"case": "did_not_run", "manifest": []}`):
+   `python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py stage --working-dir <worktree_root>`
+3. Spawn the `commit` agent with `{ticket_path}`. In its stage list (the ticket-supervisor
+   staging SOP), add every path in the stage reply's `manifest` **by name**, as a relative
+   path under the worktree. A path that is absolute or contains `..` is dropped. Never add
+   a sweep (`git add -A` / `git add .`).
+4. When the commit agent returns, run this exactly once, on success and failure alike
+   (`ok` only when the commit landed, otherwise `failed`):
+   `python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py observe --working-dir <worktree_root> --commit-status ok|failed`
+   Its JSON reply, unchanged, is this ticket's
+   `knowledge_routing`. If it cannot run, return `{"case": "did_not_run"}` instead. Never
+   copy figures from the stage reply.
+5. Release the lock (§5.3), then add `knowledge_routing` to the ticket's result payload.
+
+Fail-open: never block, fail, or retry the ticket because of these calls, and never let them change its status.
+A ticket with no `commit` phase does not route, and its records wait for the next carrying
+commit. Records whose text an earlier ticket's commit already carries are not written
+again; the stage reports them as `already_on_branch`.
+
+### §5.10 Gate runs on every drive (TQ-500f-3-iv, TQ-500g-1-vii)
+
+These run on every ticket-supervisor drive, whatever started it (no route test: that would be
+a skip path). Each command is ONE Bash call from the worktree root: no `cd`, pipe or `&&`.
+`<root>` is the worktree root with forward slashes, `<ids>` the `source_ac` ids joined by
+commas, `<ticket>` the ticket file's absolute path with forward slashes. `ticket_key` and
+`runs_alone` come from the dispatch input; the CLIs write the records under
+`<git-dir>/leafcutter/gate-verdicts/`. You never write, edit, move or delete anything there, never run
+`wrong_version_runner.py recover` (the workflow runs it once at the drive head), never
+reuse an earlier list, reply or result, and never put your own account of a verdict in its place.
+When `ticket_key` is missing, use the ticket file's stem.
+
+**Input check** (before any command of §5.10.1 or §5.10.2): `ticket_key` and every `source_ac`
+id must match `^[A-Za-z0-9._-]+$`; `<root>` (and `<ticket>` for §5.10.1) must contain none of
+`"`, `$`, backtick, CR, LF. On failure run nothing and halt with step `input-check` and the rejected values.
+
+**Parse fail-closed.** A reply is valid only as one JSON object stdout with the fields named below;
+a non-zero exit with no such object, empty stdout or prose is no reply, and halts.
+
+**Halt shape.** Return `{status: "blocked", message: "Wrong-version <step> step did not pass: <parsed
+reply as JSON text, or null>", ticket_path, gate: "wrong_version_gate", wrong_version_step:
+"input-check" | "batch-serial-check" | "list" | "finish", wrong_version_detail: <parsed reply
+verbatim, or null>}`, and set the commit phase to failed through the `signoff` skill (§4) so a
+re-drive repeats the sequence. Red-baseline halts return `{status: "blocked", message naming the
+reader's reason and refused tests, ticket_path, gate: "verify_red_baseline", gate_verdict: <JSON
+verbatim, or the raw stdout / rejected values>}`.
+
+#### §5.10.1 Red-baseline reader (once per drive, outside the lock)
+
+Run it immediately before the first coder spawn of the drive (also on resume with `test-writer`
+already `signed_off`). When the drive will spawn `commit` but no coder (coders already
+`signed_off`), run it once before the first §5.10.2 sequence instead (`--ticket` reuses the pass
+recorded earlier; without one the reader halts). After the input check, exactly:
+
+`python "<root>"/{{config.output_root}}/scripts/build_orchestration/fast_lane.py heavy_lane_gate --source-ac "<ids>" --test-root "<root>" --ac-root "<root>/docs/acceptance-criteria" --ticket "<ticket>" --record "<ticket_key>"`
+
+Without `source_ac` (K3) drop the `--source-ac "<ids>"` pair; still run it. Continue to the coder
+only when `gate_passed` is the boolean true; the test-writer's sign-off or `red_baseline_verified`
+claim is never a substitute. Return `red_baseline_gate` = the verdict's `outcome` verbatim
+(K3: "red-baseline reader not applicable: no source requirement", never "verified").
+
+#### §5.10.2 Wrong-version runs (before EVERY `commit` spawn, inside the commit lock)
+
+After the last pre-commit phase, and again after any retry, handoff or remedy agent
+(for example restructuring-specialist), in this order:
+
+1. Acquire the lock (§5.2). Run the input check.
+2. **Serial check:** when `runs_alone` is false (missing counts as true only when no `ticket_key`
+   came in the dispatch input) and `source_ac` is non-empty, run no command; halt with step
+   `batch-serial-check`, `wrong_version_detail` `{source_ac: [ids]}`, message "This ticket owes
+   wrong-version runs but its batch ran in parallel; no wrong-version step ran."
+3. Red-baseline reader (§5.10.1), if this drive has not run it yet.
+4. Only with non-empty `source_ac`, the list step; `owed` must be an array and `error` null, else halt with step `list`:
+   `python "<root>"/{{config.output_root}}/scripts/build_orchestration/wrong_version_writer.py list --ac-ids "<ids>" --ac-root "<root>/docs/acceptance-criteria" --test-root "<root>" --base-ref HEAD`
+5. Only when `owed` is non-empty, spawn `test-breaker` with `{work_key: <ticket_key>, repo_root: <root>,
+   requirement_ids: [<ids>], wrong_versions: <owed, unchanged, scope included>}`. Only the list
+   step decides that nothing is owed; you never decide it yourself.
+6. Always run `finish` (K3: drop the `--ac-ids "<ids>"` pair). The reply goes in a quoted
+   here-document: `<DELIM>` starts as `WV_REPLY_EOF` and gains `_X` while the reply contains it.
+   The line is followed by the reply (byte for byte: never edited, reformatted, extracted or
+   summarised), a newline when the reply is non-empty, then `<DELIM>` on its own line. A string
+   reply goes in as is; a failed, refused or empty test-breaker spawn, or nothing owed, goes in as an empty reply.
+   `python "<root>"/{{config.output_root}}/scripts/build_orchestration/wrong_version_gate.py finish --work-key "<ticket_key>" --reply - --ac-ids "<ids>" --ac-root "<root>/docs/acceptance-criteria" --test-root "<root>" --base-ref HEAD --record "<ticket_key>" <<'<DELIM>'`
+7. `gate_passed` must be the boolean true, else halt with step `finish` (a writer stop,
+   `stopped_at: "write"`, is a halt; never retry by running the runner without a manifest).
+   Only then continue with §5.9 steps 2 to 5 under the same lock.
+
+Return `wrong_version_outcome` = `finish`'s `verdict.outcome` verbatim (null when no verdict;
+K3: "wrong-version runs not applicable: no source requirement", never "verified"), beside
+`red_baseline_gate`, on every ticket that reached `finish`.
+
 ---
 
 ## §6 User Escalation Contract
@@ -1082,7 +1219,7 @@ All four fields are required. The values are:
 
 > **`/build-feature` MAY continue processing other tickets in the current batch (and subsequent batches) while a blocked ticket waits for user input**, provided the remaining tickets do not depend on the blocked one (transitively, via either `depends_on` or `files_touched`).
 
-Equivalent phrasing: a single ticket's user-escalation does NOT halt the epic by default. The epic only halts when the §1.3 conditions are met (structural blocker, dependency-cycle invariant violation, or unrecoverable lock state).
+Equivalent phrasing: a single ticket's user-escalation does NOT halt the epic by default. The epic only halts when the §1.3 conditions are met (structural blocker, dependency-cycle invariant violation, or unrecoverable lock state). The workflow driver adds two stops of its own after a halted ticket: staged leftovers, and a worktree state that cannot be read (§1.3). Work behind the halted ticket (dependants, or tickets sharing files it left modified) is withheld and named in `unbuilt`; everything else still builds, and the final return never reports the epic complete.
 
 When the user replies and resolves the blocker, the supervisor flow is:
 

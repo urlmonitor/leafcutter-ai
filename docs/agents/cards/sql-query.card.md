@@ -95,6 +95,7 @@ flowchart TD
 | `Edit` |
 | `Write` |
 | `Agent` |
+| `Skill` |
 ---
 
 ## Skills Used
@@ -102,7 +103,7 @@ flowchart TD
 | Skill | Mode | Condition |
 |-------|------|-----------|
 | `sql-query-past-queries` | always | — |
-| `signoff` | conditional | — |
+| `signoff` | conditional | When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket. |
 ---
 
 ## Configuration

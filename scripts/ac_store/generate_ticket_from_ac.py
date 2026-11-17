@@ -25,6 +25,7 @@ ARCHITECTURE: CLI script in scripts/ac_store/; called by the /build-ac workflow 
       _gtfa_config           guardrail-gates / agent-registry reads
       _gtfa_components       component vocabulary resolution
       _gtfa_phases           location-keyed phase deferral (+ its two error types)
+      _gtfa_declared_surface declared-files surface: files_touched, body section, report
       _gtfa_files_touched    files_touched derivation
       _gtfa_impl_py          the implementation-.py classification predicate
       _gtfa_store            AC-store and ticket lookup, parent resolution
@@ -128,6 +129,7 @@ if TYPE_CHECKING:  # pragma: no cover - a static declaration, never executed
     from . import _gtfa_constants  # noqa: F401
     from . import _gtfa_contracts  # noqa: F401
     from . import _gtfa_decision_history  # noqa: F401
+    from . import _gtfa_declared_surface  # noqa: F401
     from . import _gtfa_doc_gates  # noqa: F401
     from . import _gtfa_doc_genre  # noqa: F401
     from . import _gtfa_files_touched  # noqa: F401

@@ -13,8 +13,9 @@ created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quali
 criteria: |
   Given the commit-guardian manifest,
   When it is read,
-  Then the self-healing hook is the entry at index 0 (registered first, before any
-    other hook).
+  Then the self-healing hook is the first hook registered after the stage
+    canaries (the precommit-canary-* members BO-4300c-1-ii places first), so
+    every entry before it is a stage canary and it runs before any other hook.
   And given a commit is attempted in a worktree where `.pre-commit-config.yaml`
     does not resolve to a readable file,
     When the self-healing hook runs,
@@ -45,17 +46,50 @@ it_requirements: |
   NOT create a separate extract-helper AC. This is the SINGLE live
   config-establishment path (single producer); it supersedes the interim one-file
   feature/SKILL.md slice (see BO-1700e-2 / L0 notes) so no two competing
-  establishment paths remain. Manifest index-0 registration is asserted so the heal
-  runs before any other hook (canonical manifest source is the templates/ copy).
+  establishment paths remain. The manifest order is asserted so the heal is the first
+  hook after the stage canaries (BO-4300c-1-ii) and runs before any other hook
+  (canonical manifest source is the templates/ copy).
+test_spec:
+  - name: test_manifest_index_0
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Reads the commit-guardian manifest and asserts that every entry before
+      ensure-precommit-config is one of the stage canaries BO-4300c-1-ii places first
+      (precommit-canary-pre-commit, then precommit-canary-commit-msg) and that the first
+      entry that is not a canary is ensure-precommit-config.
+    must_catch:
+      - "another hook is registered between the stage canaries and the self-healing hook"
+      - "the self-healing hook is moved ahead of the stage canaries, or the canaries are removed"
+  - name: test_config_present_subprocess_exits_0
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      The self-healing hook run through its own command-line entry point in a worktree whose
+      .pre-commit-config.yaml resolves exits 0; the re-materialization paths are proved by
+      the children BO-1700c-1-i .. BO-1700c-1-iv.
 delivers_to:
   agent: python-coder
-  contract: "A first-registered (index-0) self-healing hook that guarantees a resolvable .pre-commit-config.yaml before any other hook runs; consumed by the create-time gate (BO-1700d-1)."
+  contract: "A self-healing hook registered first after the stage canaries (BO-4300c-1-ii) that guarantees a resolvable .pre-commit-config.yaml before any other hook runs; consumed by the create-time gate (BO-1700d-1)."
 expects_from:
   ac_id: BO-1700e-2
   contract: "The shared-git-dir -> main-checkout resolution used to locate the main tree's .leafcutter for re-materialization."
 origin_agent: business-analyst-v3
 created: 2026-07-01
-amended_by: []
+amended_by:
+- reason: canary-first-manifest-order
+  by: human:user
+  at: 2026-10-21
+  note: >-
+    Criteria amended by the user's "canary first" decision (2026-10-21): the self-healing
+    'Ensure Pre-commit Config' hook is no longer the manifest entry at index 0 but the first
+    hook registered after the stage canaries. BO-4300c-1-ii places the precommit-canary-*
+    members first (precommit-canary-pre-commit at 0, precommit-canary-commit-msg at 1) so each
+    canary is the first hook of its stage. TestManifestIndex0 asserts the new order.
 superseded_by: null
 covered_by: [BO-1700c-1-i, BO-1700c-1-ii, BO-1700c-1-iii, BO-1700c-1-iv]
 implemented_by: []

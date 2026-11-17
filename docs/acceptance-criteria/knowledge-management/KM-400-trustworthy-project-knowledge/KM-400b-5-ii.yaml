@@ -1,0 +1,113 @@
+id: KM-400b-5-ii
+title: "When removing a failed generation itself fails, the result reports both failures and names the generation left behind"
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: done
+parent: KM-400b-5
+criteria: |
+  Given generation G32 is the active generation of repository R1
+  And a publication of G33 for R1 has stored 10,700 nodes and 28,000 relationships tagged to G33
+  And the publication fails because its count check reports 28,814 relationships expected and 28,813 kept
+  When the removal of G33 is refused because the store has become read-only
+  Then the operation reports failure
+  And the result carries the original cause: the count check, relationships, 28,814 expected and 28,813 kept
+  And the result separately states that the failed generation was not removed, naming repository R1 and generation G33
+  And the result states the refusal received for the removal
+  And the result states how many nodes and relationships tagged to G33 remain, or states that the remaining amount could not be determined, never 0
+  And G32 is still the active generation of R1
+
+  Given the removal of G33 deletes the nodes but is refused before the relationships are removed
+  When the operation returns
+  Then the result names G33 as partially removed and states which kinds remain
+
+  Given the store refuses both the removal and the request to count what remains
+  When the operation returns
+  Then the result names G33 as not removed and the remaining amount as undetermined, naming the refusal
+  And the result is distinguishable from a failure in which G33 was removed
+depends_on: [KM-400b-5, KM-400b-5-i]
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5-i.yaml
+    relationship: context
+    status: exists
+    relevance: Supplies the removal this record reports on when it does not succeed.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1-vi.yaml
+    relationship: context
+    status: exists
+    relevance: Same reporting rule on the retention side; an unassessable or unremoved store is reported as such, never as a clean result.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1-iv.yaml
+    relationship: context
+    status: exists
+    relevance: A generation named here as left behind is later reported reclaimable on the failed-publication basis.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: An undetermined count is stated as undetermined, never as 0.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: The operator reads this result to know a stranded generation exists and needs action.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: KM-400b-5-i
+  contract: The removal attempt and its outcome on a failed publication.
+origin_agent: business-analyst
+created: '2026-10-14'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_km_400b_5_ii.py
+implemented_by:
+- tickets/00_inbox/TICKET-20261014-KM-400b-5-ii.md
+- knowledge/adapters/neo4j_projection.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-14. The hosted instances latched read-only in exactly the condition
+  where removal matters most: a full store refuses the deletes that would free it. A
+  result that reported only "generation count validation failed" in that state would
+  read as a clean failure while ~28k relationships sat stranded. This is not a
+  duplicate of KM-400f-1-vi, which covers the retention evaluation being unable to
+  read the store. This record covers the publication's own failure result.
+
+  The original cause must survive. A removal error raised inside the failure path
+  must not replace the publication's own failure, or the operator learns that cleanup
+  failed but never learns why the publication failed.
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_refused_removal_reports_original_cause_and_names_stranded_generation
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Use a backend double that records writes and deletes, fail the publication's count check after storing, then refuse every delete as read-only; assert the result carries the count-check cause with both figures, names R1 and G33 as not removed, states the refusal and the remaining counts, and the active generation is unchanged.
+    covers: [KM-400b-5-ii]
+    must_catch:
+      - "let the removal error replace the original count-check failure"
+      - "report the original failure only, hiding the stranded generation"
+      - "report the remaining amount as 0 when it could not be counted"
+    requires_db: false
+  - name: test_partial_removal_is_named_as_partial
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: Let the double accept node deletes and refuse relationship deletes; assert the result names G33 as partially removed and states relationships remain.
+    covers: [KM-400b-5-ii]
+    must_catch:
+      - "report removed because the first delete succeeded"
+    requires_db: false
+test_rationale: >-
+  The existing publish tests never fed a duplicate relationship, so no test drove a
+  publication into failure after storing, let alone into a failed cleanup — the precise
+  state two hosted instances reached. The double refuses deletes the way a latched
+  read-only store does, and the assertions read the result's two causes as separate
+  values, because a chained exception that only carries one of them passes any test
+  that checks "it failed". Grep-only coverage is forbidden for this record.

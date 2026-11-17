@@ -11,6 +11,11 @@ description: |
 model: sonnet
 name: find-structural-smells
 tools: Bash, Read, Skill
+skills:
+- skill_id: review-for-code-smells
+  mode: always
+- skill_id: review-for-structural-code-smells
+  mode: always
 portable: true
 signoff: false
 requires_verification: false

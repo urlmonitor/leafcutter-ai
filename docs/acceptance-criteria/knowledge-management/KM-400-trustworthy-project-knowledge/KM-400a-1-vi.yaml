@@ -1,0 +1,194 @@
+id: KM-400a-1-vi
+title: Ticket metadata retains execution declarations without inventing completion evidence
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+priority: medium
+work_status: done
+parent: KM-400a-1
+criteria: |
+  Given a Ticket declares title, status, components, created and depends_on
+  And it may declare change_target, risk_surface, requires_diagram, requires_adr, agents, ac_traceability and test_requirements
+  When its native fields are exposed as graph metadata from the selected source revision
+  Then every authored frontmatter field remains available together with the complete body as separately identified source content
+  And nested agent status, AC traceability and test declarations preserve their own fields and associations
+  And historical scalar or list alternatives such as ac_coverage, ac_traceability and test_constraints remain in their authored shapes
+  And true, false, explicit null and absence for requires_diagram or requires_adr remain distinguishable
+  And a historical status such as open is not silently changed to a current lifecycle value
+  And test declarations, planned files_touched, signoff text and status done do not manufacture passing-test or actual-change evidence
+  And tickets with the same filename in different locations remain distinct by their complete canonical source identities
+
+  Given an epic master plan, a child ticket inside its epic and a README with ticket-like frontmatter
+  When ticket records are selected
+  Then an epic remains a Ticket subtype with attributable subtype information
+  And the child does not become an epic solely because of its containing folder
+  And the README and generic notes are not admitted as Ticket records
+  And malformed admitted ticket frontmatter is reported explicitly rather than replaced with defaults
+depends_on: [KM-400a-1]
+doc_links:
+- path: docs/reference/artifact-knowledge-graph-data-map.md
+  relationship: context
+  status: exists
+- path: reports/native-fields/review-Ticket.json
+  relationship: context
+  status: exists
+- path: reports/native-fields/code-Ticket.json
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+- path: reports/native-fields/ac-linked-strict.xml
+  relationship: verifies
+  status: exists
+  relevance: 'Fresh strict execution after criterion-specific test tags: 388 passed and one Windows symlink-privilege
+    skip across 19 focused modules. Per-type cases resolve through the test catalog; no live database rerun is implied.'
+- path: docs/reference/artifact-knowledge-graph-data-map.md
+  relationship: context
+  status: exists
+- path: reports/native-fields/review-Ticket.json
+  relationship: context
+  status: exists
+- path: reports/native-fields/code-Ticket.json
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-02'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_native_ticket.py::test_ticket_preserves_full_metadata_nested_shapes_dates_and_body
+- tests/knowledge/test_native_ticket.py::test_ticket_distinct_paths_and_epic_subtype_provenance
+- tests/knowledge/test_native_ticket.py::test_ticket_excludes_readme_generic_notes_and_missing_frontmatter
+- tests/knowledge/test_native_ticket.py::test_ticket_never_defaults_missing_fields_or_normalizes_historical_values
+- tests/knowledge/test_native_ticket.py::test_ticket_invalid_frontmatter_is_explicit_failure
+- tests/knowledge/test_native_ticket.py::test_ticket_absent_store_returns_no_records
+- tests/knowledge/test_native_ticket.py::test_ticket_real_store_preserves_every_frontmatter_field
+implemented_by:
+  - knowledge/native_types/ticket.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Retrospective type-specific refinement of KM-400a-3-i. Base authoring requirements,
+  newer edit-hook requirements and actually present historical fields are different sets;
+  metadata exposure does not rewrite historical records to satisfy newer authoring rules.
+  The receipt verifies complete frontmatter/body fidelity and source-selection mutations.
+  IT PO review and criterion-specific test links are recorded; declaration is not execution evidence.
+  Final bidirectional traceability and strict test evidence: reports/native-fields/ac-traceability.json.
+  Work status reflects linked test outcomes; reviewed readiness does not assert user approval.
+estimated_complexity: M
+it_requirements:
+- Ticket/epic source selection and complete repository-relative identity remain compatible with historical stores;
+  equal basenames never cause record collapse.
+- Extraction is read-only and must not convert lifecycle, test declarations or signoff prose into independently
+  verified execution or actual-change evidence.
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+- name: test_ticket_preserves_full_metadata_nested_shapes_dates_and_body
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Ticket preserves full metadata nested shapes dates and body.
+  covers:
+  - KM-400a-1-vi
+- name: test_ticket_distinct_paths_and_epic_subtype_provenance
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Ticket distinct paths and epic subtype provenance.
+  covers:
+  - KM-400a-1-vi
+- name: test_ticket_excludes_readme_generic_notes_and_missing_frontmatter
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Ticket excludes readme generic notes and missing frontmatter.
+  covers:
+  - KM-400a-1-vi
+- name: test_ticket_never_defaults_missing_fields_or_normalizes_historical_values
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Ticket never defaults missing fields or normalizes historical values.
+  covers:
+  - KM-400a-1-vi
+- name: test_ticket_invalid_frontmatter_is_explicit_failure
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Ticket invalid frontmatter is explicit failure.
+  covers:
+  - KM-400a-1-vi
+- name: test_ticket_absent_store_returns_no_records
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Ticket absent store returns no records.
+  covers:
+  - KM-400a-1-vi
+- name: test_ticket_real_store_preserves_every_frontmatter_field
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: Ticket real store preserves every frontmatter field.
+  covers:
+  - KM-400a-1-vi
+test_rationale: The verified catalog supplies exact existing reader-function anchors, including source-fixture,
+  boundary and failure checks. Only catalog-confirmed type-specific integration links are added. Shared lossless
+  property encoding, physical Neo4j publication, readback and retained-generation behavior remain covered by KM-400a-3-i;
+  these focused tests do not claim 17 independent live database journeys. This is retrospective traceability over
+  dated implementation receipts, not a newly performed TDD sequence. Subsequent strict execution is separately recorded
+  in reports/native-fields/ac-linked-strict.xml (388 passed, one skipped); no database test was rerun for these
+  annotation-only changes.

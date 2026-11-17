@@ -61,7 +61,7 @@ that any adopter project can include verbatim.
   the `agents:` map for new tickets.
 - `scripts/worktree/sweep_processes.py` — cross-platform pre-removal sweep
   helper; terminates residual background worker processes and removes log files
-  before `git worktree remove`. Invoked by the close-worktree workflow (Phase 3.5)
+  before the workspace is deleted (see [docs/how-to/get-a-workspace.md](docs/how-to/get-a-workspace.md); the workspace maker `worktree.py` owns clearing). Invoked by the close-worktree workflow (Phase 3.5)
   and the worktree-agent remove action. Run with `--dry-run` to preview without
   acting. Config keys: `worktree_cleanup.kill_residual_processes`,
   `worktree_cleanup.log_globs`, `worktree_cleanup.protected_paths`.

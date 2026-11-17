@@ -1,0 +1,107 @@
+id: DK-500g-3
+title: Asking which decisions used a category names each decision with the criterion it asked
+component: decision-kernel
+components:
+- decision_kernel
+- knowledge_management
+level: L2
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given a published generation built from a commit holding cat-1dc11c5a2ffa7310 and its three member decisions,
+  When a person asks which decisions used cat-1dc11c5a2ffa7310,
+  Then the answer names dec-4673055ef54113d5, dec-acdfd972fcaca478 and dec-d53e1c52cd47c832, each with its criterion id crit.small_slice and the question that decision asked,
+  And it comes from a registered query that takes the category id as its parameter and is pinned to one named generation,
+  And the number of decisions it names equals the category's usage count in the same commit, 3.
+depends_on:
+- DK-500g
+- DK-500g-1
+covered_by:
+- DK-500g-3-i
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: DK-500g-1
+  contract: CriterionCategory nodes and membership links in a published generation (DK-500g-1 delivers_to).
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+- 'Registered like DK-500g-2 (IT PO default name: get_category_decisions, argument category_id). Answer fields: {category_id, lifecycle_stage, replaced_by, decisions: [{decision_id, criterion_id, question}]} plus completeness.'
+- Tests cross-check that the decision count equals the category's usage_count in docs/criteria/index.json of the same commit.
+test_required: true
+test_spec:
+- name: test_answer_names_three_decisions_with_criterion_and_question
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Asking about cat-1dc11c5a2ffa7310 names its three decisions, each with crit.small_slice and the question that decision asked.
+- name: test_registered_operation_pinned_to_generation
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The answer comes from get_category_decisions with category_id as its parameter and reports the generation it is pinned to.
+- name: test_count_equals_usage_count
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The number of decisions named equals the category's usage count in the same commit, 3.
+test_rationale: Build real generations through the knowledge sync and registered-operation entry points from a fixture commit (offline fixture backend), and assert node identities, links and answers against the category records of that commit; a live Neo4j test proves server compatibility. Unit tests of the reader alone would not prove that the Decision kind is unchanged in a full generation.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: constrains
+  status: exists
+  relevance: Immutable generations from one commit, validated and published atomically; a failed build leaves the active generation untouched; registered parameterized queries only; finite native reader registry; disabled, unavailable and stale are distinct from an empty answer. On this branch since the 2026-10-05 merge of origin/main.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Finite native reader registry (knowledge/native_types/registry.py), generation publication, registered operations and the optional authored query catalog.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: related
+  status: exists
+  relevance: How a generation is built (python -m knowledge sync) and how registered operations such as get_entities and get_ac_descendants are requested and answered.
+- path: docs/reference/knowledge-retrieval-answers.md
+  relationship: describes
+  status: exists
+  relevance: Answer fields, completeness and the distinct non-answers the two category queries reuse.
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  User-requested query 2 of 2. Flow node: criteria-library explore ("three decisions for the category"). Tying the count to the usage index (DK-500f-1) checks the graph and the records against each other.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: explore.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: explore
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'

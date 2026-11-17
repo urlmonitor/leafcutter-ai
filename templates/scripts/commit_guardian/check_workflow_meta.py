@@ -246,10 +246,11 @@ def _get_staged_js_files() -> list[str]:
         print(f"Warning: git diff failed: {exc}", file=sys.stderr)
         return []
 
+    prefix = "templates/workflows-js/"
     return [
         f
         for f in result.stdout.strip().splitlines()
-        if f.startswith("templates/workflows-js/") and f.endswith(".js")
+        if f.startswith(prefix) and f.endswith(".js") and "/" not in f[len(prefix) :]
     ]
 
 
@@ -358,5 +359,13 @@ DECISION HISTORY
   ADR-006 addendum documents the pure-literal meta contract as a package
   invariant.
   (EPIC-FinalizeFeatureHardening/02_workflow_meta_literal_gate.md)
+- 2026-10-12 [python-coder]: Staged-file filter restricted to DIRECT children
+  of templates/workflows-js/ (no further "/" after the prefix). Shared modules
+  such as templates/workflows-js/_shared/workspace-answer.js are fragments the
+  build inlines into workflows and have no meta block by design; the staged
+  path and the hook `files:` pattern matched any depth while
+  _scan_all_workflow_js listed the top level only, so the halves disagreed.
+  Now all three agree.
+  (BO-4300 16_TICKET-20261012-workflow-meta-skips-shared-modules.md)
 ====================================================================
 """

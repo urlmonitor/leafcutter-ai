@@ -54,6 +54,10 @@ import sys
 import tempfile
 from pathlib import Path
 
+from scripts.suite_performance._shared_layout_coordination import (  # noqa: E402
+    emit_execution_signal,
+)
+
 from _bp1500g1_harness_fixtures import (  # noqa: E402 -- re-exported, see ARCHITECTURE above
     PlantedPackageTemplate,
     is_discoverable,
@@ -110,12 +114,20 @@ def run_build(
     own package root as ``Path(__file__).resolve().parent.parent``).
     """
     script = build_script if build_script is not None else BUILD_SCRIPT
-    return subprocess.run(
+    result = subprocess.run(
         [sys.executable, str(script), "--target-dir", str(target_dir), *extra_args],
         capture_output=True,
         text=True,
         timeout=timeout,
     )
+    # TQ-600a-9: this is the one real deploy subprocess every caller of
+    # `run_build` (every BP-1500g adopter file) funnels through -- the
+    # single counter-instrumentation point the whole family needs, per
+    # unit_tests/suite_performance/_test_helpers_tq_600a_9.py's ASSUMED
+    # PRODUCTION CONTRACT. A no-op unless a test has pointed
+    # LEAFCUTTER_SHARED_LAYOUT_EXECUTION_LOG at a scratch file.
+    emit_execution_signal(target_dir)
+    return result
 
 
 _SYMLINK_DISABLED_WRAPPER_TEMPLATE = '''

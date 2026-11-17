@@ -35,6 +35,8 @@ ARCHITECTURE: Reads directory/manifest paths from a 'hook_parity' section in
     build, so a diverged runtime manifest is already caught by check_build_drift.
     Exits 1 on any detected violation; exits 0 (fail-open) on I/O or parse
     errors — unexpected errors must never block a commit.
+    4. Remedy declarations (GE-132a-1): see _remedy_registration_parity. FAIL
+       CLOSED — unreadable input exits 2 (could_not_check), never a pass.
 """
 
 from __future__ import annotations
@@ -44,6 +46,9 @@ import hashlib
 import json
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # sibling modules
+import _remedy_registration_parity  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Internal constants
@@ -522,21 +527,12 @@ def _run_checks() -> int:
         check_deployed_parity(canonical_dir, deployed_dir, patterns, excluded)
     )
 
-    if all_violations:
-        print(
-            "\n[check-hook-parity] BLOCKED — hook parity violations detected:\n",
-            file=sys.stderr,
-        )
-        for violation in all_violations:
-            print(violation, file=sys.stderr)
-        print(
-            "\nFix: Ensure hook scripts and manifest entries are present in all "
-            "required locations before committing.\n",
-            file=sys.stderr,
-        )
-        return 1
-
-    return 0
+    # GE-132a-1: FAIL CLOSED leg (could-not-check is exit 2, never a pass).
+    leg_violations, could_not_check = _remedy_registration_parity.run_leg(
+        canonical_manifest, project_root
+    )
+    all_violations.extend(leg_violations)
+    return _remedy_registration_parity.report(all_violations, could_not_check)
 
 
 # ---------------------------------------------------------------------------
@@ -566,20 +562,10 @@ if __name__ == "__main__":
 #   (if no deployed dir → pre-build state → skip). Missing scripts in deployed
 #   dir remain non-blocking INFO. Added _compute_file_hash() helper.
 #   hashlib import added. ARCHITECTURE docstring updated.
-# - 2026-07-08 [python-coder/remediation]: Applied 10-finding code review fixes.
-#   H-1: Added top-level except Exception fail-open in main() + extracted
-#   _run_checks(); hardened _load_config and _load_manifest_hook_ids against
-#   UnicodeDecodeError and non-dict/non-list structures.
-#   H-2: Added hook_parity section + check-hook-parity entry to runtime config
-#   (scripts/commit_guardian/commit_guardian.json).
-#   M-2: Reordered _load_config candidates — project_root first, adjacent second,
-#   honouring the configurable-project_root contract.
-#   M-3: Downgraded check_deployed_parity violations to informational warnings
-#   (exit 0) — present-but-stale and genuine-drift are indistinguishable.
-#   L-1: Removed dead logger/logging.basicConfig (all output is print-to-stderr).
-#   L-2: Changed deployed_dir.exists() → deployed_dir.is_dir() so a file at that
-#   path is treated as absent rather than causing a false block.
-#   L-3: Omitted runtime-manifest comparison; documented rationale in ARCHITECTURE.
+# - 2026-07-08 [python-coder/remediation]: 10 review fixes (detail in git log).
+#   H-1 fail-open main()/_run_checks() and hardened loaders; H-2 runtime config
+#   hook_parity section; M-2 project_root-first config lookup; M-3 deployed
+#   parity downgraded to INFO (reversed by BP-100i-3 below); L-1..L-3 cleanups.
 # - 2026-08-18 15:10 [python-coder]: BP-100i-3: Reversed the M-3 downgrade.
 #   check_deployed_parity now treats a script present in canonical but absent
 #   from an existing deployed dir as a BLOCKING violation (exit 1), naming the
@@ -588,4 +574,6 @@ if __name__ == "__main__":
 #   comparison so a genuine I/O error (e.g. permission denied) still fails open
 #   (exit 0) and is not conflated with "every script missing."
 #   (#EPIC-BuildPipelinePhantomRemediation/03)
+# - 2026-10-12 [python-coder/GE-132a-1]: Added the FAIL-CLOSED remedy-declaration
+#   leg (_remedy_registration_parity.py, shared loader _remedy_declarations.py).
 # ====================================================================

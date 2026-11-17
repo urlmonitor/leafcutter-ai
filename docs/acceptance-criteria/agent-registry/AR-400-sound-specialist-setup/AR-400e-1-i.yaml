@@ -1,0 +1,86 @@
+id: AR-400e-1-i
+title: "The briefing and the build's registry validation show the abilities of the four specialists that were only in the older list"
+component: agent-registry
+components:
+  - agent_registry
+  - skill_registry
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given live-surface-tester, business-analyst, it-po and user-surface-smoker --
+    the four specialists whose derived registry entry carried only the older
+    abilities field on 2026-10-12 -- each with a non-empty `skills:` declaration,
+  When the effective prompt of each is rendered, and the build's registry
+    validation runs,
+  Then each one's rendered effective prompt lists exactly its declared
+    abilities,
+    And the registry validation examines each one's declared abilities (they
+      appear in its examined set and a planted unresolvable id in any of their
+      declarations fails validation naming that specialist),
+    And neither view reads the retired field: deleting it from a fixture copy of
+      the registry by hand changes neither output.
+depends_on:
+  - AR-400e-1
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "The four skills_used-only entries."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "Views in scope: scripts/render_effective_prompt.py (briefing, ~404) and the build's registry validation -- scripts/build_phases_agent_validation.py (~199 required fields, ~307 skill_id resolution) and scripts/registry_validator._check_skills_used (~244-270), which today validates skills_used only and becomes the retired-field refusal of AR-400e-2-i."
+  - "Derive 'the specialists that carried only the older field' from the pre-change registry (a fixture snapshot, e.g. unit_tests/prompt_assembly/fixtures_ar_300c/agent_registry.pre_migration.json or a captured 2026-10-12 copy), never hard-code the four names."
+  - "The planted unresolvable id must fail validation naming the specialist through build_phases_agent_validation's skills_invoked resolution."
+  - "descriptive_only entries are excluded from the rendered ability list."
+test_spec:
+  - name: test_briefing_lists_declared_abilities_for_former_older_field_specialists
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "For each specialist that held only skills_used in the 2026-10-12 registry snapshot, render_effective_prompt over the real tree lists exactly its frontmatter `skills:` ids."
+  - name: test_planted_unresolvable_id_fails_validation_naming_the_specialist
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "In a copy, add a nonexistent id to one of those specialists' declarations and regenerate; the build's registry validation fails naming that specialist."
+  - name: test_deleting_retired_field_from_fixture_registry_changes_neither_view
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Delete skills_used by hand from a copy of the registry; the briefing and the validation output are byte-identical before and after."
+    must_catch:
+      - "a view still reads skills_used"
+test_rationale: >-
+  The population is the one each of these readers was blind to; deriving it
+  from the snapshot keeps the test meaningful after the field is gone.
+delivers_to: null
+expects_from:
+  ac_id: AR-400e-2
+  contract: "Registry with skills_invoked populated for every declared specialist."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400e-1.yaml
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400e_1_i_briefing_validation.py
+implemented_by:
+  - templates/scripts/commit_guardian/_agent_ability_sync.py
+  - scripts/render_effective_prompt.py
+  - config/agent_registry.json
+notes: |
+  The four names are a 2026-10-12 measurement, recorded so the population is
+  checkable; the test should derive "specialists that carried only the older
+  field" from the pre-change registry rather than hard-code them.

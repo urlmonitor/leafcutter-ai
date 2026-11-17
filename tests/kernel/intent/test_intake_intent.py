@@ -37,6 +37,7 @@ class TestEachKindRoutesCorrectly(IntentCase):
     """decision, evidence and ideas reach their capability; change and out_of_domain decline."""
 
     async def test_decision_routes_to_the_decision_capability_without_a_routing_call(self) -> None:
+        # covers: DK-600a-1
         self.intents = [("decision", *SURE)]
         envelope = await self.service().start_run(self.goal_task("Should we use a cache?"))
         values = await self.checkpoint_values(envelope.run_id)
@@ -46,6 +47,7 @@ class TestEachKindRoutesCorrectly(IntentCase):
         self.assertEqual(self.jev.questions_asked("kernel.intent"), ["intent.answer_kind"])
 
     async def test_evidence_routes_to_research_and_completes_with_an_evidence_bundle(self) -> None:
+        # covers: DK-600a-1
         self.intents = [("evidence", *SURE)]
         envelope = await self.service().start_run(self.goal_task(TESTS))
         self.assertEqual(envelope.status, RunStatus.COMPLETED, envelope.limitations)
@@ -68,6 +70,7 @@ class TestEachKindRoutesCorrectly(IntentCase):
         self.assertIn("ADR-900", text)
 
     async def test_ideas_route_to_option_generation_and_stay_proposals(self) -> None:
+        # covers: DK-600a-1
         self.intents = [("ideas", *SURE)]
         responder = FakeHostResponder({schema_ids.OPTIONS: options_response("primary")})
         paused = await self.service().start_run(self.goal_task(IDEAS))
@@ -97,6 +100,7 @@ class TestEachKindRoutesCorrectly(IntentCase):
         self.assertFalse(invocation.input_payload["propose_criteria"])
 
     async def test_change_is_declined_plainly_without_a_question_or_a_build_opportunity(self) -> None:
+        # covers: DK-600a-1
         self.intents = [("change", *SURE)]
         envelope = await self.service().start_run(self.goal_task(IMPLEMENT))
         self.assertEqual(envelope.status, RunStatus.BLOCKED)
@@ -125,6 +129,7 @@ class TestEachKindRoutesCorrectly(IntentCase):
         self.assertEqual(envelope.usage_summary.host_operations, 0)  # no permissive fallback
 
     async def test_out_of_domain_is_declined_and_never_a_build_opportunity(self) -> None:
+        # covers: DK-600a-1
         self.intents = [("out_of_domain", *SURE)]
         envelope = await self.service().start_run(self.goal_task(WEATHER))
         self.assertEqual(envelope.status, RunStatus.BLOCKED)
@@ -258,8 +263,9 @@ class TestClarification(IntentCase):
                                                 answer_human(paused, {"free_text": answer}))
         self.assertNotEqual(final.status, RunStatus.BLOCKED, final.limitations)
         self.assertEqual(self.classified()[0], IMPLEMENT)
-        self.assertTrue(self.classified()[1].startswith(answer))  # the answer leads
-        self.assertIn(IMPLEMENT, self.classified()[1])  # the original stays as context
+        self.assertEqual(self.classified()[1], IMPLEMENT)
+        batches = [batch for batch in self.jev.batches if batch.purpose == "kernel.intent"]
+        self.assertEqual(batches[1].state["clarifications"], [answer])
         values = await self.checkpoint_values(final.run_id)
         self.assertIn("decision", self.capabilities_used(values))
         self.assertEqual(values["task"].intent, "decision")
@@ -267,10 +273,12 @@ class TestClarification(IntentCase):
                        key=lambda i: i.created_at)  # the first one (grounding research follows)
         self.assertIsNone(decision.continuation)  # the router's wait does not leak into the capability
         self.assertEqual(decision.child_outcomes, [])  # nor does the clarification answer
+        self.assertEqual(decision.input_payload["clarifications"], [answer])
         self.assertEqual(values["task"].original_goal, IMPLEMENT)  # never rewritten
         root = values["requests"][values["work_items"][values["task"].root_work_item_id]
                                   .request_id]
-        self.assertTrue(root.goal.startswith(answer))
+        self.assertEqual(root.goal, IMPLEMENT)
+        self.assertEqual(root.payload["clarifications"], [answer])
         self.assertEqual(self.service().list_gaps(), [])  # the clarification resolved it
 
     async def test_an_answer_that_is_still_unclear_gets_one_improved_follow_up(self) -> None:

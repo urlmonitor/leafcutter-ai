@@ -1,0 +1,9 @@
+[
+  {"name": "Lint (ruff)", "state": "SUCCESS", "link": "https://github.com/urlmonitor/leafcutter-ai/actions/runs/9100000002/job/1", "description": ""},
+  {"name": "Component vocab", "state": "SUCCESS", "link": "https://github.com/urlmonitor/leafcutter-ai/actions/runs/9100000002/job/2", "description": ""},
+  {"name": "Test suite (pytest)", "state": "FAILURE", "link": "https://github.com/urlmonitor/leafcutter-ai/actions/runs/9100000002/job/3", "description": "1 failed, 5316 passed: unit_tests/test_example_changed_by_this_pr.py::test_parses_header (AssertionError: expected 'v2', got 'v1')"},
+  {"name": "Proof-of-done", "state": "SUCCESS", "link": "https://github.com/urlmonitor/leafcutter-ai/actions/runs/9100000002/job/4", "description": ""},
+  {"name": "Changelog entry present", "state": "SUCCESS", "link": "https://github.com/urlmonitor/leafcutter-ai/actions/runs/9100000002/job/5", "description": ""},
+  {"name": "AC store valid", "state": "SUCCESS", "link": "https://github.com/urlmonitor/leafcutter-ai/actions/runs/9100000002/job/6", "description": ""},
+  {"name": "Post-merge suite status", "state": "FAILURE", "link": "https://github.com/urlmonitor/leafcutter-ai/actions/runs/9100000002/job/7", "description": "Post-merge suite is not green: run https://github.com/urlmonitor/leafcutter-ai/actions/runs/9099999999 concluded failure; the tests failed. This is not caused by this pull request. To restore a verdict: fix main so the suite is green again, or declare the fix in a pull request with a passing fix proof (Fixes #<notice>)."}
+]

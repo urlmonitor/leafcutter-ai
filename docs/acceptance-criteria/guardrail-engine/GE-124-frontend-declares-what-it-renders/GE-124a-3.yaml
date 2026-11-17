@@ -103,7 +103,8 @@ superseded_by: null
 covered_by:
   - GE-124a-3-i
   - GE-124a-3-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/06_TICKET-20261022-GE-124a-3.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -128,3 +129,4 @@ notes: |
   and that choice determines whether the guardrail's errors are visible or
   silent. Pinned to fail-towards-in-scope, with GE-124d-2 as the accountable
   exit.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "steps": [
+    {
+      "name": "repository-rules",
+      "paths": ["scripts", "tests", "unit_tests", "kernel"]
+    },
+    {
+      "name": "kernel-error-handling",
+      "paths": ["kernel"],
+      "select": ["E722", "BLE001", "TRY"]
+    }
+  ],
+  "linter_version_source": "requirements-dev.txt"
+}

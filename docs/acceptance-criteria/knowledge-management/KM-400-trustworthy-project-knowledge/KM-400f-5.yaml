@@ -1,0 +1,93 @@
+id: KM-400f-5
+title: "The knowledge sync workflow's closing status report evaluates capacity and retention against the same declared limits as the sync step"
+component: knowledge-management
+components: [knowledge_management]
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: done
+roadmap_phase: phase_1
+parent: KM-400f
+criteria: |
+  Given the knowledge sync workflow declares a retention bound (maximum retained generations and minimum retirement age) and a capacity ceiling with refuse and warn thresholds as job environment values
+  And the workflow's sync step passes all six of those declared values to the sync operation, so the sync step measures headroom against a known ceiling
+  When the workflow's final step requests status for the same repository and revision
+  Then the status operation receives the same six declared values the sync step received
+  And the status report states the capacity ceiling as known, with measured node and relationship usage evaluated against it
+  And each listed generation's reclaimability is evaluated against the declared retention bound, and the report states that bound
+  And the bug symptom ("the status report printed at the end of every knowledge sync run shows capacity verdict 'unknown' (ceiling_known false) and reclaimability 'undetermined (no retention bound declared)', although the sync step on line 118 measured headroom correctly (runs 39584696422, 39592668894, 39592922945)") must not occur
+depends_on: [KM-400f, KM-400f-3, KM-400f-4]
+doc_links:
+  - path: .github/workflows/knowledge-sync.yml
+    relationship: modifies
+    status: exists
+    relevance: "Target of the fix: the status call on the line after the sync call must pass the six declared limit flags."
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-3.yaml
+    relationship: context
+    status: exists
+    relevance: "Owns the declared ceiling and thresholds the workflow passes to sync; this AC requires the status step to evaluate against the same values."
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-4.yaml
+    relationship: context
+    status: exists
+    relevance: "Owns the operator status surface; status accepts the retention and capacity flags since this AC."
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: context
+    status: exists
+    relevance: "Documents the declared bound and thresholds an operator configures."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: KM-400f-4
+  contract: "The status operation accepts --retention-max-generations, --retention-min-age-seconds, --capacity-max-nodes, --capacity-max-relationships, --capacity-refuse-percent and --capacity-warn-percent and evaluates its report against them."
+test_required: true
+test_spec:
+  - name: test_workflow_status_step_receives_the_same_declared_limits_as_sync
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Load .github/workflows/knowledge-sync.yml with yaml.safe_load, locate the 'Validate and publish canonical snapshot' step, tokenize its sync and status command lines with shlex, and assert that every --retention-* and --capacity-* flag passed to sync is also passed to status with the identical environment reference."
+    covers: [KM-400f-5]
+    must_catch:
+      - "the original defect: the status call passes none of the six limit flags"
+      - "passing only the capacity flags and omitting the retention bound, or vice versa"
+      - "passing a flag to status bound to a different environment variable than the one sync uses"
+    requires_db: false
+  - name: test_workflow_status_command_reports_a_known_ceiling_and_declared_bound
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Take the status command line exactly as the workflow file declares it, substitute the job's declared env values, and run it through the real knowledge CLI entry point against a backend double holding retained generations; assert the report's capacity verdict has ceiling_known true and that reclaimability is evaluated against the declared retention bound rather than reported as undetermined."
+    covers: [KM-400f-5]
+    must_catch:
+      - "a status invocation that parses but still reports capacity 'unknown'"
+      - "reclaimability reported as 'undetermined (no retention bound declared)' from the workflow's own command"
+    requires_db: false
+test_rationale: >-
+  The first test pins the workflow wiring by comparing the two real command lines token by
+  token, so it fails on the exact shape of the defect (status missing flags sync has) and
+  on a partial fix. Because a grep of the workflow cannot show the flags actually change the
+  report, the second test executes the workflow's own status command through the real CLI
+  entry point and asserts the observable report fields that were wrong in production runs.
+origin_agent: BrainCandy
+created: '2026-10-21'
+amended_by: []
+superseded_by: null
+covered_by:
+  - tests/knowledge/test_km_400f_5.py
+implemented_by:
+  - .github/workflows/knowledge-sync.yml
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored by /quick-fix. Root cause: line 119 calls `status` without the six flags line 118 passes to `sync`: --retention-max-generations "$KNOWLEDGE_RETENTION_MAX_GENERATIONS" --retention-min-age-seconds "$KNOWLEDGE_RETENTION_MIN_AGE_SECONDS" --capacity-max-nodes "$KNOWLEDGE_CAPACITY_MAX_NODES" --capacity-max-relationships "$KNOWLEDGE_CAPACITY_MAX_RELATIONSHIPS" --capacity-refuse-percent "$KNOWLEDGE_CAPACITY_REFUSE_PERCENT" --capacity-warn-percent "$KNOWLEDGE_CAPACITY_WARN_PERCENT" (status accepts them since KM-400f-4). Fix: pass the same six flags to the status call. Component knowledge-management; related ACs KM-400f-3/KM-400f-4; existing workflow test tests/knowledge/test_km_400f_3.py::test_workflow_declares_the_aura_free_ceiling_and_stays_disabled..
+
+  Placement: KM-400f held four L2 children against a cap of five, so this is added as a
+  new L2 sibling per the /quick-fix placement rule. This takes KM-400f's last free L2
+  slot. KM-400f's 2026-10-12 amendment records a further criterion still needed (failed
+  publications' generations are reclaimable and accounted for); that one will now need a
+  child_limit_override or an L3 placement.

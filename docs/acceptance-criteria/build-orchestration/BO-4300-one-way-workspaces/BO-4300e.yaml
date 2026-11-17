@@ -27,7 +27,14 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: user-decision-q8
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Notes only; criteria unchanged. Q8 recorded as DECIDED (user, 2026-09-28): a one-time discard
+    token returned by the refusal and bound to the workspace and its unsent set. readiness stays
+    approved.
 superseded_by: null
 covered_by: [BO-4300e-1, BO-4300e-2, BO-4300e-3, BO-4300e-4, BO-4300e-5]
 implemented_by: []
@@ -41,11 +48,15 @@ notes: |
   This record is that finding and clearing are served by the same one door as making
   (decision 4), and that clearing is safe for unattended callers.
 
-  OPEN, NOT DECIDED HERE: Q8 whether removal requires a caller-supplied confirmation
-  token. The customer intent is only that authorisation is given up front rather than
-  asked interactively (finalize's teardown step deadlocks today on an interactive "yes"
-  it cannot give) and that without it, work that never reached the shared project is
-  never destroyed.
+  Q8 removal authorisation -- DECIDED (user, 2026-09-28): a refusal to remove a workspace
+  that holds unpushed or uncommitted work returns a ONE-TIME TOKEN bound to exactly what
+  would be lost (the workspace, its unsent commits and files). Only a remove request carrying
+  that exact token may discard it; the token is invalid for any other workspace and invalid
+  once the unsent set changes. It is never an environment variable or config setting, and
+  never remembered. The customer intent is unchanged: authorisation is given up front in the
+  request rather than asked interactively (finalize's teardown step deadlocks today on an
+  interactive "yes" it cannot give), and without it work that never reached the shared
+  project is never destroyed. Recorded on BO-4300e-3, BO-4300e-3-i and BO-4300e-5.
 
   Under decision 1 no version-control command lists the workspaces, so "find" cannot lean
   on one; how they are found is for BA/IT PO. Temporary workspaces used for comparison
@@ -54,3 +65,10 @@ notes: |
 
   documentation_triggers: how-to -- clearing a workspace by hand, including how to
   authorise the loss of unsent work, is a user-facing action.
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08)
+#   Q8 DECIDED (user, 2026-09-28): one-time discard token. Notes only; criteria unchanged.
+# ====================================================================

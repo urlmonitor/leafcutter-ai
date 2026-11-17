@@ -85,7 +85,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Required the markup examples to be executable against the real pin reader and the quoted block report to be captured from the real check rather than paraphrased, so the page goes red on drift. Bounded it against GE-124b-5 (task guidance here, contract there). criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/15_TICKET-20261022-GE-124b-4.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -103,3 +104,4 @@ notes: |
   (leafcutter-web). The .vue / .svelte / .html examples are exercised against
   the shared pin reader, which is framework-agnostic — that is sufficient for
   this AC and is the honest limit of what can be verified today.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

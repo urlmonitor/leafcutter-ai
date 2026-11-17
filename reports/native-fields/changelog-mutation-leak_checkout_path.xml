@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="18.414" timestamp="2026-10-02T09:15:04.435220+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_recovery_payload_is_independent_of_checkout_path" time="0.019"><failure message="assert [NativeRecord...ckout-one'}})] == [NativeRecord...ckout-two'}})]&#10;  &#10;  At index 0 diff: NativeRecord(kind='ChangelogEntry', native_id='changelogs/stable.md', source_path='changelogs/stable.md', metadata={'title': 'Stable', 'description': 'literal\\.expression'}, locator='', title='Stable', description='literal\\.expression', derived={'body': '\n## Entry\n', 'frontmatter_raw': 'title: Stable\ndescription: &quot;literal\\.expression&quot;\n', 'parsing': {'mode': 'compatibility', 'field': 'description', 'rule': 'emitter_literal_description', 'raw_fragment': 'description: &quot;literal\\.expression&quot;\n', 'original_error': 'while scanning a double-quoted scala...&#10;  &#10;  ...Full output truncated (2 lines hidden), use '-vv' to show">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3073/test_changelog_recovery_payloa0')
+
+    def test_changelog_recovery_payload_is_independent_of_checkout_path(tmp_path):
+        # covers: KM-400a-3-i
+        # angle: seam
+        raw = 'title: Stable\ndescription: "literal\\.expression"\n'
+        _write(tmp_path / "checkout-one", "changelogs/stable.md", raw)
+        _write(tmp_path / "checkout-two", "changelogs/stable.md", raw)
+&gt;       assert _extract(tmp_path / "checkout-one") == _extract(tmp_path / "checkout-two")
+E       assert [NativeRecord...ckout-one'}})] == [NativeRecord...ckout-two'}})]
+E         
+E         At index 0 diff: NativeRecord(kind='ChangelogEntry', native_id='changelogs/stable.md', source_path='changelogs/stable.md', metadata={'title': 'Stable', 'description': 'literal\\.expression'}, locator='', title='Stable', description='literal\\.expression', derived={'body': '\n## Entry\n', 'frontmatter_raw': 'title: Stable\ndescription: "literal\\.expression"\n', 'parsing': {'mode': 'compatibility', 'field': 'description', 'rule': 'emitter_literal_description', 'raw_fragment': 'description: "literal\\.expression"\n', 'original_error': 'while scanning a double-quoted scala...
+E         
+E         ...Full output truncated (2 lines hidden), use '-vv' to show
+
+tests\knowledge\test_native_changelog_entry.py:201: AssertionError</failure></testcase></testsuite></testsuites>

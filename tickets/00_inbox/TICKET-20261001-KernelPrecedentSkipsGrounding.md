@@ -1,6 +1,6 @@
 ---
 title: "Kernel: an applicable precedent no longer skips option-grounding research"
-status: todo
+status: done
 components:
   - decision_kernel
 created: 2026-10-01
@@ -13,10 +13,10 @@ change_target: code
 risk_surface: internal
 tags:
   - decision-kernel
-last_updated: 2026-10-01
+last_updated: 2026-10-02
 agents:
   python-coder: signed_off
-  commit: needed
+  commit: signed_off
 ---
 
 # Kernel: an applicable precedent no longer skips option-grounding research
@@ -34,8 +34,17 @@ In order to let the host propose repository-grounded options, we need the ground
 - The precedent evidence stays beside the researched evidence in the options packet.
 - Test: tests/kernel/memory/test_precedent_grounding.py (precedent-only decision researches; the options packet cites both kinds).
 
+## Sign-offs
+
+- [x] python-coder — 2026-10-01 20:34
+- [x] commit — 2026-10-01 20:34
+
 ## Comments
 
 ### 2026-10-01 12:00 — python-coder (status: ok)
 feedback-id: fb_2026-10-01_98ac9716
 Fixed in the decision-store worktree (uncommitted).
+
+### 2026-10-02 12:00 — python-coder (status: ok)
+feedback-id: fb_2026-10-02_d5398766
+Fixed by 9f43a086 in #978 (merged on main). Ticket closed (status: done) during the decision-lifecycle AC work.

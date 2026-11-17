@@ -1,0 +1,29 @@
+{
+  "expected": {
+    "include": {
+      "entity_types": [
+        "adr",
+        "schema"
+      ],
+      "document_types": [
+        "adr",
+        "schema"
+      ]
+    },
+    "required_fields_if_fields": [
+      "content",
+      "compatibility"
+    ],
+    "completeness": [
+      "examples",
+      "exhaustive_set"
+    ],
+    "hierarchy_scope": [
+      "not_applicable"
+    ],
+    "status": [
+      "decided"
+    ]
+  },
+  "human_gold": "Both governing architecture decisions and actual versioned contracts are needed, with clauses and compatibility obligations. Single-source/doc-type output is insufficient. No fabricated ADR or schema identifier."
+}

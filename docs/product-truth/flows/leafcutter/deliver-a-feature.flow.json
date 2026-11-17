@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 1,
+  "version": 2,
   "tags": [
     "build-pipeline",
     "journey",
@@ -23,7 +23,8 @@
     {
       "id": "plan",
       "label": "Plan",
-      "human": "Say what you want; the ACs get authored.",
+      "description": "You say what you want and AI agents author the acceptance criteria for it.",
+      "actor_kind": "llm",
       "order": 1,
       "expands_to": [
         "leafcutter/define-a-feature"
@@ -32,12 +33,73 @@
         "ACD-300"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/assigned_agent",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded.",
+              "readiness": "draft",
+              "assigned_agent": "python-coder"
+            }
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": [
+        "ac/id: string (required)",
+        "ac/criteria: string (required)",
+        "ac/readiness: string (optional)",
+        "ac/assigned_agent: null|string (optional)"
+      ]
     },
     {
       "id": "build",
       "label": "Build",
-      "human": "The wired ticket is driven through its phase agents.",
+      "description": "AI phase agents drive the wired ticket through its build phases until it is green and committed.",
+      "actor_kind": "llm",
       "order": 2,
       "expands_to": [
         "leafcutter/how-acs-are-built"
@@ -46,12 +108,107 @@
         "BP-300"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/ordered_phases",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "source_ac": [
+                "ACD-300"
+              ],
+              "ordered_phases": [
+                {
+                  "agent": "test-writer",
+                  "status": "needed"
+                },
+                {
+                  "agent": "python-coder",
+                  "status": "needed"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/source_ac: array (optional)",
+        "planner/ordered_phases: array (required)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/message: string (optional)"
+      ]
     },
     {
       "id": "finalize",
       "label": "Finalize",
-      "human": "The PR is merged and the epic/ticket is closed.",
+      "description": "The finalize pipeline merges the pull request and closes the epic or ticket.",
+      "actor_kind": "deterministic",
       "order": 3,
       "expands_to": [
         "leafcutter/finalize-feature"
@@ -60,7 +217,140 @@
         "FIN-100"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "readback",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/lifecycle_status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/needed_phases",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/failed_phases",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/signoffs",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/work_status",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/implemented_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/covered_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "readback",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative readback projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "lifecycle_status": "in_progress",
+              "needed_phases": [
+                "python-coder"
+              ],
+              "failed_phases": [],
+              "signoffs": [
+                {
+                  "agent": "test-writer",
+                  "status": "passed"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "work_status": "done",
+              "implemented_by": [
+                "app/service.py"
+              ],
+              "covered_by": [
+                "tests/test_service.py::test_contract"
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "readback/ticket_path: string (optional)",
+        "readback/lifecycle_status: string (optional)",
+        "readback/needed_phases: array (optional)",
+        "readback/failed_phases: array (optional)",
+        "readback/signoffs: array (optional)"
+      ],
+      "produces": [
+        "ac/id: string (required)",
+        "ac/work_status: null|string (optional)",
+        "ac/implemented_by: array (optional; default [])",
+        "ac/covered_by: array (optional; default [])"
+      ]
     }
   ],
   "branches": [],
@@ -90,6 +380,12 @@
       "by": "BrainCandy (product-truth Atlas session)",
       "date": "2026-07-14",
       "note": "L0 journey introducing the SUB-FLOW / drill-down hierarchy: plan -> define-a-feature, build -> how-acs-are-built, finalize -> finalize-feature."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (agent-led I/O contract migration)",
+      "date": "2026-10-03",
+      "note": "Added source-bound field/type/requiredness/default metadata and explicitly illustrative JSON projections. Preserved topology, actor ownership, realization and AC status. Non-JSON artifacts and genuinely undefined proposed interfaces remain explicit."
     }
   ],
   "impl_summary": {
@@ -98,5 +394,25 @@
     "not_started": 0,
     "total": 3,
     "asof": "2026-07-20"
+  },
+  "contract_definitions": {
+    "ac": {
+      "schema": "config/ac_store_schema.json"
+    },
+    "planner": {
+      "schema": "docs/product-truth/schemas/delivery-workflow-planner.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity."
+    },
+    "phase-result": {
+      "schema": "docs/product-truth/schemas/delivery-workflow-phase-result.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity."
+    },
+    "readback": {
+      "schema": "docs/product-truth/schemas/delivery-workflow-readback.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed transcription of templates/workflows-js/build-ticket.js readback response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity."
+    }
   }
 }

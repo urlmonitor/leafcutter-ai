@@ -45,6 +45,9 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _file_size_measure_copy import copy_measure_package  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 COMMIT_GUARDIAN_DIR = REPO_ROOT / "templates" / "scripts" / "commit_guardian"
 CHECK_FILE_SIZE = COMMIT_GUARDIAN_DIR / "check_file_size.py"
@@ -173,6 +176,7 @@ def copy_commit_guardian(
         names = RUN_HOOK_SIBLINGS
     for name in names:
         shutil.copy2(COMMIT_GUARDIAN_DIR / name, dst / name)
+    copy_measure_package(dst)
     if file_size_overrides:
         config_path = dst / "commit_guardian.json"
         config = json.loads(config_path.read_text(encoding="utf-8"))

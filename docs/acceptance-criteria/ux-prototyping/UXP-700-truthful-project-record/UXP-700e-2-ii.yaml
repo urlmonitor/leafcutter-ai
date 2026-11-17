@@ -1,0 +1,161 @@
+id: UXP-700e-2-ii
+title: Contract labels are derived from the metadata and never written into a step description
+component: ux-prototyping
+components:
+- ux_prototyping
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: medium
+criteria: 'Given a node''s structured contract metadata is authoritative and its description is one authored
+  sentence of what happens,
+
+  When the Product Truth generator runs after a field or example changes,
+
+  Then the updated flow artifact is written with compatibility input and output labels derived from that
+  metadata,
+
+  And the description is left unchanged, with no generated contract text added to it,
+
+  And a second generation without a source change leaves the generated content unchanged,
+
+  And the validator rejects a hand-edited compatibility label that disagrees with the canonical rendering,
+
+  And the validator rejects a step or branch description that is longer than the declared bound, holds
+  more than one sentence, or contains code-shaped content such as file paths, identifiers, ids, build-status
+  words or generated contract text, while plain-English sentences pass,
+
+  And it rejects a step whose actor kind is missing or is not one of deterministic, jev, llm or human.'
+depends_on:
+- UXP-700e-2
+doc_links:
+- path: docs/how-to/product-truth-schema-reference.md
+  relationship: specifies
+  status: exists
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-05'
+amended_by:
+- reason: '2026-10-05 business-analyst: recorded source/test traceability and locally verified completion
+    after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge had not yet run at that local verification.'
+- reason: '2026-10-09 business-analyst: kernel decision dec-7b1dcfd47f85cf0a (chosen by the user) renamed the flow step field human to description, holding one plain sentence of what happens, and added actor_kind (deterministic | jev | llm | human); contract detail is no longer generated into the step text. The generator now derives only the compatibility labels, and the validator adds the description length bound, the code-token lint and the actor_kind vocabulary as errors. work_status unchanged: the amended behaviour is implemented and its tests pass locally (TICKET-20261009-ProductTruthDescriptionActorKind).'
+superseded_by: null
+covered_by:
+- unit_tests/product_truth/test_flow_io_contract_gate.py
+- unit_tests/product_truth/test_product_truth_descriptions.py
+implemented_by:
+- docs/product-truth/scripts/generate_product_truth.py
+- docs/product-truth/scripts/product_truth_flow_fields.py
+- docs/product-truth/scripts/product_truth_contract_render.py
+- docs/product-truth/scripts/product_truth_contracts.py
+- docs/product-truth/scripts/product_truth_descriptions.py
+- docs/product-truth/scripts/validate_product_truth.py
+- docs/product-truth/schemas/flow.schema.json
+notes: 'The test writer verified the Python contract suites: 49 tests plus 16 subtests passed. Real generator-to-file
+  checks prove source preservation and repeated-generation stability; the CLI rejects generated-label
+  and example drift without repairing it.
+
+
+  The user accepted the displayed feature and authorized completing its AC/test coverage and merging after
+  green checks. Readiness remains reviewed: BA and IT PO reviewed these newly authored criteria; no separate
+  individual-AC user sign-off is claimed. Work status records locally verified implementation. At the local verification recorded on 2026-10-05,
+  hosted CI and merge had not yet run. GitHub PR checks and merge status track release completion. This leaf does not claim production retrieval integration or completion
+  of its broader parent.'
+declares_side_effect: true
+estimated_complexity: M
+change_target:
+- code
+- schema
+risk_surface: contract_boundary
+it_requirements:
+- Generate compatibility labels from the same checked metadata used by the validator; repeated generation
+  without changed sources must be byte-stable. Never write contract text into a description.
+- Preserve the authored description, contract metadata and unrelated flow fields while updating only
+  generator-owned representations. Validation must report drift without silently repairing it.
+- The description gates are errors from the start because the same change migrates every flow. Keep the lint's
+  false positives near zero with explicit allow-rules and a plain-English negative control.
+- actor_kind is required on steps and optional on branches; its four values mirror ADR-053's mechanisms.
+expects_from:
+  ac_id: UXP-300-1
+  contract: 'Flow JSON at docs/product-truth/flows/**/*.flow.json: contract_definitions is a map from
+    reference label to {schema?: string, model?: string, authority?: runtime|source_reviewed|illustrative_design,
+    note?: string}; each node has io_contracts with consumes/produces arrays of {contract: string, fields:
+    [{path: JSON-pointer string, types: JSON-type string[], required: boolean, default?: JSON value, applies?:
+    string}]}. Optional means absent, not null unless explicitly allowed. Contract labels are not payload
+    wrapper keys.'
+delivers_to:
+  agent: frontend-coder
+  contract: The canonical generator derives node consumes/produces string arrays from io_contracts and
+    writes no contract text into a step or branch description; Atlas may omit those derived labels only
+    when it can display the structured metadata.
+test_spec:
+- name: test_generator_repairs_only_derived_contract_presentation_and_is_idempotent
+  target_dir: unit_tests/product_truth/
+  description: Run the real generator after source metadata changes, read the serialized flow, verify
+    the description is unchanged with no contract text added and a second run is byte-stable.
+  framework: unittest
+  type: integration
+  angle: reachability
+- name: test_cli_checks_visible_labels_and_is_read_only
+  target_dir: unit_tests/product_truth/
+  description: The canonical validator rejects edited compatibility labels without rewriting the record.
+  framework: unittest
+  type: integration
+  angle: failure
+- name: test_validator_rejects_contract_text_in_description_without_repairing_it
+  target_dir: unit_tests/product_truth/
+  description: The canonical validator rejects an old-style description carrying generated contract text,
+    and neither it nor the generator rewrites it.
+  framework: unittest
+  type: integration
+  angle: discrimination
+- name: test_a_description_at_the_bound_passes_and_one_past_it_fails
+  target_dir: unit_tests/product_truth/
+  description: The length bound admits a description exactly at the limit and refuses one character more.
+  framework: unittest
+  type: unit
+  angle: boundary
+- name: test_plain_english_sentences_pass
+  target_dir: unit_tests/product_truth/
+  description: Negative control; plain sentences with slashes, abbreviations, step(s), entity and product
+    names pass the code-token lint.
+  framework: unittest
+  type: unit
+  angle: discrimination
+- name: test_each_code_shaped_token_is_rejected_with_its_reason
+  target_dir: unit_tests/product_truth/
+  description: Each code-shaped family (backticks, files, paths, identifiers, calls, ids, flags, build status,
+    second sentence, generated text) is rejected with its named reason.
+  framework: unittest
+  type: unit
+  angle: criterion
+- name: test_the_checker_fails_on_a_code_shaped_description_and_names_the_step
+  target_dir: unit_tests/product_truth/
+  description: The real checker CLI fails a store holding one code-shaped description and names the step.
+  framework: unittest
+  type: integration
+  angle: reachability
+- name: test_an_unknown_or_missing_step_kind_is_rejected
+  target_dir: unit_tests/product_truth/
+  description: The flow schema refuses an actor kind outside the four values and a step without one.
+  framework: unittest
+  type: unit
+  angle: failure
+test_rationale: The real generator-to-file-to-validator round trip covers criterion, seam and real-artifact
+  obligations together. It distinguishes canonical derivation from a second manually synchronized copy.
+test_required: true
+product_truth:
+  - flow: leafcutter/generate-product-truth
+    node: derive
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-05'

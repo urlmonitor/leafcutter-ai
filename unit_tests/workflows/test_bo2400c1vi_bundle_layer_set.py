@@ -122,6 +122,9 @@ if str(_WORKFLOWS_DIR) not in sys.path:
     sys.path.insert(0, str(_WORKFLOWS_DIR))
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
+if str(_WORKFLOWS_DIR.parent) not in sys.path:
+    sys.path.insert(0, str(_WORKFLOWS_DIR.parent))
+from _workflow_engine_harness import workspace_answer_of, workspace_ensure_from_opened  # noqa: E402
 
 _INJECTION_BUILDERS_PY = _SCRIPTS_DIR / "injection_builders.py"
 
@@ -595,7 +598,7 @@ def test_coder_dispatch_prompt_tells_the_agent_to_read_each_record_from_the_stor
     assert isinstance(prompt, str), f"coder prompt must be a string. Got: {type(prompt)}"
 
     store_root = (
-        f"{sibling._GREEN_LABELS['fastlane-worktree']['worktree_path']}"
+        f"{workspace_answer_of(sibling._GREEN_LABELS['workspace-ensure'])['workspace_path']}"
         f"/docs/acceptance-criteria"
     )
     assert "read its YAML from" in prompt, (
@@ -635,7 +638,7 @@ def test_test_writer_dispatch_prompt_still_carries_the_read_from_store_instructi
     )
 
     store_root = (
-        f"{sibling._GREEN_LABELS['fastlane-worktree']['worktree_path']}"
+        f"{workspace_answer_of(sibling._GREEN_LABELS['workspace-ensure'])['workspace_path']}"
         f"/docs/acceptance-criteria"
     )
     assert "read its YAML from" in prompt, (
@@ -698,20 +701,6 @@ _REAL_WORKTREE_LABEL = {
     "created": True,
 }
 
-# The lane confirms the worktree location against git and lets git outrank the
-# creation agent when the two disagree. A fixture that moves the worktree must
-# therefore say so in BOTH places; overriding only the creation label would
-# leave the stub self-contradictory, and the workflow would correctly believe
-# git over it.
-_REAL_WORKTREE_VERIFY_LABEL = {
-    "worktree_path": str(_REPO_ROOT),
-    "raw": (
-        f"worktree {_REPO_ROOT}\n"
-        "HEAD 0000000000000000000000000000000000000000\n"
-        "branch refs/heads/fast-lane/bo2400c1vi-real-worktree-probe"
-    ),
-}
-
 
 def _extract_architecture_path(prompt: str, worktree_path: str) -> str:
     """Pull the literal architecture-layer path out of *prompt*, rooted at
@@ -740,8 +729,7 @@ def test_named_architecture_path_resolves_in_the_workspace():
     sibling = _get_sibling()
     result = sibling._run_ship(
         extra_labels={
-            "fastlane-worktree": _REAL_WORKTREE_LABEL,
-            "fastlane-worktree-verify": _REAL_WORKTREE_VERIFY_LABEL,
+            "workspace-ensure": workspace_ensure_from_opened(_REAL_WORKTREE_LABEL),
         }
     )
     assert result.error == "", f"Harness error: {result.error}"

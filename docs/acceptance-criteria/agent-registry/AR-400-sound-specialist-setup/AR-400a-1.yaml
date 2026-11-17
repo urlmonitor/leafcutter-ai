@@ -1,0 +1,135 @@
+id: AR-400a-1
+title: "An instruction to use an ability that exists nowhere stops the build, naming the specialist, the ability and the line"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a package tree in which the definition of a test specialist named
+    "probe-agent" grants it nothing, and its instructions contain, on line 40,
+    the sentence "Load `.claude/skills/ghost-ability/SKILL.md` and follow it",
+    And no ability named "ghost-ability" is shipped by the package, and the
+    grant does not mark it as supplied by the project,
+  When the build runs over that tree,
+  Then the build stops with a failing result before anything is deployed,
+    And the failure names the specialist "probe-agent", the ability
+      "ghost-ability", the file holding the instruction and line 40,
+    And it classifies the fault as "ability does not exist" -- distinct from
+      "ability exists but is not granted" (AR-400b-1) -- so the reader knows
+      which side to fix,
+    And the run states how many specialist definitions and shared guides were
+      examined, and that count equals the number present in the tree,
+    And when "ghost-ability" is then added to the package and granted to
+      "probe-agent", the same build passes with no finding about it.
+depends_on:
+  - AR-400a
+doc_links:
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-007.md
+    relationship: describes
+    status: exists
+    relevance: "The defect this closes. Its closure condition: the existing reference checker exits clean on the real tree AND is wired in as a required build/CI check. A check that runs only by hand is the status quo."
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
+    relevance: "The `skills:` declaration shape (skill_id, mode, condition) the existence check reads from the specialist's own definition."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for config/agent_registry.json and scripts/registry_validator.py, the validation the build already runs and this check is wired into."
+  - path: docs/architecture/components/skill-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Where the set of abilities the package ships (templates/skills/<id>/SKILL.md) is described -- the existence side of the check."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "ONE CHECK, WIRED WHERE THE BUILD ALREADY VALIDATES: the existence logic of scripts/check_skill_refs.py (load_skill_names, _scan_text, _missing_target, scan) is the base. It is invoked from registry_validator.validate_agent_registry() and its findings are RETURNED as errors (not printed as [WARNING]). validate_agent_registry is the single function both doors reach: build.py:373 (the build) and templates/scripts/commit_guardian/check_agent_registry.py (the commit hook / `python scripts/registry_validator.py` CLI). No third checker is written."
+  - "DELETE THE OLD CHECK IN THE SAME CHANGE: check_skills_invoked_xref() (registry_validator.py ~662-759), _extract_skill_refs_from_template() (~624-659), the _SKILL_PATH_RE / _SKILL_DIRECTIVE_STOPWORDS / _SKILL_DIRECTIVE_RE / _SKILL_TOOL_RE constants (~60-79) and the advisory print loop at ~133-138 are removed. unit_tests/build_guards/test_self_description_descriptive_only.py references the deleted function and must be retargeted, not deleted, in the same change."
+  - "FILE-SIZE RATCHET: scripts/registry_validator.py measures 634 content lines (repo counter, 2026-10-12) and may not grow; the deletion above must leave it net-shorter. The recognition rule (AR-400b-2) and the grant comparison (AR-400b-1, design name scripts/agent_skill_ref_grants.py) live in NEW modules; check_skill_refs.py (160 lines) may grow but stays under 400."
+  - "DISTINCT FAULT KINDS AS DATA: each finding carries one machine-readable kind from {nonexistent, ungranted, case-mismatch, names-an-agent} plus the specialist (or guide) id, the ability text, the canonical id when one exists, the repo-relative file and the 1-based line. The human-readable line is rendered from one fixed template per kind, defined once and importable, so the reference (AR-400a-4) and tests can compare against it word for word."
+  - "EXAMINED COUNTS ARE PART OF THE VERDICT: the run reports specialist definitions examined and shared guides examined as two separate figures. Specialist-definition population = every registry agent whose template_path resolves under templates/agents/ (derived at run time, never a hard-coded list); shared-guide population = every other .md the check scans (templates/skills/**/*.md including templates/skills/README.md, and templates/agents/_*.md). Zero in either population fails (AR-400a-1-i)."
+  - "REFUSE BEFORE DEPLOY: the failing verdict must be produced before any build phase writes the target tree; confirm the ordering of validate_agent_registry relative to the deploy phases in scripts/build.py rather than assuming it."
+  - "PROJECT-SUPPLIED GRANTS ARE NOT NONEXISTENT: an instruction naming an ability the specialist grants with provided_by: project is never classified 'nonexistent' because the package does not ship it (AR-400d-1/-3); an UNMARKED grant or no grant at all is classified on the packaged set only."
+  - "Must handle unreadable template files per the project error-handling policy: an unreadable specialist definition is a failure naming the file, never a silent skip that lowers the examined count without saying so."
+delivers_to:
+  - agent: python-coder
+    contract: "A per-reference verdict over every specialist definition and shared guide: {examined_count, findings: [{agent_or_guide, ability, file, line, kind: 'nonexistent' | 'ungranted' | 'case-mismatch' | 'names-an-agent'}]} -- the same pass AR-400b-1 extends with the grant comparison. Python shape: {'definitions_examined': int, 'guides_examined': int, 'findings': list[{'subject': str, 'ability_text': str, 'canonical_id': str | None, 'file': str (repo-relative POSIX), 'line': int (1-based), 'kind': str}]}; returned by one function and rendered to error strings by validate_agent_registry."
+  - agent: reference-author
+    contract: "The exact one-line failure text per fault kind (one fixed template per kind, importable as constants) that AR-400a-4 quotes word for word."
+test_spec:
+  - name: test_nonexistent_ability_instruction_fails_validator_naming_agent_ability_file_line
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Copy the real templates/ + config/ into a temp package, add probe-agent whose line 40 says 'Load `.claude/skills/ghost-ability/SKILL.md` and follow it'; run `python scripts/registry_validator.py` against the copy in a subprocess; assert non-zero exit and one finding naming probe-agent, ghost-ability, the file and line 40 with kind 'ability does not exist'."
+    must_catch:
+      - "the finding is printed as [WARNING] and the exit code stays 0"
+      - "the old check_skills_invoked_xref is left wired beside the new check"
+  - name: test_build_refuses_before_deploy_on_nonexistent_ability
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: deployed
+    description: "Same fixture through scripts/build.py --target-dir <tmp>: non-zero exit, the same finding, and no compiled agent written under the target's output root."
+  - name: test_examined_counts_equal_definitions_and_guides_present
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The reported definitions-examined and guides-examined figures equal the counts derived independently from the copied tree (registry agents with templates; non-specialist .md files scanned)."
+  - name: test_adding_and_granting_ghost_ability_clears_the_finding
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Negative control: create templates/skills/ghost-ability/SKILL.md in the copy and grant it to probe-agent; the same run exits 0 with no finding about ghost-ability."
+test_rationale: >-
+  The check is a gate, so every descriptor runs the real entry point (the
+  validator CLI and build.py) in a fresh process over a copy of the real tree --
+  never an import of a helper and never a grep of the source. The negative
+  control proves the finding is caused by the missing ability, and the counts
+  descriptor stops a run that scanned nothing from reading as clean.
+expects_from:
+  ac_id: AR-400b-2
+  contract: "The recognition rule that decides which sentences are instructions to use an ability. Existence is only checked for what that rule recognises."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400a.yaml
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-400a-1-i
+  - AR-400a-1-ii
+implemented_by:
+  - scripts/check_skill_refs.py
+  - scripts/registry_validator.py
+notes: |
+  A REFUSAL, NOT A WARNING (AR-400a; user wording "failing the build instead of
+  printing noise"). The build's current skill-reference lines are all
+  [WARNING]; this AC is the first that makes one of them stop the build.
+
+  PREFER WIRING WHAT EXISTS. The design names an existing, unwired checker
+  (KI-BP-007) as the base for this behaviour and asks that it be wired into the
+  registry validation the build already runs, rather than a third checker
+  being written. That is a preference recorded for the IT PO, not a criterion.
+
+  DISTINCT FAULT KINDS ARE PART OF THE BEHAVIOUR. "Does not exist" and "is not
+  granted" ask for opposite fixes (author or remove the reference, versus add
+  the grant). A single undifferentiated message re-creates the "nobody can act
+  on it" harm this goal removes.
+
+  THE PROJECT-SUPPLIED CASE IS AR-400d's. A grant marked as supplied by the
+  project is not "nonexistent" because the package does not ship it; see
+  AR-400d-2 for what happens when the project does not have it either.

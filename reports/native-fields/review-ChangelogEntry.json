@@ -1,0 +1,111 @@
+{
+  "review_version": 1,
+  "entity_kind": "ChangelogEntry",
+  "neo4j_label": "ChangelogEntry",
+  "reviewed_on": "2026-10-02",
+  "scope": "Source field and discovery contract review only; no source records, schemas, runtime code or Aura were changed.",
+  "authorities": [
+    {"path": "scripts/changelog/emit_entry.py", "symbols": ["REQUIRED_FIELDS", "VALID_TYPES", "validate_payload", "_yaml_value", "build_frontmatter", "generate_filename", "_load_changelogs_dir"], "role": "Current writer and actual field authority; allows arbitrary additional payload fields."},
+    {"path": "scripts/changelog/README.md", "role": "Context only: stale required-field list omits summary, stale type enum omits ticket_completion and feature, and configuration wording predates writer self-location."},
+    {"path": "templates/scripts/commit_guardian/commit_guardian.json", "locator": "/changelogs_dir", "role": "Current configured folder is changelogs."},
+    {"path": "reports/native-fields/inventory.json", "role": "Native type inventory; the observed source is Markdown with YAML frontmatter, not the YAML documents claimed by older component prose."}
+  ],
+  "discovery": {
+    "current_glob": "changelogs/*.md",
+    "legacy_glob": "docs/changelog/*.md",
+    "configuration": "Use the current changelogs_dir declaration when present, supporting the development template location and the deployed leafcutter/template location used by the writer. Default to changelogs. Keep docs/changelog as explicit legacy source. Resolve paths within the supplied immutable root and deduplicate overlapping resolved paths.",
+    "configuration_authority": "scripts/changelog/emit_entry.py actually reads leafcutter/templates/scripts/commit_guardian/commit_guardian.json and falls back to changelogs. In this development checkout the declaration is templates/scripts/commit_guardian/commit_guardian.json. Do not use the README's obsolete changelog_folder claim as the sole authority.",
+    "source_count": 531,
+    "current_count": 526,
+    "legacy_count": 5,
+    "strictly_parseable_frontmatter_count": 528,
+    "malformed_frontmatter_count": 3,
+    "observed_field_count_in_parseable_records": 22,
+    "no_frontmatter_in_parseable_records": 0,
+    "legacy_filenames_also_in_current_folder": 0,
+    "exclusions": ["README.md and index.md folder guidance or indexes", "root CHANGELOG.md legacy monolithic history is not one per-entry record", "scripts/changelog/README.md describes the writer and is a Document, not an entry", "templates and generated copies of source entries"],
+    "routing": "Document traversal must exclude both canonical and legacy changelog source directories so each entry has one native identity.",
+    "missing_store": "An absent current or legacy folder contributes no records; neither folder should be manufactured.",
+    "filename_variations": "Do not enforce the new YYYY-MM-DD-HHMM-slug.md filename regex on historical records; 2026-05-28-current-epic-frontendagent-complete.md is a real entry. Folder and Markdown record content are the source contract."
+  },
+  "identity": {
+    "kind": "ChangelogEntry",
+    "native_id": "Repository-relative source path including directory and extension.",
+    "source_path": "The same repository-relative path using forward slashes.",
+    "locator": "Empty string for one entry per file.",
+    "reason": "The writer defines no id field. Filename collision suffixes are meaningful, titles and dates are not unique, and separate current/legacy directories must not collide. Do not derive identity from title or truncate to date.",
+    "title": "Use exact nonempty string frontmatter title for display; fallback to the filename stem is derived presentation only and must not manufacture metadata.title.",
+    "description": "Use authored description as display summary when it is a string; otherwise authored summary if it is a string, while preserving both separately in metadata. Missing description stays absent.",
+    "revision": "Read and hash the file at the immutable source revision being projected, including retained generation backfills."
+  },
+  "current_writer_validation": {
+    "required_fields": ["title", "date", "time", "type", "components", "summary", "description"],
+    "required_means": "validate_payload checks key presence, not non-nullness or complete scalar types/formats.",
+    "valid_types": ["epic_completion", "ticket_completion", "deploy_tag", "feature", "manual", "rollback"],
+    "conditional_requirements": ["epic key when type is epic_completion", "ticket key when type is ticket_completion", "truthy breaking requires nonempty list migration_steps"],
+    "open_mapping": true,
+    "historical_ingestion_rule": "Do not call the current writer validator as an ingestion gate. It is a new-write rule, not a historical schema. Preserve old enum values and missing fields without substituting defaults."
+  },
+  "field_inventory": [
+    {"name": "title", "required_by_current_writer": true, "observed_count": 528, "observed_types": {"string": 528}, "meaning": "Entry heading, not stable identity. Exact authored value remains available through /title when graph presentation reserves title."},
+    {"name": "date", "required_by_current_writer": true, "observed_count": 528, "observed_types": {"string": 526, "date": 2}, "meaning": "Authored entry date, normally YYYY-MM-DD. Preserve quoted string versus YAML date scalar; never replace with ingestion date."},
+    {"name": "time", "required_by_current_writer": true, "observed_count": 528, "observed_types": {"string": 504, "integer": 24}, "meaning": "Authored clock time, normally HH:MM. Some unquoted YAML 1.1 sexagesimal scalars parse as integers. Preserve parsed type and full raw frontmatter; do not guess a timezone, pad, or coerce integers into strings."},
+    {"name": "type", "required_by_current_writer": true, "observed_count": 528, "observed_types": {"string": 528}, "meaning": "Changelog event subtype, separate from graph kind ChangelogEntry. Observed historic ac_authoring and fix are preserved."},
+    {"name": "components", "required_by_current_writer": true, "observed_count": 528, "observed_types": {"list": 528}, "element_types": {"string": 1048}, "meaning": "Declared affected component identifiers. Preserve order and duplicates in source /components; derive graph membership only for exact resolvable entries, never infer registry aliases or fabricate components."},
+    {"name": "summary", "required_by_current_writer": true, "observed_count": 528, "observed_types": {"string": 528}, "meaning": "Business-language one-liner; distinct from technical description and Markdown body. Expose /summary when graph bookkeeping reserves summary."},
+    {"name": "description", "required_by_current_writer": true, "observed_count": 526, "observed_types": {"string": 526}, "meaning": "Detailed change description. Two valid historical records omit it; preserve absence. Two additional malformed records have unambiguously recoverable writer-escaped descriptions."},
+    {"name": "epic", "required_by_current_writer": "conditional on epic_completion", "observed_count": 11, "observed_types": {"string": 11}, "meaning": "Epic basename or human title; preserve exact declaration without pretending it is always a resolvable path."},
+    {"name": "ticket", "required_by_current_writer": "conditional on ticket_completion", "observed_count": 49, "observed_types": {"string": 49}, "meaning": "Single ticket basename or title; separate from plural tickets. Writer serializes it through the remaining-keys loop."},
+    {"name": "pr", "required_by_current_writer": false, "observed_count": 121, "observed_types": {"integer": 110, "string": 3, "null": 8}, "meaning": "Pull request reference; integer numbers, strings and explicit null are not interchangeable. Never infer a repository URL or coerce null into an empty string."},
+    {"name": "adrs", "required_by_current_writer": false, "observed_count": 29, "observed_types": {"list": 29}, "element_types": {"string": 26}, "empty_list_count": 7, "meaning": "Declared ADR references, which may be short IDs, stems or paths. Preserve original values/order without inventing resolved identities."},
+    {"name": "diagrams", "required_by_current_writer": false, "observed_count": 7, "observed_types": {"list": 7}, "element_types": {"string": 11}, "meaning": "Declared diagram/document traceability paths; distinct from adrs."},
+    {"name": "tickets", "required_by_current_writer": false, "observed_count": 8, "observed_types": {"list": 8}, "element_types": {"string": 25}, "meaning": "Plural related ticket references; preserve values independently of the required ticket field for ticket_completion."},
+    {"name": "commits", "required_by_current_writer": false, "observed_count": 331, "observed_types": {"list": 271, "null": 60}, "element_types": {"string": 765, "integer": 19}, "empty_list_count": 37, "meaning": "Declared commit references. Unquoted numeric-only abbreviated SHAs were parsed as integers by YAML. Preserve exact parsed types, raw source, explicit null and empty list; do not invent missing SHA characters."},
+    {"name": "breaking", "required_by_current_writer": false, "observed_count": 409, "observed_types": {"boolean": 409}, "meaning": "Authored compatibility declaration used by SemVer consumers. Missing is distinct from false; do not add the writer's runtime false default to historical metadata."},
+    {"name": "migration_steps", "required_by_current_writer": "nonempty list when breaking is truthy", "observed_count": 9, "observed_types": {"list": 9}, "element_types": {"string": 7, "mapping": 1}, "empty_list_count": 6, "meaning": "Ordered migration instructions. A valid existing record has a mapping item caused by an unquoted colon; preserve the actual parsed map and item correlation. Only the one YAML-failing literal-list writer defect qualifies for narrow recovery."},
+    {"name": "scope", "required_by_current_writer": false, "observed_count": 1, "observed_types": {"string": 1}, "meaning": "Open-mapping extension; do not merge with components."},
+    {"name": "merge_commit", "required_by_current_writer": false, "observed_count": 1, "observed_types": {"string": 1}, "meaning": "Explicit merge commit extension; preserve separately from commits."},
+    {"name": "acs", "required_by_current_writer": false, "observed_count": 1, "observed_types": {"list": 1}, "element_types": {"string": 5}, "meaning": "Declared acceptance-criterion references; not globally required and not inferred from the body."},
+    {"name": "created", "required_by_current_writer": false, "observed_count": 3, "observed_types": {"string": 3}, "meaning": "Legacy document frontmatter created date; separate from changelog date."},
+    {"name": "last_updated", "required_by_current_writer": false, "observed_count": 3, "observed_types": {"string": 3}, "meaning": "Legacy document lifecycle date, not graph refresh timestamp."},
+    {"name": "status", "required_by_current_writer": false, "observed_count": 3, "observed_types": {"string": 3}, "meaning": "Legacy document status, observed active. Distinct from changelog type and graph current."},
+    {"name": "other supplied fields", "required_by_current_writer": false, "meaning": "The writer emits arbitrary remaining keys. Preserve extension scalars, lists and nested structures without a lossy allowlist or invented universal requirement."}
+  ],
+  "nested_and_body_contract": {
+    "ordinary_properties": "Expose simple scalars and homogeneous primitive arrays directly where names do not collide with graph bookkeeping.",
+    "nested_properties": "Use shared indexed JSON-pointer leaves for heterogeneous arrays and maps, including migration_steps/0/<escaped-label>. Preserve object keys, list positions and map/list identity with the common shape manifest.",
+    "valid_mapping_example": {"path": "changelogs/2026-08-14-0143-changelog-ac-pattern-steward-pattern-producer-acs-and-files-touched-enforcement.md", "pointer": "/migration_steps/0", "value": {"Before staging a ticket as status": "done, ensure files_touched lists every source file (.py/.sql/.ts/.tsx/.js) actually modified on the branch."}},
+    "null_and_empty": "Explicit null, empty list and absent key remain distinguishable; no missing-field default injection.",
+    "body": "Preserve exact Markdown after the whole-line closing --- delimiter separately in derived.body. The writer initializes only a bare ## Entry heading; later authored sections and tables are content, not a new field schema. Do not parse prose headings into invented universal fields.",
+    "raw_frontmatter": "Preserve exact source text between the opening and closing delimiter in derived.frontmatter_raw, including quoting and scalar spelling. The parsed metadata stays separate and queryable.",
+    "record_contract": "Return common.NativeRecord from extract(root), with metadata as the full source mapping and derived provenance/body kept separate. No Aura access or graph mutation in the reader."
+  },
+  "historical_exceptions": {
+    "observed_types_in_528_parseable_records": {"manual": 453, "ticket_completion": 48, "epic_completion": 11, "feature": 11, "ac_authoring": 1, "fix": 4},
+    "missing_description_paths": [
+      "changelogs/2026-08-18-1830-a-handoff-status-no-longer-reads-as-a-passing-phase.md",
+      "changelogs/2026-08-18-2145-build-pipeline-gates-that-could-not-check-stop-reporting-passes.md"
+    ],
+    "malformed_records": [
+      {"path": "changelogs/2026-05-27-0000-epic-consolidatedoutputroot-all-build-outputs-consolidated-into-leafcutter.md", "field": "migration_steps", "error": "mapping values are not allowed here; the second literal list item contains both output_root: .leafcutter and shim_strategy: symlink without YAML quoting", "recovery_rule": "emitter_literal_migration_list", "expected_list_item_count": 5},
+      {"path": "changelogs/2026-09-07-1215-windows-contributors-can-commit-again-and-the-product-truth-record-gets-criteria-for-staying-true.md", "field": "description", "error": "unknown YAML double-quoted escape \\. in a regular-expression fragment", "recovery_rule": "emitter_literal_description"},
+      {"path": "changelogs/2026-09-07-1305-a-gate-that-had-nothing-to-match-yet-stops-being-treated-as-one-that-never-could-and-the-known-issue-this-only-half-closes-is-reopened-in-the-same-commit.md", "field": "description", "error": "unknown YAML double-quoted escape \\. in a regular-expression fragment", "recovery_rule": "emitter_literal_description"}
+    ],
+    "compatibility_recovery_contract": [
+      "Try the strict common frontmatter parser first. Compatibility recovery is for an actual failing field only; never re-interpret any valid YAML scalar, mapping or list.",
+      "The writer _yaml_value quotes strings with double quotes and replaces embedded double quotes with backslash-double-quote, but does not escape existing backslashes. A whole-line double-quoted description failing specifically on an invalid YAML backslash escape can therefore decode the writer's own escaping rule while preserving all literal backslashes.",
+      "The writer serializes each list element as a literal indented dash line. A failing migration_steps field consisting entirely of simple, equally indented, one-line list items can preserve each literal item string in order. This fixes only the failing field, not a valid map item in another entry.",
+      "Use safely parsed sibling fields unchanged. Preserve full raw frontmatter, exact recovered field fragments, original parse error and the named recovery rule separately under derived parsing provenance.",
+      "Do not modify source files, strip punctuation, replace backslashes globally, guess multiline scalar semantics, coerce all migration items, or silently drop a record. Unsupported or ambiguous malformed shapes must fail explicitly with the path and field.",
+      "Record recovered metadata as compatibility-parsed with auditable provenance, not as strict YAML parse success. Parent integration approved these two narrow writer-specific recoveries on 2026-10-02."
+    ]
+  },
+  "verification_requirements_for_coder": [
+    "One fixture exercising every declared writer field, extension keys, exact body and raw frontmatter, mixed commit scalar types, explicit null and empty lists, YAML dates, and no invented missing values.",
+    "Legacy fixture retains historic type fix/ac_authoring and missing description without applying current writer rejection/default rules; same filename in two source directories yields distinct native IDs.",
+    "Configured current directory and legacy directory discovery, safe root containment, absent stores, guidance exclusions, and overlap deduplication.",
+    "Both writer-defect recoveries retain all safely parsed siblings and complete exact recovered values, with raw fragment, original error and named rule. A valid migration mapping item remains a mapping.",
+    "Malformed or ambiguous unsupported frontmatter still raises; negative tests must prove that reader does not silently skip or invent values.",
+    "Real checkout extraction should account for 531 entries, 528 strict parses and 3 auditable compatibility parses; report exact counts rather than claiming every source passes today's writer rules."
+  ]
+}

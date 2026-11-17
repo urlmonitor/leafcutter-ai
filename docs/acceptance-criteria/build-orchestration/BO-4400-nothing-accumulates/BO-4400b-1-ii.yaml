@@ -1,0 +1,91 @@
+id: BO-4400b-1-ii
+title: "An outside item that cannot be removed is named in the answer, never reported as cleared"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a workspace holding nothing unsent whose Python environment outside its folder
+    cannot be deleted because one file inside it is read-only to the current user,
+  When the workspace is cleared through the one shared clearing door,
+  Then the workspace's folder, branch and registration are removed,
+  And the answer is not a plain success: it states the clearing was partial and names
+    the environment's location and the reason it could not be removed,
+  And the bytes still held by the remaining environment are not counted in the
+    answer's total space freed,
+  And a later clearing request or sweep that finds the same environment removable
+    removes it, even though the workspace itself no longer exists.
+depends_on: [BO-4400b-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: The door answers ok only after a post-check finds nothing left; this extends the post-check to outside items.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400b-1
+  contract: "Per-item removal list."
+package_surface: false
+it_requirements:
+  - >-
+    A failed item removal is caught with a specific exception type, logged at WARNING, and reported
+    in not_removed {kind, location, reason, bytes}; the answer status is PARTIAL (distinct from ok
+    in both the JSON status and the exit code) and bytes_freed_total excludes the remaining bytes.
+  - >-
+    The folder, branch and registration are still removed when an outside item fails; removal of
+    each item is independent and the remove verb never stops at the first failure.
+  - >-
+    The leftover item stays discoverable without its workspace: the inventory's orphan finder
+    (delivered by BO-4400b-1) reports it, and a later remove or the BO-4400d sweep removes it once
+    it becomes removable.
+  - >-
+    TEST FIXTURE NOTE: on POSIX a read-only file inside a writable directory is still deletable, so
+    the fixture makes the item's containing directory non-writable (and restores it in teardown);
+    the test is skipped with an explicit reason when running as root, never silently passed.
+test_required: true
+test_spec:
+  - name: test_unremovable_environment_yields_partial_answer_naming_it
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Folder, branch and registration are gone; the answer is PARTIAL and names the environment's location and the reason."
+    must_catch:
+      - "removal error swallowed and the answer reports success"
+  - name: test_unremoved_bytes_excluded_from_total_freed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "bytes_freed_total equals what was actually removed and excludes the remaining environment's bytes."
+  - name: test_orphaned_environment_removed_by_later_request
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "After the directory is made writable again, a later clearing request or sweep removes the orphaned environment."
+test_rationale: >-
+  A swallowed removal error is invisible to every success-path test. Only a real unremovable item
+  shows the answer stays honest and the leftover stays reachable.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Windows-hosted files under WSL (locked files) are the realistic trigger. The last clause
+  makes an orphaned outside item reachable without its workspace -- the sweep (BO-4400d-1)
+  must be able to find it by the inventory alone. Named wrong version: removal errors
+  swallowed and the answer reports success -- space silently stays lost.

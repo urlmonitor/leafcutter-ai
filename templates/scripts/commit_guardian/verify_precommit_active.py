@@ -121,7 +121,13 @@ def check_b_config() -> bool:
         return False
 
     try:
-        parsed = yaml.safe_load(content)
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): this diagnostic self-check's error path
+        # decides whether an agent is told the pre-commit config is healthy
+        # or broken -- a false "fine" here could make an agent trust a
+        # broken guardrail setup. One small config file read once per check
+        # -- no speed case for the fast loader here.
+        parsed = yaml.load(content, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         _log.warning("check_b_config: YAML parse error in %s: %s", config_path, exc)
         return False

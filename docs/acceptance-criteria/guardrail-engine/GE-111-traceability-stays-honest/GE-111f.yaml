@@ -45,6 +45,8 @@ notes: |
   normalises bypassing a TDD gate. Fixing the detector is what makes the gate keepable.
 change_target: code
 risk_surface: internal
+covered_by:
+  - GE-111f-1
 amended_by:
   - reason: number-drift-repair
     entry: 'Renumbered from GE-119 to GE-111f (TICKET-20260817-GE-120e-1 / GE-120e-1).

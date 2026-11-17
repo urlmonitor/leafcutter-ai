@@ -1,0 +1,25 @@
+id: TDE-9703
+title: The report can be exported as CSV
+component: testing-quality
+components:
+- testing_quality
+level: L3
+status: active
+readiness: approved
+priority: high
+criteria: 'Given the report job runs,
+
+  When the requirement applies,
+
+  Then the report is exported as a CSV file with a header row.
+
+  '
+assigned_agent: python-coder
+declared_files:
+- path: scripts/report_export.py
+  state: to_be_created
+test_required: true
+test_intent:
+- clause: the report is exported as a CSV file with a header row
+  needs_test: true
+  reason: The behaviour is observable only by running the code.

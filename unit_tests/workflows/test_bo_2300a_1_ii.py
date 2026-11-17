@@ -37,7 +37,11 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    HarnessResult,
+    run_workflow_under_e2,
+    workspace_ensure_reply,
+)
 from _plan_feature_gate_harness import load_real_registry, permits_shell  # noqa: E402
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -46,9 +50,10 @@ _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature
 _TIMEOUT = 30  # seconds; all agent() calls are synchronous mocks
 
 # The seven dispatches BO-2300a-1-ii's Then-clause names -- every one of them
-# must go to the shell-permitted agent (worktree-agent), never status-checker.
+# must go to a shell-permitted agent, never status-checker: the pause-store dispatches to worktree-agent, the
+# workspace step (which replaced the retired script-path resolution, BO-4300c-3) to shell-runner.
 _TARGET_LABELS = (
-    "resolve-worktree-setup-script-path",
+    "workspace-ensure",
     "pause-persist",
     "pause-persist-verify",
     "peek-pause-record",
@@ -59,6 +64,7 @@ _TARGET_LABELS = (
 
 _FORBIDDEN_AGENT_TYPE = "status-checker"
 _REQUIRED_AGENT_TYPE = "worktree-agent"
+_REQUIRED_AGENT_BY_LABEL = {"workspace-ensure": "shell-runner"}
 
 
 def _granted_permission() -> dict:
@@ -93,17 +99,10 @@ _PERMIT_OK = _granted_permission()
 # genuinely succeeds and the resume genuinely reaches every one of the seven
 # target dispatches in a single two-hop scenario.
 _ROUND_TRIP_LABEL_RESPONSES = {
-    "resolve-worktree-setup-script-path": {
-        "output": "/tmp/fake-repo/.leafcutter/scripts/setup_ticket_worktree.py",
-        "exit_code": 0,
-    },
-    "worktree-setup": {
-        "output": (
-            '{"worktree_path": "/tmp/fake-ac-worktree", '
-            '"ac_store_path": "/tmp/fake-ac-worktree/docs/acceptance-criteria"}'
-        ),
-        "exit_code": 0,
-    },
+    "workspace-ensure": workspace_ensure_reply(
+        "/tmp/fake-ac-worktree",
+        ac_store_path="/tmp/fake-ac-worktree/docs/acceptance-criteria",
+    ),
     "pause-persist-verify": {"exists": True, "stale": False},
     "read-pause-record": {"exists": True, "stale": False},
     "clear-pause-record": {"ok": True},
@@ -184,7 +183,7 @@ def test_pause_store_and_script_resolution_dispatch_to_shell_permitted_agent():
     permits_shell: true), and none of them goes to status-checker."
 
     Drives a headless pause (hop 1) then a resume (hop 2) so all seven
-    target dispatches -- resolve-worktree-setup-script-path, pause-persist,
+    target dispatches -- workspace-ensure, pause-persist,
     and pause-persist-verify in hop 1; peek-pause-record, read-pause-record,
     clear-pause-record, and clear-pause-record-verify in hop 2 -- are
     actually reached in one scenario, and asserts every single one of them
@@ -197,9 +196,9 @@ def test_pause_store_and_script_resolution_dispatch_to_shell_permitted_agent():
 
     hop1_targets = _target_calls(hop1)
     hop1_labels_seen = {c.label for c in hop1_targets}
-    assert {"resolve-worktree-setup-script-path", "pause-persist", "pause-persist-verify"} <= hop1_labels_seen, (
+    assert {"workspace-ensure", "pause-persist", "pause-persist-verify"} <= hop1_labels_seen, (
         "Hop 1 (headless pause) must dispatch at least "
-        "resolve-worktree-setup-script-path, pause-persist, and "
+        "workspace-ensure, pause-persist, and "
         f"pause-persist-verify to reach this test's scenario. Got labels: "
         f"{[c.label for c in hop1.agent_calls]}"
     )
@@ -223,7 +222,7 @@ def test_pause_store_and_script_resolution_dispatch_to_shell_permitted_agent():
         f"dispatches were sent to '{_FORBIDDEN_AGENT_TYPE}' instead of "
         f"'{_REQUIRED_AGENT_TYPE}': "
         f"{[(c.label, c.agent_type) for c in wrongly_dispatched]}. "
-        "Every one of resolve-worktree-setup-script-path, pause-persist, "
+        "Every one of workspace-ensure, pause-persist, "
         "pause-persist-verify, peek-pause-record, read-pause-record, "
         "clear-pause-record, and clear-pause-record-verify must be "
         f"dispatched to '{_REQUIRED_AGENT_TYPE}' (permits_shell: true), "
@@ -232,11 +231,12 @@ def test_pause_store_and_script_resolution_dispatch_to_shell_permitted_agent():
 
     all_target_calls = hop1_targets + hop2_targets
     non_worktree_agent = [
-        c for c in all_target_calls if c.agent_type != _REQUIRED_AGENT_TYPE
+        c for c in all_target_calls
+        if c.agent_type != _REQUIRED_AGENT_BY_LABEL.get(c.label, _REQUIRED_AGENT_TYPE)
     ]
     assert not non_worktree_agent, (
         "BO-2300a-1-ii: every one of the seven target dispatches must carry "
-        f"agentType='{_REQUIRED_AGENT_TYPE}'. Found dispatch(es) with a "
+        f"its shell-permitted agentType ({_REQUIRED_AGENT_BY_LABEL}, else '{_REQUIRED_AGENT_TYPE}'). Found dispatch(es) with a "
         f"different agentType: {[(c.label, c.agent_type) for c in non_worktree_agent]}"
     )
 

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="17.616" timestamp="2026-10-02T09:14:45.284309+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_recovers_only_failing_literal_description" time="0.012"><failure message="AssertionError: assert 'unknown escape character' in ''">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3072/test_changelog_recovers_only_f0')
+
+    def test_changelog_recovers_only_failing_literal_description(tmp_path):
+        # covers: KM-400a-3-i
+        # angle: boundary
+        description = r'Regex \.yaml and C:\new\test, with "quotes" and \\tail'
+        fragment = 'description: "' + description.replace('"', '\\"') + '"\n'
+        raw = "title: Recovered\ntime: 12:15\npr: null\n" + fragment + "commits: [123456, abcdef]\n"
+        _write(tmp_path, "changelogs/escaped.md", raw)
+        (record,) = _extract(tmp_path)
+        assert record.metadata == {
+            "title": "Recovered",
+            "time": 735,
+            "pr": None,
+            "description": description,
+            "commits": [123456, "abcdef"],
+        }
+        assert record.derived["frontmatter_raw"] == raw
+        parsing = record.derived["parsing"]
+        assert parsing["mode"] == "compatibility"
+        assert parsing["field"] == "description"
+        assert parsing["rule"] == "emitter_literal_description"
+        assert parsing["raw_fragment"] == fragment
+&gt;       assert "unknown escape character" in parsing["original_error"]
+E       AssertionError: assert 'unknown escape character' in ''
+
+tests\knowledge\test_native_changelog_entry.py:157: AssertionError</failure></testcase></testsuite></testsuites>

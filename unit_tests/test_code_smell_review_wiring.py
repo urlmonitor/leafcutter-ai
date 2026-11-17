@@ -50,6 +50,7 @@ _COMMANDS_DIR = _REPO_ROOT / "templates" / "commands"
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
+from _skill_ids_support import assert_grants_agree, skill_ids as _skill_ids  # noqa: E402
 from registry_validator import (  # noqa: E402
     validate_agent_registry,
     validate_skill_registry,
@@ -315,8 +316,8 @@ def test_leaf_agents_are_tiered_and_load_core_plus_own_bucket() -> None:
     assert structural is not None and design is not None
     assert structural["model"] == "sonnet"
     assert design["model"] == "opus"
-    assert set(structural.get("skills_invoked", [])) == {CORE_SKILL, STRUCTURAL_SKILL}
-    assert set(design.get("skills_invoked", [])) == {CORE_SKILL, DESIGN_SKILL}
+    assert_grants_agree(structural, _agent_frontmatter(STRUCTURAL_AGENT), {CORE_SKILL, STRUCTURAL_SKILL})
+    assert_grants_agree(design, _agent_frontmatter(DESIGN_AGENT), {CORE_SKILL, DESIGN_SKILL})
 
 
 def test_orchestration_fans_out_to_both_leaf_agents() -> None:
@@ -339,7 +340,9 @@ def test_fanout_lives_at_top_level_not_in_a_subagent() -> None:
     """
     assert _agent_entry(ORCHESTRATION_SKILL) is None  # it is a skill, not an agent
     for leaf in (STRUCTURAL_AGENT, DESIGN_AGENT):
-        assert _agent_entry(leaf).get("spawn_allowlist", []) == []
+        leaf_entry = _agent_entry(leaf)
+        assert isinstance(leaf_entry, dict)
+        assert leaf_entry.get("spawn_allowlist", []) == []
     fm = _frontmatter(_skill_md(ORCHESTRATION_SKILL))
     assert "Agent" in (fm.get("allowed-tools") or [])
     body = _skill_md(ORCHESTRATION_SKILL).lower()
@@ -355,16 +358,15 @@ def test_leaf_agents_are_readonly_and_return_findings() -> None:
         assert {"Bash", "Read", "Skill"} <= tools
         assert fm.get("requires_verification") is False
         entry = _agent_entry(leaf)
+        assert isinstance(entry, dict)
         assert entry.get("requires_verification") is False
         assert entry.get("produces") == "review_verdict"
-        assert bucket in set(entry.get("skills_invoked", []))
+        assert bucket in _skill_ids(entry.get("skills_invoked")) and bucket in _skill_ids(fm.get("skills"))
 
 
 def test_single_agent_find_code_smells_is_fully_retired() -> None:
     # covers: CR-100f-5
-    # Absent from the parsed registry.
     assert _agent_entry(RETIRED_AGENT) is None
-    # No template and no command file on disk.
     assert not (_AGENTS_DIR / f"{RETIRED_AGENT}.md").exists()
     assert not (_COMMANDS_DIR / f"{RETIRED_AGENT}.md").exists()
 

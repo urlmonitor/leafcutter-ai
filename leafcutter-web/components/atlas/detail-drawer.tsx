@@ -31,6 +31,7 @@ import {
   WORK_STATUS_TONE,
 } from "@/lib/status";
 import type { AC, FlowAppearance } from "@/lib/data/types";
+import { flowHref } from "@/lib/flow-url";
 
 function Chip({
   label,
@@ -308,7 +309,7 @@ export function DetailDrawer({
                     {flowAppearances.map((f) => (
                       <Link
                         key={`${f.flowId}:${f.stepId}`}
-                        href={`/flows?flow=${encodeURIComponent(f.flowId)}&step=${encodeURIComponent(f.stepId)}`}
+                        href={flowHref(f.flowId, f.stepId)}
                         title={`Open "${f.stepLabel}" in ${f.flowName}`}
                         className="flex items-center justify-between gap-2 rounded-md border border-primary/40 bg-primary/10 px-2 py-1.5 text-[11px] text-primary transition-colors hover:bg-primary/20"
                       >

@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="23" skipped="0" tests="23" time="0.523" timestamp="2026-10-02T09:26:38.138357+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_exposes_complete_contract_and_future_fields" time="0.008"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:57: in test_test_reference_exposes_complete_contract_and_future_fields
+    record = _reader().from_entity(tmp_path, entity)
+             ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_never_observes_current_filesystem[True-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855-True]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:97: in test_test_reference_never_observes_current_filesystem
+    reader = _reader()
+             ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_never_observes_current_filesystem[False-historical-present-hash-False]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:97: in test_test_reference_never_observes_current_filesystem
+    reader = _reader()
+             ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_never_observes_current_filesystem[True--True]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:97: in test_test_reference_never_observes_current_filesystem
+    reader = _reader()
+             ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_never_observes_current_filesystem[False-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855-False]" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:97: in test_test_reference_never_observes_current_filesystem
+    reader = _reader()
+             ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_absent_empty_null_and_false_remain_distinct[properties0]" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:125: in test_test_reference_absent_empty_null_and_false_remain_distinct
+    record = _reader().from_entity(tmp_path, entity)
+             ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_absent_empty_null_and_false_remain_distinct[properties1]" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:125: in test_test_reference_absent_empty_null_and_false_remain_distinct
+    record = _reader().from_entity(tmp_path, entity)
+             ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_absent_empty_null_and_false_remain_distinct[properties2]" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:125: in test_test_reference_absent_empty_null_and_false_remain_distinct
+    record = _reader().from_entity(tmp_path, entity)
+             ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_removes_only_exact_adapter_keys" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:146: in test_test_reference_removes_only_exact_adapter_keys
+    record = _reader().from_entity(tmp_path, entity)
+             ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_copies_nested_data_in_both_directions" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:161: in test_test_reference_copies_nested_data_in_both_directions
+    record = _reader().from_entity(tmp_path, entity)
+             ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_rejects_other_kinds_without_path_reclassification[SourceFile]" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:178: in test_test_reference_rejects_other_kinds_without_path_reclassification
+    _reader().from_entity(tmp_path, _entity(kind=kind))
+    ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_rejects_other_kinds_without_path_reclassification[AcceptanceCriterion]" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:178: in test_test_reference_rejects_other_kinds_without_path_reclassification
+    _reader().from_entity(tmp_path, _entity(kind=kind))
+    ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_rejects_other_kinds_without_path_reclassification[Component]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:178: in test_test_reference_rejects_other_kinds_without_path_reclassification
+    _reader().from_entity(tmp_path, _entity(kind=kind))
+    ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_rejects_other_kinds_without_path_reclassification[test]" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:178: in test_test_reference_rejects_other_kinds_without_path_reclassification
+    _reader().from_entity(tmp_path, _entity(kind=kind))
+    ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_revalidates_source_paths_without_repair[../outside.py]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:191: in test_test_reference_revalidates_source_paths_without_repair
+    _reader().from_entity(tmp_path, entity)
+    ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_revalidates_source_paths_without_repair[tests/../../outside.py]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:191: in test_test_reference_revalidates_source_paths_without_repair
+    _reader().from_entity(tmp_path, entity)
+    ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_revalidates_source_paths_without_repair[/outside.py]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:191: in test_test_reference_revalidates_source_paths_without_repair
+    _reader().from_entity(tmp_path, entity)
+    ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_revalidates_source_paths_without_repair[C:/outside.py]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:191: in test_test_reference_revalidates_source_paths_without_repair
+    _reader().from_entity(tmp_path, entity)
+    ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_revalidates_source_paths_without_repair[tests\\case.py]" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:191: in test_test_reference_revalidates_source_paths_without_repair
+    _reader().from_entity(tmp_path, entity)
+    ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_rejects_non_entity_and_invalid_pinned_source" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:199: in test_test_reference_rejects_non_entity_and_invalid_pinned_source
+    _reader().from_entity(tmp_path, _entity().model_dump(mode="python"))
+    ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_preserves_existing_classification_without_invention[tests/support.json]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:214: in test_test_reference_preserves_existing_classification_without_invention
+    record = _reader().from_entity(tmp_path, entity)
+             ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_preserves_existing_classification_without_invention[unit_tests/shared]" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:214: in test_test_reference_preserves_existing_classification_without_invention
+    record = _reader().from_entity(tmp_path, entity)
+             ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_preserves_existing_classification_without_invention[historic/custom/location]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.test'">tests\knowledge\test_native_test.py:214: in test_test_reference_preserves_existing_classification_without_invention
+    record = _reader().from_entity(tmp_path, entity)
+             ^^^^^^^^^
+tests\knowledge\test_native_test.py:15: in _reader
+    return importlib.import_module("knowledge.native_types.test")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.test'</failure></testcase></testsuite></testsuites>

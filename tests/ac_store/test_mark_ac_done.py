@@ -13,6 +13,7 @@ ARCHITECTURE: Integration tests using temporary fixture directories. Each test
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -203,3 +204,161 @@ class TestMarkAcDoneDryRun:
         assert result.returncode == 0, f"Expected exit 0 for dry-run, got {result.returncode}. stderr: {result.stderr}"
         assert ac_file.read_text() == original_content, \
             "Expected file unchanged after --dry-run, but file was modified"
+
+
+# ---------------------------------------------------------------------------
+# BO-202 (F6): a composite AC (covered_by holds child AC ids) is never marked
+# done on diff evidence alone. Real temp store, real CLI, real check_done_proof.
+# ---------------------------------------------------------------------------
+
+CHECK_DONE_PROOF = WORKTREE_ROOT / "scripts" / "commit_guardian" / "check_done_proof.py"
+_PARENT = "ZZ-202a"
+_CHILD_A = "ZZ-202a-1"
+_CHILD_B = "ZZ-202a-2"
+_PASSING_TEST = "def test_synthetic_covering_test():\n    # covers: {ac_id}\n    assert 1 + 1 == 2\n"
+
+
+def _write_ac(ac_root: Path, ac_id: str, work_status: str, covered_by: list[str]) -> Path:
+    """Write a real AC record (serialized by yaml.safe_dump) into the temp store."""
+    ac_root.mkdir(parents=True, exist_ok=True)
+    data = {
+        "id": ac_id, "title": f"Synthetic {ac_id}", "component": "ac-store",
+        "level": "L2", "status": "active", "work_status": work_status,
+        "readiness": "approved", "priority": "medium", "depends_on": [],
+        "criteria": "Given a\nWhen b\nThen c\n", "covered_by": covered_by,
+        "implemented_by": [], "superseded_by": None,
+    }
+    path = ac_root / f"{ac_id}.yaml"
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    return path
+
+
+def _write_covering_test(test_root: Path, ac_id: str) -> None:
+    """Write a real passing pytest file carrying a covers tag for *ac_id*."""
+    test_root.mkdir(parents=True, exist_ok=True)
+    name = "test_" + ac_id.lower().replace("-", "_") + ".py"
+    (test_root / name).write_text(_PASSING_TEST.format(ac_id=ac_id), encoding="utf-8")
+
+
+def _run_mark(ac_root: Path, *extra: str, ac: str = _PARENT):
+    """Run the real mark_ac_done CLI in a fresh process (no AC_ENFORCE_STRICT)."""
+    env = {k: v for k, v in os.environ.items() if k != "AC_ENFORCE_STRICT"}
+    env["LEAFCUTTER_AC_STORE_ROOT"] = str(ac_root)
+    target = ["--ac", ac] if ac else []
+    return subprocess.run(
+        [sys.executable, str(MARK_SCRIPT), *target, "--ac-root", str(ac_root), *extra],
+        capture_output=True, text=True, timeout=300, cwd=str(WORKTREE_ROOT), env=env, check=False,
+    )
+
+
+def _work_status(path: Path) -> str:
+    return yaml.safe_load(path.read_text(encoding="utf-8"))["work_status"]
+
+
+class TestCompositeAcRule:
+    def test_composite_with_todo_children_goes_in_progress(self, tmp_path):
+        # covers: BO-202
+        # angle: criterion
+        """AC-3: a todo composite with unfinished children goes in_progress, exit 0, names them."""
+        ac_root, test_root = tmp_path / "acceptance-criteria", tmp_path / "tests"
+        parent = _write_ac(ac_root, _PARENT, "todo", [_CHILD_A, _CHILD_B])
+        _write_ac(ac_root, _CHILD_A, "todo", [])
+        _write_ac(ac_root, _CHILD_B, "todo", [])
+        test_root.mkdir()
+
+        result = _run_mark(ac_root, "--test-root", str(test_root))
+
+        assert result.returncode == 0, result.stderr
+        assert _work_status(parent) == "in_progress"
+        output = result.stdout + result.stderr
+        assert _CHILD_A in output and _CHILD_B in output
+
+    def test_composite_with_all_children_proven_goes_done_and_passes_check_done_proof(self, tmp_path):
+        # covers: BO-202
+        # angle: real_artifact
+        """AC-2: all children done and covered -> parent done; real check_done_proof accepts the store."""
+        # green_at_baseline (guard): today's writer also marks this done.
+        ac_root, test_root = tmp_path / "acceptance-criteria", tmp_path / "tests"
+        parent = _write_ac(ac_root, _PARENT, "todo", [_CHILD_A, _CHILD_B])
+        for child in (_CHILD_A, _CHILD_B):
+            _write_ac(ac_root, child, "done", [])
+            _write_covering_test(test_root, child)
+
+        result = _run_mark(ac_root, "--test-root", str(test_root))
+
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert _work_status(parent) == "done"
+        proof = subprocess.run(
+            [sys.executable, str(CHECK_DONE_PROOF), "--mode", "ci",
+             "--ac-root", str(ac_root), "--test-root", str(test_root)],
+            capture_output=True, text=True, timeout=120, cwd=str(WORKTREE_ROOT), check=False,
+        )
+        assert proof.returncode == 0, proof.stdout + proof.stderr
+        assert _PARENT not in proof.stdout + proof.stderr
+
+    def test_leaf_behaviour_is_unchanged(self, tmp_path):
+        # covers: BO-202
+        # angle: boundary
+        """AC-5: a leaf (covered_by only a test path) is marked done as before, with and without --test-root."""
+        # green_at_baseline (guard)
+        for with_root in (False, True):
+            base = tmp_path / ("with" if with_root else "without")
+            ac_root, test_root = base / "acceptance-criteria", base / "tests"
+            leaf = _write_ac(ac_root, _CHILD_A, "todo", ["tests/test_x.py"])
+            extra: tuple[str, ...] = ()
+            if with_root:
+                _write_covering_test(test_root, _CHILD_A)
+                extra = ("--test-root", str(test_root))
+            result = _run_mark(ac_root, *extra, ac=_CHILD_A)
+            assert result.returncode == 0, result.stdout + result.stderr
+            assert f"marked {_CHILD_A} work_status=done" in result.stdout
+            assert _work_status(leaf) == "done"
+
+    def test_already_done_unproven_composite_is_refused(self, tmp_path):
+        # covers: BO-202
+        # angle: failure
+        """AC-4: a done composite with an unproven child is refused (non-zero), file untouched."""
+        ac_root, test_root = tmp_path / "acceptance-criteria", tmp_path / "tests"
+        parent = _write_ac(ac_root, _PARENT, "done", [_CHILD_A, _CHILD_B])
+        _write_ac(ac_root, _CHILD_A, "done", [])
+        _write_covering_test(test_root, _CHILD_A)
+        _write_ac(ac_root, _CHILD_B, "todo", [])
+        before = parent.read_bytes()
+
+        # Without --test-root (the finalize-feature call) and with it.
+        for extra in ((), ("--test-root", str(test_root))):
+            result = _run_mark(ac_root, *extra)
+            assert result.returncode != 0, (extra, result.stdout + result.stderr)
+            assert _CHILD_B in result.stdout + result.stderr
+            assert parent.read_bytes() == before
+
+    def test_composite_without_test_root_never_goes_done(self, tmp_path):
+        # covers: BO-202
+        # angle: failure
+        """AC-5: called as finalize-feature does (--ticket, no --test-root) a composite is never written done."""
+        ac_root = tmp_path / "acceptance-criteria"
+        parent = _write_ac(ac_root, _PARENT, "todo", [_CHILD_A, _CHILD_B])
+        _write_ac(ac_root, _CHILD_A, "done", [])
+        _write_ac(ac_root, _CHILD_B, "todo", [])
+        ticket = _make_ticket_md(tmp_path, "TICKET-20261006-composite.md", source_ac=_PARENT)
+
+        result = _run_mark(ac_root, "--ticket", str(ticket), ac="")
+
+        assert _work_status(parent) != "done", result.stdout + result.stderr
+        assert _work_status(parent) == "in_progress"
+        assert result.returncode == 0, result.stderr
+        assert _CHILD_A in result.stdout + result.stderr
+
+    def test_mark_ac_done_and_check_done_proof_share_one_composite_helper(self):
+        # covers: BO-202
+        # angle: seam
+        """AC-1: both modules resolve _composite_child_ids to the same function object."""
+        sys.path.insert(0, str(WORKTREE_ROOT / "scripts" / "ac_store"))
+        sys.path.insert(0, str(WORKTREE_ROOT / "scripts" / "commit_guardian"))
+        try:
+            import check_done_proof
+            import mark_ac_done
+        finally:
+            del sys.path[:2]
+        assert hasattr(mark_ac_done, "_composite_child_ids"), "mark_ac_done must import the shared composite helper"
+        assert mark_ac_done._composite_child_ids is check_done_proof._composite_child_ids

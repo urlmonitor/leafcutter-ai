@@ -37,7 +37,7 @@ TEST STRATEGY: self-contained real-execution harness (per this directory's
     repository ("the project") holding a REAL, verbatim copy of this
     repository's own scripts/pause_store.py under its untracked
     .leafcutter/scripts/ (matching production; ADR-001), and a REAL
-    `git worktree add` of that repository as a sibling directory holding NO
+    the linked-checkout add of that repository as a sibling directory holding NO
     .leafcutter/ of its own. Driving templates/workflows-js/plan-feature.js's
     real, on-disk top-level body via a real Node child_process with `cwd` set
     to the worktree -- TWICE per test, as two independent Node subprocess
@@ -61,12 +61,12 @@ import json
 import subprocess
 import tempfile
 from pathlib import Path
-from unit_tests._plan_feature_harness_defaults import worktree_setup_default_responses
-_WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
-_PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
-_REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
-
-_TIMEOUT = 40  # seconds; includes real `git worktree add` and real subprocess I/O.
+from unit_tests._plan_feature_harness_defaults import approval_apply_reply, approval_step_replies
+from unit_tests.workflows.test_acd_2100c_2 import (  # noqa: F401 -- shared real-execution helpers
+    _init_git_project, _install_real_pause_store, _parsed_real_result, _real_calls, _run,
+    _run_plan_feature_real, _write_shaped_calls,
+)
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout
 
 _DRAFT_RELATIVE_PATH = "docs/acceptance-criteria/test-component/DRAFT-8888.yaml"
 _DRAFT_CONTENT = (
@@ -80,58 +80,18 @@ _DRAFT_CONTENT = (
 )
 
 
-# ---------------------------------------------------------------------------
-# Fixture builders (self-contained copy of test_acd_2100c_2.py's conventions)
-# ---------------------------------------------------------------------------
-
-
-def _run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        cmd, cwd=str(cwd) if cwd else None, check=True, capture_output=True, text=True
-    )
-
-
-def _init_git_project(path: Path) -> None:
-    path.mkdir(parents=True)
-    _run(["git", "init", "-b", "main", str(path)])
-    _run(["git", "-C", str(path), "config", "user.email", "test@example.com"])
-    _run(["git", "-C", str(path), "config", "user.name", "Test"])
-    (path / "README.md").write_text("seed\n", encoding="utf-8")
-    _run(["git", "-C", str(path), "add", "README.md"])
-    _run(["git", "-C", str(path), "commit", "-m", "seed"])
-
-
-def _install_real_pause_store(project_dir: Path) -> Path:
-    """Copy the REAL, verbatim scripts/pause_store.py into the fixture
-    project's untracked `.leafcutter/scripts/` -- matching production, where
-    `.leafcutter/` is build output that is never committed (ADR-001). A
-    hand-authored stand-in would not exercise the real CLI's argument
-    parsing, idempotency, or error-handling contract (2h.2 Fixture
-    Authenticity Rule).
-    """
-    dest = project_dir / ".leafcutter" / "scripts" / "pause_store.py"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_bytes(_REAL_PAUSE_STORE_PY.read_bytes())
-    return dest
-
-
 def _make_worktree_fixture(tmp_path: Path) -> dict:
     """Build the Given: a REAL git repository ("the project") holding a REAL
     `.leafcutter/scripts/pause_store.py`, and a REAL git worktree of that
     repository, created as a sibling directory, holding NO `.leafcutter/` of
-    its own.
+    its own. (Fixture builders: a self-contained copy of test_acd_2100c_2.py's conventions.)
     """
     project_dir = tmp_path / "project"
     _init_git_project(project_dir)
     _install_real_pause_store(project_dir)
 
     worktree_path = tmp_path / "ac-authoring-worktree"
-    _run(
-        [
-            "git", "-C", str(project_dir), "worktree", "add",
-            "-b", "ac-authoring/pause-c3-test", str(worktree_path), "main",
-        ]
-    )
+    link_checkout(project_dir, ["-b", "ac-authoring/pause-c3-test", str(worktree_path), "main"])
 
     return {"project_dir": project_dir, "worktree_path": worktree_path}
 
@@ -171,229 +131,33 @@ def _permitted_args(**extra) -> dict:
     return {"workspace_setup_permission": {"permits": True}, **extra}
 
 
-# ---------------------------------------------------------------------------
-# The real-execution harness (self-contained copy of
-# test_acd_2100c_2.py's `_run_plan_feature_real` -- see that file's module
-# docstring for why this real-executes ONLY pause_store.py dispatches and
-# stubs everything else).
-# ---------------------------------------------------------------------------
+# The real-execution harness is test_acd_2100c_2.py's `_run_plan_feature_real`: each call is a
+# brand-new Node child_process -- the "new process" this AC names -- running the real body.
 
-_SHIM_TEMPLATE = r"""
-'use strict';
 
-const { execSync } = require('child_process');
+_DESIGNED_BATCH = {
+    "design-prepass": {"output": json.dumps({"batch": [], "records": [{"id": "DRAFT-8888", "declared_files": [], "test_dirs": [], "reference_files": []}]}), "exit_code": 0},
+    "stage-test-design-author": {"status": "ok", "records": [], "anomalies": []},
+}
 
-const __RUN_CWD__ = __RUN_CWD_JSON__;
-const __labelResponses__ = __LABEL_RESPONSES_JSON__;
-const __capturedCalls__ = [];
 
-const _PAUSE_LINE_RE = /^.*pause_store\.py.*$/m;
-
-async function agent(promptOrOpts, opts) {
-  var label =
-    (opts && opts.label) ||
-    (typeof promptOrOpts === 'object' && promptOrOpts && promptOrOpts.label) ||
-    null;
-
-  var record = { label: label, prompt: promptOrOpts, opts: opts || null, real_result: null };
-  var response;
-
-  if (typeof promptOrOpts === 'string' && promptOrOpts.indexOf('pause_store.py') !== -1) {
-    var m = promptOrOpts.match(_PAUSE_LINE_RE);
-    var real = { command: null, cwd: __RUN_CWD__, output: '', exit_code: null, stderr: '' };
-    if (m) {
-      var cmd = m[0].trim().replace(/\{\{config\.output_root\}\}/g, '.leafcutter');
-      real.command = cmd;
-      try {
-        var out = execSync(cmd, { cwd: __RUN_CWD__, encoding: 'utf8', timeout: 15000 });
-        real.output = out;
-        real.exit_code = 0;
-      } catch (e) {
-        real.output = (e.stdout || '').toString();
-        real.stderr = (e.stderr || '').toString();
-        real.exit_code = (e.status === null || e.status === undefined) ? 1 : e.status;
-      }
-    } else {
-      real.stderr = 'harness: could not locate a pause_store.py command line in the prompt';
-      real.exit_code = 1;
+def _after_itpo_committed(ids: list[str]) -> dict:
+    """Label replies of a RESUMED run under the G4 pipeline (ACD-2500c-2): itpo is auto-approved and
+    committed before the test-design stage, so a real resume finds it in git log and does not re-author it;
+    the approval step (ACD-300c-4: dry run `approval-holds`, then `approval-apply`) approves the run's ids."""
+    body = "plan-feature(IT-PO): test-component\n\nAC IDs: " + (", ".join(ids) or "(none)") + "\nrun-id: r\n"
+    holds = {"output": json.dumps({"approved": ids, "held": []}), "exit_code": 0}
+    return {
+        "scan-committed-stages": {"output": "abc1234 plan-feature(IT-PO): test-component\n", "exit_code": 0},
+        "resume-log": {"output": body, "exit_code": 0},
+        "approval-holds": holds, "approval-apply": approval_apply_reply(holds),
     }
-    record.real_result = real;
-    var parsed = null;
-    try { parsed = JSON.parse((real.output || '').trim()); } catch (_pe) { parsed = null; }
-    response = parsed;
-  } else if (label !== null && Object.prototype.hasOwnProperty.call(__labelResponses__, label)) {
-    response = __labelResponses__[label];
-  } else {
-    response = {
-      status: 'ok', message: 'stub', passed: true, git_type: 'file',
-      branch: 'feature-stub', exit_code: 0, output: '',
-    };
-  }
-
-  __capturedCalls__.push(record);
-  return response;
-}
-
-async function parallel(thunksArg) {
-  var results = [];
-  if (Array.isArray(thunksArg)) {
-    for (var i = 0; i < thunksArg.length; i++) {
-      var fn = thunksArg[i];
-      if (typeof fn === 'function') {
-        try { results.push(await fn()); } catch (_e) { results.push(null); }
-      }
-    }
-  }
-  return results;
-}
-
-async function pipeline(stepsArg) { return parallel(stepsArg); }
-
-async function phase(name, fn) {
-  if (typeof fn === 'function') { return fn(); }
-}
-
-function log(_msg) {}
-
-function workflow() {
-  throw new Error('workflow() cannot be called from within a running workflow.');
-}
-
-const budget = Object.freeze({ tokens_used: 0, tokens_limit: null });
-
-const args = Object.assign({
-  target_file: 'stub/target.py',
-  root_cause: 'stub root cause for harness execution',
-  location_hint: 'line 1',
-  symptom: 'stub symptom',
-  userInput: 'Add a small test feature for pause resolution',
-  ac: 'BO-STUB-1',
-}, __ARGS_JSON__);
-
-(async function __body__() {
-// BEGIN TARGET SCRIPT
-__SCRIPT_BODY__
-// END TARGET SCRIPT
-})().then(function (result) {
-  process.stdout.write(JSON.stringify({
-    calls: __capturedCalls__,
-    result: (typeof result === 'undefined' ? null : result),
-  }));
-}).catch(function (err) {
-  process.stderr.write('harness: top-level error: ' + String(err) + '\n');
-  process.stdout.write(JSON.stringify({
-    calls: __capturedCalls__,
-    result: null,
-    error: String(err),
-  }));
-});
-"""
 
 
-def _strip_exports(source: str) -> str:
-    """Minimal ESM `export` stripper (self-contained copy)."""
-    lines = source.splitlines()
-    out: list[str] = []
-    for line in lines:
-        stripped = line.lstrip()
-        if stripped.startswith("export default "):
-            out.append("/* export default stripped */")
-        elif stripped.startswith("export {"):
-            out.append("/* export block stripped */")
-        elif stripped.startswith("export "):
-            indent = len(line) - len(stripped)
-            out.append(" " * indent + stripped[len("export "):])
-        else:
-            out.append(line)
-    return "\n".join(out)
-
-
-def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict:
-    """Drive the REAL templates/workflows-js/plan-feature.js top-level body,
-    as a brand-new Node child_process each call -- this IS the "new process"
-    the AC names. Every dispatch whose prompt embeds a `pause_store.py`
-    command line is ACTUALLY EXECUTED via a real Node child_process with
-    `cwd` set to the given directory. Returns the parsed
-    {calls: [...], result: ..., error?: ...} payload.
-
-    This is also this ticket's resolved reachability entry point (see the
-    module docstring's TEST STRATEGY and this file's
-    reachability-angle test): a real subprocess executing the actual,
-    on-disk production script's top-level body -- the E2 workflow-dispatch
-    contract (ADR-030) -- never an import of an inner function.
-
-    `label_responses` is merged UNDER `worktree_setup_default_responses()`
-    (BO-1500a-5-i) so a caller that never overrides 'worktree-setup' /
-    'resolve-worktree-setup-script-path' still gets a real, confirming
-    reply for both and reaches the pause-store dispatches this file tests,
-    instead of halting fail-closed at Pre-Stage-0. A caller-supplied entry
-    for either label still wins (dict merge order below).
-    """
-    source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
-    body = _strip_exports(source)
-
-    shim = (
-        _SHIM_TEMPLATE
-        .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
-        .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(), **label_responses}))
-        .replace("__ARGS_JSON__", json.dumps(args))
-        .replace("__SCRIPT_BODY__", body)
-    )
-
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".js", prefix="acd_2100c3_", delete=False, encoding="utf-8"
-    ) as tmp:
-        tmp_path = Path(tmp.name)
-        tmp.write(shim)
-
-    try:
-        proc = subprocess.run(
-            ["node", str(tmp_path)], capture_output=True, text=True, timeout=_TIMEOUT
-        )
-    finally:
-        tmp_path.unlink(missing_ok=True)
-
-    stdout = proc.stdout or ""
-    if not stdout.strip():
-        raise AssertionError(
-            "harness produced no stdout at all.\n"
-            f"returncode={proc.returncode}\nstderr={proc.stderr[:2000]!r}"
-        )
-    try:
-        payload = json.loads(stdout)
-    except json.JSONDecodeError as exc:
-        raise AssertionError(
-            f"harness produced non-JSON stdout: {exc}\n"
-            f"stdout={stdout[:2000]!r}\nstderr={proc.stderr[:2000]!r}"
-        ) from exc
-
-    payload["_stderr"] = proc.stderr
-    payload["_returncode"] = proc.returncode
-    return payload
-
-
-def _real_calls(payload: dict) -> list:
-    """All captured calls whose prompt was real-executed (a pause_store.py dispatch)."""
-    return [c for c in payload.get("calls", []) if c.get("real_result") is not None]
-
-
-def _parsed_real_result(call: dict):
-    rr = call.get("real_result") or {}
-    try:
-        return json.loads((rr.get("output") or "").strip())
-    except (ValueError, TypeError):
-        return None
-
-
-def _write_shaped_calls(payload: dict) -> list:
-    """Real-executed calls whose stdout parsed to write_record()'s own output
-    shape (presence of the "ok" key)."""
-    out = []
-    for c in _real_calls(payload):
-        parsed = _parsed_real_result(c)
-        if isinstance(parsed, dict) and "ok" in parsed:
-            out.append((c, parsed))
-    return out
+def _approve_ids(payload: dict, label: str) -> list:
+    """The --ids list of each approve_acs.py dispatch under `label` (ACD-300c-4's approval step)."""
+    prompts = [c.get("prompt") or "" for c in payload.get("calls", []) if c.get("label") == label]
+    return [p.split("--ids ", 1)[1].split()[0].split(",") for p in prompts if "approve_acs.py" in p]
 
 
 def _labels(payload: dict) -> list:
@@ -452,13 +216,13 @@ def _read_via_fresh_process(pause_store_path: Path, project_dir: Path, run_id: s
     return json.loads(proc.stdout.strip())
 
 
-def _pause_headless(worktree_path: Path, project_dir: Path, run_id: str) -> tuple:
+def _pause_headless(worktree_path: Path, project_dir: Path, run_id: str, label_responses: dict | None = None) -> tuple:
     """Run the real production entry point headless (no resume_answer) and
     confirm it pauses with a verified, on-disk record. Returns
     (payload, gate_id).
     """
     payload = _run_plan_feature_real(
-        worktree_path, label_responses={}, args=_permitted_args(run_id=run_id)
+        worktree_path, label_responses=label_responses or {}, args=_permitted_args(run_id=run_id)
     )
     assert not payload.get("error"), (
         f"Unattended run must not crash. error={payload.get('error')} "
@@ -514,10 +278,15 @@ def test_resume_in_a_new_process_continues_from_the_decision_point():
         _assert_worktree_has_no_installed_leafcutter(fixture["worktree_path"])
 
         run_id = "acd2100c3-criterion-run"
-        payload1, gate_id = _pause_headless(fixture["worktree_path"], fixture["project_dir"], run_id)
+        payload1, gate_id = _pause_headless(
+            fixture["worktree_path"], fixture["project_dir"], run_id, label_responses=_DESIGNED_BATCH
+        )
         labels1 = _labels(payload1)
         assert labels1.count("stage-itpo-author") == 1, (
             f"Sanity: the it-po author step must run exactly once before pausing. Labels: {labels1}"
+        )
+        assert labels1.count("stage-test-design-author") == 1, (
+            f"Sanity: the test-design step (the step right before the final gate) must run once. Labels: {labels1}"
         )
 
         # Run 2: a brand-new process (a fresh Node child_process invocation --
@@ -531,7 +300,7 @@ def test_resume_in_a_new_process_continues_from_the_decision_point():
         }
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=_after_itpo_committed([]),
             args=_permitted_args(run_id=run_id, resume_answer=resume_answer),
         )
         assert not payload2.get("error"), f"Resumed run must not crash. error={payload2.get('error')}"
@@ -546,8 +315,8 @@ def test_resume_in_a_new_process_continues_from_the_decision_point():
 
         # AC-1: the steps BEFORE the decision point must not re-execute -- observed
         # from the RESUMED run's own dispatch record, never a source scan.
-        assert labels2.count("stage-itpo-author") == 0, (
-            "The it-po authoring step -- the step before the final-gate decision on "
+        assert labels2.count("stage-itpo-author") + labels2.count("stage-test-design-author") == 0, (
+            "The it-po authoring step or the test-design step -- the steps before the final-gate decision on "
             "this route -- was re-dispatched by the resumed run. AC-1 requires the "
             "resumed run to continue from the decision point, not repeat the steps "
             f"before it. Resumed run's own labels: {labels2}"
@@ -634,12 +403,12 @@ def test_supplied_answer_is_the_one_applied_to_that_decision():
 
         payload_approve = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=approval_step_replies(),  # ACD-300c-4: the approval step releases one id
             args=_permitted_args(run_id=run_id_approve, resume_answer=approve_answer),
         )
         payload_cancel = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=approval_step_replies(),
             args=_permitted_args(run_id=run_id_cancel, resume_answer=cancel_answer),
         )
         assert not payload_approve.get("error"), f"Approve resume must not crash: {payload_approve.get('error')}"
@@ -662,11 +431,11 @@ def test_supplied_answer_is_the_one_applied_to_that_decision():
 
         labels_approve = _labels(payload_approve)
         labels_cancel = _labels(payload_cancel)
-        assert "apply-approval" in labels_approve, (
-            f"The approve branch must dispatch apply-approval. Labels: {labels_approve}"
+        assert "approval-apply" in labels_approve, (
+            f"The approve branch must dispatch approval-apply. Labels: {labels_approve}"
         )
-        assert "apply-approval" not in labels_cancel, (
-            f"The cancel branch must NOT dispatch apply-approval. Labels: {labels_cancel}"
+        assert "approval-apply" not in labels_cancel, (
+            f"The cancel branch must NOT dispatch approval-apply. Labels: {labels_cancel}"
         )
 
 
@@ -700,12 +469,12 @@ def test_no_waiting_record_remains_after_the_resumed_run_passes_the_gate():
         }
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=approval_step_replies(),  # ACD-300c-4: the approval step releases one id
             args=_permitted_args(run_id=run_id, resume_answer=resume_answer),
         )
         assert not payload2.get("error"), f"Resumed run must not crash. error={payload2.get('error')}"
         labels2 = _labels(payload2)
-        assert "apply-approval" in labels2, (
+        assert "approval-apply" in labels2, (
             f"Test construction error: the resumed run must actually move past the "
             f"gate before the 'record cleared' assertion is meaningful. Labels: {labels2}"
         )
@@ -761,7 +530,7 @@ def test_acd_2100c_3_reachable_from_entry_point():
         }
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=approval_step_replies(),  # ACD-300c-4: the approval step releases one id
             args=_permitted_args(run_id=run_id, resume_answer=resume_answer),
         )
         assert not payload2.get("error"), (
@@ -781,9 +550,9 @@ def test_acd_2100c_3_reachable_from_entry_point():
             "invocation paused at) must actually occur -- the run must be observed, "
             f"via its own terminal result, to have moved past the gate. Got: {result2!r}"
         )
-        assert "apply-approval" in _labels(payload2), (
+        assert "approval-apply" in _labels(payload2), (
             "The paused-then-resumed outcome must be CONSUMED in control flow (the "
-            "apply-approval dispatch that only fires once the gate resolves), not "
+            "approval-apply dispatch that only fires once the gate resolves), not "
             f"merely computed and discarded. Labels: {_labels(payload2)}"
         )
 
@@ -801,8 +570,8 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
     crash-resume mechanism (`committedStageKeys`, ~2850-2937, pushed at
     ~2911) a few dozen lines earlier in the SAME `for (const step of
     pipeline)` loop. Every already-committed stage's AC id is therefore
-    counted twice -- corrupting the `apply-approval` dispatch prompt, the
-    terminal success message's "N AC(s) approved" count, and the terminal
+    counted twice -- corrupting the approval step's `--ids` list (ACD-300c-4), the
+    terminal success message's "N approved" count, and the terminal
     `acs_approved` array.
 
     None of the four pre-existing tests in this file can reach this: they all
@@ -826,6 +595,32 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
 
     Expected to be RED against current production code: `acs_approved` will
     contain the "ba" stage's AC id twice.
+
+    Fixture notes (moved here from inline comments):
+    - The seeded record is what a genuine pre-pause run would have left: the
+      "ba" stage already committed (its AC is already inside context.all_acs),
+      and this run paused at the FINAL gate while authoring "itpo".
+    - `stage-0-triage` forces the multi-stage "behavioral" route (ba -> itpo),
+      the smallest route with an earlier stage to duplicate against.
+    - The "ba" stage already committed in a PRIOR process. This fresh process's
+      own crash-resume reconstruction (real production code) recovers its AC id
+      from `git log` output shaped exactly as the real `scanCommittedStages()`
+      parser expects -- only the underlying `git log` execution is stubbed,
+      matching this file's convention of stubbing every non-pause_store.py
+      dispatch.
+    - commitStageOutput()'s internal branch-check + commit dispatch are forced
+      to succeed so the run reaches its real "approve" success path and returns
+      a real `acs_approved` terminal field (an early commit error would make the
+      duplication this test targets unobservable).
+    - Since ACD-300c-4 the approval is the approval step: `approval-holds` is
+      approve_acs.py --dry-run with the run's own id list (`--ids`), and
+      `approval-apply` approves what the dry run released. Both replies are
+      stubbed, so `acs_approved` and the "N approved" count echo the stub; the
+      dry run's `--ids` list is the run's own record of what it asked to
+      approve, so that list is where a double-counted id shows. H-2: the "ba"
+      stage's AC id, reconstructed once from git log, must NOT also be
+      re-pushed from the persisted `_resumedContext.all_acs` snapshot, and the
+      user-facing count must match the distinct ACs approved.
     """
     with tempfile.TemporaryDirectory(prefix="acd2100c3_h2_dup_") as tmp:
         fixture = _make_worktree_fixture(Path(tmp))
@@ -836,10 +631,6 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
         ba_ac_id = "H2DUP-BA-1"
         itpo_ac_id = "H2DUP-ITPO-1"
 
-        # Seed the durable record a genuine pre-pause run would have left: the
-        # "ba" stage already committed (its AC is already inside
-        # context.all_acs), and this run paused at the FINAL gate while
-        # authoring "itpo".
         _write_pause_record_via_real_process(
             pause_store_path, fixture["project_dir"], run_id,
             {
@@ -853,7 +644,7 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
                 },
                 "context": {
                     "stage": "final",
-                    "acs": [itpo_ac_id],
+                    "acs": [ba_ac_id, itpo_ac_id],
                     "all_acs": [ba_ac_id, itpo_ac_id],
                 },
                 "status": "paused_awaiting_input",
@@ -861,23 +652,14 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
         )
 
         label_responses = {
-            # Force the multi-stage "behavioral" route (ba -> itpo) -- the
-            # smallest route with an earlier stage to duplicate against.
             "stage-0-triage": {
                 "route": "behavioral",
                 "existing_acs": [],
                 "parent_l1_id": "H2DUP-L1",
                 "rationale": "forced for H-2 regression test",
             },
-            # The "ba" stage already committed in a PRIOR process. This fresh
-            # process's own crash-resume reconstruction (real production
-            # code, ~2850-2937) recovers its AC id from `git log` output
-            # shaped exactly as the real `scanCommittedStages()` parser
-            # expects -- only the underlying `git log` execution itself is
-            # stubbed, matching this file's existing convention of stubbing
-            # every non-pause_store.py dispatch.
             "scan-committed-stages": {
-                "output": "abc1234 plan-feature(BA): test-component\n",
+                "output": "abc1234 plan-feature(BA): test-component\ndef5678 plan-feature(IT-PO): test-component\n",
                 "exit_code": 0,
             },
             "resume-log": {
@@ -885,15 +667,15 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
                     "plan-feature(BA): test-component\n\n"
                     f"AC IDs: {ba_ac_id}\n"
                     f"run-id: {run_id}\n"
-                    "mid-pipeline commit\n"
+                    "mid-pipeline commit\n\n"
+                    "plan-feature(IT-PO): test-component\n\n"
+                    f"AC IDs: {itpo_ac_id}\n"
+                    f"run-id: {run_id}\n"
                 ),
                 "exit_code": 0,
             },
-            # commitStageOutput()'s internal branch-check + commit dispatch --
-            # forced to succeed so the run reaches its real "approve" success
-            # path and returns a real `acs_approved` terminal field (rather
-            # than aborting early with a commit error, which would make the
-            # duplication this test targets unobservable).
+            "approval-holds": {"output": json.dumps({"approved": [ba_ac_id, itpo_ac_id], "held": []}), "exit_code": 0},
+            "approval-apply": approval_apply_reply({"output": json.dumps({"approved": [ba_ac_id, itpo_ac_id]})}),
             "branch-check": {"output": "ac-authoring/h2-dup-test", "exit_code": 0},
             "commit-stage-output": {"status": "ok", "message": "committed successfully"},
         }
@@ -924,10 +706,6 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
         acs_approved = result.get("acs_approved")
         assert isinstance(acs_approved, list), f"Expected a list. Got: {acs_approved!r}"
 
-        # H-2: the "ba" stage's AC id was reconstructed once from git log
-        # (crash-resume) and must NOT ALSO be re-pushed from the persisted
-        # `_resumedContext.all_acs` snapshot -- it must appear exactly once
-        # in the run's own terminal record of what was approved.
         assert acs_approved.count(ba_ac_id) == 1, (
             f"AC {ba_ac_id!r} (the already-committed 'ba' stage) must appear "
             f"exactly once in the resumed run's own acs_approved record -- it "
@@ -939,24 +717,17 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
             f"acs_approved must contain no duplicate AC ids at all. Got: {acs_approved!r}"
         )
 
-        # The user-facing terminal count must match the real number of
-        # distinct ACs approved, not an inflated double-counted total.
         expected_message_count = len(set(acs_approved))
-        assert f"{expected_message_count} AC(s) approved" in (result.get("message") or ""), (
+        assert f"{expected_message_count} approved," in (result.get("message") or ""), (
             f"Terminal message must report the true distinct AC count "
             f"({expected_message_count}), not an inflated double-counted one. "
             f"Got message={result.get('message')!r}"
         )
 
-        # The apply-approval dispatch must name each AC exactly once too -- a
-        # duplicate there means the same AC would be presented twice in the
-        # prompt that updates readiness/priority on the real AC YAML files.
-        approval_calls = [c for c in payload.get("calls", []) if c.get("label") == "apply-approval"]
-        assert approval_calls, "Test construction error: apply-approval must have been dispatched."
-        approval_prompt = approval_calls[0].get("prompt") or ""
-        assert approval_prompt.count(ba_ac_id) == 1, (
-            f"The apply-approval dispatch must name {ba_ac_id!r} exactly once, not "
-            f"duplicate it. Prompt: {approval_prompt!r}"
+        dry_run_ids = _approve_ids(payload, "approval-holds")
+        assert dry_run_ids, "Test construction error: the approval step's dry run must have been dispatched."
+        assert dry_run_ids[0].count(ba_ac_id) == 1 and len(dry_run_ids[0]) == len(set(dry_run_ids[0])), (
+            f"The approval step must name {ba_ac_id!r} exactly once, not duplicate it. --ids: {dry_run_ids[0]!r}"
         )
 
 

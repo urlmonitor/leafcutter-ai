@@ -19,7 +19,9 @@ ARCHITECTURE: PreToolUse hook on ``Bash`` tool calls that run git's
     each is tokenised with ``shlex``, and a segment counts as a commit when
     its program is ``git`` and its first non-option argument, after git's
     global options (``-C <dir>``, ``-c <k=v>``, ``--git-dir`` ...), is
-    ``commit``. Text inside a quoted argument never triggers; unparseable
+    ``commit``, or when it runs the shared commit step script
+    (``commit_changes.py``, direct or via a Python interpreter), which commits
+    internally and is guarded identically. Text inside a quoted argument never triggers; unparseable
     quoting fails closed. Checks ``COMMIT_AGENT_MODE`` env var (set only within the commit agent
     template's Step 4). If the env var is absent or not exactly ``"1"``, emits
     a JSON block decision. Fail-open on any exception, malformed stdin, or
@@ -61,6 +63,13 @@ _SHELLS = frozenset({"sh", "bash", "zsh", "dash"})
 
 _ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 
+# The shared commit step's deployed basename (BO-4500a-5-vii). The ONE place
+# this hook names the step; every recogniser below keys on it.
+_COMMIT_STEP_SCRIPT = "commit_changes.py"
+
+# Python interpreter basenames (python, python3, python3.12, pypy3, py, *.exe).
+_INTERPRETER_RE = re.compile(r"^(python[\d.]*|pypy[\d.]*|py)(\.exe)?$")
+
 # Word boundaries for the fail-closed fallback: whitespace and shell syntax.
 _FALLBACK_SPLIT_RE = re.compile(r"[\s$()`;&|<>{}]+")
 
@@ -79,6 +88,23 @@ def _program_name(word: str) -> str:
 def _is_git_program(word: str) -> bool:
     """Return True when the argv word's basename is ``git`` or ``git.exe``."""
     return _program_name(word) in ("git", "git.exe")
+
+
+def _is_commit_step_call(words: list[str]) -> bool:
+    """Return True when argv runs the shared commit step script.
+
+    Matches direct execution (the program's basename is the step) and a
+    Python-interpreter run (the first non-option argument's basename is the
+    step), for any path spelling. Readers such as ``cat <step>`` and a quoted
+    mention (one argv word of other text) never match.
+    """
+    program = _program_name(words[0])
+    if program == _COMMIT_STEP_SCRIPT:
+        return True
+    if not _INTERPRETER_RE.match(program):
+        return False
+    script = next((word for word in words[1:] if not word.startswith("-")), "")
+    return _program_name(script) == _COMMIT_STEP_SCRIPT
 
 
 def _substitution_span(command: str, index: int) -> tuple[int, int] | None:
@@ -169,7 +195,10 @@ def _shell_script_runs_git_commit(args: list[str]) -> bool:
 
 
 def _argv_runs_git_commit(tokens: list[str]) -> bool:
-    """Return True when one tokenised simple command runs git's commit.
+    """Return True when one tokenised simple command records a commit.
+
+    That is git's ``commit`` subcommand or a run of the shared commit step
+    script (``_COMMIT_STEP_SCRIPT``), which commits internally.
 
     Leading ``VAR=value`` assignments are skipped. After a wrapper (``env``,
     ``sudo``, ``xargs`` ...) every later non-wrapper word is tried as the
@@ -191,6 +220,8 @@ def _argv_runs_git_commit(tokens: list[str]) -> bool:
     program = _program_name(words[0])
     if _is_git_program(words[0]):
         return _git_subcommand(words[1:]) == "commit"
+    if _is_commit_step_call(words):
+        return True
     if program in _WRAPPERS:
         return any(
             _argv_runs_git_commit(words[start:])
@@ -215,7 +246,7 @@ def _fallback_runs_git_commit(segment: str) -> bool:
     for word in (raw.strip("'\"") for raw in _FALLBACK_SPLIT_RE.split(segment)):
         if _is_git_program(word):
             seen_git = True
-        elif seen_git and word == "commit":
+        elif (seen_git and word == "commit") or _program_name(word) == _COMMIT_STEP_SCRIPT:
             return True
     return False
 
@@ -305,17 +336,18 @@ def _build_block_message() -> str:
     return (
         "PreToolUse blocked: direct git commit is not allowed.\n"
         "\n"
-        "What was blocked: a `git commit` call was intercepted outside the "
+        "What was blocked: a `git commit` call (or a run of the shared commit "
+        "step, which commits internally) was intercepted outside the "
         "commit agent context (COMMIT_AGENT_MODE is not set to '1').\n"
         "\n"
-        "Why: calling `git commit` directly bypasses the confirmation gate "
+        "Why: committing directly bypasses the confirmation gate "
         "(Step 3 of commit.md), the pre-commit hook failure → autofix path "
         "(Step 5), the sign-off recording, and the background-commit safety "
         "checks. These safeguards only run when commits flow through the "
         "dedicated `commit` agent template.\n"
         "\n"
         "Corrective action: Dispatch the commit agent via the Agent tool "
-        "instead of calling git commit directly."
+        "instead of calling git commit or the commit step directly."
     )
 
 
@@ -378,5 +410,21 @@ DECISION HISTORY
   are followed; unbalanced quoting fails closed. COMMIT_AGENT_MODE
   exemption unchanged. Covers BP-1100d-3.
   (#TICKETLESS reason=quick-fix-BP-1100d-3-commit-delegation-argv)
+- 2026-10-16 18:00 [python-coder]: Guard the shared commit step like a direct
+  commit (BO-4500a-5-vii). commit_changes.py records a commit internally, so
+  a git-argv-only guard cannot see it. _argv_runs_git_commit now also matches
+  a run of the step: direct execution (program basename) or a Python
+  interpreter whose first non-option argument has that basename, so every
+  path spelling (relative, absolute, templates/scripts, .leafcutter/scripts)
+  works and sh -c / env / wrapper / assignment following is inherited from
+  the existing argv machinery. Readers (cat, grep) and quoted mentions do
+  not match. Single source of the step name: the module constant
+  _COMMIT_STEP_SCRIPT. Rejected reading config/commit_step.json: it is not
+  deployed beside the hook, so a deployed hook would no-op or crash (deployed
+  layout trap); the constant is a deployed basename, same in both layouts.
+  COMMIT_AGENT_MODE acceptance and the block message are shared by both
+  cases (message reworded to name both); commit.md step calls now carry the
+  inline COMMIT_AGENT_MODE=1 prefix. Fail-open behaviour unchanged.
+  (#TICKETLESS reason=fast-lane-BO-4500a-5-vii)
 ====================================================================
 """

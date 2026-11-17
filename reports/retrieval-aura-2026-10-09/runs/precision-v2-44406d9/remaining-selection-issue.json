@@ -1,0 +1,35 @@
+{
+  "observed_case": "A02",
+  "trace_path": "A02/resume-0002/trace.json",
+  "state_path": "A02/resume-0002/state.json",
+  "interpretation_and_child_contract_correct": true,
+  "required_fields": [
+    "criteria",
+    "test_spec"
+  ],
+  "target_ids": [
+    "KM-500c-2"
+  ],
+  "relationships": [],
+  "population": "returned_entities",
+  "require_complete": true,
+  "selected_operation": "get_entities",
+  "selected_probability": 0.71,
+  "minimum_selected_probability": 0.8,
+  "confidence": 0.64,
+  "minimum_confidence": 0.5,
+  "competing_get_related_tests_probability": 0.27,
+  "finite_probability_labels": [
+    "get_entities",
+    "get_related_tests",
+    "get_declared_dependents",
+    "unsupported",
+    "unsupported_population"
+  ],
+  "paid_calls_preserved": 1,
+  "retrieval_executed": false,
+  "evidence_returned": false,
+  "next_issue": "Operation-choice reliability / existing queued issue02; preserve thresholds and use independent discriminating cases before any separately authorized retest.",
+  "causal_limit": "The failed case had catalog enabled, but this single paired observation does not isolate catalog configuration as the cause. Host wording and model variability are not controlled causal factors here.",
+  "merge_recommendation": "Approve the scoped interpretation repair; do not mark the full retrieval delivery or catalog-enabled positive gate complete."
+}

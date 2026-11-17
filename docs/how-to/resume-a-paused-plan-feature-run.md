@@ -41,7 +41,7 @@ A paused run's record lives on disk at
 under the filesystem the run's own writer resolved -- **not** the directory
 the run happened to be started in (`ACD-2100a-4`: the store's location is a
 function of the project, never of the caller's working directory, so this
-works identically from the project root and from a worktree). Resolve the
+works identically from the project root and from a worktree made by the workspace maker (see [get-a-workspace](get-a-workspace.md))). Resolve the
 same location a resumed run will look in and list it:
 
 ```bash

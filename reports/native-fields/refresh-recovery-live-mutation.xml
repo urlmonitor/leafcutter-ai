@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="2.340" timestamp="2026-10-02T09:30:47.488714+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge_live.native_refresh_recovery_checks" name="test_native_refresh_resumes_a_committed_partial_batch_without_changing_history" time="1.973"><failure message="ValueError: generation identity or readiness mismatch">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3091/test_native_refresh_resumes_a_0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x000001FD626B5CD0&gt;
+
+    def test_native_refresh_resumes_a_committed_partial_batch_without_changing_history(tmp_path, monkeypatch):
+        # covers: KM-400a-3-i
+        # angle: real_artifact
+        async def scenario():
+            uri = "bolt://127.0.0.1:18088"
+            credentials = (uri, "neo4j", "leafcutter-native-tests")
+            db = Neo4jBackend(*credentials, query_timeout=30)
+            repo = "native-recovery-" + uuid.uuid4().hex
+    
+            def snapshot(generation, count):
+                return ProjectionSnapshot(
+                    repository_id=repo,
+                    source_sha="a" * 40,
+                    generation_id=generation,
+                    mapper_version="7",
+                    nodes=[
+                        Entity(
+                            canonical_id=f"AC-{index}",
+                            kind="AcceptanceCriterion",
+                            title="Recovery fixture",
+                            source=SourceReference(
+                                repository_id=repo, source_sha="a" * 40, path=f"ac/{index}.yaml"
+                            ),
+                        )
+                        for index in range(count)
+                    ],
+                )
+    
+            old, target = snapshot("old", 2), snapshot("new", 251)
+            old_key, target_key = scope_key(repo, "old"), scope_key(repo, "new")
+            try:
+                await db.setup()
+                assert await db.publish(old)
+                retained = await db._run(
+                    "MATCH (n:AC {generation_key:$key}) RETURN n.payload AS payload ORDER BY n.key",
+                    {"key": old_key},
+                )
+                normal_run = db._run
+    
+                async def interrupted(statement, parameters=None, write=False):
+                    rows = await normal_run(statement, parameters, write)
+                    if write and "UNWIND $rows AS row MERGE (n:" in statement:
+                        raise BackendUnavailable()
+                    return rows
+    
+                db._run = interrupted
+                with pytest.raises(BackendUnavailable):
+                    await db.publish(target, expected_generation="old")
+                db._run = normal_run
+                partial = await db._run(
+                    "MATCH (n:AC {generation_key:$key}) RETURN count(n) AS count",
+                    {"key": target_key},
+                )
+                assert partial == [{"count": 250}]
+                assert (await db.active(repo)).generation_id == "old"
+    
+                monkeypatch.setattr(native_refresh, "resolve_neo4j", lambda config: credentials)
+                monkeypatch.setattr(native_refresh, "writer_backend", lambda root: db)
+                monkeypatch.setattr(native_refresh, "load_snapshot", lambda *args: target)
+                backup = tmp_path / "private-backup.json"
+                args = argparse.Namespace(
+                    root=str(Path(__file__).resolve().parents[2]),
+                    source_root="unused-by-fixture",
+                    repository_id=repo,
+                    expected_host="127.0.0.1",
+                    apply=True,
+                    backup=str(backup),
+                )
+                result = await native_refresh.run(args)
+                assert result["published"] is True
+                assert result["resuming_staged_generation"] is True
+                assert result["retained_generations_verified"] == 1
+                saved = json.loads(backup.read_text(encoding="utf-8"))
+                assert len(saved["staged_generations"]) == 1
+                assert saved["staged_generations"][0]["metadata"]["status"] == "failed"
+                assert len(saved["staged_generations"][0]["nodes"]) == 250
+                verify = Neo4jBackend(*credentials, query_timeout=30)
+                try:
+                    assert (await verify.active(repo)).generation_id == "new"
+                    assert await verify._run(
+                        "MATCH (n:AC {generation_key:$key}) RETURN n.payload AS payload ORDER BY n.key",
+                        {"key": old_key},
+                    ) == retained
+                    counts = await verify._run(
+                        "MATCH (n:AC {generation_key:$key}) RETURN count(n) AS count, count(CASE WHEN n.current THEN 1 END) AS current",
+                        {"key": target_key},
+                    )
+                    assert counts == [{"count": 251, "current": 251}]
+                finally:
+                    await verify.close()
+            finally:
+                await db.close()
+    
+&gt;       asyncio.run(scenario())
+
+tests\knowledge_live\native_refresh_recovery_checks.py:110: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Python314\Lib\asyncio\runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\knowledge_live\native_refresh_recovery_checks.py:85: in scenario
+    result = await native_refresh.run(args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge\native_refresh.py:176: in run
+    before = await _inspect_refresh(db, args.repository_id)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+db = &lt;knowledge.adapters.neo4j_backend.Neo4jBackend object at 0x000001FD626974D0&gt;
+repository_id = 'native-recovery-57fb93d00d534eda97397b692e91949d'
+
+    async def inspect(db: object, repository_id: str) -&gt; dict:
+        """Read and validate all owned generations; this function never writes.
+    
+        Args:
+            db: Adapter connected to the explicitly selected database.
+            repository_id: Repository whose existing graph will be inspected.
+    
+        Returns:
+            Serializable migration plan, including original properties for an operator backup.
+    
+        Raises:
+            ValueError: Unknown, corrupt, duplicate or cross-generation graph data is found.
+        """
+        repos = await db._run(
+            "MATCH (r:KRRepository {repository_id:$repo}) RETURN properties(r) AS props",
+            {"repo": repository_id},
+        )
+        if len(repos) != 1:
+            raise ValueError("expected exactly one owned repository")
+        manifests = await db._run(
+            "MATCH (g:KRGeneration {repository_id:$repo}) RETURN properties(g) AS props ORDER BY g.key",
+            {"repo": repository_id},
+        )
+        groups = []
+        keys = set()
+        fingerprint = hashlib.sha256()
+        for row in manifests:
+            meta = row["props"]
+            key = scope_key(repository_id, meta["generation_id"])
+            if meta["key"] != key or meta["status"] != "ready" or key in keys:
+&gt;               raise ValueError("generation identity or readiness mismatch")
+E               ValueError: generation identity or readiness mismatch
+
+knowledge\adapters\neo4j_domain_migration.py:52: ValueError</failure></testcase></testsuite></testsuites>

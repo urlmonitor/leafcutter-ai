@@ -1,0 +1,216 @@
+"""Independent source comparisons and readable receipts; no provider/backend calls."""
+from __future__ import annotations
+
+import html
+import json
+from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlsplit
+
+from proof_support import BUDGET, CASES, host_count, read, save, sha256, totals, utc_now
+
+
+def _payloads(state: dict, suffix: str) -> list[dict]:
+    """Read only completed, accepted child payloads from the durable checkpoint."""
+    return [value["output_payload"] for value in (state.get("results") or {}).values()
+            if value.get("status") == "completed" and value.get("output_schema_id", "").endswith(suffix)
+            and isinstance(value.get("output_payload"), dict)]
+
+
+def _diagnostics(state: dict) -> list[dict]:
+    """Retain actual retrieval diagnostics, including refusals and stale boundaries."""
+    return [value["diagnostics"] for value in (state.get("results") or {}).values()
+            if any(name.startswith("knowledge_") for name in value.get("diagnostics", {}))]
+
+
+def _citation_matches(item: dict, oracle: dict, identifier: str, field: str) -> bool:
+    """Require the actual canonical identity, source commit, path and field pointer."""
+    source = item.get("source", {})
+    uri = urlsplit(source.get("locator", ""))
+    query = parse_qs(uri.query)
+    return (uri.scheme == "knowledge" and uri.netloc == "leafcutter@" + oracle["source_sha"]
+            and unquote(uri.path).strip("/") == identifier
+            and query.get("path") == [oracle["path"]] and query.get("locator") == ["/" + field]
+            and source.get("section_locator") == "/" + field
+            and source.get("source_version", {}).get("commit") == oracle["source_sha"]
+            and not item.get("truncated", False))
+
+
+def _field_matches(evidence: list[dict], oracle: dict, identifier: str, field: str) -> bool:
+    """Compare actual full criteria or parsed declared assertions to independent Git bytes."""
+    import yaml
+
+    values = [item["excerpt"] for item in evidence if _citation_matches(item, oracle, identifier, field)]
+    if field == "criteria":
+        return oracle["criteria"] in values
+    if field == "test_spec":
+        for value in values:
+            try:
+                if yaml.safe_load(value) == oracle["test_spec"]:
+                    return True
+            except yaml.YAMLError:
+                continue
+    return False
+
+
+def _needs_sufficient(needs: dict | None, case: dict, oracle: dict, revision: str) -> dict:
+    """Score interpretation independently of whether execution met a narrower proposal."""
+    chosen = needs or {}
+    selection = chosen.get("selections", {})
+    scope = chosen.get("source_scope", {})
+    expected = set(oracle["expected_interpretation_fields"])
+    gates = {"accepted_decided": chosen.get("status") == "decided",
+        "original_question": chosen.get("original_question") == case["question"],
+        "literal_target": selection.get("target_ids") == [case["target"]],
+        "content_types": selection.get("entity_types") == ["ac"] and selection.get("document_types") == ["ac_yaml"],
+        "canonical_obligations": expected <= set(selection.get("required_fields", [])),
+        "detail": chosen.get("detail_mode") == "fields",
+        "scope": scope.get("repository_id") == "leafcutter" and scope.get("revision") == revision
+            and scope.get("source_ids") == ["knowledge.graph"] and scope.get("read_roots") == ["docs"],
+        "single_entity": chosen.get("completeness") == "single_entity",
+        "no_relationship_substitution": selection.get("relationships") == []}
+    return {"sufficient": all(gates.values()), "checks": gates,
+            "expected_fields": sorted(expected), "actual_fields": selection.get("required_fields", [])}
+
+
+
+def _answers_fulfilled(answers: list[dict], requested: list[str], target: str) -> bool:
+    """Require every recorded answer to fulfill the exact selected field contract.
+
+    Args:
+        answers: Actual deterministic answer assessments from saved diagnostics.
+        requested: Fields selected by the accepted needs interpretation.
+        target: Original canonical entity that the question names.
+
+    Returns:
+        Whether a nonempty assessment set fulfills the unchanged selected contract.
+    """
+    return bool(answers) and all(answer["status"] == "fulfilled" and not answer["missing_fields"]
+        and answer["scope"].get("entity_ids") == [target]
+        and answer["required_fields"] == requested for answer in answers)
+
+
+def _execution(envelope: dict, diagnostics: list[dict], needs: dict | None,
+               case: dict, oracle: dict, plan: dict) -> dict:
+    """Separate executor fulfillment of selected fields from question-level sufficiency."""
+    evidence = (envelope.get("output") or {}).get("payload", {}).get("evidence", [])
+    answers = [json.loads(row["knowledge_answer"]) for row in diagnostics if "knowledge_answer" in row]
+    requested = (needs or {}).get("selections", {}).get("required_fields", [])
+    chosen_authored = [name for name in ("criteria", "test_spec") if name in requested]
+    fields = {name: _field_matches(evidence, oracle, case["target"], name) for name in chosen_authored}
+    source_rows = [row for row in diagnostics if row.get("knowledge_generation")]
+    gates = {"public_completed": envelope["status"] == "completed",
+        "answer_present": bool(answers),
+        "answer_fulfilled": _answers_fulfilled(answers, requested, case["target"]),
+        "source_agreement": bool(source_rows) and all(row.get("knowledge_source_sha") == plan["source_sha"]
+            and row.get("knowledge_generation") == plan["generation_id"] for row in source_rows),
+        "chosen_source_fields_match": all(fields.values()),
+        "not_truncated": not (envelope.get("output") or {}).get("payload", {}).get("truncated", True)}
+    question_fields = {name: _field_matches(evidence, oracle, case["target"], name)
+                       for name in oracle["expected_interpretation_fields"]}
+    return {"chosen_contract_fulfilled": all(gates.values()), "checks": gates,
+        "chosen_source_field_matches": fields, "question_source_field_matches": question_fields,
+        "all_question_source_fields_present": all(question_fields.values()), "answer_assessments": answers}
+
+
+def _stale_control(envelope: dict, diagnostics: list[dict]) -> dict:
+    """An early model refusal is not evidence that the source-revision boundary ran."""
+    matched = []
+    for row in diagnostics:
+        if row.get("knowledge_status") != "stale" or not row.get("knowledge_retrieval_id"):
+            continue
+        diagnosis = json.loads(row.get("knowledge_diagnosis", "{}"))
+        if diagnosis.get("expected", {}).get("source_sha") == "0" * 40:
+            matched.append(row)
+    evidence = (envelope.get("output") or {}).get("payload", {}).get("evidence", [])
+    return {"passed": envelope["status"] != "completed" and not evidence and bool(matched),
+            "actual_stale_boundary_exercised": bool(matched), "stale_receipts": matched}
+
+
+def score_case(output: Path, case: dict, plan: dict, oracles: dict) -> dict:
+    """Report one actual terminal or pending outcome without retrying it."""
+    directory = output / case["id"]
+    if not (directory / "current.json").exists():
+        return {"id": case["id"], "status": "not_completed", "functional_success": False,
+                "reason": "No public envelope recorded; inspect preserved attempt/failure receipts."}
+    envelope = read(directory / "current.json")
+    step = read(directory / "current-step.json")["step"]
+    state = read(directory / step / "state.json")
+    accepted = _payloads(state, "retrieval_needs_output.v1")
+    needs = accepted[-1] if accepted else None
+    diagnostics = _diagnostics(state)
+    oracle = oracles[case["target"]]
+    revision = "0" * 40 if case["negative"] else plan["source_sha"]
+    interpretation = _needs_sufficient(needs, case, oracle, revision)
+    execution = _execution(envelope, diagnostics, needs, case, oracle, plan)
+    negative = _stale_control(envelope, diagnostics) if case["negative"] else None
+    success = (negative["passed"] if negative is not None else interpretation["sufficient"]
+        and execution["chosen_contract_fulfilled"] and execution["all_question_source_fields_present"])
+    dispatches = [read(path) for path in sorted(directory.glob("*/host/dispatch.json"))]
+    return {"host_dispatch_provenance": dispatches, "id": case["id"], "question": case["question"], "catalog_enabled": case["catalog"],
+        "status": envelope["status"], "functional_success": success, "negative_control": negative,
+        "interpretation": interpretation, "execution": execution, "accepted_needs": needs,
+        "retrieval_diagnostics": diagnostics, "requested_revision": revision,
+        "actual_jev_calls": envelope["usage_summary"]["jev_calls"], "accepted_host_results": host_count(envelope),
+        "public_evidence": (envelope.get("output") or {}).get("payload", {}).get("evidence", []),
+        "limitations": (envelope.get("output") or {}).get("payload", {}).get("limitations", []),
+        "receipt": f"{case['id']}/{step}/envelope.json"}
+
+
+def render(output: Path, summary: dict):
+    """Show question, needs, operation, evidence and assessment as a readable audit."""
+    def esc(value):
+        return html.escape(str(value))
+    sections = []
+    for case in summary["cases"]:
+        if "question" not in case:
+            sections.append(f"<section><h2>{esc(case['id'])}</h2><p>{esc(case['reason'])}</p></section>")
+            continue
+        needs = case.get("accepted_needs") or {}
+        selection = needs.get("selections", {})
+        operations = [{"operation": row.get("knowledge_selected_operation", row.get("knowledge_operation")),
+                       "arguments": row.get("knowledge_selected_arguments"),
+                       "source_sha": row.get("knowledge_source_sha"), "generation": row.get("knowledge_generation"),
+                       "status": row.get("knowledge_status")} for row in case["retrieval_diagnostics"]]
+        quotes = "".join(f"<details><summary>{esc(item['source']['section_locator'])}</summary>"
+            f"<p>{esc(item['source']['locator'])}</p><pre>{esc(item['excerpt'])}</pre></details>"
+            for item in case["public_evidence"])
+        sections.append(f"<section><h2>{esc(case['id'])}: {esc(case['status'])}</h2>"
+            f"<p>Functional success: <b>{esc(case['functional_success'])}</b></p><ol>"
+            f"<li><b>Question</b><p>{esc(case['question'])}</p></li>"
+            f"<li><b>Accepted interpretation</b><p>Targets: {esc(selection.get('target_ids'))}; fields: "
+            f"{esc(selection.get('required_fields'))}. Sufficient: {esc(case['interpretation']['sufficient'])}.</p></li>"
+            f"<li><b>Actual retrieval</b><pre>{esc(json.dumps(operations, indent=2))}</pre></li>"
+            f"<li><b>Source evidence</b>{quotes or '<p>No source evidence returned.</p>'}</li>"
+            f"<li><b>Assessment</b><p>Chosen contract fulfilled: {esc(case['execution']['chosen_contract_fulfilled'])}."
+            f" All question fields present: {esc(case['execution']['all_question_source_fields_present'])}.</p>"
+            f"<p>{esc('; '.join(case['limitations']))}</p></li></ol>"
+            f"<a href='{esc(case['receipt'])}'>Actual public receipt</a></section>")
+    document = "<!doctype html><html lang='en'><meta charset='utf-8'><title>Aura retrieval proof</title>"
+    document += "<style>body{font:17px system-ui;max-width:1050px;margin:40px auto;padding:0 24px;background:#f5f7fa;color:#172335}section{background:white;padding:24px;border-radius:12px;margin:24px 0}li{margin:18px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:14px monospace}details{margin:12px 0}a{color:#205ab2}</style>"
+    document += "<h1>Aura retrieval proof</h1><p>Real Aura, production TypeSafe Jev and blind external host packets. "
+    document += f"Source: {esc(summary['source_sha'])}; generation: {esc(summary['generation_id'])}.</p>"
+    document += f"<p>{summary['positive_successes']}/3 complete positive answers; {summary['negative_passes']}/1 stale control."
+    document += " Interpretation sufficiency and executor fulfillment are scored separately. No model reruns or graph/catalog writes.</p>"
+    document += "<p><a href='summary.json'>Full assessment</a> · <a href='plan.json'>Frozen plan</a> · <a href='readiness.json'>Publication readiness</a></p>"
+    (output / "index.html").write_text(document + "".join(sections) + "</html>", encoding="utf-8")
+
+
+def score(output: Path):
+    """Compare preserved actual receipts against the independent immutable source oracle."""
+    plan = read(output / "plan.json")
+    if plan["limits"] != BUDGET or sha256(output / "source-oracles.json") != plan["oracle_sha256"]:
+        raise ValueError("Frozen budget/oracle integrity failed")
+    oracles = read(output / "source-oracles.json")
+    cases = [score_case(output, case, plan, oracles) for case in CASES]
+    frozen = read(output / "working-source-freeze.json")
+    summary = {"scored_at": utc_now(), "evaluated_code_revision": frozen["code_revision"],
+        "evaluated_working_source_sha256": frozen["aggregate_sha256"], "source_sha": plan["source_sha"], "generation_id": plan["generation_id"],
+        "writer_code_sha": plan["writer_code_sha"], "semantic_readiness": read(output / "readiness.json")["semantic_ready"],
+        "source_mode": plan["source_mode"], "positive_successes": sum(case["functional_success"] for case in cases[:3]),
+        "negative_passes": int(cases[3]["functional_success"]), "cases": cases, **totals(output),
+        "usage_note": "Envelope usage is a known lower bound when usage_incomplete_cases is nonempty; failure traces are retained."}
+    save(output / "summary.json", summary, replace=True)
+    render(output, summary)
+    print(json.dumps({"summary": str(output / "summary.json"),
+                      "positive_successes": summary["positive_successes"], "negative_passes": summary["negative_passes"]}))
+

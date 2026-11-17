@@ -78,7 +78,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Required per-file error containment with typed exceptions per the error-handling policy, made skipped-and-named a recorded outcome distinct from both not-examined and pass, separated its message from GE-124c-2-ii's, and added the over-correction guard — a malformed file must not degrade the whole run to advisory and become a universal bypass. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/23_TICKET-20261022-GE-124c-3-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -101,3 +102,4 @@ notes: |
   file), GE-124c-2-ii (the store), and GE-124c-1's internal-error fail-open (the
   hook itself). Each has a different message and a different effect on the exit
   code; merging them produces a check that tells authors to fix the wrong thing.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

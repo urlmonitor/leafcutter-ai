@@ -1,0 +1,385 @@
+id: ACD-1600c-4-v
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: high
+title: "The to-be-created marker is a build precondition, not a claim of ownership and not a historical note, so it is spent once the work is finished and a precondition a sibling satisfied early is reported as that rather than as a stale marker"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given the declared-files marker states a PRECONDITION ON THE TREE AT THE MOMENT THIS
+    REQUIREMENT'S WORK IS BUILT -- `existing` meaning "the work expects to find this path" and
+    `to_be_created` meaning "the work must not assume this path is present" -- so the marker is
+    neither a claim that this requirement's own work creates the path, nor a historical note
+    about the tree at authoring time,
+  And given that a precondition is LIVE while the work is unbuilt and SPENT once the work is
+    finished, which is why an unfinished record's unsatisfiable `existing` declaration is
+    refused and a finished record's declarations are checked no further,
+  And a fixture store in which requirement C, whose work is finished, declares
+    scripts/ci/alpha.py marked to be created and whose implemented-by list names
+    scripts/ci/alpha.py,
+    and nine requirements D1 through D9, each of whose work is finished, each declare the same
+    scripts/ci/alpha.py marked to be created and none of whose implemented-by lists names
+    scripts/ci/alpha.py,
+    and requirement N, whose work is not finished, declares the same scripts/ci/alpha.py
+    marked to be created,
+    and scripts/ci/alpha.py is present in the fixture repository tree,
+  When a change that stages C, D1 and N is checked before it enters the repository,
+  Then no refusal message names C, D1 or scripts/ci/alpha.py,
+  And no message of any kind names C or D1: a finished record's to-be-created path that now
+    exists is neither refused nor reported at commit time, because the declaration was true
+    when the record was authored -- not because that record's work is what created the path,
+  And N is reported exactly once, naming N and scripts/ci/alpha.py, without being a reason to
+    refuse N,
+  And N's report states that the path is already declared by a finished record -- naming C --
+    so N is reported as a precondition another record has already satisfied and NOT as a stale
+    marker,
+  And given a further requirement M, whose work is not finished, which declares
+    scripts/ci/beta.py marked to be created where scripts/ci/beta.py is present in the tree and
+    NO other record in the store declares it at all, M's report names scripts/ci/beta.py as a
+    marker no other record accounts for,
+  And the two reports are distinguishable by their wording, so a reader can tell a precondition
+    satisfied early by sibling work from a declaration that is simply wrong,
+  And the store-wide declared-files report lists all ten finished records -- C and D1 through
+    D9 -- under the section "declared to be created, now exists (work finished)", one line per
+    (record, path) naming both, sorted by record id then declared order,
+  And the report states that section's total as 10,
+  And each listed line states whether that record's own implemented-by list names the path, so
+    the one record whose work created it is separated from the nine whose work did not,
+  And those ten entries never make the report command exit non-zero and are never raised at
+    commit time,
+  And neither the check nor the report removes, re-marks or re-orders any declared-files entry
+    on C, on D1 through D9, or on N.
+
+  Given additionally requirement P in the same fixture store, whose status is deprecated and
+    whose work status is therefore not finished, declaring scripts/ci/alpha.py marked to be
+    created,
+  When a change that stages P is checked before it enters the repository,
+  Then no message of any kind names P or scripts/ci/alpha.py: a retired requirement's
+    preconditions are void rather than live, because the work they condition will never be
+    built, and the only action that could clear the report is building work that has been
+    deliberately retired,
+  And the store-wide declared-files report lists P under the separate section label "declared
+    to be created, now exists (requirement retired)", naming P and the path, and states that
+    section's total as 1,
+  And P is counted in neither the finished section's total of 10 nor the unfinished reports, so
+    the three populations are separately countable.
+depends_on:
+  - ACD-1600c-4
+  - ACD-1600c-4-i
+  - ACD-1600c-4-ii
+  - ACD-1600c-4-iv
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-4-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE RECORD CARRYING THE UNSOUND RATIONALE THIS AC EXISTS TO REPLACE. Its closing
+      criterion exempts a finished record's to-be-created path that now exists "because the
+      finished work is what created it". The behaviour is correct and tested; the stated
+      reason is false whenever the path is shared between records, which is the common case
+      rather than the exotic one. Its own notes come closer -- "the marker records intent at
+      authoring time", and, on the refusal branch, "a claim that cannot be true of any
+      repository state, so it refuses" -- and those two together are the precondition reading
+      this AC states explicitly. Its refusal branch is also the evidence that defeats the
+      purely-historical reading of the field.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-4-ii.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Defines the one store-wide declared-files report (read-only, deterministic, emitted by
+      the seam's command-line entry point). This AC adds one section to that same report, not
+      a second report, exactly as ACD-1600c-4-iv does.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-4-iv.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE MIRROR CASE, AND THE RECORD THAT NAMED THIS ONE AS UNDECIDED. It covers a finished
+      record whose `existing` path was later deleted: reported store-wide, never refused. Its
+      notes close with "NOT SPECIFIED HERE: a finished record whose to-be-created file was
+      created and later deleted ... the reverse drift is not decided". This AC decides the
+      adjacent half of that gap -- created and still present, on a record that did not create
+      it -- and adopts the same posture: report store-wide, never refuse.
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600b-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE CANONICAL LIST OF TRUE-LOOKING-AND-WRONG SHAPES, where `declared_files[].state` is
+      recorded as the fourth member and the most common one. This AC is the countability half
+      of that entry's cure: the condition it describes is today exempted rather than flagged,
+      so no gate and no report will ever surface it.
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The check-ac-schema commit hook is the point that must NOT refuse or report C or D1."
+  - path: docs/reference/ac-schema.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE SSOT THAT DOES NOT DOCUMENT THE FIELD AT ALL. Grepped 2026-10-12: `declared_files`
+      and `to_be_created` appear nowhere under docs/reference/. So the only published account
+      of what the marker means is ACD-1600c-4-i's criteria sentence -- the unsound one -- and
+      a reader reconstructing the field's semantics from documentation reconstructs the
+      ownership reading. The settled meaning in this AC's first Given belongs in the schema
+      reference.
+assigned_agent: python-coder
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: schema
+risk_surface: contract_boundary
+notes: |
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect are deliberately unset. This record was authored at
+  the L3 behavioural level only; the technical enrichment is the IT PO's, and readiness stays
+  `draft` for the user rather than being promoted here.
+
+  ORIGIN (2026-10-12, user-approved filing). Raised during a declared-files hygiene pass on
+  TQ-600a-13 and filed on the user's instruction. The finding as reported: ACD-1600c-4-i's
+  closing clause exempts a finished record's to-be-created path that now exists "because the
+  finished work is what created it", and that stated reason is FALSE whenever a path is shared
+  between records.
+
+  ==========================================================================
+  THE PRIOR QUESTION, AND THE ANSWER IS NEITHER OF THE TWO OFFERED READINGS.
+  ==========================================================================
+  Before the rationale can be called wrong, the field's meaning has to be settled. The question
+  was put as a choice between two readings, and the owner's lean (2026-10-12) was for the
+  second, explicitly deferred to the BA:
+
+      OWNERSHIP: `to_be_created` claims "my own work creates this path".
+      HISTORICAL: `to_be_created` claims "this path did not exist when I was authored",
+        making the field a dated note that nothing acts on afterwards.
+
+  BOTH ARE WRONG, AND THE SECOND IS WRONG IN THE DANGEROUS DIRECTION. The marker is a BUILD
+  PRECONDITION: a statement about the tree AT THE MOMENT THIS RECORD'S WORK IS BUILT.
+  `existing` = "the work expects to find this path"; `to_be_created` = "the work must not
+  assume this path is present". It is forward-looking, it is evaluated against the tree as it
+  now stands for as long as the work is pending, and it goes inert when the work is built
+  because A PRECONDITION FOR WORK THAT HAS HAPPENED IS SPENT.
+
+  WHY OWNERSHIP IS DEAD, AND WHAT WOULD HAVE HAD TO BE TRUE FOR IT. Two things, neither of
+  which holds. (1) The enum would need a third value, or a separate owner field, because a
+  record whose work EDITS a file a SIBLING CREATES -- the ordinary shape of any multi-record
+  family building one module -- has no honest value available: `to_be_created` would be false
+  (its work does not create the file) and `existing` equally false (the file is not there to
+  find, at authoring time or at build time if it builds first). Nine of the fifteen measured
+  declarations are exactly that shape. (2) `to_be_created` + present on an unfinished record
+  would have to be a REFUSAL, not a report, because a non-creator asserting "I create this"
+  is simply false and nothing about it is salvageable. It is advisory by explicit design, and
+  ACD-1600c-4-i's own notes name the benign case: "it can also be legitimate mid-build (the
+  file was created by the work in progress)". A field cannot mean a thing its enforcement is
+  deliberately built not to enforce.
+
+  WHY THE HISTORICAL READING IS ALSO WRONG, AND THIS IS THE PART THAT MATTERS MOST BECAUSE IT
+  IS THE LEAN. Taken seriously it makes the field INERT -- a dated note nothing reads -- and
+  that is falsified by the one piece of live enforcement the field has: `existing` + absent on
+  an unfinished record is a BLOCKING REFUSAL (ACD-1600c-4-i). Nothing blocks a merge over a
+  stale historical note. That refusal only makes sense if the declaration is a claim about the
+  tree THE WORK WILL BE BUILT AGAINST, and ACD-1600c-4-i's notes give exactly that reason:
+  "'Neither present nor marked' is a claim that cannot be true of any repository state, so it
+  refuses" -- i.e. the precondition is UNSATISFIABLE, so the work cannot proceed. So the field
+  is read, and acted on, for precisely as long as the work is pending.
+
+  AND THE CONSEQUENCE OF GETTING THIS WRONG IS A DISARMED GATE, WHICH IS WHY THE LEAN IS
+  OVERTURNED RATHER THAN ADOPTED. Under the historical reading the three reports on
+  TQ-600a-13-x are a gate complaining about a non-problem, and the natural next step -- raised
+  as a live option when the question was put -- is to extend the exemption to unfinished
+  records too. THAT WOULD BE A MISTAKE. The same comparison that produces those three advisory
+  lines is the comparison that produces the `existing` + absent refusal; they are one check
+  with two outcomes. Exempting unfinished records to quiet the advisory half would reach into
+  the branch that is doing real work. The reports should be RELABELLED, not silenced, and that
+  is what this AC's criteria do.
+
+  THE PRECONDITION READING ALSO EXPLAINS THE ASYMMETRY, WHICH NEITHER OTHER READING DOES.
+  Refuse `existing` + absent; only report `to_be_created` + present. On the precondition
+  reading that is not an arbitrary choice of severity -- it is actionability. An unsatisfiable
+  "I expect to find this" blocks the build. A "do not assume this is present" that turns out to
+  be present does NOT block anything: the work proceeds, editing rather than creating. The
+  advisory exists because that condition has two causes and the check cannot tell them apart.
+  The safe declaration for a record that cannot guarantee build order is `to_be_created`, and
+  the asymmetry exists so that the safe declaration is never punished.
+
+  WHAT THE STORE'S OWN PROSE SUPPORTS, read again with the precondition reading in hand -- it
+  fits all three passages, where the historical reading fits only the middle one:
+    - ACD-1600c-4's it_requirements: the value was renamed `exists` -> `existing` "so the
+      authored claim cannot be confused with the observed state the pre-pass reports". An
+      authored claim about the build tree, held separately from an observation. Exactly a
+      precondition.
+    - ACD-1600c-4-i's notes: "the marker records intent at authoring time" -- intent being
+      forward-looking, which is the precondition and not a snapshot.
+    - ACD-1600c-4-iv's notes: "The file was present when the work was done; the declaration
+      was true then" -- the precondition held at build time, which is when it had to hold.
+
+  SO THE DEFECT IS NARROWER THAN FIRST FILED, AND BETTER LOCATED. The exemption is right; the
+  reason "because the finished work is what created it" is wrong; and the CORRECT reason is
+  neither "it was true when authored" (which would make the field inert) nor anything about
+  creation -- it is that THE PRECONDITION IS SPENT. That reason is true of all 12 exempted
+  entries, creator and consumer alike, which is exactly what the filed reason is not.
+
+  ==========================================================================
+  WHAT FOLLOWS: RIGHT BEHAVIOUR, WRONG REASON, AND AN INVISIBLE CONDITION.
+  ==========================================================================
+  Under reading A the EXEMPTION IS CORRECT -- a declaration that was true when authored should
+  not generate a commit-time report forever after, on a finished record nobody can act on.
+  ACD-1600c-4-i's behaviour therefore stands and this AC does not disturb it. What changes is
+  the reason, and the reason is load-bearing in one specific way: it is what makes the
+  condition look accounted-for. "The finished work created it" reads as a complete explanation
+  of every exempted entry, so nobody asks how many exempted entries there are, or how many of
+  them that sentence is actually true of.
+
+  THE MEASUREMENT, taken 2026-10-12 across the three paths TQ-600a-13-x declares
+  (scripts/ci/post_merge_hold.py, scripts/ci/post_merge_notice.py,
+  scripts/ci/post_merge_tunables.json), all three of which exist in the tree:
+
+      15  `to_be_created` declarations in total
+           hold.py 7 (-vi, -iv, -vii, -viii, -ix, -x, -xiv)
+           notice.py 6 (-iii, -iv, -v, -x, -xii, -xiii)
+           tunables.json 2 (-ii, -x)
+       3  on the CREATING record (-vi created hold.py, -iii created notice.py,
+          -ii created tunables.json) -- the three the rationale is true of
+       9  on `done` records whose work did NOT create the path -- silently absolved by a
+          sentence that is false of every one of them
+       3  on TQ-600a-13-x, the one record still `todo` -- the ONLY three a report names
+
+  So the rationale is true of 3 of the 12 exempted declarations and false of 9, and the 12 are
+  invisible while the 3 that are visible belong to the one record that has not even been built
+  yet. A reader who meets the three advisory lines has no way to learn that twelve more
+  instances sit behind the exemption.
+
+  WHAT THIS AC ADDS, IN TWO PARTS, AND THE SECOND IS THE ONE THAT CHANGED ONCE THE SEMANTICS
+  WERE SETTLED.
+
+  (a) FOR FINISHED RECORDS: one section in the single store-wide declared-files report,
+  counting the exempted entries and stating per line whether the record's own implemented-by
+  list names the path -- the mechanical signal separating the one creator from the nine
+  consumers, available from the store without any new field. Posture copied from
+  ACD-1600c-4-iv: informational, never exit non-zero, never raised at commit time, never
+  rewrites a record. This is bookkeeping: the entries are spent preconditions and the only
+  thing wrong with them was that nobody could count them.
+
+  (b) FOR UNFINISHED RECORDS: the live advisory is RELABELLED so it names its cause. Today a
+  single sentence -- "marked to be created but already exists" -- covers two conditions with
+  opposite meanings: a precondition a SIBLING SATISFIED EARLY (the author was right, and chose
+  the safe marker) and a marker NO RECORD ACCOUNTS FOR (the author was wrong). The check can
+  tell them apart mechanically, from the store alone: does any other record declare this path,
+  and is that record finished? Nothing new needs to be stored. This is the half that is worth
+  building, because the current wording makes a correct declaration look like a mistake, which
+  is what invites the two bad fixes below.
+
+  WHY NEITHER BAD FIX. Refusing at commit time would hold unrelated commits hostage to another
+  record's file lifecycle -- the failure ACD-1600c-4-iv exists to prevent. SILENCING the
+  unfinished advisory, which is the step the historical reading invites, would reach into the
+  branch that produces the `existing` + absent REFUSAL, since both outcomes come from one
+  comparison. And re-marking the nine entries to `existing` would assert a precondition those
+  records cannot guarantee, converting an advisory into a latent blocking refusal keyed on
+  another record's build order -- the trade TQ-600a-13-x's notes refuse for the same reason.
+
+  ==========================================================================
+  ONE OPEN QUESTION, NAMED NARROWLY SO IT CAN BE TESTED RATHER THAN RE-DEBATED.
+  ==========================================================================
+  The precondition reading above was reached from the AC store and the validator's observable
+  behaviour ONLY. This record's author does not read source, by design, so one thing is
+  asserted rather than verified: THAT THE FIELD'S CONSUMERS TREAT IT AS A BUILD PRECONDITION
+  AND NOT AS A SNAPSHOT. The falsifiable form, for whoever checks it:
+
+      In scripts/ac_store/declared_files.py and its four declared consumers -- the
+      implementation-readiness gate (ACD-1600c-1/-2), the ticket generator (TKT-600a-3/-3-i),
+      the requirement rule check (ACD-2500a-3, ACD-2500c-1-i) and the file-aware pre-pass
+      (ACD-2500d-5-i) -- is `state` used to decide what the WORK WILL DO (expect to find vs
+      expect to create), or is it compared to the tree as a correctness assertion about the
+      record?
+
+  IF THE CONSUMERS TREAT IT AS A CORRECTNESS ASSERTION, the precondition reading is wrong about
+  the field as built (though it would remain the right design), and the relabelling in clause
+  (b) would need re-deriving. WHAT WOULD NOT CHANGE EITHER WAY: the ownership reading stays
+  dead (its two defeats are in the enum's arity and the advisory-by-design severity, neither of
+  which is a source-level fact), the `done` exemption's stated reason stays wrong for shared
+  paths, and TQ-600a-13-x's three entries stay as they are -- that decision holds under all
+  three readings, for three different reasons.
+
+  ==========================================================================
+  THE RETIRED-RECORD CLAUSES ARE A SEPARATE FINDING, MADE 2026-10-12 BY RUNNING THE VALIDATOR
+  RATHER THAN BY READING THE STORE. FLAGGED FOR THE USER AT THE APPROVAL GATE.
+  ==========================================================================
+  THIS WAS NOT PART OF WHAT WAS APPROVED FOR FILING, AND IT CORRECTS THE REPORT THAT PRECEDED
+  IT. The finding as escalated said TQ-600a-13-x's three entries were "the only visible
+  instance" of the condition. That was wrong. `validate_ac_schema.py` over the whole store
+  (5,036 records, 2026-10-12) emits SIX report lines across FOUR records:
+
+      TQ-600a-13-x       3 lines  (work_status todo, approved, awaiting build)
+      TQ-600a-11         1 line   (status deprecated, work_status todo)
+      TQ-600a-11-ii      1 line   (status deprecated, work_status todo)
+      TQ-600a-11-iii     1 line   (status deprecated, work_status todo)
+
+  THE SECOND GROUP IS A COLLISION BETWEEN TWO CURES, AND IT IS THE INTERESTING HALF. The
+  TQ-600a-11 family was RETIRED, following the retirement shape INF-600b-2 documents, which
+  mandates `work_status: done -> todo` on the ground that "done is a claim about the tree and
+  not about the past". That demotion is correct on its own terms. But the already-exists
+  exemption is keyed on `work_status: done` -- so retiring a record UN-EXEMPTS its declared
+  files and converts a silent, correct exemption into a PERMANENT advisory report. Their work
+  genuinely created those paths; the paths are still there; and the records now report
+  drift forever.
+
+  WHAT MAKES IT WORSE THAN ORDINARY NOISE: IT IS UNCLEARABLE BY CONSTRUCTION. Every other
+  instance of this report has an exit -- build the work and the record goes `done` and the
+  report stops. A retired record has no such exit, because the only work that would clear it
+  is work that was deliberately retired. So the report asks for something it is a contradiction
+  to supply, which is precisely the failure mode INF-600b-2's retirement block already
+  describes for three OTHER gates: "each refusal offers remedies that are locally reasonable
+  and globally wrong ... every one of them is a way of making a retired record look alive".
+  This is a fourth gate with the same property, found the same way, and it is not in that
+  block's list because the list predates the `declared_files` field.
+
+  WHY THE CLAUSES ARE IN THIS AC RATHER THAN A SIXTH SIBLING, AND THE USER MAY OVERRULE THIS.
+  The argument for splitting is real: the retired case keys on `status`, not `work_status`, so
+  it is a different population and a different branch. The argument against, which decided it,
+  is that this AC's SUBJECT IS THE EXEMPTED POPULATION AND ITS COUNTABILITY. Splitting the
+  exemption population across two records would mean no single record states who is exempted
+  and why -- recreating, inside the fix, the exact "cannot see the whole population" defect the
+  fix exists to remove. The three sections are also one report, as ACD-1600c-4-ii requires.
+  If the user prefers the split at the approval gate, the retired clauses lift out cleanly
+  into ACD-1600c-4-vi: they are the final Given/When/Then group and share no clause with the
+  rest. There is room either way -- the L3 level carries no child cap (check_ac_limits caps
+  only L1-per-L0 at 7 and L2-per-L1 at 5), though note ACD-1600c itself is AT its 5-L2 cap, so
+  anything here must be an L3 under ACD-1600c-4 and cannot become a new L2.
+
+  ==========================================================================
+  THE SHAPE: A CONDITION ON WORK, EVALUATED AGAINST A TREE SOMEBODY ELSE CAN MOVE.
+  ==========================================================================
+  Filed as the fourth member of the canonical list in INF-600b-2's notes, and recorded there as
+  the most common member BECAUSE IT NEEDS NO ERROR TO OCCUR. The full write-up is there; the
+  short form, so this record stands on its own.
+
+  `declared_files[].state` states a condition on the tree at THIS record's build time, but it
+  is evaluated against the tree AS IT NOW STANDS, and the tree is moved by OTHER RECORDS' WORK.
+  So the declared and observed states diverge with NOBODY MAKING A MISTAKE -- which is what
+  separates this from shape (2), where a true fact about the past was deliberately parked in a
+  present-tense field and defended. Here nothing was parked and nothing was defended: the
+  declaration was correct, is still correct as a condition, and merely got SATISFIED EARLY by a
+  sibling.
+
+  THE DEFECT IS NOT THE DIVERGENCE -- IT IS THAT THE CHECK CANNOT NAME ITS CAUSE, AND THE
+  WORDING PICKS THE WRONG ONE. "Marked to be created but already exists" describes a satisfied
+  precondition and a wrong declaration in the same words, and reads as the second. So a correct
+  record looks negligent, which is what makes a reader reach for a tidy-up that either arms a
+  blocking refusal (re-mark to `existing`) or disarms a live gate (silence the advisory). THE
+  REPORT'S INABILITY TO DISTINGUISH IS THE BUG; the divergence is normal operation.
+
+  AND ONE HALF IS UNFINDABLE ON TOP OF THAT: once `work_status: done` the condition is EXEMPTED
+  RATHER THAN FLAGGED, so no gate ever surfaces it and nobody can count the population. The
+  exemption is right -- a spent precondition has nothing left to check -- but the reason given
+  for it is wrong, and a complete-sounding wrong reason is what stops anyone asking for the
+  count. Hence the two-part cure above: COUNT the spent ones, RELABEL the live ones. Neither
+  half is a refusal, because neither condition is an error.

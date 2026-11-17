@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given requirement R carries a file finding from the file-aware step with no recorded decision,
     and requirement S carries a file finding whose recorded decision is "assignment stands" with a
@@ -88,7 +88,8 @@ created: '2026-09-25'
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/39_TICKET-20261012-ACD-2500d-3-i.md
 change_target:
 - code
 - schema
@@ -100,3 +101,24 @@ notes: |
   A letter split of ACD-2500d-3 (d-3a/d-3b) would take ACD-2500d over the 5-L2 cap, so the
   deterministic half is this L3 instead. Its clauses restate those parents' approval-hold and
   hand-back behaviour at the approval step; no new behaviour is added. BA to review at the final gate.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: finalGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'
+  - flow: leafcutter/ac-lifecycle
+    node: handback
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

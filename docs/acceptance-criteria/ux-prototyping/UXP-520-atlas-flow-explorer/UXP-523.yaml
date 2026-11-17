@@ -32,7 +32,11 @@ origin_agent: BrainCandy
 created: 2026-07-14
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- UXP-523-1
+- UXP-523-2
+- UXP-523-3
+- UXP-523-4
 implemented_by:
   - leafcutter-web/components/flows/flow-drawer.tsx
   - leafcutter-web/components/flows/flow-explorer.tsx

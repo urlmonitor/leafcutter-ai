@@ -1,0 +1,203 @@
+id: KM-400a-1-i
+title: AC metadata retains the complete authored requirement and its test contract
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+priority: medium
+work_status: done
+parent: KM-400a-1
+criteria: |
+  Given an accepted AC has id KM-400a-1, a multiline criteria value, component knowledge-management,
+  components [knowledge_management], status active, readiness reviewed and work_status done
+  And it declares nested test_spec, doc_links, amended_by, pattern_bindings, delivers_to and expects_from values
+  When that AC's native fields are exposed as graph metadata from the selected source revision
+  Then the complete authored record is available, including criteria and every supplied schema field
+  And lifecycle, priority, level, assignment, implementation references, coverage references and test declarations retain their independent meanings
+  And each nested test declaration retains its own name, target, description and coverage references without mixing values between entries
+  And the scalar component namespace remains distinct from the components membership list
+  And source list order, duplicates, multiline text, typed dates, false, zero, explicit null and empty containers are preserved
+  And an omitted optional field remains omitted even when its authoring schema defines a default
+  And exposure creates no approval, parent relationship or passing-test claim that the source did not declare
+
+  Given the selected source contains duplicate AC IDs or an AC rejected by the canonical AC validation rules
+  When native AC metadata is prepared
+  Then the invalid source is reported explicitly and is not silently collapsed or presented as a valid complete AC
+depends_on: [KM-400a-1]
+doc_links:
+- path: docs/reference/ac-schema.md
+  relationship: describes
+  status: exists
+- path: reports/native-fields/review-AcceptanceCriterion.json
+  relationship: context
+  status: exists
+- path: reports/native-fields/code-AcceptanceCriterion.json
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+- path: reports/native-fields/ac-linked-strict.xml
+  relationship: verifies
+  status: exists
+  relevance: 'Fresh strict execution after criterion-specific test tags: 388 passed and one Windows symlink-privilege
+    skip across 19 focused modules. Per-type cases resolve through the test catalog; no live database rerun is implied.'
+- path: docs/reference/ac-schema.md
+  relationship: describes
+  status: exists
+- path: reports/native-fields/review-AcceptanceCriterion.json
+  relationship: context
+  status: exists
+- path: reports/native-fields/code-AcceptanceCriterion.json
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-02'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_native_acceptance_criterion.py::test_all_schema_fields_survive_validated_source_extraction
+- tests/knowledge/test_native_acceptance_criterion.py::test_absent_defaults_and_yaml_date_strings_remain_authored
+- tests/knowledge/test_native_acceptance_criterion.py::test_configured_surface_is_used_and_non_records_are_excluded
+- tests/knowledge/test_native_acceptance_criterion.py::test_invalid_source_is_rejected_by_existing_validator
+- tests/knowledge/test_native_acceptance_criterion.py::test_duplicate_ids_are_not_collapsed
+- tests/knowledge/test_native_acceptance_criterion.py::test_source_cannot_escape_supplied_snapshot
+- tests/knowledge/test_native_acceptance_criterion.py::test_metadata_does_not_alias_another_extraction
+- tests/knowledge/test_native_metadata_integration.py::test_authored_and_derived_fields_survive_payload_and_physical_projection
+implemented_by:
+  - knowledge/native_types/acceptance_criterion.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Retrospective type-specific refinement of the delivered KM-400a-3-i metadata contract.
+  The field review distinguishes required-for-authoring fields from optional authored fields;
+  this criterion does not require every AC to contain every optional schema field.
+  The reader receipt verifies all 47 schema fields in a validated fixture and records prior
+  failure, passing and mutation evidence. Criterion-specific test links were added during IT PO review. This reviewed specification
+  does not assert user approval or a newly executed test result.
+  Final bidirectional traceability and strict test evidence: reports/native-fields/ac-traceability.json.
+  Work status reflects linked test outcomes; reviewed readiness does not assert user approval.
+estimated_complexity: M
+it_requirements:
+- 'Canonical AC validation remains authoritative: invalid input fails explicitly, and accepted input is not repaired
+  by inserting schema defaults or inferred lifecycle fields.'
+- Source containment and independent returned metadata must hold without changing the AC store or its authored requirement/test
+  declarations.
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+- name: test_all_schema_fields_survive_validated_source_extraction
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: All schema fields survive validated source extraction.
+  covers:
+  - KM-400a-1-i
+- name: test_absent_defaults_and_yaml_date_strings_remain_authored
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Absent defaults and yaml date strings remain authored.
+  covers:
+  - KM-400a-1-i
+- name: test_configured_surface_is_used_and_non_records_are_excluded
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Configured surface is used and non records are excluded.
+  covers:
+  - KM-400a-1-i
+- name: test_invalid_source_is_rejected_by_existing_validator
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Invalid source is rejected by existing validator.
+  covers:
+  - KM-400a-1-i
+- name: test_duplicate_ids_are_not_collapsed
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Duplicate ids are not collapsed.
+  covers:
+  - KM-400a-1-i
+- name: test_source_cannot_escape_supplied_snapshot
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Source cannot escape supplied snapshot.
+  covers:
+  - KM-400a-1-i
+- name: test_metadata_does_not_alias_another_extraction
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Metadata does not alias another extraction.
+  covers:
+  - KM-400a-1-i
+- name: test_authored_and_derived_fields_survive_payload_and_physical_projection
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: AcceptanceCriterion fixture validates typed authored and derived properties through Entity payload
+    and physical projection.
+  covers:
+  - KM-400a-1-i
+test_rationale: The verified catalog supplies exact existing reader-function anchors, including source-fixture,
+  boundary and failure checks. Only catalog-confirmed type-specific integration links are added. Shared lossless
+  property encoding, physical Neo4j publication, readback and retained-generation behavior remain covered by KM-400a-3-i;
+  these focused tests do not claim 17 independent live database journeys. This is retrospective traceability over
+  dated implementation receipts, not a newly performed TDD sequence. Subsequent strict execution is separately recorded
+  in reports/native-fields/ac-linked-strict.xml (388 passed, one skipped); no database test was rerun for these
+  annotation-only changes.

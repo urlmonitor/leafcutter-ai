@@ -71,10 +71,18 @@ documentation_triggers:
   - reference-doc
 origin_agent: BrainCandy
 created: 2026-09-14
-amended_by: []
+amended_by:
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "covered_by listed only GE-128a-1, which is retired (status superseded_by, superseded_by TQ-100b-4-iii, done), so check-done-proof had no live child to derive this L1 from; under the current source it would fall back to this L1's own covers tag, which an L1 should never carry (KI-ACS-016 resolution, 'Not done here'). GE-128a-1 was never the ratchet: it was the no-crash precondition of the check that will judge it, and that is now owned by TQ-100b-4-iii (a TQ id, not a child of this record). The ratchet itself, which these criteria and notes specify, had no child at all. Not superseded, because no other record owns the per-file undeclared-test ratchet. New live children: GE-128a-2 (growth refused, paired with the same file edited otherwise allowed, the notes' mandatory negative arm) with L3 GE-128a-2-i (bulk, generated and merge changes get no implicit exemption), GE-128a-3 (same or lower allowed, judged against the file's own previous count and no target), GE-128a-4 (the mode is explicitly chosen and reported, without deciding which), and documentation children GE-128a-5 (how-to) and GE-128a-6 (reference-doc) for this record's documentation_triggers. The no-previous-version case is left to GE-128b as the notes require. GE-128a-1 stays in covered_by for the audit trail; its scalar superseded_by is a valid schema form and was not changed. work_status untouched."
 superseded_by: null
 covered_by:
   - GE-128a-1
+  - GE-128a-2
+  - GE-128a-3
+  - GE-128a-4
+  - GE-128a-5
+  - GE-128a-6
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

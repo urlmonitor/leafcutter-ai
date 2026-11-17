@@ -139,12 +139,17 @@ DECISION HISTORY
 
 from __future__ import annotations
 
+import io
 import json
 import re
 import shutil
 import subprocess
 import sys
+import tokenize
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _file_size_measure_copy import copy_measure_package  # noqa: E402
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _COMMIT_GUARDIAN_SRC = _REPO_ROOT / "templates" / "scripts" / "commit_guardian"
@@ -235,6 +240,7 @@ def copy_production_modules(dest: Path) -> None:
     dest.mkdir(parents=True, exist_ok=True)
     for name in PRODUCTION_MODULES:
         shutil.copy2(_COMMIT_GUARDIAN_SRC / name, dest / name)
+    copy_measure_package(dest)
 
 
 def build_fixture_tree(root: Path, *, line_limit: int = 5, checked_extensions: list[str] | None = None) -> Path:
@@ -344,6 +350,34 @@ def parse_discard_categories(measures_text: str | None) -> set[str]:
     return categories
 
 
+def independent_python_measure(content: str) -> int:
+    """Re-derive a Python file's measured length from the PUBLISHED rule alone (GE-127d-3).
+
+    The rule the gate now publishes is comment-blind and string-role-aware, which the
+    category regexes of ``independent_count_content_lines`` cannot express. This is
+    built on the stdlib tokenizer, never on production code: a line holding only a
+    comment is not counted, a statement consisting solely of string tokens (a docstring
+    or bare string) is not counted on any of its lines, and BLANK LINES NEVER COUNT
+    (BrainCandy 2026-10-21): a physical line counts only if it is non-blank and holds a
+    code token -- including each non-blank line of a used multi-line string.
+    """
+    lines = content.splitlines()
+    counted: set[int] = set()
+    statement: list[tokenize.TokenInfo] = []
+    skip = {tokenize.NL, tokenize.COMMENT, tokenize.INDENT, tokenize.DEDENT, tokenize.ENCODING}
+    for tok in tokenize.generate_tokens(io.StringIO(content).readline):
+        if tok.type in (tokenize.NEWLINE, tokenize.ENDMARKER):
+            if statement and not all(t.type == tokenize.STRING for t in statement):
+                for t in statement:
+                    counted.update(
+                        row for row in range(t.start[0], t.end[0] + 1) if row <= len(lines) and lines[row - 1].strip()
+                    )
+            statement = []
+        elif tok.type not in skip:
+            statement.append(tok)
+    return len(counted)
+
+
 def independent_count_content_lines(content: str, categories: set[str]) -> int:
     """Re-derive a line count from *content*, driven ONLY by *categories*.
 
@@ -438,6 +472,51 @@ def mutate_rule_to_also_discard_hash_comments(dest: Path) -> None:
     path.write_text(original + override, encoding="utf-8")
 
 
+def mutate_rule_to_stop_counting_blank_lines(dest: Path) -> None:
+    """Change the rule in force on the fixture's OWN copy so blank lines stop counting.
+
+    GE-127d-3 rewrite of the seam descriptor's mutation: discarding '#' comments is
+    a no-op under the rule now in force, but dropping blank lines still moves a
+    file's length. Same reassign-at-module-level mechanism as the hash-comment
+    mutation above (appended, never edited in place); it wraps whatever
+    ``count_content_lines`` is bound at that point.
+    """
+    path = dest / "_file_size_ratchet.py"
+    original = path.read_text(encoding="utf-8")
+    override = (
+        "\n\n"
+        "# TEST-INJECTED MUTATION (GE-127d-3/test-writer): blank lines stop counting.\n"
+        "_ORIGINAL_COUNT_CONTENT_LINES_BLANKS = count_content_lines\n"
+        "\n\n"
+        "def count_content_lines(content, *args, **kwargs):  # noqa: F811 -- intentional test override\n"
+        "    kept = [ln for ln in content.splitlines() if ln.strip()]\n"
+        "    return _ORIGINAL_COUNT_CONTENT_LINES_BLANKS(\"\\n\".join(kept), *args, **kwargs)\n"
+    )
+    path.write_text(original + override, encoding="utf-8")
+
+
+def mutate_rule_to_count_blank_lines_again(dest: Path) -> None:
+    """Change the rule in force on the fixture's OWN copy so blank lines COUNT again.
+
+    Blank lines never count in the rule in force (BrainCandy 2026-10-21), so this
+    mutation moves a file's length (and the published statement) under that rule.
+    Same appended-redefinition mechanism as the other mutations; it wraps whatever
+    ``count_content_lines`` is bound at that point.
+    """
+    path = dest / "_file_size_ratchet.py"
+    original = path.read_text(encoding="utf-8")
+    override = (
+        "\n\n"
+        "# TEST-INJECTED MUTATION (GE-127d-3/test-writer): blank lines count again.\n"
+        "_ORIGINAL_COUNT_CONTENT_LINES_COUNT_BLANKS = count_content_lines\n"
+        "\n\n"
+        "def count_content_lines(content, *args, **kwargs):  # noqa: F811 -- intentional test override\n"
+        "    total = _ORIGINAL_COUNT_CONTENT_LINES_COUNT_BLANKS(content, *args, **kwargs)\n"
+        "    return total + sum(1 for ln in content.splitlines() if not ln.strip())\n"
+    )
+    path.write_text(original + override, encoding="utf-8")
+
+
 def write_precommit_config(root: Path) -> None:
     """Write a `.pre-commit-config.yaml` wiring the check-file-size hook ALONE."""
     body = (
@@ -451,6 +530,7 @@ def write_precommit_config(root: Path) -> None:
         "        language: system\n"
         "        pass_filenames: false\n"
         "        always_run: true\n"
+        "        verbose: true\n"
     )
     (root / ".pre-commit-config.yaml").write_text(body, encoding="utf-8")
 

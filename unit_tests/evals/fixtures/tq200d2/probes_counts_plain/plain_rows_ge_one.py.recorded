@@ -1,0 +1,31 @@
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, "scripts")
+from db_check.checker import resolve_test_db_address
+
+import psycopg2
+
+
+class TestBuyVolumeWindow(unittest.TestCase):
+    def setUp(self):
+        self.conn = psycopg2.connect(resolve_test_db_address(Path.cwd()))
+        self.conn.autocommit = False
+
+    def tearDown(self):
+        self.conn.rollback()
+        self.conn.close()
+
+    def test_every_row_has_non_negative_buy_volume(self):
+        # covers: TQ-9502
+        seeded_volumes = [125.5, 0, 7.25]
+        with self.conn.cursor() as cur:
+            cur.executemany(
+                "INSERT INTO trades (symbol, buy_volume) VALUES (%s, %s)",
+                [("TQ9502", v) for v in seeded_volumes],
+            )
+            cur.execute("select buy_volume from buy_volume_window where symbol = %s", ("TQ9502",))
+            rows = cur.fetchall()
+        assert len(rows) >= 1
+        assert len([r for r in rows if r[0] is not None]) == len(seeded_volumes)

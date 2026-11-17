@@ -1,0 +1,185 @@
+id: KM-400a-1-ii
+title: ADR metadata distinguishes authored document fields from decision status in its body
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+priority: medium
+work_status: done
+parent: KM-400a-1
+criteria: |
+  Given an ADR declares title, type, status, created, last_updated and components
+  And it may also declare description, deciders, affects_diagrams, labeled related_docs or related_code references and extension fields
+  When the ADR's native fields are exposed as graph metadata from the selected source revision
+  Then every authored frontmatter value remains available with its original value and structure
+  And the complete Markdown body is available separately from that frontmatter
+  And document status active remains distinct from a body decision status Accepted
+  And the first applicable body status table retains its ordered labels, raw values and source locations
+  And a convenience decision status, date, author or supersedes value is supplied only from an unambiguous corresponding row
+  And later unrelated tables and free prose cannot manufacture those convenience values
+  And explicit source identity is retained, or the existing complete document identity is used without shortening it to an ADR number
+
+  Given a legacy ADR omits frontmatter or fields required by current authoring guidance
+  When its metadata is exposed
+  Then its authored content remains available and the missing source fields remain absent
+  And source diagnostics distinguish missing or unconventional fields from filled-in defaults
+  And a body Supersedes value of None remains source text rather than becoming an invented null field
+depends_on: [KM-400a-1]
+doc_links:
+- path: docs/how-to/documentation/write-adr.md
+  relationship: describes
+  status: exists
+- path: reports/native-fields/review-ADR.json
+  relationship: context
+  status: exists
+- path: reports/native-fields/code-ADR.json
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+- path: reports/native-fields/ac-linked-strict.xml
+  relationship: verifies
+  status: exists
+  relevance: 'Fresh strict execution after criterion-specific test tags: 388 passed and one Windows symlink-privilege
+    skip across 19 focused modules. Per-type cases resolve through the test catalog; no live database rerun is implied.'
+- path: docs/how-to/documentation/write-adr.md
+  relationship: describes
+  status: exists
+- path: reports/native-fields/review-ADR.json
+  relationship: context
+  status: exists
+- path: reports/native-fields/code-ADR.json
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-02'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_native_adr.py::test_native_adr_preserves_all_frontmatter_types_without_defaults
+- tests/knowledge/test_native_adr.py::test_native_adr_legacy_missing_frontmatter_remains_a_record
+- tests/knowledge/test_native_adr.py::test_native_adr_distinguishes_document_status_and_guide_disagreements
+- tests/knowledge/test_native_adr.py::test_native_adr_only_reads_first_direct_status_table_and_keeps_unknown_rows
+- tests/knowledge/test_native_adr.py::test_native_adr_respects_configured_surface_and_existing_id_override
+- tests/knowledge/test_native_adr.py::test_native_adr_real_sources_retain_complete_fields_and_legacy_body
+implemented_by:
+  - knowledge/native_types/adr.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Retrospective type-specific refinement of KM-400a-3-i. ADR authoring guidance,
+  scaffolds and mechanical validation disagree on some required fields; ingestion must
+  preserve that source truth instead of repairing historical records. Extension fields
+  such as amended, requires_ac and tags are retained when present, not required on every ADR.
+  The receipt records source-corpus comparison and mutation evidence. Criterion-specific test links and IT PO review are recorded;
+  this reviewed specification does not claim user approval or a new execution result.
+  Final bidirectional traceability and strict test evidence: reports/native-fields/ac-traceability.json.
+  Work status reflects linked test outcomes; reviewed readiness does not assert user approval.
+estimated_complexity: M
+it_requirements:
+- Existing source identity and safe source decoding remain compatible with legacy ADRs; guidance disagreements are
+  diagnostics, not permission to repair historical frontmatter.
+- Derived status-table observations retain their own source attribution and must not be treated as an approved replacement
+  for the authored document fields.
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+- name: test_native_adr_preserves_all_frontmatter_types_without_defaults
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Native adr preserves all frontmatter types without defaults.
+  covers:
+  - KM-400a-1-ii
+- name: test_native_adr_legacy_missing_frontmatter_remains_a_record
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Native adr legacy missing frontmatter remains a record.
+  covers:
+  - KM-400a-1-ii
+- name: test_native_adr_distinguishes_document_status_and_guide_disagreements
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Native adr distinguishes document status and guide disagreements.
+  covers:
+  - KM-400a-1-ii
+- name: test_native_adr_only_reads_first_direct_status_table_and_keeps_unknown_rows
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Native adr only reads first direct status table and keeps unknown rows.
+  covers:
+  - KM-400a-1-ii
+- name: test_native_adr_respects_configured_surface_and_existing_id_override
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: seam
+  description: Native adr respects configured surface and existing id override.
+  covers:
+  - KM-400a-1-ii
+- name: test_native_adr_real_sources_retain_complete_fields_and_legacy_body
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: Native adr real sources retain complete fields and legacy body.
+  covers:
+  - KM-400a-1-ii
+test_rationale: The verified catalog supplies exact existing reader-function anchors, including source-fixture,
+  boundary and failure checks. Only catalog-confirmed type-specific integration links are added. Shared lossless
+  property encoding, physical Neo4j publication, readback and retained-generation behavior remain covered by KM-400a-3-i;
+  these focused tests do not claim 17 independent live database journeys. This is retrospective traceability over
+  dated implementation receipts, not a newly performed TDD sequence. Subsequent strict execution is separately recorded
+  in reports/native-fields/ac-linked-strict.xml (388 passed, one skipped); no database test was rerun for these
+  annotation-only changes.

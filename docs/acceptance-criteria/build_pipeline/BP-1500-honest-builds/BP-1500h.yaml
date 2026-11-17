@@ -1,0 +1,65 @@
+id: BP-1500h
+title: "A setting you leave blank means 'not set', never a broken location"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L1
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Leave a file location empty, and every part of the build reads it as off.
+
+  An empty file location in your settings means one thing everywhere: that
+  feature is not configured. No part of the build tries to open your project
+  folder as if it were the file, and no part skips the work silently -- what
+  was not configured is said once, the same way, wherever it is read.
+depends_on:
+  - BP-1500
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500.yaml
+    relationship: related
+    status: exists
+    relevance: "Parent promise: the build's account of its work is complete and true. A blank setting today produces either an error about a folder that was never meant to be read, or a step that silently does nothing -- both false accounts."
+  - path: templates/agents/changelog-agent.md
+    relationship: modifies
+    status: exists
+    relevance: "Its instructions (around line 104) describe the blank-location case and must agree with the single meaning settled here."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500b-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Why this is h and not f: f is reserved by name in BP-1500b and BP-1500b-3-i for lifting the general 'an unexamined check must not look like a satisfied one' rule."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1500h-1
+  - BP-1500h-2
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "A blank setting's meaning becomes uniform; no new user-facing surface. The one place instructions describe the case is corrected in place."
+notes: |
+  USER DECISION 2 (BrainCandy, 2026-10-12), BINDING: an empty file location is
+  "not configured", decided in ONE place that every reader uses. The source
+  analysis found three readers with three behaviours today -- one joins the
+  blank to the project folder and then fails reading it as a file, one skips
+  silently, one already treats it as unset. The third is the precedent.
+
+  PLACEMENT. This consumes BP-1500's SEVENTH and last L1 slot (7/7, no
+  child_limit_override). f stays reserved, as recorded in BP-1500b,
+  BP-1500b-3-i and build_pipeline/PROJECT_CONTEXT.md. Any further BP-1500 L1
+  needs a waiver or a new L0 -- including the reserved f, which now can only
+  be taken by a waiver or a split. FLAGGED for the user: if the reserved lift
+  matters more than this fix, move this record instead (it is small enough to
+  sit as an L2 elsewhere). The design names this a small one-off that could go
+  straight to /build-ac; it was authored at L1 because the orchestrator asked
+  for it in this tree.
+
+  "SAID ONCE" IS DELIBERATE. The opposite of a silent skip is not a warning
+  repeated by every reader; that would add exactly the noise AR-400 removes.

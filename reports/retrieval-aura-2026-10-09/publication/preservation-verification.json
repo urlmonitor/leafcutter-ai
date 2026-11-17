@@ -1,0 +1,25 @@
+{
+  "checked_at": "2026-10-09T21:36:56.314653+00:00",
+  "baseline_original_files": 202,
+  "baseline_addenda_files": 3,
+  "stage1_closed_files": 267,
+  "closed_runtime_fingerprint_files": {
+    "baseline": 356,
+    "stage1": 359
+  },
+  "verification_methods": {
+    "unchanged_original_bytes": 1168,
+    "exact_path_and_hash_archive": 17,
+    "exact_recorded_git_blob": 2
+  },
+  "historical_archive_entries": 8,
+  "path_only_or_wrong_hash_resolution_rejected": true,
+  "local_only_databases_verified": 16,
+  "local_html_links_checked": 60,
+  "current_helpers_verified": 6,
+  "prior312_archive_tree": "f6f5983afc2a87d4848a3cf6b63355346f421218",
+  "old_receipts_or_gold_modified": false,
+  "model_calls": 0,
+  "graph_calls": 0,
+  "scope": "working-file and Git history verification; staged Git blob verification still required at release"
+}

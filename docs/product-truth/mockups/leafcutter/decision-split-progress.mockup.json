@@ -1,0 +1,54 @@
+{
+  "id": "leafcutter/decision-split-progress",
+  "component": "decision_kernel",
+  "screen": "decision-split-progress",
+  "title": "Split progress and report",
+  "summary": "What happens after the split gate. Each part shows its outcome (decided, answered, pending, settled by a human, not settled, not run), its child record link and dependency order. Cards: hand split, mid-run split, research split, a partial run (budget stop, dependants not run, one part still decided), a rejected split kept whole (run not blocked), a rejected split of an ambiguous request that falls back to today's clarification question (run waiting_human, no gap recorded), and a rejected split that ends blocked (jev_none only).",
+  "entities": [
+    "Decision",
+    "Decomposition"
+  ],
+  "source": "mock",
+  "realization": "mock",
+  "renders": "decision-split-progress.html",
+  "status": "active",
+  "superseded_by": null,
+  "readiness": "draft",
+  "version": 4,
+  "shape_version": 1,
+  "tags": [
+    "decision-kernel",
+    "decision-lifecycle",
+    "split",
+    "decomposition",
+    "progress",
+    "report"
+  ],
+  "mock_data_ref": "leafcutter/decisions",
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "mockup-author",
+      "date": "2026-10-03",
+      "note": "Drafted from leafcutter/decisions Decomposition records; styled from the Atlas tokens via docs/ui-context.md (globals.css, tailwind.config.ts, layout.tsx, kit.tsx)."
+    },
+    {
+      "action": "extended",
+      "by": "mockup-author",
+      "date": "2026-10-05",
+      "note": "Decisions v4: split also offered when routing would accept the request (bundled_accepted); reject depends on the trigger."
+    },
+    {
+      "action": "extended",
+      "by": "mockup-author",
+      "date": "2026-10-05",
+      "note": "Decisions v5: seven-part bundled_accepted gate sample with read-only not-covered parts; partial-run card (budget stop, dependants not run)."
+    },
+    {
+      "action": "extended",
+      "by": "mockup-author",
+      "date": "2026-10-05",
+      "note": "Decisions v6 / flow v6: new rejected_clarify card (dcp-format-and-repeats-clarify) with the clarification question and waiting_human status; intro and blocked wording corrected to three outcomes by trigger."
+    }
+  ]
+}

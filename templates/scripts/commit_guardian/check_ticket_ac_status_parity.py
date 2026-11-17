@@ -110,7 +110,12 @@ def _parse_frontmatter(path: Path) -> dict | None:
         return None
 
     try:
-        data = yaml.safe_load(parts[1])
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): an unparseable ticket is silently excluded
+        # from the ticket-vs-AC parity check below, so a more permissive
+        # parser only narrows this check. Staged-ticket volume per commit is
+        # tiny -- no speed case for the fast loader here.
+        data = yaml.load(parts[1], Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         print(
             f"WARNING: check_ticket_ac_status_parity: YAML error in {path}: {exc}",
@@ -157,8 +162,13 @@ def _read_ac_work_status(ac_path: Path) -> str | None:
         The ``work_status`` string value, or ``None`` if absent or unreadable.
     """
     try:
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): same shape as _parse_frontmatter above --
+        # a parse failure here silently drops the AC's work_status from the
+        # parity comparison. One file read per staged ticket -- no speed
+        # case for the fast loader here.
         with open(ac_path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            data = yaml.load(fh, Loader=yaml.SafeLoader)
     except (OSError, yaml.YAMLError) as exc:
         print(
             f"WARNING: check_ticket_ac_status_parity: cannot read {ac_path}: {exc}",

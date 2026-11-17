@@ -1,5 +1,5 @@
 id: GE-117c-1
-readiness: draft
+readiness: approved
 priority: medium
 title: "A new decision-history entry carrying a resolvable AC reference satisfies the entry-AC declaration"
 component: guardrail-engine
@@ -31,6 +31,7 @@ criteria: |
   Then the check produces no verdict for that pre-existing entry
 depends_on:
   - GE-117c
+  - GE-124c-2-i
 doc_links:
   - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117c.yaml"
     relationship: parent
@@ -44,22 +45,112 @@ doc_links:
   - path: "docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md"
     relationship: describes
     status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+  - path: "templates/skills/doc-enforcer/SKILL.md"
+    relationship: describes
+    status: exists
+    relevance: "Defines the DECISION HISTORY tail-tag grammar the AC dimension layers on top of."
+  - path: "templates/scripts/commit_guardian/doc_validators.py"
+    relationship: reuses
+    status: exists
+    relevance: "Existing added-line DECISION HISTORY extraction (_get_added_dh_lines, _DH_ENTRY_RE) and ticket tail-tag validation (_validate_tail_tag, validate_tail_tags_in_diff)."
+  - path: "templates/scripts/commit_guardian/check_documentation.py"
+    relationship: related
+    status: exists
+    relevance: "Calls validate_tail_tags_in_diff, but is withheld from hooks_manifest registration (KI-CG-20260831-0713), so it does not run at commit time."
+  - path: "templates/scripts/commit_guardian/transform_decision_history.py"
+    relationship: related
+    status: exists
+    relevance: "Pre-stage transformer that appends (#TICKETLESS reason=agent-no-tag-autofix) to untagged entries; not registered as a hook today."
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c-2-i.yaml"
+    relationship: related
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
 it_requirements:
-  - "EXTEND the existing DECISION HISTORY tail-tag validator (check_documentation.py plus doc_validators.py / docstring_validators.py) to carry an AC dimension on each NEW entry; do NOT re-specify or re-implement the existing ticket tail-tag — the ticket ref already exists, add the AC ref alongside it."
+  - "The decision-history-ac surface must be enforced by the REGISTERED declaration hook (check_declaration_traceability.py, hooks_manifest tier: judgment). Do NOT wire it only into check_documentation.py's main(): check_documentation.py is withheld from hooks_manifest registration (KI-CG-20260831-0713), so a surface wired only there never runs at commit time."
+  - "Reuse doc_validators.py's added-line DECISION HISTORY extraction rather than re-implementing diff parsing, and leave the existing ticket tail-tag grammar and its validation unchanged; this AC adds the AC dimension alongside the ticket ref, it does not re-specify it."
+  - "Entry recognition must cover the entry formats real files carry, including the date-only '- YYYY-MM-DD [agent/ID]: ...' form; doc_validators._DH_ENTRY_RE matches only 'YYYY-MM-DD HH:MM' entries and the transformer that would add HH:MM (transform_decision_history.py) is not registered, so reusing the regex unchanged would silently skip most real new entries."
+  - "A ticket tail-tag '(#EPIC-Name/NN)' or a '(#TICKETLESS reason=...)' opt-out is NOT an AC reference and must never satisfy this surface."
   - "Detect NEWLY ADDED decision-history entries from the staged diff (added lines only); pre-existing entries are never retrofitted (third criteria scenario) — the core of the tail-tag convention. Determine new-vs-existing from the staged diff, not a full-file rescan."
-  - "Resolve the entry's AC reference against the AC store via the SAME extracted _load_ac_by_id shared module used by GE-117b (the AC store is authoritative per ADR-010; id format per ADR-008); a reference is valid iff the resolver returns a record."
+  - "Resolve the entry's AC reference ONLY through the shared GE-124c-2-i id-resolution entry point (scripts/ac_store/ac_coverage_resolver.py over _ac_store_index.get_ac_index); the AC store is authoritative per ADR-010, id format per ADR-008; a reference is valid iff the resolver answers resolved. Treat store-unreachable as its own loud fail-open state."
   - "Emit the per-entry verdict {file, entry_ref, surface: 'decision-history-ac', verdict: 'satisfied'|'missing'|'invalid', declared_ref, resolved: bool}; keep it structurally aligned with the module-component and symbol-ac verdicts for GE-117d-1 aggregation."
   - "The inheritance rule (an entry may inherit its enclosing symbol's resolved AC) is specified in GE-117c-1-i; this L2 owns happy/missing/diff-only-legacy paths — route both through the shared verdict emitter so inheritance is handled uniformly."
-  - "Fail-open on INTERNAL hook error only (exit 0, stderr advisory, clean stdout). Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+  - "Fail-open on INTERNAL hook error only (exit 0, stderr advisory, clean stdout). Respect the file-size ratchet (check_documentation.py is already at its limit). Edit only templates/scripts/commit_guardian/ (ADR-001); verify via the deployed hook after a build.py round-trip."
 delivers_to:
   agent: python-coder
   contract: "Per-entry decision-history AC verdict {file, entry_ref, surface: 'decision-history-ac', verdict: 'satisfied'|'missing'|'invalid', declared_ref, resolved: bool} consumed by GE-117d (block) and GE-117e (message/autofix)"
-expects_from: null
+expects_from:
+  ac_id: GE-124c-2-i
+  contract: "One public id-resolution entry point on scripts/ac_store/ac_coverage_resolver.py: an AC id string in, one of three answers out (resolved record | not-found | store-unreachable), observing the store at call time with no private snapshot"
+test_spec:
+  - name: test_ge_117c_1_new_entry_with_a_resolvable_ac_is_satisfied
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a temp git repo with a temp AC store containing GE-900a-1, stage a module whose DECISION HISTORY gains one new entry citing GE-900a-1: one decision-history-ac verdict for that entry, verdict 'satisfied'."
+  - name: test_ge_117c_1_new_module_level_entry_without_an_ac_is_missing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Stage a new module-level DECISION HISTORY entry that cites no AC, in a module with no inheritable symbol: verdict 'missing', and the verdict names the file and the added entry."
+  - name: test_ge_117c_1_unmodified_pre_existing_entry_gets_no_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Commit a file whose DECISION HISTORY holds an AC-less entry, then stage a new AC-citing entry below it: exactly one verdict (for the new entry) and none for the pre-existing one."
+    must_catch:
+      - "rescans the whole DECISION HISTORY block instead of only the lines added in the staged diff"
+  - name: test_ge_117c_1_ticket_tail_tag_or_ticketless_opt_out_is_not_an_ac_reference
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Stage two new module-level entries, one carrying only '(#EPIC-Demo/03)' and one carrying only '(#TICKETLESS reason=agent-no-tag-autofix)': both are 'missing'."
+    must_catch:
+      - "counts the existing ticket tail-tag as the AC reference"
+      - "accepts the TICKETLESS tag that transform_decision_history.py appends as an AC declaration"
+  - name: test_ge_117c_1_date_only_entries_written_in_real_files_are_recognised
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Stage a new entry in the exact shape this repository's real modules use (an indented '- 2026-10-22 [python-coder/<id>]: ...' line inside a module-docstring DECISION HISTORY block, copied from a real templates/scripts/commit_guardian/ file) without an AC: it is detected and gets a verdict instead of being skipped."
+    must_catch:
+      - "reuses doc_validators._DH_ENTRY_RE unchanged, which matches only 'YYYY-MM-DD HH:MM' entries and silently skips date-only entries"
+  - name: test_ge_117c_1_registered_hook_enforces_the_entry_surface
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "check_declaration_traceability.py via the deployed run_hook.py, as registered in hooks_manifest"
+    description: "Marked shared_layout_reader: invoke the hook registered in the deployed hooks_manifest against a temp repo whose staged diff adds an AC-less module-level entry, and assert its output names the decision-history-ac item. Fails if the surface lives only in check_documentation.py, which is not registered."
+    must_catch:
+      - "implements the surface only inside check_documentation.py main(), which is withheld from hooks_manifest and never runs at commit time"
+test_rationale: |
+  The three criteria scenarios are proven against a real staged diff, because 'newly added
+  entry' is only defined relative to HEAD. The two highest-risk defects came from reading the
+  existing tail-tag machinery, not from the criteria. First, the obvious home for this
+  surface, check_documentation.py, is withheld from registration, so code placed only there
+  would pass every unit test and never run: the reachability test proves the surface runs from
+  the registered hook. Second, doc_validators' entry regex requires HH:MM, but the files in
+  this repository write date-only entries. The transformer that would add the time is not
+  registered either. The real-artifact test copies the real entry shape so the check cannot
+  quietly skip the entries it exists to police. The discrimination test closes the
+  confusion between the ticket tail-tag or TICKETLESS opt-out and an AC reference.
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Moved enforcement from 'extend check_documentation.py' to the registered declaration hook after finding check_documentation.py withheld from hooks_manifest (KI-CG-20260831-0713); added the date-only entry and ticket-tag-is-not-an-AC requirements; re-pointed resolution to the shared GE-124c-2-i resolver (expects_from now GE-124c-2-i); added change_target, declared_files, test_spec and test_rationale. Corrected the source path to templates/scripts/commit_guardian/ (ADR-001). criteria untouched."
 superseded_by: null
 covered_by:
   - GE-117c-1-i

@@ -1,0 +1,209 @@
+id: KM-400a-1-x
+title: Flow properties preserve the authored journey and its nested steps
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+work_status: done
+priority: medium
+parent: KM-400a-1
+criteria: |
+  Given a canonical Flow named leafcutter/finalize-feature contains ordered steps, branches and acceptance scenarios, and its registration has a shorter summary
+  When the Flow's native fields are exposed in the repository graph
+  Then the Flow retains its complete authored id, component, name, summary, kind, source, status, readiness, version, entities and steps
+  And any authored product, example_product, level, realization, superseded_by, shape_version, tags, mock_data_ref, branches, impl_summary, acceptance_scenarios, provenance, behind and confirmed values remain separately queryable
+  And each step and branch retains its own identity, order, actor, screen, inputs, outputs, requirement references and stored implementation status without exchanging values with another member
+  And an expands_to string remains a string while an expands_to list remains an ordered list, and stored progress and confirmation values are not recomputed
+  And source fields remain distinct from registration fields, including conflicting summaries and tags
+  And a canonical Flow missing from registration remains visible with its unregistered state identified, while malformed records, conflicting identities, duplicate registrations and source references outside the selected repository fail explicitly
+  And nested values, future fields, explicit nulls, empty collections and omitted optional fields remain distinguishable without invented defaults or additional top-level step records
+depends_on: [KM-400a-1]
+doc_links:
+- path: reports/native-fields/review-Flow.json
+  relationship: describes
+  status: exists
+  relevance: Complete Flow field inventory, nested ownership and source-versus-registration authority.
+- path: reports/native-fields/code-Flow.json
+  relationship: verifies
+  status: exists
+  relevance: Reader verification and mutation evidence for the reviewed contract.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+- path: reports/native-fields/ac-linked-strict.xml
+  relationship: verifies
+  status: exists
+  relevance: 'Fresh strict execution after criterion-specific test tags: 388 passed and one Windows symlink-privilege
+    skip across 19 focused modules. Per-type cases resolve through the test catalog; no live database rerun is implied.'
+- path: reports/native-fields/review-Flow.json
+  relationship: describes
+  status: exists
+  relevance: Complete Flow field inventory, nested ownership and source-versus-registration authority.
+- path: reports/native-fields/code-Flow.json
+  relationship: verifies
+  status: exists
+  relevance: Reader verification and mutation evidence for the reviewed contract.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-02'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_native_flow.py::test_flow_all_nested_fields_preserved_and_manifest_separate
+- tests/knowledge/test_native_flow.py::test_flow_unregistered_sources_and_empty_shapes_stay_visible
+- tests/knowledge/test_native_flow.py::test_flow_real_corpus_deep_equality_and_no_rewrites
+- tests/knowledge/test_native_flow.py::test_flow_missing_store_is_empty
+- tests/knowledge/test_native_flow.py::test_flow_malformed_manifest_fails
+- tests/knowledge/test_native_flow.py::test_flow_unsafe_or_noncanonical_declared_path_fails
+- tests/knowledge/test_native_flow.py::test_flow_invalid_registration_or_identity_fails
+- tests/knowledge/test_native_flow.py::test_flow_invalid_source_fails
+- tests/knowledge/test_native_flow.py::test_flow_required_source_shapes_fail_explicitly
+- tests/knowledge/test_native_flow.py::test_flow_no_manifest_and_normalized_registration_spelling
+implemented_by:
+  - knowledge/native_types/flow.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Retrospective, type-specific refinement of KM-400a-1 source alignment and the
+  complete-native-fields scope in KM-400a-3-i; no new canonical journey authority.
+  The dated reader receipt reports 35 passing cases and comparison with 14 source
+  Flows. Those counts are evidence scope, not permanent population requirements.
+  BA authoring does not assert user approval or a new execution of those tests.
+  Final bidirectional traceability and strict test evidence: reports/native-fields/ac-traceability.json.
+  Work status reflects linked test outcomes; reviewed readiness does not assert user approval.
+estimated_complexity: M
+it_requirements:
+- Canonical Flow JSON remains authoritative over registration summaries and tags; registration conflicts are visible
+  failures, not automatic repairs.
+- Stored implementation/progress fields and artifact references remain data from the selected snapshot; extraction
+  never recalculates progress, rewrites a Flow or executes a referenced implementation.
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+- name: test_flow_all_nested_fields_preserved_and_manifest_separate
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Flow all nested fields preserved and manifest separate.
+  covers:
+  - KM-400a-1-x
+- name: test_flow_unregistered_sources_and_empty_shapes_stay_visible
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Flow unregistered sources and empty shapes stay visible.
+  covers:
+  - KM-400a-1-x
+- name: test_flow_real_corpus_deep_equality_and_no_rewrites
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: Flow real corpus deep equality and no rewrites.
+  covers:
+  - KM-400a-1-x
+- name: test_flow_missing_store_is_empty
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Flow missing store is empty.
+  covers:
+  - KM-400a-1-x
+- name: test_flow_malformed_manifest_fails
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Flow malformed manifest fails.
+  covers:
+  - KM-400a-1-x
+- name: test_flow_unsafe_or_noncanonical_declared_path_fails
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Flow unsafe or noncanonical declared path fails.
+  covers:
+  - KM-400a-1-x
+- name: test_flow_invalid_registration_or_identity_fails
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Flow invalid registration or identity fails.
+  covers:
+  - KM-400a-1-x
+- name: test_flow_invalid_source_fails
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Flow invalid source fails.
+  covers:
+  - KM-400a-1-x
+- name: test_flow_required_source_shapes_fail_explicitly
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Flow required source shapes fail explicitly.
+  covers:
+  - KM-400a-1-x
+- name: test_flow_no_manifest_and_normalized_registration_spelling
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Flow no manifest and normalized registration spelling.
+  covers:
+  - KM-400a-1-x
+test_rationale: The verified catalog supplies exact existing reader-function anchors, including source-fixture,
+  boundary and failure checks. Only catalog-confirmed type-specific integration links are added. Shared lossless
+  property encoding, physical Neo4j publication, readback and retained-generation behavior remain covered by KM-400a-3-i;
+  these focused tests do not claim 17 independent live database journeys. This is retrospective traceability over
+  dated implementation receipts, not a newly performed TDD sequence. Subsequent strict execution is separately recorded
+  in reports/native-fields/ac-linked-strict.xml (388 passed, one skipped); no database test was rerun for these
+  annotation-only changes.

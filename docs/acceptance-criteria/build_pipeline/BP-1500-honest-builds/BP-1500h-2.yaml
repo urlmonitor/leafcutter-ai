@@ -1,0 +1,103 @@
+id: BP-1500h-2
+title: "changelog-agent's instructions read an empty categories setting as 'use the defaults'"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a scratch consumer project whose settings set
+    `changelog_categories_path: ""`,
+  When the build compiles changelog-agent's prompt for that project,
+  Then the compiled categorisation step tells changelog-agent that no project
+    categorisation rules are configured and to apply the default categories,
+    And it contains no command that reads an empty path or the project folder,
+    And when the same project instead sets the setting to an existing rules
+      file, the compiled step tells changelog-agent to read that file and apply
+      its rules, and when the setting is absent altogether the compiled step
+      tells changelog-agent to read the shipped default rules location and
+      apply its rules -- it is not the empty-value step.
+depends_on:
+  - BP-1500h
+  - BP-1500h-1
+doc_links:
+  - path: templates/agents/changelog-agent.md
+    relationship: modifies
+    status: exists
+    relevance: "Step 3 (line ~104, dated snapshot) runs a `cat` of the injected changelog_categories_path value with errors discarded, which with an empty value reads an empty path and relies on the error being discarded."
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: "The compile that injects config values into agent templates."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target:
+  - code
+  - prompt
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "REASSIGNED llm-expert -> python-coder (IT PO, 2026-10-12): the criteria require the COMPILED prompt to differ by configuration (empty -> 'no project rules, apply the built-in categories'; existing file or absent key -> 'read <resolved path> and apply its rules'). The template compiler has no conditional-block syntax (no {{#if}} in templates/agents/*.md or template_compiler.py), so the choice must be made at compile time in Python -- e.g. a computed config-derived placeholder or a compile step resolved through scripts/config_paths.py -- with the template edit at templates/agents/changelog-agent.md Step 3 (~line 104, `cat \"{{config.changelog_categories_path}}\" 2>/dev/null`) as the companion change. Both files are on python-coder's surface (.py, .md)."
+  - "template_compiler.py (290 content lines) may take the hook; injection_builders.py is far over the 400-line limit and may not grow -- put new logic in a new module or in config_paths.py."
+  - "MEMORY TRAP (inject_config): the deploy step rewrites contiguous {{config.*}} literals in deployed .py files; any Python that recognises the token must build it from pieces."
+  - "The compiled step for the 'configured' case must name the resolved path; no compiled variant may contain a shell command that reads an empty path or the project folder, and the error-discarding '2>/dev/null' read is removed."
+  - "User decision 11: \"\" = off -> the compiled step uses changelog-agent's built-in categories (the conventional-commit fallback table already in Step 3); ABSENT -> the shipped default path from config/skills_config.default.json ('.claude/changelog_categories.md'), which the scaffold phase installs, so the compiled step reads it. Both outcomes come from scripts/config_paths.resolve_file_setting, never from a literal default in the compile code."
+  - "If the absent-key default file is somehow missing at compile time (scaffold not run), the compiled step for that case follows the BP-1500h-1-i 'broken' rule: warned at build time, and the compiled step falls back to the built-in categories -- never a read of a missing path."
+test_spec:
+  - name: test_empty_setting_compiles_default_categories_step_without_read
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: e2e
+    angle: deployed
+    description: "Scratch consumer with changelog_categories_path: \"\"; build and read the compiled changelog-agent prompt: Step 3 says no project categorisation rules are configured and to apply the default categories, and contains no `cat` (or other read) of an empty path or the project folder."
+    must_catch:
+      - "the compiled step still runs cat \"\" 2>/dev/null"
+  - name: test_existing_rules_file_compiles_read_and_apply_step
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: e2e
+    angle: discrimination
+    description: "Same project with the setting pointing at an existing rules file: the compiled Step 3 tells changelog-agent to read that path and apply its rules."
+  - name: test_absent_setting_compiles_read_of_shipped_default_path
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: e2e
+    angle: boundary
+    description: "With the key absent, the compiled Step 3 tells changelog-agent to read the shipped default path (as read from config/skills_config.default.json) and apply its rules, and differs from the empty-value step."
+    must_catch:
+      - "absent is compiled as off (identical to the empty-value step)"
+      - "the default path is hard-coded in the compile code instead of read from skills_config.default.json"
+test_rationale: >-
+  The behaviour lives in the compiled prompt, so every descriptor reads the
+  prompt a real build produced; the existing-file descriptor proves the
+  configured path still works after the empty case is fixed.
+delivers_to: null
+expects_from:
+  ac_id: BP-1500h-1
+  contract: "The single meaning of an empty file-location setting (scripts/config_paths.resolve_file_setting)."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500h.yaml
+amended_by:
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "criteria, last clause: 'when the setting is absent altogether the compiled step is identical to the empty-value one' REPLACED by 'when the setting is absent altogether the compiled step tells changelog-agent to read the shipped default rules location and apply its rules -- it is not the empty-value step'. Other clauses unchanged. WHY: user decision 11 (BrainCandy, 2026-10-12): \"\" = feature off (changelog-agent uses its built-in categories); an ABSENT key = the shipped default path from config/skills_config.default.json. assigned_agent was also changed llm-expert -> python-coder at enrichment (no conditional template syntax exists; the choice is made at compile time)."
+superseded_by: null
+covered_by:
+  - unit_tests/build_guards/test_bp_1500h_2.py
+implemented_by:
+  - scripts/compile_computed_steps.py
+  - scripts/template_compiler.py
+  - templates/agents/changelog-agent.md
+notes: |
+  BP-1500h names this as "the one place instructions describe the case". The
+  instruction today works only because the failed read is discarded -- an
+  honest-looking step that does nothing, the same shape BP-1500h removes from the
+  build itself. How the compile chooses between the two wordings (a conditional
+  in the template, or the compile resolving it) is the IT PO's.

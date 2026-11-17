@@ -477,7 +477,7 @@ flowchart TD
     AC --> TW --> Fix --> TR --> CM
 ```
 
-### AC BP-600a-1 constraint: no `git worktree add`, no `setup_ticket_worktree.py`
+### AC BP-600a-1 constraint: no hand-made workspace, no retired set-up script
 
 The `quick-fix.js` workflow script MUST NOT call `setup_ticket_worktree.py` or any equivalent
 command that creates a new worktree directory. All phases run in the directory where `/quick-fix`
@@ -493,9 +493,9 @@ the full build pipeline. Specifically, the following are unconditionally prohibi
 | Prohibited item | Why |
 |---|---|
 | `worktree-agent` dispatch | Creates/manages isolated git worktrees — the opposite of stay-in-place |
-| `feature` skill invocation | Calls `git worktree add`; creates branch isolation — violates BP-600a-1 |
-| `git worktree add` | Direct worktree creation command — prohibited by BP-600a-1 |
-| `setup_ticket_worktree.py` | Bootstrap script for new isolated worktrees — not needed in existing worktree |
+| `feature` skill invocation | Asks the workspace maker for a workspace; creates branch isolation — violates BP-600a-1 |
+| hand-made workspace | Any workspace not made by the workspace maker — prohibited by BP-600a-1 |
+| retired set-up script | Former bootstrap script, replaced by the workspace maker (`worktree.py`) — not needed in existing worktree |
 | Any branch-switching command | `git checkout -b`, `git switch -c`, etc. |
 
 The phase agents dispatched by `/quick-fix` (`build-ac`, `test-writer`, `python-coder`,
@@ -1669,7 +1669,7 @@ sequenceDiagram
     Git-->>WF: fetch complete
 
     Note over WF,WT: Phase 2 — create isolated worktree + branch off origin/main
-    WF->>Git: worktree add <isolated-path> -b <authoring-branch> origin/main
+    WF->>Git: workspace maker ensure (kind, slug) -> clone off origin/main
     Git->>Main: resolve base commit
     Main-->>Git: base commit
     Git->>WT: materialise worktree at base commit on new branch
@@ -2025,7 +2025,7 @@ Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#4-detail-vie
 ## Cross-References
 
 - [Agent Inventory](../agents/README.md) — Comprehensive table of all existing agents and slash commands.
-- [`signoff` skill](../../templates/skills/signoff/SKILL.md) — Formal specification for the frontmatter status enum, commit-phase serialization lock, and pre-commit parity guards.
+- [`signoff` skill](../../templates/skills/signoff/SKILL.md) — Formal specification for the frontmatter status enum, commit-phase serialization lock, and pre-commit parity guards; the commit itself goes through the [Shared Commit Step](../reference/shared-commit-step.md) (inputs, one-answer contract, reason codes).
 - [Agent Supervisor Design Spec](../superpowers/specs/2026-05-08-agent-supervisor-design.md) — In-depth breakdown of the supervisor execution algorithms.
 
 <!--

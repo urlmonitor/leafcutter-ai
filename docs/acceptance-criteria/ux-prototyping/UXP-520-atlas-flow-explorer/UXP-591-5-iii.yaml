@@ -1,0 +1,161 @@
+id: UXP-591-5-iii
+title: "A filter change that excludes the entry flow keeps the drawn flow and shows 'Outside the current filters'"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the person drilled from /flows/leafcutter/deliver-a-feature into
+    "How a ticket is built (the phase chain)" and opened the 'Coders make it green (prio 6-8)'
+    drawer, so the tab has two history entries, the address is
+    /flows/leafcutter/how-acs-are-built?step=code and the filters are Real, User, All,
+  When they set the Realization filter to 'Spec',
+  Then "How a ticket is built (the phase chain)" stays drawn with the breadcrumb
+    "Deliver a feature end-to-end > How a ticket is built (the phase chain)" and its drawer open,
+  And the address bar stays /flows/leafcutter/how-acs-are-built?step=code and the tab still has
+    two entries,
+  And an 'Outside the current filters' notice reads "'Deliver a feature end-to-end' is not a
+    Real · User · Spec flow, so the flow list no longer shows it. It stays on screen until you
+    pick another flow.",
+  And the notice stays on screen until the person picks another flow,
+  And Back returns to /flows/leafcutter/deliver-a-feature with the filters Real, User, All and no
+    notice,
+  And Forward brings back the Realization filter at 'Spec' together with the notice.
+depends_on:
+  - UXP-591-5
+  - UXP-521
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
+assigned_agent: frontend-coder
+estimated_complexity: S
+change_target:
+- code
+- ui
+risk_surface: internal
+it_requirements:
+- A Source, Kind or Realization change rewrites the current entry through the UXP-591-4 replace-entry
+  path with the same URL (?step= kept) and the new filters in its view state; never a push. The drawn
+  flow, crumbs and drawer are unchanged.
+- The re-pick path (first flow the selector lists under the new filters) is removed entirely, with no
+  dead fallback left.
+- 'scopeNotice is one pure function of the entry flow (crumbs[0]) and the filters: a notice iff the flow''s
+  source or kind differs, or realization is neither ''all'' nor the flow''s realization; its text is one
+  template naming the flow and the three filter labels. The selector list follows the filters even when
+  it no longer lists the drawn flow.'
+- The notice clears only when another flow is picked (a push) or the filters match again.
+delivers_to:
+  agent: frontend-coder
+  contract: 'scopeNotice(entryFlow: {name, source, kind, realization}, filters: {source, kind, realization})
+    -> {title: ''Outside the current filters'', detail: string} | null, pure, used by the flow page, by
+    UXP-591-5-ii''s restore and by UXP-591-5-iv.'
+expects_from:
+  ac_id: UXP-591-4
+  contract: replaceEntry(url, {crumbs, filters}) in leafcutter-web/components/flows/flow-history.ts, here
+    called with the unchanged current URL.
+test_spec:
+- name: Realization Spec on how-acs-are-built?step=code keeps the flow, breadcrumb and drawer, keeps the
+    address and two entries, and shows the notice text
+  target_dir: leafcutter-web/__tests__/uxp-591-5/
+  framework: vitest
+  type: component
+  angle: criterion
+  must_catch:
+  - the filter change re-picks leafcutter/define-a-feature
+  - the replaced URL drops ?step=code
+  - the filter change pushes an entry
+- name: Back returns deliver-a-feature at Real, User, All with no notice; Forward brings back Spec and
+    the notice
+  target_dir: leafcutter-web/__tests__/uxp-591-5/
+  framework: vitest
+  type: component
+  angle: seam
+- name: scopeNotice is null when realization is 'all' or the flow's own, and set for a source, kind or
+    realization mismatch
+  target_dir: leafcutter-web/__tests__/uxp-591-5/
+  framework: vitest
+  type: unit
+  angle: boundary
+- name: filter-replace session replay from atlas-flows.mock.json
+  target_dir: leafcutter-web/__tests__/uxp-591-5/
+  framework: vitest
+  type: unit
+  angle: real_artifact
+  description: FlowNavigation records of session filter-replace, including scope_notice.
+test_rationale: 'The seam test proves the replaced entry stores the new filters that UXP-591-5-ii restores
+  the notice from. Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run`
+  (180 s timeout). Known gap: the build pipeline''s red-baseline and done-proof checks cannot read vitest
+  tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright:
+  the harness is deferred by the owner.'
+test_required: true
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+- reason: '2026-10-14 business-analyst: criteria REPLACED for UXP-617 (flow v6 branch
+    filterRepicksFlow, rewritten in place; the flow keeps the id for this AC link).
+    Owner decision 2026-10-12: a filter change never swaps the drawn flow, replacing
+    owner ruling 3 of 2026-10-09. Old behaviour: the first flow the selector lists
+    under the new filters (leafcutter/define-a-feature) was drawn and the entry replaced
+    with its address. New behaviour: the flow, breadcrumb, drawer and address stay;
+    an ''Outside the current filters'' notice shows; no entry is added. Title changed
+    to match. Readiness lowered approved -> draft; it_requirements (re-pick from the
+    selector), delivers_to (the re-pick function) and the whole test_spec describe
+    the rejected behaviour and must be re-authored by IT-PO. The filter change is
+    still written to the current entry in place (filters and notice must return on
+    Back/Forward, UXP-591-5-ii).'
+  agent: business-analyst
+  date: '2026-10-14'
+- action: approved
+  agent: approve_acs
+  date: '2026-10-14'
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261012-UXP-591-5-iii.md
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v5, branch 'filterRepicksFlow' (from
+  the 'filter' step, which UXP-521 implements; FlowNavigation nav-filter-replace-1 to -3 and
+  -5 to -7). Owner ruling 3 (2026-10-09): a Source, Kind or Realization change never adds a
+  history entry. The re-picked flow is the first flow the selector lists under the new
+  filters, as today. Not modelled by the dataset: a filter change while the 'Flow not found'
+  notice shows.
+
+  AMENDED 2026-10-14 (business-analyst, UXP-617): the re-pick rule above is retired; the notes
+  above describing it are history. The dataset leafcutter/atlas-flows v4 records nav-filter-replace-5
+  to -7 as the new sessions (scope_notice set, rendered_flow unchanged).
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: filterRepicksFlow
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowNavigation
+    source: real
+    asof: '2026-10-09'

@@ -4,16 +4,20 @@ description: "C4 L2 sequence diagram showing the /create-ac pipeline: partial-ru
 type: architecture
 status: active
 created: 2026-06-05
-last_updated: 2026-06-22
-flight_level: L2
-parent: agent_delivery_workflows.md
+last_updated: 2026-10-21
+flight_level: L2-Container
+parent: docs/architecture/diagrams/c1-001-command-map.md
+children:
+  - docs/architecture/diagrams/c3-030-requirement-rule-check-components.md
+  - docs/architecture/diagrams/c3-032-code-aware-test-design-sequence.md
+  - docs/architecture/diagrams/c3-033-requirement-part-owners-components.md
 components:
   - ac_store
   - ticket_creation_pipeline
 related_docs:
-  - docs/architecture/diagrams/ac-readiness-states.md
-  - docs/architecture/diagrams/build-ac-flow.md
-  - docs/architecture/diagrams/ac-driven-pipeline.md
+  - docs/architecture/diagrams/c2-003-ac-readiness-states.md
+  - docs/architecture/diagrams/c2-004-build-ac-flow.md
+  - docs/architecture/diagrams/c2-001-ac-driven-pipeline.md
   - docs/how-to/ac-driven-development.md
 ---
 
@@ -81,6 +85,8 @@ sequenceDiagram
     User-->>User: Sets readiness: approved, confirms priority
     Note over User: Scanner (scan_ac_store.py) may now<br/>pick up ACs with readiness: approved
 ```
+
+Parent: [Leafcutter Command Map — User-Facing Slash Commands](c1-001-command-map.md)
 
 ---
 

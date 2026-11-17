@@ -1,0 +1,30 @@
+{
+  "status": "completed; live one-shot boundary closed",
+  "working_directory": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01",
+  "python": "C:\\Users\\Hendrik\\Code\\leafcutter\\.venv\\Scripts\\python.exe",
+  "code_sha": "887c66d3896ba7727ce41b743887210a3883c6ce",
+  "steps_performed": [
+    "replay.py prepare",
+    "replay.py neutral",
+    "replay.py kernel-controls",
+    "replay.py kernel-valid",
+    "replay.py live-RS-02",
+    "replay.py live-RS-03",
+    "continuation_checks.py",
+    "finalize.py"
+  ],
+  "script_directory": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-scenarios-2026-10-02-retest-887c66d3",
+  "live_repeat_policy": "Do not rerun or delete live-started guards. New provider execution requires a new authorized scope and fresh output/checkpoint/catalog paths.",
+  "secret_handling": "Existing supported environment loader reads external .env locally; no secret values are included in artifacts.",
+  "actual_live_calls": 8,
+  "live_resumes": 0,
+  "post_save_console_error": {
+    "process_exit": 1,
+    "error": "TypeError: AnswerAssessment is not JSON serializable in final console summary",
+    "query_receipts_saved_before_error": true,
+    "raw_log": "continuation-checks.log",
+    "queries_rerun": false
+  },
+  "offline_validation": "finalize.py uses saved receipts and git show for the pinned source; no database or provider calls.",
+  "source_changes": "None. Only new evaluation artifacts; live-boundary human_prompts finalized from actual fresh responses."
+}

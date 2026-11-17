@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given three leaf code requirements at readiness "reviewed":
     R1 carries test intent marking 2 clauses needs-test and carries no test design,
@@ -102,7 +102,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - ACD-2500b-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/23_TICKET-20261012-ACD-2500b-2.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -126,3 +127,14 @@ notes: |
   cycle. The delivers_to contract string was deliberately left as it is, because ACD-2500b-2-i,
   ACD-2500b-4, ACD-2500c-2, ACD-2500d-2-i and ACD-2500d-3-i carry it byte-for-byte in their
   expects_from.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: finalGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

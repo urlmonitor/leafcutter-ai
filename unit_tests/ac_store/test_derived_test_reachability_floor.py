@@ -63,9 +63,16 @@ import yaml
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _GEN_SCRIPT = _REPO_ROOT / "scripts" / "ac_store" / "generate_ticket_from_ac.py"
 _REAL_AC_ROOT = _REPO_ROOT / "docs" / "acceptance-criteria"
-_SCHEMA_PATH = _REPO_ROOT / "config" / "ac_store_schema.json"
 
 sys.path.insert(0, str(_REPO_ROOT / "scripts" / "ac_store"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from _reachability_anchor import declares_implementation_py  # noqa: E402
+from _reachability_schema_helpers import (  # noqa: E402
+    _AUTHORED_ANGLE_AC,
+    _schema_errors,
+    _test_spec_item_schema,
+)
 
 from generate_ticket_from_ac import (  # noqa: E402
     _build_test_requirements_section,
@@ -99,82 +106,6 @@ _ALL_TEST_ANGLES = frozenset({
     "criterion", "reachability", "seam", "real_artifact",
     "deployed", "boundary", "failure", "discrimination",
 })
-
-
-def _load_schema() -> dict:
-    """Read and parse the REAL on-disk config/ac_store_schema.json."""
-    return json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
-
-
-def _test_spec_item_schema() -> dict:
-    """Return the ``test_spec`` array-item subschema from the real schema file."""
-    test_spec = _load_schema()["properties"]["test_spec"]
-    array_branches = [
-        branch for branch in test_spec["oneOf"] if branch.get("type") == "array"
-    ]
-    assert len(array_branches) == 1, (
-        f"test_spec must keep exactly one array branch in its oneOf: {test_spec}"
-    )
-    return array_branches[0]["items"]
-
-
-def _schema_errors(record: dict) -> list[str]:
-    """Validate *record* against the real AC store schema; return error strings.
-
-    Uses jsonschema.Draft7Validator against config/ac_store_schema.json — the
-    identical mechanism and identical schema file used by BOTH the
-    ``check-ac-schema`` pre-commit hook (via
-    ``templates/scripts/commit_guardian/check_ac_schema.py``) and
-    ``scripts/ac_store/validate_ac_schema.py``. Nested ``oneOf`` context errors
-    are flattened in, because the top-level message for a failing array branch
-    is only "is not valid under any of the given schemas" and hides the actual
-    violation.
-
-    Args:
-        record: Parsed AC record.
-
-    Returns:
-        Human-readable violation strings; empty list when the record is valid.
-    """
-    import jsonschema  # noqa: PLC0415 — optional dep, imported at call time
-
-    def _fmt(err) -> str:
-        loc = ".".join(str(p) for p in err.absolute_path) or "<root>"
-        return f"at {loc} — {err.message}"
-
-    errors: list[str] = []
-    for err in sorted(jsonschema.Draft7Validator(_load_schema()).iter_errors(record), key=str):
-        errors.append(_fmt(err))
-        errors.extend(_fmt(sub) for sub in err.context or [])
-    return errors
-
-
-# A constructed record that is nonetheless a FULL, schema-valid AC — the point
-# of the schema assertion below is lost if the fixture is a partial dict that
-# only happens to satisfy the code path. 'build-pipeline' keeps it out of the
-# schema's package-surface if/then branch, which would otherwise demand a
-# structured it_requirements object.
-_AUTHORED_ANGLE_AC: dict = {
-    "id": "ZZ-900a-1",
-    "title": "Fixture AC whose it-po authored a reachability-angle test_spec",
-    "component": "build-pipeline",
-    "components": ["build_pipeline"],
-    "status": "active",
-    "readiness": "approved",
-    "priority": "medium",
-    "level": "L2",
-    "work_status": "todo",
-    "assigned_agent": "python-coder",
-    "criteria": "Given a thing\nWhen it happens\nThen the thing is recorded\n",
-    "test_spec": [
-        {
-            "name": "test_zz_900a_1_reachable_from_entry_point",
-            "description": "Invoke the CLI and assert the record lands.",
-            "target_dir": "unit_tests/zz/",
-            "angle": "reachability",
-        }
-    ],
-}
 
 
 # ---------------------------------------------------------------------------
@@ -218,8 +149,12 @@ def _find_fallback_anchor(records: list[tuple[Path, dict]]) -> dict:
 
     Requirements: a coder agent (so the ticket is a code ticket), no authored
     ``test_spec`` (so the fallback fires), ``test_required`` not False (so the
-    section is emitted at all), and at least two ``Then`` clauses (so the
-    criterion/reachability distinction is observable).
+    section is emitted at all), at least two ``Then`` clauses (so the
+    criterion/reachability distinction is observable), AND an implementation
+    ``.py`` declared in the record's own fields. The last condition is what the
+    generator needs to emit ``## Test Requirements`` without a ``test_spec``;
+    without it the choice depended on sort order, and an un-enriched draft that
+    sorted first made the ticket legitimately carry no block.
 
     Args:
         records: Real store records.
@@ -235,10 +170,12 @@ def _find_fallback_anchor(records: list[tuple[Path, dict]]) -> dict:
         and not _has_test_spec(record)
         and record.get("test_required") is not False
         and _then_clause_count(record) >= 2
+        and declares_implementation_py(record)
     ]
     assert matches, (
         "no real AC in docs/acceptance-criteria/ has a coder agent, no "
-        "test_spec, and >=2 Then clauses — the fallback anchor is gone"
+        "test_spec, >=2 Then clauses, and an implementation .py declared "
+        "(it_requirements.reference_file_path or an edit-surface doc_link)"
     )
     return matches[0]
 

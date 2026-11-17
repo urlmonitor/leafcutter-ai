@@ -10,7 +10,7 @@ components:
   - build_orchestration
 related_docs:
   - docs/known-issues/build-orchestration.md
-  - docs/known-issues/build-orchestration/open-high-ki-bo-20260921-worktree-base-resolver-defaults-to-cwd.md
+  - docs/known-issues/build-orchestration/resolved/resolved-high-ki-bo-20260921-worktree-base-resolver-defaults-to-cwd.md
   - docs/known-issues/ac-driven-dev/open-high-ki-acd-20260927-repo-anchor-picks-the-in-repo-install-copy.md
   - docs/known-issues/commit-guardian/open-high-ki-cg-20260925-shared-root-resolver-accepts-non-repo-workspace-parent.md
 ---

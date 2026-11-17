@@ -1,0 +1,147 @@
+id: BO-4400b-1
+title: "Clearing a workspace also removes everything it created outside its own folder"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a workspace "ws-a" holding nothing that has not reached the shared project,
+    which during its life brought each of these into being outside its own folder:
+    - its own local line of work (branch) in the shared project,
+    - its registration entry in the shared project,
+    - a stored look-up of the requirements store kept in the shared project's version
+      control data on its behalf,
+    - a Python environment for it in the user's shared Poetry environments folder,
+    - a web development server cache for it outside its folder,
+  When "ws-a" is cleared through the one shared clearing door,
+  Then none of the five items exists afterwards,
+  And the door's answer lists each of the five items it removed, by kind and location,
+    with the space each one occupied in bytes,
+  And the answer's total space freed equals the sum of the folder's size and the five
+    items' sizes as measured immediately before the clearing.
+depends_on: [BO-4400b, BO-4300e-2, BO-4100c-4]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c-4.yaml
+    relationship: related
+    status: exists
+    relevance: Already requires folder and registration gone; this record extends "gone" to everything outside the folder.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      (1) The remove answer, widened: ok / PARTIAL answers carry removed_items [{kind: str,
+      location: absolute path str, bytes: int}], not_removed [{kind, location, reason: str, bytes:
+      int}] (empty on ok), and bytes_freed_total: int = folder bytes + sum(removed_items.bytes),
+      every figure measured immediately before removal with the ONE shared size measure. (2) The
+      declared outside-item inventory: one table of item kinds, each with a matcher that, given a
+      workspace's identity (absolute path, branch, marker), returns that workspace's exact items,
+      and an orphan finder that enumerates items whose workspace no longer exists. Consumed by the
+      sweep (BO-4400d-1/-2), the space report (BO-4400e-4) and the lifetime measurement (BO-4400b-2).
+  - agent: documentation-expert
+    contract: "The inventory's item kinds (kind, location, creator, matching rule, reclaim method) that the reference page BO-4400b-3 reproduces one row per kind."
+expects_from:
+  ac_id: BO-4300e-2
+  contract: "The one clearing request; this record widens what its removed answer covers."
+package_surface: false
+it_requirements:
+  - >-
+    SURFACE: the one maker's remove verb (templates/scripts/worktree.py per BO-4300a-1; not yet on
+    disk) plus ONE declared inventory of outside-item kinds, held as data in one place (a table in
+    the maker family or a declared config section -- never a second hard-coded list in the sweep or
+    the space report). Adding a kind is a one-entry change that remove, sweep, space report and the
+    reference page all pick up.
+  - >-
+    KNOWN KINDS to declare: the workspace's local branch and its registration (legacy git-worktree
+    workspaces: the main checkout's branch and .git/worktrees/<name>); the AC-store index cache
+    written by templates/scripts/commit_guardian/_ac_store_index_disk.py under the git-dir; the
+    workspace's Poetry environment in the user's Poetry virtualenvs folder (honour
+    POETRY_VIRTUALENVS_PATH / POETRY_CACHE_DIR, default ~/.cache/pypoetry/virtualenvs); the web dev
+    server cache. Under the BO-4300 clone topology some of these live inside the clone folder and
+    die with it; the inventory must cover both topologies until BO-4300f-3's cut-over retires the
+    last legacy worktree.
+  - >-
+    EXACT MATCHING: each matcher derives its workspace's item from the workspace's own identity
+    (Poetry's environment name is derived from the project's absolute path, so compute that exact
+    name); never a prefix, glob or project-name match (BO-4400b-1-i).
+  - >-
+    SAFETY: nothing outside the folder is removed unless the door's verdict is holds-nothing
+    (BO-4300e); branch deletion is local only, and the hub's copy of the branch is never deleted by
+    this AC.
+  - >-
+    ONE SIZE MEASURE: a single shared function computes bytes for folders and items (apparent size,
+    each inode counted once, symlinks not followed) and is the only measure used by remove, the
+    sweep preview and real run, and the space report.
+  - >-
+    The answer is ok only when a post-check finds the folder and every listed item gone; otherwise
+    it is PARTIAL (BO-4400b-1-ii). Must handle errors per the project error handling policy
+    (CLAUDE.md Rules 1-4).
+  - >-
+    The maker stays stdlib-only, its only tracked source is templates/scripts/, and any new helper
+    module it imports gets a named deploy-manifest entry (scripts/build_phases_script_deploy.py and
+    scripts/build_deploy_manifest_helpers.py), verified by running the DEPLOYED copy.
+  - >-
+    PROOF runs the DEPLOYED maker as a separate process against real temporary repositories, a real
+    bare hub, a temporary HOME / XDG_CACHE_HOME holding a real (small) Poetry-named environment
+    folder and a real cache file; no mock of git or of the filesystem, no import of the maker
+    module. Tests do not spawn build.py.
+test_required: true
+test_spec:
+  - name: test_clearing_removes_all_five_outside_items
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "After ws-a is cleared, its branch, registration, index cache, Poetry environment and dev-server cache no longer exist."
+    must_catch:
+      - "remove deletes only the folder and registration (BO-4100c-4 scope)"
+  - name: test_remove_answer_lists_each_item_with_kind_location_and_bytes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The answer's removed_items holds one entry per item with its kind, absolute location and pre-removal byte size."
+  - name: test_bytes_freed_total_equals_folder_plus_items_measured_before
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "bytes_freed_total equals the folder size plus the five item sizes measured by the test immediately before clearing."
+    must_catch:
+      - "total reported from a fixed or estimated figure"
+test_rationale: >-
+  The pile-up hides outside the folder, so the proof has to create real outside items in a
+  temporary home and see them gone. A mocked filesystem would let a matcher that never matches pass.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400b-1-i, BO-4400b-1-ii]
+implemented_by: []
+notes: |
+  Gap G2. Known outside artifacts named in the 2026-10-09 coverage check: the requirements
+  store index cache under the version-control data directory, Poetry virtualenvs in the
+  user's cache, the Turbopack dev cache, the branch and the registration. The five in the
+  Given are those, stated as behaviour. They must come from ONE declared inventory (see
+  BO-4400b-2, which proves the inventory is complete by measurement rather than by
+  listing). BO-4400c is the prevention side: once environments live inside the workspace
+  the Poetry item stops arising, but clearing must still remove one created before that.
+
+  Branch deletion is local only and follows the verdict: holds-nothing already means every
+  commit is on the shared project (pushed line, main, or squash-merged per BO-4100c-1-i).
+  The shared project's copy of the line is never deleted by this record.

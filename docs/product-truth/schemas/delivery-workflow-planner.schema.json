@@ -1,0 +1,63 @@
+{
+  "type": "object",
+  "required": [
+    "ticket_path",
+    "ordered_phases"
+  ],
+  "properties": {
+    "ticket_path": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "files_touched": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "has_test_requirements": {
+      "type": "boolean"
+    },
+    "existing_test_files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source_ac": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ordered_phases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "agent",
+          "status"
+        ],
+        "properties": {
+          "agent": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "needed",
+              "signed_off",
+              "not_needed",
+              "failed"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Source-reviewed PLANNER_SCHEMA",
+  "description": "Documentation transcription of templates/workflows-js/build-ticket.js::PLANNER_SCHEMA. This is the existing source shape, not a new runtime registration; automatic source/schema parity is not asserted."
+}

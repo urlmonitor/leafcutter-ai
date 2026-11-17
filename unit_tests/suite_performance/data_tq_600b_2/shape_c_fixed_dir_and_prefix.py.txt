@@ -1,0 +1,7 @@
+"""Offender shape 3: a fixed dir= plus a fixed prefix= that is then reused."""
+import tempfile
+
+
+def test_makes_a_fixed_dir_and_prefix_scratch():
+    scratch = tempfile.mkdtemp(dir="/var/tmp", prefix="leaf_fixed_shape_c_")
+    assert scratch

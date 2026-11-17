@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="3" time="21.090" timestamp="2026-10-02T09:31:20.050428+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_absent_empty_null_and_false_remain_distinct[properties0]" time="0.007"><failure message="AssertionError: assert {'canonical_i...ary': '', ...} == {'canonical_i...ary': '', ...}&#10;  &#10;  Omitting 5 identical items, use -vv to show&#10;  Differing items:&#10;  {'properties': {'canonical': False}} != {'properties': {}}&#10;  Use -v to get more diff">tests\knowledge\test_native_test.py:147: in test_test_reference_absent_empty_null_and_false_remain_distinct
+    assert record.metadata == expected
+E   AssertionError: assert {'canonical_i...ary': '', ...} == {'canonical_i...ary': '', ...}
+E     
+E     Omitting 5 identical items, use -vv to show
+E     Differing items:
+E     {'properties': {'canonical': False}} != {'properties': {}}
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_absent_empty_null_and_false_remain_distinct[properties1]" time="0.003"><failure message="AssertionError: assert {'canonical_i...ary': '', ...} == {'canonical_i...ary': '', ...}&#10;  &#10;  Omitting 5 identical items, use -vv to show&#10;  Differing items:&#10;  {'properties': {'missing': False, 'canonical': False}} != {'properties': {'missing': False}}&#10;  Use -v to get more diff">tests\knowledge\test_native_test.py:147: in test_test_reference_absent_empty_null_and_false_remain_distinct
+    assert record.metadata == expected
+E   AssertionError: assert {'canonical_i...ary': '', ...} == {'canonical_i...ary': '', ...}
+E     
+E     Omitting 5 identical items, use -vv to show
+E     Differing items:
+E     {'properties': {'missing': False, 'canonical': False}} != {'properties': {'missing': False}}
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_absent_empty_null_and_false_remain_distinct[properties2]" time="0.002"><failure message="AssertionError: assert {'canonical_i...ary': '', ...} == {'canonical_i...ary': '', ...}&#10;  &#10;  Omitting 5 identical items, use -vv to show&#10;  Differing items:&#10;  {'properties': {'missing': None, 'canonical': False}} != {'properties': {'missing': None}}&#10;  Use -v to get more diff">tests\knowledge\test_native_test.py:147: in test_test_reference_absent_empty_null_and_false_remain_distinct
+    assert record.metadata == expected
+E   AssertionError: assert {'canonical_i...ary': '', ...} == {'canonical_i...ary': '', ...}
+E     
+E     Omitting 5 identical items, use -vv to show
+E     Differing items:
+E     {'properties': {'missing': None, 'canonical': False}} != {'properties': {'missing': None}}
+E     Use -v to get more diff</failure></testcase></testsuite></testsuites>

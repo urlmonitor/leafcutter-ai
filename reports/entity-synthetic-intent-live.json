@@ -1,0 +1,83 @@
+{
+  "provider_mode": "live",
+  "rows": [
+    {
+      "id": "meaning",
+      "expected": "evidence",
+      "recognition_model_calls": 0,
+      "baseline": {
+        "intent": "evidence",
+        "clarification": false,
+        "model_calls": 1,
+        "caller_context": {
+          "conversation": [
+            "We are discussing an invented example project."
+          ]
+        }
+      },
+      "entity": {
+        "intent": "evidence",
+        "clarification": false,
+        "model_calls": 1,
+        "caller_context": {
+          "conversation": [
+            "We are discussing an invented example project."
+          ]
+        }
+      },
+      "passed": true
+    },
+    {
+      "id": "new_name",
+      "expected": "change",
+      "recognition_model_calls": 0,
+      "baseline": {
+        "intent": "change",
+        "clarification": false,
+        "model_calls": 1,
+        "caller_context": {
+          "observations": [
+            "This fictional name is new."
+          ]
+        }
+      },
+      "entity": {
+        "intent": "change",
+        "clarification": false,
+        "model_calls": 1,
+        "caller_context": {
+          "observations": [
+            "This fictional name is new."
+          ]
+        }
+      },
+      "passed": true
+    },
+    {
+      "id": "unclear",
+      "expected": "insufficient_context",
+      "recognition_model_calls": 0,
+      "baseline": {
+        "intent": "insufficient_context",
+        "clarification": true,
+        "model_calls": 1,
+        "caller_context": {
+          "host": "ExampleHost"
+        }
+      },
+      "entity": {
+        "intent": "insufficient_context",
+        "clarification": true,
+        "model_calls": 1,
+        "caller_context": {
+          "host": "ExampleHost"
+        }
+      },
+      "passed": true
+    }
+  ],
+  "total": 3,
+  "passed": 3,
+  "model_calls": 6,
+  "interpretation": "Synthetic example, six paired calls; does not establish statistical improvement or real-repository answer quality."
+}

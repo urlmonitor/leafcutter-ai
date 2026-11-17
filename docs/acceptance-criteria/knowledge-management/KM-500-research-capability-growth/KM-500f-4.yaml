@@ -1,0 +1,184 @@
+id: KM-500f-4
+title: Bound implementation explanations by inspected source evidence
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+work_status: in_progress
+readiness: approved
+priority: medium
+parent: KM-500f
+criteria: 'Given an agent asks where the work-status field is lost between canonical source and the returned answer
+
+  When research checks whether approved implementation evidence exists for that question and revision
+
+  Then an explanation based on inspected source identifies the attributable stages and supporting locations that
+  establish the claimed field transformation
+
+  And declared implementation references are labeled as references rather than proof of a complete function or data-flow
+  graph
+
+  And a source-based explanation remains distinguishable from a diagnosis of one particular runtime request
+
+  And a runtime-cause claim requires the matching request or diagnostic evidence in addition to source interpretation
+
+  And if implementation source or its approved inspection route is unavailable, the answer identifies that missing
+  evidence and leaves the unobserved transformation unresolved
+
+  And the absence of an indexed code relationship is not treated as proof that the code or dependency does not exist.
+
+  '
+depends_on:
+- KM-500f
+- KM-500e-2
+- KM-500f-1
+doc_links:
+- path: docs/analysis/2026-10-01-repository-query-catalog.md
+  relationship: context
+  status: exists
+  relevance: RQ3/RQ4/RQ5/RQ6 role questions and current source limitations.
+- path: docs/analysis/2026-10-01-repository-query-evaluation-cases.json
+  relationship: context
+  status: exists
+  relevance: RQE-03/RQE-04 are planned controls, not passing runtime proof.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Declared canonical relationships and approved source mappings remain authoritative.
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500e-5.yaml
+  relationship: context
+  status: exists
+  relevance: Shared reference-doc requirement for this feature; no duplicated vocabulary.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Existing public boundaries, canonical projection ownership and bounded research integration.
+- path: docs/testing/test-angles.md
+  relationship: context
+  status: exists
+  relevance: Public reachability, producer-consumer seams and discriminating proof expectations; these descriptors
+    are planned.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+- ac_id: KM-500e-5
+  agent: documentation-expert
+  contract: 'Implementation explanation: inspected source evidence and locators/revision, bounded field-flow stages
+    when supported, declared implementation references, runtime-attempt evidence if supplied, inference label, unsupported
+    scope and missing inspection authorization.'
+expects_from:
+- ac_id: KM-500e-2
+  contract: 'Attributed field evidence: canonical_id, repository_id, source_sha, source_locator, disclosed_values
+    keyed by canonical field, field_availability (present, source_absent, projection_absent, disclosure_omitted,
+    truncated, unknown), exact_clause completeness and limitations; lifecycle status, req_status, work_status and
+    readiness remain separate.'
+- ac_id: KM-500f-1
+  contract: 'Declared-impact evidence: source_sha(s), root canonical ID, relation kind/direction/depth, attributable
+    edges and unique dependent IDs, complete flag/limitations, known subset and exact total only when complete;
+    declared links and inferred effects are distinct.'
+origin_agent: business-analyst
+created: '2026-10-01'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500f.yaml
+amended_by:
+- '2026-10-01: User explicitly approved the new ACs and directed implementation with agents and an independent evaluator. Approval records authorization, not implementation or execution proof.'
+superseded_by: null
+covered_by:
+- tests/knowledge/test_query_answer_contract_acceptance_assessment.py
+- tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py
+- tests/knowledge/test_query_answer_contract_acceptance_clauses.py
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RepositoryResearchAnswers/TICKET-20261001-KM-500f-4.md
+change_target: code
+risk_surface: contract_boundary
+notes: RQ5; CODER-01, CODER-05. Conditional supported inspection contract only; complete code graph, universal source
+  ingestion and automated field-flow analysis remain outside this draft scope. Draft behavioral specification under
+  the user-requested BA pass; technical enrichment and proof remain pending.
+it_requirements:
+- Retain immutable repository/source SHA provenance, bounded registered read-only queries and existing kernel authorization,
+  budgets and retries. This contract adds no arbitrary Cypher, new network endpoint, source-write permission or
+  automatic query activation.
+- The named fields below describe the planned observable semantic contract; preserve compatible existing envelope
+  fields and version any incompatible extension. Required unavailable values stay explicit and are never inferred
+  from an evaluation oracle.
+- This contract consumes approved source evidence already available to research; it does not add universal code
+  indexing, call-graph extraction or a new source-inspection permission.
+- Implementation references establish only declared links. Field-flow stages need attributable inspected content
+  and revision; explanations distinguish inspected source facts from inference and unknown stages.
+- A runtime-cause claim additionally requires diagnostics for the matching request/attempt and relevant revision.
+  Static source findings alone cannot establish why another run failed.
+- If approved inspection is unavailable or missing evidence prevents a stage, return a bounded explanation and explicit
+  gap without asserting that the implementation or dependency does not exist.
+test_required: true
+test_rationale: Planned criterion and public reachability proof includes real producer/consumer boundaries and named
+  plausible wrong outcomes. No descriptor is executed coverage; no provider, database or deployment result is asserted.
+test_spec:
+- name: test_public_implementation_explanation_is_bounded_by_supplied_source
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Provide approved source excerpts with locators and revision through public research; assert only
+    evidenced field-flow stages are explained and interpretation remains labeled.
+  must_catch:
+  - Inventing unseen stages or claiming a complete code graph from a few snippets.
+  covers:
+  - KM-500f-4
+  requires_db: false
+  surface_invoked: Existing kernel research run/resume entry point using retrieve.repository
+- name: test_implementation_reference_alone_does_not_establish_dataflow
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Provide implemented_by file references without inspected content and assert the references are reported
+    while the field-flow question remains unresolved.
+  must_catch:
+  - Treating a filename reference as evidence of a callable path or transformation.
+  covers:
+  - KM-500f-4
+  requires_db: false
+- name: test_static_explanation_and_runtime_diagnostics_keep_attempt_identity
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Combine real source-evidence and diagnostic consumers with matching and mismatched request/revision
+    identities; permit causal statements only for attributable matching diagnostics.
+  must_catch:
+  - Using a source excerpt or an unrelated failure trace as proof of the current runtime cause.
+  covers:
+  - KM-500f-4
+  requires_db: false
+- name: test_missing_inspection_support_never_expands_access
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Make source inspection unsupported or unauthorized and assert an explicit capability/evidence gap
+    with no inspection invocation and no claim that absent graph links prove absent code.
+  must_catch:
+  - Launching an unauthorized source read or declaring no dependency because the graph has no code mapping.
+  covers:
+  - KM-500f-4
+  requires_db: false
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: assess
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: judge-coverage
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'

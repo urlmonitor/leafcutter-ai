@@ -155,6 +155,14 @@ superseded_by: null
 covered_by:
 - unit_tests/prompt_assembly/test_bo_400e_3.py
 - BO-400e-3-i
+- BO-400e-3-ii
+- BO-400e-3-iii
+- BO-400e-3-iv
+- BO-400e-3-v
+- BO-400e-3-vi
+- BO-400e-3-vii
+- BO-400e-3-viii
+- BO-400e-3-ix
 implemented_by:
 - tickets/00_inbox/epics/EPIC-WorkIsOnlyEverMarkedFinishedThroughThe/03_TICKET-20260914-BO-400e-3.md
 - scripts/set_ticket_status.py

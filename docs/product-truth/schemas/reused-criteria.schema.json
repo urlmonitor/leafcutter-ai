@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PROPOSED reused criteria list",
+  "description": "Design-only list transcribed from the DK-500d-1 delivers_to contract (docs/acceptance-criteria/decision-kernel/DK-500-reusable-decision-criteria/DK-500d-1.yaml): each published category that fits the decision is offered as one proposed criterion linked to its category. DK-500d-1 names left_out_count beside this list but defines no enclosing payload, so that count is not part of this schema. No kernel step, payload or validator implements this list yet; it is not a kernel Criterion, which forbids extra fields such as category_id.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "category_id": {
+        "type": "string",
+        "pattern": "^cat-[0-9a-f]{16}$",
+        "description": "the published CriterionCategory.id this criterion is reused from"
+      },
+      "criterion_id": {
+        "type": "string",
+        "description": "the most common member criterion id (ties in lexical order), made unique within the decision"
+      },
+      "question": {
+        "type": "string",
+        "description": "the category's pref_label"
+      },
+      "priority": {
+        "type": "string",
+        "enum": ["required", "supporting"],
+        "description": "the majority priority among the category's member criteria, falling back to the decision record schema default on a tie"
+      },
+      "kind": {
+        "type": "string",
+        "enum": ["evidence_answerable", "design_judgement"],
+        "description": "the majority kind among the category's member criteria, falling back to the decision record schema default on a tie"
+      },
+      "proposal_status": {
+        "type": "string",
+        "enum": ["proposed"],
+        "description": "always proposed: a reused criterion reaches the approval gate as a proposal, never as approved"
+      },
+      "reuse": {
+        "type": "string",
+        "enum": ["unedited", "edited", "grouped"],
+        "description": "reuse-link kind named in DK-500d-1; the reuse step emits unedited"
+      }
+    },
+    "required": ["category_id", "criterion_id", "question", "priority", "kind", "proposal_status", "reuse"]
+  }
+}

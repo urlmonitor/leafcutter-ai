@@ -35,6 +35,7 @@ amended_by:
 superseded_by: null
 covered_by:
   - unit_tests/feedback/test_submit_feedback.py::TestConfigResolutionAnchoring
+  - INF-100c-1-i
 implemented_by:
   - templates/scripts/feedback/submit_feedback.py
 change_target: code

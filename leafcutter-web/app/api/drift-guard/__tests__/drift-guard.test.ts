@@ -12,7 +12,6 @@
  * so citing them here stays within the black-box mandate.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { NextRequest } from "next/server";
 
 afterEach(() => {
   vi.resetModules();
@@ -126,8 +125,7 @@ async function callDriftGuard(opts: {
   }));
 
   const mod = await import("@/app/api/drift-guard/route");
-  const request = new NextRequest("http://localhost/api/drift-guard");
-  return mod.GET(request);
+  return mod.GET();
 }
 
 describe("UXP-609 — drift-guard asserts mock mode active BEFORE evaluating drift", () => {

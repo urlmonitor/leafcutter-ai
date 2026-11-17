@@ -1,0 +1,75 @@
+id: DK-500d
+title: "Start each new decision from the categories that already fit"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Matching approved categories become a new decision's starting criteria.
+
+  When a new decision is being framed, the approved categories that fit its kind
+  and the parts of the project it touches are offered first, in their preferred
+  wording, and each reused question stays linked to its category. You still
+  review and approve the criteria of every decision, so a reused question gains
+  no authority from having been used before.
+depends_on:
+  - DK-500
+doc_links:
+  - path: docs/decisions/dec-93c1c730463c1f3c.yaml
+    relationship: governs
+    status: exists
+    relevance: "Categories carry decision_type and components filters from declared vocabularies; a later run finds candidates by filter and wording without opening every file (criteria crit.filters_from_declared_vocabularies, crit.cheap_candidate_lookup)."
+  - path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: modifies
+    status: exists
+    relevance: "Steps 7-8 (propose, approve-proposals) gain reuse-first criteria; the flow does not show this yet."
+  - path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+    relationship: related
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-10-03
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-500d-1
+  - DK-500d-2
+  - DK-500d-3
+  - DK-500d-4
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+notes: |
+  Only PUBLISHED categories are offered. Candidates, staged and retired
+  categories are not. The kernel finds them through reviewed records in Git,
+  never through Langfuse (ADR-058 section 6).
+
+  The human approval gate stays. Reused criteria are proposals at the
+  approve-proposals step exactly like generated ones (ADR-060: evidence, never
+  authority). This L1 must not create a path where a reused category skips that
+  step.
+
+  DISTINCT FROM PRECEDENT. The precedent step (decision-retrieval flow) may
+  offer an earlier ANSWER. This L1 offers earlier QUESTIONS. The two can apply
+  in the same run.
+
+  OPEN, for BA / IT PO: "each reused question stays linked to its category".
+  Membership lives only in the category record as (decision id, criterion id)
+  pairs, and decision records stay unchanged. How a NEW decision's reuse of a
+  category becomes a member pair is not settled by the decision. Two options:
+  the category record gains the pair when the new decision is published, or the
+  next mining round (DK-500a) picks it up. DK-500f's usage and outcome counts
+  depend on this.

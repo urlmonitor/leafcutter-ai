@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "goal": "For KM-500c-2, what must tests demonstrate?",
+  "caller": {
+    "schema_version": "1.0",
+    "id": "aura-proof",
+    "kind": "host"
+  },
+  "scope": {
+    "schema_version": "1.0",
+    "workspace_id": "aura-proof",
+    "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01",
+    "revision": {
+      "schema_version": "1.0",
+      "commit": "0000000000000000000000000000000000000000",
+      "dirty": false,
+      "tree_fingerprint": null
+    },
+    "component_ids": [],
+    "read_roots": [
+      "docs"
+    ],
+    "source_ids": [
+      "knowledge.graph"
+    ],
+    "technologies": []
+  },
+  "requested_output_schema": "leafcutter.evidence_bundle.v1",
+  "input_payload_schema": "leafcutter.research_request.v1",
+  "input_payload": {
+    "question": "For KM-500c-2, what must tests demonstrate?",
+    "evidence_needs_only": true,
+    "evidence_needs": [
+      {
+        "id": "need.question",
+        "category": "task_context",
+        "priority": "required",
+        "question": "For KM-500c-2, what must tests demonstrate?"
+      }
+    ]
+  },
+  "initial_evidence": [],
+  "context": {
+    "schema_version": "1.0",
+    "host": null,
+    "capabilities": [],
+    "conversation": [],
+    "observations": []
+  },
+  "constraints": [],
+  "permissions": [
+    "read_repo"
+  ]
+}

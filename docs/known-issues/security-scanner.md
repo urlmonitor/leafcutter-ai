@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-19
-last_updated: 2026-09-14
+last_updated: 2026-10-20
 components:
   - security_scanner
   - commit_guardian
@@ -91,7 +91,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`security-scanner/resolved/`](security-scanner/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 3** (0 blocker, 1 high, 2 low) · **Resolved: 0**
+**Open: 4** (0 blocker, 1 high, 3 low) · **Resolved: 0**
 
 ## Open
 
@@ -100,6 +100,7 @@ Fixed issues move to [`security-scanner/resolved/`](security-scanner/resolved/) 
 | `high` | KI-SEC-001 — Prose exemption disables entropy detection for WHOLE FILES, including executable Python under `templates/skills/` | [open-high-ki-sec-001.md](security-scanner/open-high-ki-sec-001.md) |
 | `low` | KI-SEC-20260914-entropy-flags-test-class-names — ENTROPY_HIGH reads a long CamelCase test class name carrying an AC id as a secret, and the only remedy it offers is an allowlist edit that an automated reviewer rightly refuses | [open-low-ki-sec-20260914-entropy-flags-test-class-names.md](security-scanner/open-low-ki-sec-20260914-entropy-flags-test-class-names.md) |
 | `low` | KI-SEC-20260927-generic-secret-flags-placeholder-constants-by-name — GENERIC_SECRET fires on any constant whose name contains TOKEN and whose value is a quoted string, and on ticket prose that quotes the line | [open-low-ki-sec-20260927-generic-secret-flags-placeholder-constants-by-name.md](security-scanner/open-low-ki-sec-20260927-generic-secret-flags-placeholder-constants-by-name.md) |
+| `low` | KI-SEC-20261020-entropy-flags-decision-history-tail-tag — ENTROPY_HIGH flags the doc-enforcer-mandated DECISION HISTORY tail tag when the epic name is long, so two mandated conventions collide | [open-low-ki-sec-20261020-entropy-flags-decision-history-tail-tag.md](security-scanner/open-low-ki-sec-20261020-entropy-flags-decision-history-tail-tag.md) |
 
 ## Resolved
 

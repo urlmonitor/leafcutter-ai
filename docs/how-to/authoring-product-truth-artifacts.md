@@ -4,10 +4,11 @@ description: "Step-by-step guide for authoring product-truth artifacts by hand, 
 type: how-to
 status: active
 created: 2026-07-14
-last_updated: 2026-09-25
+last_updated: 2026-10-09
 components:
   - ux_prototyping
 related_docs:
+  - docs/product-truth/JSON-CONTRACTS.md
   - docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md
   - docs/architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md
   - docs/architecture/components/ux-prototyping.md
@@ -19,8 +20,7 @@ related_docs:
 
 # How to author a Flow, Mockup, or Mock Data artifact by hand
 
-This guide covers authoring the three product-truth artifact kinds — **Flows**,
-**Mockups**, and **Mock Data** — in `docs/product-truth/`. It applies whether you
+This guide covers authoring the three product-truth artifact kinds — **Flows**, **Mockups**, and **Mock Data** — in `docs/product-truth/`. It applies whether you
 are a human dogfooding a seed or an agent (`business-analyst`, `frontend-coder`,
 etc.) producing an artifact.
 
@@ -60,8 +60,7 @@ entities.
 | "the data behind X / a sample dataset" | Mock Data |
 | "a screen / page / view that shows X" | Mockup (+ Mock Data to populate it) |
 
-Record the component and entities the request implies — you need them for the
-search step next.
+Record the component and entities the request implies — you need them for the search step next.
 
 ---
 
@@ -83,16 +82,15 @@ for something that already exists — extend it in place.**
        -> EXTEND it in place. Add the new records / fields / steps / branches,
           bump `version`, append a `provenance` entry. Keep the id.
    Else:
-       -> CREATE a new artifact, then register it in artifacts[] AND every
-          derived index it belongs to (by_component, by_entity, by_flow).
+       -> CREATE a new artifact, then register it in artifacts[] only.
+          Run the generator to rebuild the derived indexes.
 
 4. NEVER create a second Mock Data artifact for an entity a component already
    has. There is ONE canonical dataset per entity per component; it grows.
    Duplicating it is the synthetic-fixture bug this store exists to kill.
 ```
 
-The same rule applies to flows: a new screen that belongs to an existing journey
-is a **step added to that flow**, not a new flow.
+The same rule applies to flows: a new screen that belongs to an existing journey is a **step added to that flow**, not a new flow.
 
 ### Searching the manifest
 
@@ -128,15 +126,29 @@ in both.
 1. If extending, add steps/branches to the existing flow; if creating, copy the
    shape from `schemas/flow.schema.json` and the seed
    `fern-and-fig/customer-buys-a-plant`.
-2. Write the `summary` (one plain-language paragraph) and, for each step, a
-   `human` one-liner. These are the human-readable view.
+2. Write the `summary` (one plain-language paragraph). Give every step (and
+   any branch that needs one) a `description`: ONE plain sentence, at most 200
+   characters, of WHAT happens and who does it. Beside `agent`, set `actor_kind`
+   to the mechanism that does the work: `deterministic` (code), `jev`, `llm` (an
+   AI agent) or `human` (a person). Each kind of detail has its own home — see
+   [What goes where in a step](product-truth-schema-reference.md#what-goes-where-in-a-step):
+   - **Never in a description:** code paths or file names; symbol, function or
+     field names; build or implementation status ("implemented", "not built",
+     "stub", "TODO"); design notes; ticket, AC, ADR or record ids; contract
+     dumps, JSON, commands or flags; a second sentence. The validator's
+     [description gates](../reference/product-truth-size-bounds.md#step-description-gates)
+     block the length and every code-shaped item.
+   - Inputs and outputs go in `io_contracts` for every step/branch, using the
+     [worked example](../product-truth/JSON-CONTRACTS.md#checked-json-handoffs);
+     Atlas renders those fields and examples next to the description.
 3. Order steps with `order`; add "what-if" `branches` (each `from` a step id,
    with a `condition`).
-4. Name the entities each step `reads`/`writes`, and point `mock_data_ref` at the
-   one canonical dataset.
+4. For entity/mock journeys, name the entities each step `reads`/`writes` and
+   link the canonical dataset. Real code/data flows need no invented screens,
+   mock entities or datasets: document their actual contracts instead.
 5. For each step/branch, write `acceptance_scenarios` (Given/When/Then). These
    are the seeds the `business-analyst` turns into L2/L3 ACs.
-6. Leave `implements` empty until ACs exist; the BA fills it with the AC ids it
+6. Leave new `implements` empty until ACs exist; preserve existing valid links. The BA fills it with the AC ids it
    authors. **Do not hand-edit `impl_status` / `impl_summary`** — they are
    derived (see below).
 7. Set the `screen` on any step that renders a Mockup.
@@ -169,16 +181,19 @@ fail the commit gate, naming both the declared value and the root.
 `impl_status` (per step/branch) and `impl_summary` (per flow) are **DERIVED** from
 the `work_status` of the ACs in each `implements` list — they are never authored
 by hand. The impl-status generator/validator recomputes them and flags drift, and
-the Leafcutter Atlas resolves them live at read time. Likewise, the `.md`
-rendering of a flow is generated from the `.flow.json` — **edit the JSON, never
-the `.md`.**
+the Leafcutter Atlas resolves them live at read time. The generator also owns the
+compatibility `consumes`/`produces` labels and never writes into a `description`.
+Author `io_contracts`, not those derived copies; Atlas renders structured metadata
+as contract groups, field tables and separate JSON examples. The canonical
+generator does not emit separate flow Markdown.
 
 ---
 
 ## Part 5 — Register and validate
 
-1. If you created a new artifact, add it to `artifacts[]` and every derived index
-   it belongs to in `index.json`.
+1. Register a new artifact in `index.json` `artifacts[]` only; update its version
+   when extending. Run `python docs/product-truth/scripts/generate_product_truth.py`
+   to rebuild the derived indexes, statuses and compatibility labels.
 2. Run the validator:
 
    ```bash
@@ -188,7 +203,8 @@ the `.md`.**
    It checks schema conformance, that `index.json` mirrors each artifact,
    entity-registry membership, step/branch id uniqueness,
    `acceptance_scenarios.for` resolution, `impl_summary` correctness, mock-data
-   invariants, and classifier `outcome` consistency. An unresolved `implements`
+   invariants, classifier `outcome` consistency, and that every step and branch
+   `description` passes the description gates. An unresolved `implements`
    AC id is now a hard failure (UXP-700c-1): every pointer is re-resolved
    against the AC store *as it stands right now*, and a broken one is reported
    as `[pointer] <flow id> <step/branch kind> '<node id>': AC pointer '<ac id>'
@@ -255,6 +271,15 @@ why a separator-only difference between platforms is never drift, see
 
 ---
 
+## Document callable inputs and outputs
+
+Every step and branch needs `io_contracts`. Follow the complete
+[JSON contract standard](../product-truth/JSON-CONTRACTS.md): exact paths, types,
+requiredness/defaults, examples and authority; genuine no-wire reasons and
+source-backed proposed gaps. Its worked example and review checklist distinguish
+contract aliases from JSON wrappers and schema validity from semantic correctness.
+Regenerate the compatibility labels, then run the canonical validator.
+
 ## Verification
 
 - The validator exits 0. It also prints `resolved N pointer(s)` naming exactly
@@ -265,7 +290,7 @@ why a separator-only difference between platforms is never drift, see
   case any more.
 - Your artifact appears in `index.json` under `artifacts[]` and in each derived
   index (`by_component`, `by_entity`, `by_flow`) it belongs to.
-- For a flow, the generated `.md` rendering reflects your steps and branches.
+- For a flow, Atlas shows each step's description, actor kind and structured contract details from the canonical JSON. The canonical generator does not emit a separate Markdown rendering.
 - In the Leafcutter Atlas (`/flows`), the artifact appears and — once ACs are
   linked via `implements` — is coloured by its live build status.
 - If you added a `confirmed` record (Part 6), the validator's stdout states

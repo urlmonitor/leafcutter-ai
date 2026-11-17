@@ -6,7 +6,7 @@ components:
 title: "Agent template declares exactly three skills with invocation conditions"
 component: build_pipeline
 level: L2
-status: active
+status: superseded_by
 req_status: active
 work_status: done
 criteria: |
@@ -36,8 +36,14 @@ expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
 created_by_ticket: "tickets/99_done/EPIC-LLMExpertAgent/done/01_agent_template.md"
-amended_by: []
-superseded_by: null
+amended_by:
+  - reason: superseded
+    agent: orchestrator
+    date: '2026-10-09'
+    changed: "SUPERSEDED by AR-300c-1 and AR-300a-4, decided by BrainCandy 2026-10-09. This record required llm-expert's template BODY to hold a hand-written 'Skills' table; AR-300a-4 ('No compiled prompt carries two competing accounts of what an agent may use') forbids exactly that once AR-300c-1 makes the frontmatter `skills:` declaration the single source, delivered as one appended skills section with mode and condition. The intent survives: llm-expert still declares exactly add-agent-to-package, add-skill-to-package and signoff, and its compiled prompt names each with when it applies. Two parts are deliberately not carried forward: the SKILL.md path column (skills are invoked by name), and signoff's 'end of every ticket phase' condition (the user made llm-expert/signoff `always`). criteria left unchanged as the audit trail; the covering test in unit_tests/agents/test_llm_expert_artifacts.py is rewritten to assert the replacement."
+superseded_by:
+  - AR-300c-1
+  - AR-300a-4
 covered_by:
   - "unit_tests/agents/test_llm_expert_artifacts.py"
 implemented_by:

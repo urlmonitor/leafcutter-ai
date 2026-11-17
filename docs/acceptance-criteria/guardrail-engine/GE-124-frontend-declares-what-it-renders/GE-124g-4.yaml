@@ -108,7 +108,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Required the rule to extend the EXISTING coverage-acceptance surface (done_proof / test_enforcement) rather than a second oracle, enumerated the rejected assertion shapes so the rule is implementable rather than a judgement of test quality, and flagged the cross-stack limit — the subject is JS/TS test source inspected by a Python implementer, so if the line cannot be drawn without a real JS AST that must be raised rather than papered over with a regex that mis-classifies in either direction. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/48_TICKET-20261023-GE-124g-4.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -136,3 +137,4 @@ notes: |
   JS, that is a genuine blocker to raise, not something to approximate — a
   mis-classification accepts an empty test or rejects a real one, and either is
   worse than the status quo.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

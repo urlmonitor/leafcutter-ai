@@ -376,7 +376,9 @@ def test_gate_verdict_on_other_fields_is_unchanged(tmp_path):
     agent = fx.make_agent(tier="not_a_real_tier")  # no step_kinds field at all
     pkg = fx.build_min_package(tmp_path, [agent])
 
-    errors = validate_agent_registry(pkg)
+    # AR-400a-1-i: a config-only package examines zero templates, which the ability
+    # reference check reports by design; this scope guard concerns the other fields.
+    errors = [e for e in validate_agent_registry(pkg) if "examined" not in e and "ability" not in e]
     assert errors == [], (
         "step_kinds validation must not incidentally switch on whole-schema "
         f"validation for unrelated fields like 'tier'. Got errors: {errors}"

@@ -81,6 +81,7 @@ flowchart TD
 |------|
 | `Bash` |
 | `Read` |
+| `Skill` |
 ---
 
 ## Skills Used

@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "decision-publish-result.schema.json",
+  "title": "decision-publish-result",
+  "description": "Source-reviewed documentation of kernel/memory/cli.py normal or refused command JSON; environment-error documents are a separate shape. No automatic source-code parity or runtime schema enforcement is claimed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ok",
+    "problems",
+    "published",
+    "already_present",
+    "corrected",
+    "index_written"
+  ],
+  "properties": {
+    "ok": {
+      "type": "boolean"
+    },
+    "problems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file",
+          "message"
+        ],
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "published": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "already_present": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "corrected": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "index_written": {
+      "type": "boolean"
+    }
+  }
+}

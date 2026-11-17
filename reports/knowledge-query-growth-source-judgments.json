@@ -1,0 +1,155 @@
+{
+  "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+  "reviewer": "Independent BA source review",
+  "method": "Read canonical AC YAML from immutable git archive; select exact components values, then direct covered_by test-file references. Independently verified target files and registry IDs exist. No query compiler or backend used to derive answers.",
+  "question": "Which directly declared test files cover acceptance criteria belonging to this component?",
+  "semantics": "Direct two-hop Component <- component_membership - AcceptanceCriterion - covered_by -> Test. Does not prove tests pass or completeness of undeclared coverage.",
+  "bounds": {
+    "git_vcs_operations_ac_count": 8,
+    "release_manager_ac_count": 1,
+    "maximum_covered_by_entries_per_selected_ac": 2,
+    "fanout_required": 10,
+    "result_limit_required": 4
+  },
+  "cases": [
+    {
+      "name": "four_declared_git_vcs_test_files",
+      "arguments": {
+        "component_ids": [
+          "git_vcs_operations"
+        ]
+      },
+      "expected_ids": [
+        "unit_tests/commit_guardian/test_ge_120e_1_ii.py",
+        "unit_tests/portability/test_ge_120e_4_i.py",
+        "unit_tests/workflows/test_bo4000b_branch_staleness_decision.py",
+        "unit_tests/workflows/test_inf_700a_5_i.py"
+      ]
+    },
+    {
+      "name": "existing_release_component_has_no_declared_test_files",
+      "arguments": {
+        "component_ids": [
+          "release_manager"
+        ]
+      },
+      "expected_ids": []
+    }
+  ],
+  "sources": [
+    {
+      "id": "BO-2400f-4-ii",
+      "path": "docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-4-ii.yaml",
+      "sha256": "6bfa8a3c8191a4dc58234cf06a737e54a9ddb271f1f2725d6f7249f1907adff8",
+      "components": [
+        "release_manager"
+      ],
+      "component_locator": "/components",
+      "covered_by_locator": "/covered_by",
+      "covered_by": []
+    },
+    {
+      "id": "BO-4000b",
+      "path": "docs/acceptance-criteria/build-orchestration/BO-4000b.yaml",
+      "sha256": "b1bcd9676cd20e5fb49814693043034fce1e4e8bc993eb5096330616ec3356b6",
+      "components": [
+        "git_vcs_operations"
+      ],
+      "component_locator": "/components",
+      "covered_by_locator": "/covered_by",
+      "covered_by": [
+        "unit_tests/workflows/test_bo4000b_branch_staleness_decision.py"
+      ]
+    },
+    {
+      "id": "GE-120e-1",
+      "path": "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e-1.yaml",
+      "sha256": "b7f2e2a4c6330dcfa660df26f200a7dc2f9c074ba2d9b949281878646627fc93",
+      "components": [
+        "git_vcs_operations"
+      ],
+      "component_locator": "/components",
+      "covered_by_locator": "/covered_by",
+      "covered_by": [
+        "GE-120e-1-i",
+        "GE-120e-1-ii"
+      ]
+    },
+    {
+      "id": "GE-120e-1-i",
+      "path": "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e-1-i.yaml",
+      "sha256": "a30f43553b86b6f34189fd1f6c71dd40af66f63872d57d9c9d4ff7c5f72e8a8c",
+      "components": [
+        "git_vcs_operations"
+      ],
+      "component_locator": "/components",
+      "covered_by_locator": "/covered_by",
+      "covered_by": []
+    },
+    {
+      "id": "GE-120e-1-ii",
+      "path": "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e-1-ii.yaml",
+      "sha256": "e42e9a64f7c1b43687627f905e3b56446350f662b94ea7a0b0b6f5ee491bbcbc",
+      "components": [
+        "git_vcs_operations"
+      ],
+      "component_locator": "/components",
+      "covered_by_locator": "/covered_by",
+      "covered_by": [
+        "unit_tests/commit_guardian/test_ge_120e_1_ii.py"
+      ]
+    },
+    {
+      "id": "GE-120e-3-ii",
+      "path": "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e-3-ii.yaml",
+      "sha256": "a5c2439877f428df248d6c1d862aa844d5207c88360fbb17556a1549306666c7",
+      "components": [
+        "git_vcs_operations"
+      ],
+      "component_locator": "/components",
+      "covered_by_locator": "/covered_by",
+      "covered_by": []
+    },
+    {
+      "id": "GE-120e-4",
+      "path": "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e-4.yaml",
+      "sha256": "e445fd7330ae4a772031f2ae9e2d098ec86101eda7d093de1f88ab7f6fdd781d",
+      "components": [
+        "git_vcs_operations"
+      ],
+      "component_locator": "/components",
+      "covered_by_locator": "/covered_by",
+      "covered_by": [
+        "GE-120e-4-i"
+      ]
+    },
+    {
+      "id": "GE-120e-4-i",
+      "path": "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e-4-i.yaml",
+      "sha256": "49a16011c82991f39c73ddd3dc52364f6b95d9f182e5327348c4595e693ec819",
+      "components": [
+        "git_vcs_operations"
+      ],
+      "component_locator": "/components",
+      "covered_by_locator": "/covered_by",
+      "covered_by": [
+        "unit_tests/portability/test_ge_120e_4_i.py"
+      ]
+    },
+    {
+      "id": "INF-700a-5-i",
+      "path": "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a-5-i.yaml",
+      "sha256": "97a75a0cff9b2442c94dde1627ab24fabe0ee85480786800585dfa3d2374528b",
+      "components": [
+        "git_vcs_operations"
+      ],
+      "component_locator": "/components",
+      "covered_by_locator": "/covered_by",
+      "covered_by": [
+        "unit_tests/workflows/test_inf_700a_5_i.py"
+      ]
+    }
+  ],
+  "execution_status": "Expected judgments only; actual admission and result evaluation not yet run.",
+  "semantic_scores": null
+}

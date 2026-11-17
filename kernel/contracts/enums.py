@@ -97,6 +97,7 @@ class SideEffectClass(StrEnum):
     NONE = "none"
     READ_ONLY = "read_only"
     RUN_ARTIFACTS = "run_artifacts"
+    CATALOG_WRITE = "catalog_write"
     REPO_WRITE = "repo_write"
     EXTERNAL_WRITE = "external_write"
 

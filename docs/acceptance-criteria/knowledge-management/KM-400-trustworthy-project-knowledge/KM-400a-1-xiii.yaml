@@ -1,0 +1,210 @@
+id: KM-400a-1-xiii
+title: Changelog properties preserve historical values and disclose compatibility parsing
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+work_status: done
+priority: medium
+parent: KM-400a-1
+criteria: |
+  Given current and legacy changelog entries contain event metadata, Markdown bodies, historical omissions and the three reviewed malformed writer outputs
+  When their native fields are exposed in the repository graph
+  Then each source entry retains its full repository-relative identity and all authored title, date, time, type, components, summary and description values that are present
+  And authored epic, ticket, pr, adrs, diagrams, tickets, commits, breaking, migration_steps, scope, merge_commit, acs, created, last_updated, status and additional fields remain queryable
+  And historical type fix, an absent description, a numeric time or commit value, an explicit null and an empty list retain their distinct source meanings without applying current-writer defaults
+  And exact original frontmatter and body remain available separately from the parsed fields
+  And only an actually failing literal description escape or simple literal migration list receives the reviewed compatibility interpretation, with the original fragment, parse error and named recovery rule retained
+  And the two reviewed description failures and one reviewed migration-list failure remain identifiable as compatibility parses, while valid migration mapping values keep their mapping shape
+  And malformed shapes outside those narrow recovery rules fail with the affected source and reason instead of dropping entries or guessing content
+  And configured and legacy sources remain distinct, overlapping source discovery does not duplicate entries, and source records are not rewritten
+depends_on: [KM-400a-1]
+doc_links:
+- path: reports/native-fields/review-ChangelogEntry.json
+  relationship: describes
+  status: exists
+  relevance: Historical field inventory and the exact three observed defects covered by two bounded recovery rules.
+- path: reports/native-fields/code-ChangelogEntry.json
+  relationship: verifies
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+- path: reports/native-fields/ac-linked-strict.xml
+  relationship: verifies
+  status: exists
+  relevance: 'Fresh strict execution after criterion-specific test tags: 388 passed and one Windows symlink-privilege
+    skip across 19 focused modules. Per-type cases resolve through the test catalog; no live database rerun is implied.'
+- path: reports/native-fields/review-ChangelogEntry.json
+  relationship: describes
+  status: exists
+  relevance: Historical field inventory and the exact three observed defects covered by two bounded recovery rules.
+- path: reports/native-fields/code-ChangelogEntry.json
+  relationship: verifies
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-02'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_preserves_every_field_body_and_authored_types
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_legacy_identity_absence_and_presentation_fallbacks
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_configured_store_and_guidance_exclusions
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_absent_stores_and_overlapping_configuration
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_rejects_unsafe_or_invalid_store
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_recovers_only_failing_literal_description
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_recovers_failing_literal_list_but_retains_valid_maps
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_recovery_payload_is_independent_of_checkout_path
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_rejects_ambiguous_or_unrelated_malformations
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_without_frontmatter_fails_naming_source_and_reason
+implemented_by:
+  - knowledge/native_types/changelog_entry.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Retrospective refinement of KM-400a-3-i. The reviewed working-tree corpus had
+  531 entries: 528 strict parses and three auditable compatibility parses.
+  The reader receipt records 20 passing cases and ten caught mutations. The
+  immutable Aura publication has a different source scope; this AC does not
+  conflate its population with the reviewed working-tree corpus. Current writer
+  requirements govern new writes and do not authorize rewriting historical data.
+  Final bidirectional traceability and strict test evidence: reports/native-fields/ac-traceability.json.
+  Work status reflects linked test outcomes; reviewed readiness does not assert user approval.
+estimated_complexity: M
+it_requirements:
+- Strict parsing remains the first interpretation; compatibility recovery is confined to the two reviewed failure
+  rules and preserves sibling fields plus the original diagnostic.
+- Compatibility output must be independent of the checkout location, retain exact raw provenance and leave every
+  original source file unchanged.
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+- name: test_changelog_preserves_every_field_body_and_authored_types
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Changelog preserves every field body and authored types.
+  covers:
+  - KM-400a-1-xiii
+- name: test_changelog_legacy_identity_absence_and_presentation_fallbacks
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Changelog legacy identity absence and presentation fallbacks.
+  covers:
+  - KM-400a-1-xiii
+- name: test_changelog_configured_store_and_guidance_exclusions
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: seam
+  description: Changelog configured store and guidance exclusions.
+  covers:
+  - KM-400a-1-xiii
+- name: test_changelog_absent_stores_and_overlapping_configuration
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Changelog absent stores and overlapping configuration.
+  covers:
+  - KM-400a-1-xiii
+- name: test_changelog_rejects_unsafe_or_invalid_store
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Changelog rejects unsafe or invalid store.
+  covers:
+  - KM-400a-1-xiii
+- name: test_changelog_recovers_only_failing_literal_description
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Changelog recovers only failing literal description.
+  covers:
+  - KM-400a-1-xiii
+- name: test_changelog_recovers_failing_literal_list_but_retains_valid_maps
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Changelog recovers failing literal list but retains valid maps.
+  covers:
+  - KM-400a-1-xiii
+- name: test_changelog_recovery_payload_is_independent_of_checkout_path
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: seam
+  description: Changelog recovery payload is independent of checkout path.
+  covers:
+  - KM-400a-1-xiii
+- name: test_changelog_rejects_ambiguous_or_unrelated_malformations
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Changelog rejects ambiguous or unrelated malformations.
+  covers:
+  - KM-400a-1-xiii
+- name: test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: Changelog real corpus accounts for all fields and three recoveries.
+  covers:
+  - KM-400a-1-xiii
+test_rationale: The verified catalog supplies exact existing reader-function anchors, including source-fixture,
+  boundary and failure checks. Only catalog-confirmed type-specific integration links are added. Shared lossless
+  property encoding, physical Neo4j publication, readback and retained-generation behavior remain covered by KM-400a-3-i;
+  these focused tests do not claim 17 independent live database journeys. This is retrospective traceability over
+  dated implementation receipts, not a newly performed TDD sequence. Subsequent strict execution is separately recorded
+  in reports/native-fields/ac-linked-strict.xml (388 passed, one skipped); no database test was rerun for these
+  annotation-only changes.

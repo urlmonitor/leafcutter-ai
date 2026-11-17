@@ -85,6 +85,15 @@ def _absorb_options(work: Working, payload: dict) -> None:
     work.options += [o for o in [*model.named_options, *model.options] if o.id not in known_o]
     work.criteria += [c for c in model.proposed_criteria if c.id not in known_c]
     work.limitations += [f"unresolved feasibility: {u}" for u in model.unresolved_feasibility]
+    _add_gaps(work, model.unresolved_feasibility)
+
+
+def _add_gaps(work: Working, items: list[str]) -> None:
+    """Add unresolved facts to the research gaps (deduplicated, bounded by MAX_GAPS_KEPT)."""
+    merged = [*work.cont.gaps, *(u.strip() for u in items if u.strip())]
+    gaps = list(dict.fromkeys(merged))[:MAX_GAPS_KEPT]
+    if gaps != work.cont.gaps:
+        work.cont = work.cont.model_copy(update={"gaps": gaps})
 
 
 def _keep_gaps(work: Working, unknowns: list[str]) -> None:

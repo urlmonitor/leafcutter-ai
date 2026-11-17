@@ -1,0 +1,56 @@
+{
+  "run_id": "run-2ac128d978244f4e",
+  "interaction_id": "int-0ef77414ef1e4b9a",
+  "expected_state_revision": 2,
+  "actor": {
+    "id": "host:blind-aura-proof",
+    "kind": "host"
+  },
+  "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+  "response": {
+    "schema_version": "1.0",
+    "original_question": "For KM-500c-2, what must tests demonstrate?",
+    "source_scope": {
+      "read_roots": [
+        "docs"
+      ],
+      "repository_id": "leafcutter",
+      "revision": "0000000000000000000000000000000000000000",
+      "source_ids": [
+        "knowledge.graph"
+      ]
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-2"
+      ],
+      "required_fields": [
+        "criteria"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "single_entity",
+    "hierarchy_scope": "not_applicable",
+    "hierarchy_levels": [],
+    "scope_resolution": "sufficient",
+    "unresolved": [],
+    "rationale": "The question asks for the acceptance obligations that tests must demonstrate for one explicitly named criterion. The complete criteria field supplies those obligations. Test specifications may provide optional supporting detail. No hierarchy traversal or population discovery is requested. The supplied source scope is preserved without validating source availability.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  }
+}

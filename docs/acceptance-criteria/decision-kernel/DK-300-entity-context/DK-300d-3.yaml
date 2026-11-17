@@ -1,0 +1,125 @@
+id: DK-300d-3
+title: "Routed work uses canonical references as hints and retrieves its own evidence"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: reviewed
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given intent has selected a supported capability and interpretation context contains resolved canonical references,
+  When native judgments, research planning or host work consume that context,
+  Then permitted canonical references can guide task-specific retrieval after intent,
+  And function bodies, artifact criteria, callers, relations and precedent are retrieved only when that routed task needs them,
+  And interpretation meanings and caller claims remain labelled separately from supporting task evidence in judgments and host artifacts,
+  And a question about live availability still requires observations rather than accepting a meaning card as proof,
+  And an approval-dependent decision still waits for the required human approval.
+depends_on: [DK-300d]
+doc_links:
+  - path: docs/analysis/2026-10-03-kernel-entity-context-concept.md
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+delivers_to: {"agent":"python-coder","contract":"EntityContext (kernel.contracts.entity_context): schema_version='1.0', kind='entity_context'; entities:list[EntityCard] with family:glossary|doc_type|entry_kind|native_kind|symbol|artifact_id, identity:string, native_kind:string|null, meaning:string, signature:string|null, resolution:resolved|ambiguous, matches:list[{channel:string,record_index:int|null,start:int,end:int,surface:string}], provenance:{source_id:string,locator:string,snapshot:string,source_hash:string,projection_hash:string}. Offsets are half-open Unicode code-point positions in original channel text. Original goal and caller claims are separate from meaning projection. Context has original_goal:string (verbatim), caller_context, workspace_id, repository_root, registered_capabilities:string[], status:recognized|no_matches|partial|unavailable|disabled, unresolved:list[{family,reference,state,matches,candidates}], coverage:{scan_complete:bool,index_status,index_fingerprint:string|null,families,counts,by_family}, budgets:{lookups:int,serialized_chars:int,elapsed_ms:number,jev_calls:0}, limitations:string[]. Counts contain detected,resolved,returned,omitted,unknown,ambiguous. No evidence field."}
+expects_from: {"ac_id":"DK-300d-1","contract":"EntityContext (kernel.contracts.entity_context): schema_version='1.0', kind='entity_context'; entities:list[EntityCard] with family:glossary|doc_type|entry_kind|native_kind|symbol|artifact_id, identity:string, native_kind:string|null, meaning:string, signature:string|null, resolution:resolved|ambiguous, matches:list[{channel:string,record_index:int|null,start:int,end:int,surface:string}], provenance:{source_id:string,locator:string,snapshot:string,source_hash:string,projection_hash:string}. Offsets are half-open Unicode code-point positions in original channel text. Original goal and caller claims are separate from meaning projection. Context has original_goal:string (verbatim), caller_context, workspace_id, repository_root, registered_capabilities:string[], status:recognized|no_matches|partial|unavailable|disabled, unresolved:list[{family,reference,state,matches,candidates}], coverage:{scan_complete:bool,index_status,index_fingerprint:string|null,families,counts,by_family}, budgets:{lookups:int,serialized_chars:int,elapsed_ms:number,jev_calls:0}, limitations:string[]. Counts contain detected,resolved,returned,omitted,unknown,ambiguous. No evidence field."}
+origin_agent: business-analyst
+created: 2026-10-03
+amended_by:
+  - reason: "IT PO review on 2026-10-03 adds technical contracts and planned test specifications under existing user authorization; readiness is now reviewed. BA criteria, implementation status and historical evidence are preserved."
+superseded_by: null
+covered_by:
+  - 'DK-300d-3-i'
+  - 'tests/kernel/entity_context/test_continuation.py::test_routed_capability_consumes_canonical_hints_after_intent'
+  - 'tests/kernel/entity_context/test_continuation.py::test_downstream_judgments_and_host_artifacts_keep_meanings_separate'
+  - 'tests/kernel/entity_context/test_continuation.py::test_meaning_only_context_cannot_settle_liveness_or_human_approval'
+  - "tests/kernel/entity_context/test_independent_research_selection.py::test_indexed_artifact_sources_require_explicit_research_selection"
+  - "tests/kernel/entity_context/test_native_pointer_retrieval.py::test_native_ac_reference_reaches_task_evidence_through_service"
+  - "tests/kernel/entity_context/test_native_pointer_retrieval.py::test_invalid_native_pointer_never_falls_back_to_whole_record"
+  - "tests/kernel/entity_context/test_native_pointer_retrieval.py::test_structured_pointer_selects_nested_value_without_same_line_siblings"
+implemented_by:
+  - "kernel/capabilities/research/planning.py"
+  - "kernel/capabilities/retrieval/executor.py"
+  - "kernel/capabilities/retrieval/locators.py"
+  - "knowledge/adapters/source_excerpt.py"
+  - "kernel/capabilities/decision/jev_support.py"
+  - "kernel/interaction/packets.py"
+notes: |
+  New behavioral requirement derived from the user-authorized entity-context concept.
+  BA behavior and IT PO technical contracts are reviewed; implementation is verified by the independent strict entity suite and recognition corpus.
+  Verification evidence: reports/entity-context-verification.md. No human approval is implied.
+  Historical DK-200 direct-gather tests and evaluation reports are preserved.
+  Fresh-run wiring criteria were explicitly reconciled to EntityContext on 2026-10-04.
+estimated_complexity: L
+it_requirements:
+  - "Only resolved permitted canonical references become optional retrieval hints; ambiguous/unknown entries cannot act as direct evidence references or permission grants."
+  - "Later retrieval re-applies current source/read policy and creates ordinary task evidence with independent source snapshot/provenance; meaning cards cannot populate supporting_evidence_ids."
+  - "Canonical native YAML/JSON field references, including acceptance-criterion path.yaml#/criteria references emitted by the real index and recognizer, remain usable after intent. Explicit retrieval resolves the selected value, preserves the canonical pointer in evidence provenance, and excludes sibling fields even when they share a source line. Nested mapping/sequence selectors and escaped key tokens resolve exactly; missing, invalid or scalar-descendant selectors produce an explicit limitation with no whole-record fallback."
+  - "Host artifacts and later native judgments preserve caller-claim/meaning/evidence distinctions and fit their own configured output limits."
+  - "Live-availability claims require observations and approval-dependent decisions still require a human actor under ADR-053/ADR-060."
+test_required: true
+test_spec:
+  - name: "test_routed_capability_consumes_canonical_hints_after_intent"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "reachability"
+    description: "tests/kernel/entity_context/test_continuation.py::test_routed_capability_consumes_canonical_hints_after_intent: Drive supported native work with a real resolved reference and recording retrieval boundary; assert hints affect task evidence lookup only after intent and bodies are absent before routing."
+  - name: "test_downstream_judgments_and_host_artifacts_keep_meanings_separate"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "seam"
+    description: "tests/kernel/entity_context/test_continuation.py::test_downstream_judgments_and_host_artifacts_keep_meanings_separate: Inspect real native/host inputs for explicit caller/meaning/evidence labels, independent evidence IDs/provenance and configured host bounds."
+  - name: "test_meaning_only_context_cannot_settle_liveness_or_human_approval"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "discrimination"
+    description: "tests/kernel/entity_context/test_continuation.py::test_meaning_only_context_cannot_settle_liveness_or_human_approval: Execute live-availability and approval-dependent workflows using only cards; assert missing observation remains unresolved and human approval pause survives."
+  - name: "test_native_ac_reference_reaches_task_evidence_through_service"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "reachability"
+    description: "tests/kernel/entity_context/test_native_pointer_retrieval.py::test_native_ac_reference_reaches_task_evidence_through_service: Build a real native AC index and recognize its ID, then run the public service through evidence intent and real retrieval; require explicit-locator evidence containing only its criteria, with the emitted canonical pointer and content hash. Lexical fallback cannot satisfy this assertion, and criteria remain absent from initial intent."
+  - name: "test_invalid_native_pointer_never_falls_back_to_whole_record"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "discrimination"
+    description: "tests/kernel/entity_context/test_native_pointer_retrieval.py::test_invalid_native_pointer_never_falls_back_to_whole_record: Feed the actual recognizer's AC locator through real retrieval with no lexical terms. Missing, scalar-descendant and malformed pointer variants return no evidence and an explicit limitation; the valid control must return the selected criteria. Catch blanket refusal and fragment-dropping whole-record fallback."
+  - name: "test_structured_pointer_selects_nested_value_without_same_line_siblings"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "boundary"
+    description: "tests/kernel/entity_context/test_native_pointer_retrieval.py::test_structured_pointer_selects_nested_value_without_same_line_siblings: Retrieve a nested mapping value through a sequence index and escaped slash/tilde tokens in real serialized single-line JSON and YAML. Assert exact selected content, canonical provenance and content hash, excluding adjacent sibling and root fields."
+test_rationale: "Exercise production public boundaries with real canonical-source fixtures and an injected recording classifier; assert observable outputs and side effects, not source strings. Capture red results before runtime implementation; no live provider is required."
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: ground
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-03'
+  - flow: leafcutter/decision-lifecycle
+    node: form
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+    source: real
+    asof: '2026-10-03'

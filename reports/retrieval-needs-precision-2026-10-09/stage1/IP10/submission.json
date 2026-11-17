@@ -1,0 +1,56 @@
+{
+  "run_id": "run-b7ca3dd6c49e4695",
+  "interaction_id": "int-c5431850072649be",
+  "expected_state_revision": 1,
+  "actor": {
+    "id": "host:blind-precision",
+    "kind": "host"
+  },
+  "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+  "response": {
+    "schema_version": "1.0",
+    "original_question": "Return the complete canonical YAML document for KM-500c-2, including all authored fields.",
+    "source_scope": {
+      "read_roots": [
+        "docs"
+      ],
+      "repository_id": "leafcutter",
+      "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "source_ids": [
+        "knowledge.graph"
+      ]
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-2"
+      ],
+      "required_fields": [
+        "content"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "full_document",
+    "completeness": "single_entity",
+    "hierarchy_scope": "not_applicable",
+    "hierarchy_levels": [],
+    "scope_resolution": "sufficient",
+    "unresolved": [],
+    "rationale": "The complete canonical YAML document, including all authored fields, is requested. Full-document mode preserves that requirement; a bounded content excerpt alone would not satisfy it.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  }
+}

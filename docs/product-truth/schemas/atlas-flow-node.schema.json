@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PROPOSED Atlas flow step or branch card (FlowNode) illustrative design",
+  "description": "Transcribed from docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json entities.FlowNode.fields (v4, the Atlas Flow finder). One record is a step or branch as the finder indexes it and its card on a flow page shows it: the actor badge, the card's accessible name, the step address, the field keys it uses and produces, its input/output gaps and its acceptance-criteria chips. Every field mirrors the stored node; actor_label, card_label, href, the field keys and the chips are derived from it. No finder index, card view model or runtime validation exists yet; the derivation rules are stated in the dataset's invariants and are not expressed here.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "string — <flow_id>#<node_id>"
+    },
+    "flow_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+/[a-z0-9-]+$"
+    },
+    "node_id": {
+      "type": "string"
+    },
+    "node_kind": {
+      "enum": [
+        "step",
+        "branch"
+      ]
+    },
+    "order": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "integer | null — the step's 1-based order; null for a branch"
+    },
+    "label": {
+      "type": "string"
+    },
+    "text": {
+      "type": "string",
+      "description": "string — the stored description, searched as text"
+    },
+    "condition": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "actor_kind": {
+      "enum": [
+        "deterministic",
+        "llm",
+        "human",
+        "jev"
+      ]
+    },
+    "actor_label": {
+      "enum": [
+        "Code",
+        "AI agent",
+        "Person",
+        "Jev"
+      ],
+      "description": "enum — the actor badge every step and branch card shows, and the Actor facet's option label"
+    },
+    "agent": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "card_label": {
+      "type": "string",
+      "description": "string — the accessible name of the focusable card that opens its drawer with Enter"
+    },
+    "href": {
+      "type": "string",
+      "description": "string — the step address <Flow.canonical_url>?step=<node_id>"
+    },
+    "screen": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "screen_title": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "uses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "array — field keys <contract>.<pointer segments joined by '.'> its io_contracts consume"
+    },
+    "produces": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "array — field keys its io_contracts produce"
+    },
+    "io_gap": {
+      "type": "boolean",
+      "description": "boolean — true when its io_contracts declare missing_bindings"
+    },
+    "missing_io": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "consumes",
+              "produces",
+              "both"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "direction"
+        ]
+      }
+    },
+    "ac_chips": {
+      "type": "array",
+      "description": "array — the acceptance-criteria chips in its drawer; href opens that AC in the Atlas",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ac": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "href": {
+            "type": "string",
+            "pattern": "^/atlas\\?ac=.+$"
+          }
+        },
+        "required": [
+          "ac",
+          "title",
+          "href"
+        ]
+      }
+    }
+  },
+  "required": [
+    "id",
+    "flow_id",
+    "node_id",
+    "node_kind",
+    "order",
+    "label",
+    "text",
+    "condition",
+    "actor_kind",
+    "actor_label",
+    "agent",
+    "card_label",
+    "href",
+    "screen",
+    "screen_title",
+    "entities",
+    "uses",
+    "produces",
+    "io_gap",
+    "missing_io",
+    "ac_chips"
+  ]
+}

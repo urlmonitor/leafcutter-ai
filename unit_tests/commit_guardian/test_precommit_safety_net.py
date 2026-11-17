@@ -51,14 +51,12 @@ _PYTHON_CODER = _REPO_ROOT / "templates" / "agents" / "python-coder.md"
 _SQL_CODER = _REPO_ROOT / "templates" / "agents" / "sql-coder.md"
 _FRONTEND_CODER = _REPO_ROOT / "templates" / "agents" / "frontend-coder.md"
 
-# Canonical blocking hook IDs per BO-210a-2
+# Canonical blocking hook IDs per BO-210a-2 as amended by GE-132a-1 (five ids; see test_ge_132a_1_registration.py)
 _EXPECTED_BLOCKING_HOOKS = {
     "check-complexity",
-    "check-docstrings",
     "check-exception-handling",
     "check-file-size",
     "check-ac-schema",
-    "check-ac-limits",
     "check-contract-shrinking",
 }
 

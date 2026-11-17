@@ -28,12 +28,12 @@ from kernel.memory.models import (
     FinalOutcome,
     PrecedentNote,
     RankedOption,
+    Rationale,
     RecordAssessment,
     RecordCriterion,
     RecordEvidence,
     RecordOption,
     RecordProvenance,
-    Rationale,
     SourceRevision,
     TaskContext,
 )
@@ -82,14 +82,14 @@ class RecordExtras:
     filters: RecordFilters = field(default_factory=RecordFilters)
     ranking: Sequence[OptionRanking] = ()
     basis: str = "kernel_ranking"
-    #: Evidence ids relevant to each criterion (defect e: not every id for every criterion).
     criterion_evidence: Mapping[str, Sequence[str]] = field(default_factory=dict)
+    """Evidence ids relevant to each criterion (defect e: not every id for every criterion)."""
     precedents: Sequence[PrecedentNote] = ()
     related: Sequence[str] = ()
     supersedes: Sequence[str] = ()
     approval_note: str = ""
-    #: One line for the knowledge map; default: the question cut at a word boundary.
     description: str | None = None
+    """One line for the knowledge map; default: the question cut at a word boundary."""
 
 
 def human_actor(actor: str | None) -> str | None:

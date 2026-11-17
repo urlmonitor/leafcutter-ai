@@ -1,0 +1,83 @@
+id: BO-4300e-2-iii
+title: 'Clearing only ever removes one of this project''s own workspaces'
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" with a ready workspace "alpha" in shop's landing place,
+    a project "blog" beside it with a ready workspace "alpha" in blog's landing
+    place, and a folder "stray" outside both landing places that holds a copy of
+    a workspace record naming shop,
+  When clearing is requested from shop for blog's "alpha", and for "stray",
+  Then each request is refused, stating that shop has no workspace at that
+    location,
+  And blog's "alpha" and "stray" are identical before and after,
+  And clearing shop's "alpha" from shop is still answered cleared.
+depends_on: [BO-4300e-2]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-2
+  contract: remove semantics.
+package_surface: false
+it_requirements:
+- remove resolves the project (--repo-root, else the marker's project_root) and acts only on a path inside
+  that project's landing place (BO-4300b-2; the same --landing-root override if one was used) whose marker
+  names that project; anything else is NOT_FOUND, and nothing is deleted, fetched or pushed.
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_remove_outside_this_projects_landing_place_is_not_found_and_changes_nothing
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: remove from shop for blog's alpha and for the stray folder holding a copy of shop's marker
+    is each refused NOT_FOUND; blog's alpha and the stray folder are byte-identical before and after, no
+    fetch or push reached either hub, and remove of shop's own alpha from shop still answers ok.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspaces and hubs afterwards. A direct-import
+  unit test would pass while the deployed copy is stale or mis-deployed (F13).
+origin_agent: business-analyst
+created: 2026-10-22
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300e_2_iii.py
+implemented_by:
+- templates/scripts/worktree_remove.py
+- templates/scripts/worktree_ensure_state.py
+notes: |
+  Hardening item M5 (remove scope), approved by the user 2026-10-22 as amendment A6. Clearing
+  must never reach a workspace of another project or a folder outside the landing place, even
+  when that folder holds a copied workspace record.
+target_epic: EPIC-WorkspaceMakerHardening

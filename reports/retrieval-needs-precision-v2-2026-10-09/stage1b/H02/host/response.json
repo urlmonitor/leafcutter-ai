@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "original_question": "Show a source excerpt from one test linked to KM-500a-2 as a covering test.",
+  "source_scope": {
+    "read_roots": [
+      "docs"
+    ],
+    "repository_id": "leafcutter",
+    "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+    "source_ids": [
+      "knowledge.graph"
+    ]
+  },
+  "selections": {
+    "entity_types": [
+      "test"
+    ],
+    "target_ids": [
+      "KM-500a-2"
+    ],
+    "required_fields": [
+      "content"
+    ],
+    "document_types": [
+      "code"
+    ],
+    "relationships": [
+      "covered_by"
+    ]
+  },
+  "uncertain": {
+    "entity_types": [],
+    "target_ids": [],
+    "required_fields": [],
+    "document_types": [],
+    "relationships": []
+  },
+  "detail_mode": "fields",
+  "completeness": "examples",
+  "hierarchy_scope": "not_applicable",
+  "hierarchy_levels": [],
+  "scope_resolution": "sufficient",
+  "unresolved": [],
+  "rationale": "A source excerpt requires content from a linked covering test record. The named criterion anchors the coverage relationship, and one example is sufficient.",
+  "engine": "host_llm",
+  "status": "decided",
+  "model_id": null
+}

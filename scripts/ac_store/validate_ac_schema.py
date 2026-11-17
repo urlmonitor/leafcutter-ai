@@ -36,10 +36,35 @@ failure signal.
 
 AC-1: Schema requires readiness field with enum [draft, reviewed, approved].
 AC-2: Schema requires priority field with enum [critical, high, medium, low].
+
+DECISION HISTORY:
+  - 2026-10-21 [python-coder/ACD-200b-2]: the documentation-trigger names live ONLY in the
+    documentation_triggers enum of config/ac_store_schema.json; ``_DOC_TRIGGER_VALUES`` and its
+    explicit check are deleted; with no schema passed, `_trigger_names` reads the shipped schema's enum. main() reads the schema of the RECORD's repo (``_repo_schema``),
+    falling back to this repo's, so a repo's own list decides its records.
+  - 2026-10-07 [python-coder/TQ-600a-11, moved here 2026-10-15]: the single-slot
+    ``_schema_validator_cache`` holds (schema_object, compiled_validator).
+    TQ-600a-11 measured that once YAML parsing is no longer the bottleneck,
+    constructing a fresh jsonschema.Draft7Validator(schema) on every one of
+    4,634 per-file calls became the new dominant cost (profiled at ~12s of a
+    ~21s full-store run, versus ~3s actually parsing YAML). main() loads the
+    schema dict exactly once and passes the SAME object through every
+    _validate_file() call in its loop, so keying on object IDENTITY (``is``,
+    never ``id()`` as an integer, which can be recycled for an unrelated
+    object once the original is garbage collected and would silently return a
+    STALE validator for different content) is sufficient and correct: a cache
+    hit only fires for the exact object main() still holds. The comment that
+    carried this text moved into the docstring to repay the file-size ratchet.
+  - 2026-10-15 [python-coder/ACS-900d-4-ii]: ``_STATUS_VALUES`` now includes
+    ``superseded`` so this gate agrees with config/ac_store_schema.json and the
+    commit-time validators. This gate checks record SHAPE only and deliberately
+    does not consult the retired-record predicate.
+    (#TICKETLESS reason=acs-900d-4-ac-driven-no-ticket-file)
 """
 
 from __future__ import annotations
 
+import functools
 import json
 import sys
 from pathlib import Path
@@ -59,6 +84,22 @@ from declared_files import declared_files_commit_messages  # noqa: E402
 # their verdicts cannot drift apart (ACS-200e).
 _SCHEMA_REL = Path("config") / "ac_store_schema.json"
 
+# Single-slot cache (schema_object, compiled_validator), keyed on object identity; see DECISION HISTORY.
+_schema_validator_cache: tuple[dict[str, Any], Any] | None = None
+
+
+def _cached_validator(schema: dict[str, Any]) -> Any:
+    """Return a ``jsonschema.Draft7Validator`` for `schema`, built at most once
+    per distinct schema object held in the single-slot cache above."""
+    global _schema_validator_cache  # noqa: PLW0603 -- single-slot process-local cache, no I/O
+    import jsonschema  # noqa: PLC0415
+
+    if _schema_validator_cache is not None and _schema_validator_cache[0] is schema:
+        return _schema_validator_cache[1]
+    validator = jsonschema.Draft7Validator(schema)
+    _schema_validator_cache = (schema, validator)
+    return validator
+
 
 def _default_schema_path() -> Path:
     """Return the repo-root-relative config/ac_store_schema.json path.
@@ -69,6 +110,34 @@ def _default_schema_path() -> Path:
     """
     repo_root = Path(__file__).resolve().parent.parent.parent
     return repo_root / _SCHEMA_REL
+
+
+@functools.lru_cache(maxsize=None)
+def _repo_schema(root: Path) -> dict[str, Any] | None:
+    """The parsed config/ac_store_schema.json of the repo at `root`; None when that repo has none."""
+    candidate = root / _SCHEMA_REL
+    return load_ac_store_schema(candidate)[0] if candidate.is_file() else None
+
+
+def _trigger_names(schema: dict[str, Any] | None) -> list[str]:
+    """The documentation_triggers enum: the ONE list of trigger names (ACD-200b-2).
+
+    Read from `schema`, or from this repo's config/ac_store_schema.json when none is passed.
+    """
+    schema = schema or load_ac_store_schema()[0] or {}
+    return schema.get("properties", {}).get("documentation_triggers", {}).get("oneOf", [{}])[0].get("items", {}).get("enum", [])
+
+
+def _trigger_value_errors(path: Path, triggers: list[Any], schema: dict[str, Any] | None) -> list[str]:
+    """Invalid documentation_triggers values; a passed schema owns the enum (jsonschema reports it).
+
+    With no schema and no loadable list there is nothing to check against, so nothing is reported.
+    """
+    names = _trigger_names(schema)
+    invalid = [] if schema is not None or not names else [t for t in triggers if t not in names]
+    if not invalid:
+        return []
+    return [f"{path}: Field 'documentation_triggers' contains invalid values: {invalid}. Valid values: {sorted(names)}."]
 
 
 def _infer_repo_root(ac_path: Path) -> Path:
@@ -93,15 +162,8 @@ def _infer_repo_root(ac_path: Path) -> Path:
 _READINESS_VALUES = {"draft", "reviewed", "approved"}
 _PRIORITY_VALUES = {"critical", "high", "medium", "low"}
 _LEVEL_VALUES = {"L0", "L1", "L2", "L3"}
-_STATUS_VALUES = {"active", "deprecated", "superseded_by"}
+_STATUS_VALUES = {"active", "deprecated", "superseded", "superseded_by"}  # ACS-900d-4-ii: agrees with the JSON schema
 _WORK_STATUS_VALUES = {"todo", "in_progress", "done"}
-_DOC_TRIGGER_VALUES = {
-    "how-to",
-    "sequence-diagram",
-    "state-diagram",
-    "component-diagram",
-    "reference-doc",
-}
 
 # Field-level help text for missing fields
 _FIELD_HELP: dict[str, str] = {
@@ -169,14 +231,14 @@ def _schema_field_errors(path: Path, data: dict[str, Any], schema: dict[str, Any
         rather than silently treating the file as valid.
     """
     try:
-        import jsonschema
+        import jsonschema  # noqa: F401 -- import-availability probe; _cached_validator does the real import
     except ImportError as exc:
         return [
             f"{path}: jsonschema is not importable ({exc}) — schema-level "
             "validation was SKIPPED. Install jsonschema to enable it."
         ]
 
-    validator = jsonschema.Draft7Validator(schema)
+    validator = _cached_validator(schema)
     return [
         f"{path}: schema violation at "
         f"{'.'.join(str(part) for part in err.absolute_path) or '<root>'} — {err.message}"
@@ -213,7 +275,20 @@ def _validate_file(
 
     try:
         content = path.read_text(encoding="utf-8")
-        data = yaml.safe_load(content)
+        # Deliberately yaml.SafeLoader, NOT the shared fast accessor
+        # (yaml_safe_loader.get_safe_yaml_loader) used elsewhere in this
+        # package (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): this
+        # except branch IS the required "AC store valid" gate's own
+        # malformed-YAML detector -- its entire job is to turn an unparseable
+        # file into the reported violation below. CSafeLoader accepts at
+        # least one input class (a tab adjacent to a colon/comma) that
+        # yaml.SafeLoader correctly rejects, so routing this one call through
+        # the fast accessor would silently narrow what this validator catches
+        # -- a malformed AC file that should fail this gate would instead
+        # parse "successfully" and be judged only on field presence, which it
+        # may pass by chance. See scripts/ac_store/yaml_safe_loader.py's own
+        # docstring for the measured divergence classes.
+        data = yaml.load(content, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         return [f"{path}: YAML parse error — {exc}"]
     except OSError as exc:
@@ -268,12 +343,7 @@ def _validate_file(
                 f"got {type(triggers).__name__}."
             )
         else:
-            invalid = [t for t in triggers if t not in _DOC_TRIGGER_VALUES]
-            if invalid:
-                errors.append(
-                    f"{path}: Field 'documentation_triggers' contains invalid values: "
-                    f"{invalid}. Valid values: {sorted(_DOC_TRIGGER_VALUES)}."
-                )
+            errors.extend(_trigger_value_errors(path, triggers, schema))
             # L1-only constraint: documentation_triggers is permitted only on L1 ACs.
             # BO-2200a-5: reject the field on L0, L2, L3 with a message that names
             # the offending AC id and its level.
@@ -283,7 +353,6 @@ def _validate_file(
                     f"{path}: Field 'documentation_triggers' is permitted only on L1 "
                     f"ACs. AC {data['id']} has level {ac_level!r}."
                 )
-
     errors.extend(test_spec_entry_errors(path, data, schema))  # TQ-500f-1 / TQ-500f-2-i
     # --- Validate against config/ac_store_schema.json (ACS-200e) ---
     # This is the SAME schema file the commit-time hook
@@ -437,7 +506,8 @@ def main(argv: list[str] | None = None) -> int:
 
     declared_files_reports: list[str] = []
     for path in paths:
-        errors = _validate_file(path, registry_ids, schema, declared_files_reports)
+        record_schema = schema and (_repo_schema(_infer_repo_root(path)) or schema)  # the record's own repo owns the lists
+        errors = _validate_file(path, registry_ids, record_schema, declared_files_reports)
         all_errors.extend(errors)
         files_checked += 1
 

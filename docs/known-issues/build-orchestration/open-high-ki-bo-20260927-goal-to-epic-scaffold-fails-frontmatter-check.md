@@ -5,11 +5,13 @@ type: reference
 category: reference
 status: active
 created: '2026-09-27'
-last_updated: '2026-09-27'
+last_updated: '2026-10-09'
 components:
   - build_orchestration
 related_docs:
   - docs/known-issues/build-orchestration.md
+  - docs/known-issues/ac-driven-dev/open-high-ki-acd-20260831-1934.md
+  - docs/known-issues/build-orchestration/open-high-ki-bo-014.md
 ---
 
 # KI-BO-20260927-goal-to-epic-scaffold-fails-frontmatter-check — goal_to_epic.py writes an epic its own commit hook refuses
@@ -57,3 +59,38 @@ resolved.
 - Point `implemented_by` at the ticket's final path.
 - Add a behavioural test that runs the generator on a fixture tree with dependencies, then runs
   the frontmatter checker over the output. It must exit 0.
+
+## Observed again, 2026-10-09
+
+The epic from the symptom above could not be driven as generated. Beyond the frontmatter repair,
+three structural defects surfaced while driving it, and the epic had to be re-cut by deliverable.
+
+1. **Dependencies followed the AC tree, not the code.** Every child ticket depended on its
+   composite parent's ticket. A parent cannot close before its children, because of
+   `check-ticket-ac-status-parity` and `check-done-proof`. So the epic deadlocked after ticket 01,
+   and commit `5395fad54` (2026-09-28) reversed the edges for 17 parents. That deadlock is
+   `KI-ACD-20260831-1934`, shape 1.
+2. **`files_touched` was empty or stale,** so the planner's only parallelism test (disjoint
+   `files_touched`) had nothing to work with. Ticket 01, built in `b7c48169b`, needed its
+   `files_touched` rewritten to the files that commit created (`5395fad54`).
+3. **One ticket per AC was the wrong unit.** "Nearly every ticket edited the same maker files", and
+   a producer the others needed (the shared test locator, BO-4300f-4) was ticket 58 of 59, so
+   earlier tickets built stand-ins for it (ticket 02's Context).
+
+The re-cut (`5ee13293e`, 2026-09-28) replaced 58 open tickets with 13 deliverable tickets (02-14).
+Each covers several ACs, keeps composite ACs with their children, takes `depends_on` from the ACs'
+Expects From contracts, and has accurate `files_touched`. A dry run of the full closing order then
+passed `check-done-proof` and `check-ticket-ac-status-parity` with no violations.
+
+**What has changed since.** On 2026-10-07, `49d6139f1` (BO-2600a-5) made `expects_from` edges order
+the epic, through one shared prerequisite rule (`scripts/ac_store/epic_dependencies.py`,
+`_scan_edges`, :86-116). It also drops a child's `depends_on` on its structural parent when the
+parent's `expects_from` names that child. That addresses part of item 1, for parents that declare
+`expects_from`. It does not change the granularity (still one ticket per leaf AC) or how
+`files_touched` is filled. The generator was not re-run against BO-4300 to check.
+
+**Fix direction, added.** Group ACs into tickets by shared code target (the files the ACs'
+`it_requirements` name) rather than one per AC, keeping composites with their children. Fail
+generation when a ticket's `files_touched` is empty while its ACs name implementation files.
+
+**Related.** `KI-BO-014` (the `--ac` path's hygiene gaps).

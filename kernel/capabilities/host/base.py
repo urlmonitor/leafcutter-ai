@@ -49,6 +49,10 @@ class HostOperation:
     operation: str = ""
     request_model: type[KernelModel] | None = None
     output_model: type[KernelModel] | None = None
+    #: Operations the packet allows; None means the registry descriptor's own operations.
+    packet_operations: tuple[str, ...] | None = None
+    #: True when the input artifact holds only the request: no clarifications or entity context.
+    bare_input: bool = False
 
     @property
     def template_id(self) -> str:
@@ -94,6 +98,10 @@ class HostOperation:
         """Convert a validated output payload (every concrete operation overrides this)."""
         raise NotImplementedError
 
+    def submission_violations(self, request: Mapping[str, Any], payload: KernelModel) -> list[str]:
+        """Return operation-specific request-bound checks before host output is accepted."""
+        return []
+
 
 class GenericHostOperation(HostOperation):
     """Packets for a host descriptor without a dedicated module: generic text, pass-through."""
@@ -114,3 +122,4 @@ class GenericHostOperation(HostOperation):
 #   returns a failed result with retryable=false): it runs inside `await_interaction` after the
 #   submission was accepted, where a raise would crash the graph run. (#KernelBootstrapV0/P8)
 # ====================================================================
+# - 2026-10-03 00:00 [python-coder]: Add typed host-needs support without activating production retrieval. (#TICKETLESS reason=user-requested-isolated-host-experiment)

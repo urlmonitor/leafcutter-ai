@@ -1,0 +1,549 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="18" skipped="0" tests="18" time="0.691" timestamp="2026-10-02T09:00:16.468502+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_all_native_fields_and_nested_sample_values_are_preserved" time="0.015"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_all_native_fiel0')
+
+    def test_mock_data_all_native_fields_and_nested_sample_values_are_preserved(tmp_path):
+        # type: integration; angle: criterion; covers: KM-400a-3-i
+        metadata = _metadata()
+        metadata["future"] = {"unknown": [False, None, {}]}
+        _source(tmp_path, metadata)
+&gt;       (record,) = _extract(tmp_path)
+                    ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_mock_data.py:55: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_manifest_is_separate_and_unregistered_files_are_discovered" time="0.008"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_manifest_is_sep0')
+
+    def test_mock_data_manifest_is_separate_and_unregistered_files_are_discovered(tmp_path):
+        # type: integration; angle: seam; covers: KM-400a-3-i
+        metadata = _metadata()
+        _source(tmp_path, metadata)
+        other = {**metadata, "id": "product/unregistered"}
+        _source(tmp_path, other, name="product/unregistered")
+        prompt = tmp_path / "docs/product-truth/mock-data/adjacent.prompt.json"
+        prompt.write_text("not dataset JSON", encoding="utf-8")
+        entry = _entry(title="Manifest title", summary="Manifest summary", component="different", status="deprecated", version=999)
+        _manifest(tmp_path, [{"type": "flow", "id": "product/flow"}, entry])
+&gt;       records = _extract(tmp_path)
+                  ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_mock_data.py:74: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_real_corpus_preserves_all_records_and_unregistered_dataset" time="0.001"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">def test_mock_data_real_corpus_preserves_all_records_and_unregistered_dataset():
+        # type: integration; angle: real_artifact; covers: KM-400a-3-i
+        root = Path(__file__).resolve().parents[2]
+&gt;       records = _extract(root)
+                  ^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_mock_data.py:90: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_missing_store_and_absent_values_are_not_defaulted" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_missing_store_a0')
+
+    def test_mock_data_missing_store_and_absent_values_are_not_defaulted(tmp_path):
+        # type: unit; angle: boundary; covers: KM-400a-3-i
+&gt;       assert _extract(tmp_path) == []
+               ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_mock_data.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_bad_source_fails_with_path[{]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_bad_source_fail0')
+text = '{'
+
+    @pytest.mark.parametrize("text", ["{", "[]", "{}", '{"id":null}', '{"id":3}', '{"id":"  "}'])
+    def test_mock_data_bad_source_fails_with_path(tmp_path, text):
+        # type: unit; angle: failure; covers: KM-400a-3-i
+        _source(tmp_path, text=text)
+        with pytest.raises(ValueError, match="sample.mock.json"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_mock_data.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_bad_source_fails_with_path[[]]" time="0.006"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_bad_source_fail1')
+text = '[]'
+
+    @pytest.mark.parametrize("text", ["{", "[]", "{}", '{"id":null}', '{"id":3}', '{"id":"  "}'])
+    def test_mock_data_bad_source_fails_with_path(tmp_path, text):
+        # type: unit; angle: failure; covers: KM-400a-3-i
+        _source(tmp_path, text=text)
+        with pytest.raises(ValueError, match="sample.mock.json"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_mock_data.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_bad_source_fails_with_path[{}]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_bad_source_fail2')
+text = '{}'
+
+    @pytest.mark.parametrize("text", ["{", "[]", "{}", '{"id":null}', '{"id":3}', '{"id":"  "}'])
+    def test_mock_data_bad_source_fails_with_path(tmp_path, text):
+        # type: unit; angle: failure; covers: KM-400a-3-i
+        _source(tmp_path, text=text)
+        with pytest.raises(ValueError, match="sample.mock.json"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_mock_data.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_bad_source_fails_with_path[{&quot;id&quot;:null}]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_bad_source_fail3')
+text = '{"id":null}'
+
+    @pytest.mark.parametrize("text", ["{", "[]", "{}", '{"id":null}', '{"id":3}', '{"id":"  "}'])
+    def test_mock_data_bad_source_fails_with_path(tmp_path, text):
+        # type: unit; angle: failure; covers: KM-400a-3-i
+        _source(tmp_path, text=text)
+        with pytest.raises(ValueError, match="sample.mock.json"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_mock_data.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_bad_source_fails_with_path[{&quot;id&quot;:3}]" time="0.006"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_bad_source_fail4')
+text = '{"id":3}'
+
+    @pytest.mark.parametrize("text", ["{", "[]", "{}", '{"id":null}', '{"id":3}', '{"id":"  "}'])
+    def test_mock_data_bad_source_fails_with_path(tmp_path, text):
+        # type: unit; angle: failure; covers: KM-400a-3-i
+        _source(tmp_path, text=text)
+        with pytest.raises(ValueError, match="sample.mock.json"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_mock_data.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_bad_source_fails_with_path[{&quot;id&quot;:&quot;  &quot;}]" time="0.006"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_bad_source_fail5')
+text = '{"id":"  "}'
+
+    @pytest.mark.parametrize("text", ["{", "[]", "{}", '{"id":null}', '{"id":3}', '{"id":"  "}'])
+    def test_mock_data_bad_source_fails_with_path(tmp_path, text):
+        # type: unit; angle: failure; covers: KM-400a-3-i
+        _source(tmp_path, text=text)
+        with pytest.raises(ValueError, match="sample.mock.json"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_mock_data.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_duplicate_native_ids_are_rejected" time="0.007"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_duplicate_nativ0')
+
+    def test_mock_data_duplicate_native_ids_are_rejected(tmp_path):
+        # type: unit; angle: failure; covers: KM-400a-3-i
+        _source(tmp_path)
+        _source(tmp_path, name="product/other")
+        with pytest.raises(ValueError, match="duplicate MockData identity"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_mock_data.py:129: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_manifest_escape_is_rejected[../../../../outside.mock.json]" time="0.007"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_manifest_escape0')
+unsafe = '../../../../outside.mock.json'
+
+    @pytest.mark.parametrize("unsafe", ["../../../../outside.mock.json", "/outside.mock.json", "C:/outside.mock.json", "https://example.com/data.mock.json"])
+    def test_mock_data_manifest_escape_is_rejected(tmp_path, unsafe):
+        # type: unit; angle: boundary; covers: KM-400a-3-i
+        _source(tmp_path)
+        _manifest(tmp_path, [_entry(path=unsafe)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_mock_data.py:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_manifest_escape_is_rejected[/outside.mock.json]" time="0.006"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_manifest_escape1')
+unsafe = '/outside.mock.json'
+
+    @pytest.mark.parametrize("unsafe", ["../../../../outside.mock.json", "/outside.mock.json", "C:/outside.mock.json", "https://example.com/data.mock.json"])
+    def test_mock_data_manifest_escape_is_rejected(tmp_path, unsafe):
+        # type: unit; angle: boundary; covers: KM-400a-3-i
+        _source(tmp_path)
+        _manifest(tmp_path, [_entry(path=unsafe)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_mock_data.py:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_manifest_escape_is_rejected[C:/outside.mock.json]" time="0.006"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_manifest_escape2')
+unsafe = 'C:/outside.mock.json'
+
+    @pytest.mark.parametrize("unsafe", ["../../../../outside.mock.json", "/outside.mock.json", "C:/outside.mock.json", "https://example.com/data.mock.json"])
+    def test_mock_data_manifest_escape_is_rejected(tmp_path, unsafe):
+        # type: unit; angle: boundary; covers: KM-400a-3-i
+        _source(tmp_path)
+        _manifest(tmp_path, [_entry(path=unsafe)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_mock_data.py:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_manifest_escape_is_rejected[https://example.com/data.mock.json]" time="0.008"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_manifest_escape3')
+unsafe = 'https://example.com/data.mock.json'
+
+    @pytest.mark.parametrize("unsafe", ["../../../../outside.mock.json", "/outside.mock.json", "C:/outside.mock.json", "https://example.com/data.mock.json"])
+    def test_mock_data_manifest_escape_is_rejected(tmp_path, unsafe):
+        # type: unit; angle: boundary; covers: KM-400a-3-i
+        _source(tmp_path)
+        _manifest(tmp_path, [_entry(path=unsafe)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_mock_data.py:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_manifest_duplicate_and_mismatched_source_fail" time="0.009"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_manifest_duplic0')
+
+    def test_mock_data_manifest_duplicate_and_mismatched_source_fail(tmp_path):
+        # type: unit; angle: failure; covers: KM-400a-3-i
+        _source(tmp_path)
+        _manifest(tmp_path, [_entry(), _entry()])
+        with pytest.raises(ValueError, match="duplicate"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_mock_data.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_resolved_symlink_escape_fails_before_read" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_resolved_symlin0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x0000023AE9852C40&gt;
+
+    def test_mock_data_resolved_symlink_escape_fails_before_read(tmp_path, monkeypatch):
+        # type: unit; angle: boundary; covers: KM-400a-3-i
+        source = _source(tmp_path)
+        original = Path.resolve
+        def resolve(path, *args, **kwargs):
+            return tmp_path.parent / "outside.mock.json" if path == source else original(path, *args, **kwargs)
+        monkeypatch.setattr(Path, "resolve", resolve)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_mock_data.py:160: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_mock_data" name="test_mock_data_unreadable_source_is_explicit" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'">tmp_path = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph/pytest-of-Hendrik/pytest-14/test_mock_data_unreadable_sour0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x0000023AE9853100&gt;
+
+    def test_mock_data_unreadable_source_is_explicit(tmp_path, monkeypatch):
+        # type: unit; angle: failure; covers: KM-400a-3-i
+        source = _source(tmp_path)
+        original = Path.read_text
+        def read(path, *args, **kwargs):
+            if path == source:
+                raise PermissionError("denied")
+            return original(path, *args, **kwargs)
+        monkeypatch.setattr(Path, "read_text", read)
+        with pytest.raises(ValueError, match="cannot read native source"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_mock_data.py:173: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_mock_data.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.mock_data").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.mock_data'
+import_ = &lt;function _gcd_import at 0x0000023AE37BBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mock_data'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase></testsuite></testsuites>

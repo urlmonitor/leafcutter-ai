@@ -214,6 +214,7 @@ def _write_master_plan_safely(
     goal_ac_id: str,
     goal_summary: str,
     epic_name: str,
+    goal_title: str = "",
 ) -> Path | None:
     """Write Master_Plan.md, treating an OSError as non-fatal.
 
@@ -230,6 +231,7 @@ def _write_master_plan_safely(
         goal_ac_id: The AC id recorded as the plan's source_ac.
         goal_summary: The plan's ``## Goal`` paragraph.
         epic_name: PascalCase EPIC name without the ``EPIC-`` prefix.
+        goal_title: Goal title for the plan's ``title`` frontmatter field.
 
     Returns:
         Path | None: The written Master_Plan.md path, or None when the write
@@ -243,6 +245,7 @@ def _write_master_plan_safely(
             goal_ac_id=goal_ac_id,
             goal_summary=goal_summary,
             epic_name=epic_name,
+            goal_title=goal_title,
         )
     except OSError as exc:
         get_logger().warning(
@@ -255,6 +258,8 @@ def _write_master_plan_safely(
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-10-06 [EPIC-BuildToolingRunsThrough/09]: _write_master_plan_safely takes goal_title. (#ACD-1200a-8-i)
+  Passed through to generate_master_plan for the plan's title frontmatter field.
 - 2026-09-14 12:00 [goal-to-epic-decompose]: Created during the decomposition of
   scripts/goal_to_epic.py, which exceeded the 400-line check_file_size limit.
   Every function here is a block lifted out of run() and/or

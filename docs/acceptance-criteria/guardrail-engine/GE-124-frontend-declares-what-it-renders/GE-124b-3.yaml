@@ -84,7 +84,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Recorded that the strip transform DOES NOT EXIST — leafcutter-web/next.config.mjs is an empty config and data-testid is not stripped today, so this AC creates the transform rather than extending one. Scoped honestly to leafcutter-web (the only front-end app in the repo; the storefront-* apps in the mock data are illustrative and reactRemoveProperties is React-only) and required the gap to be recorded in GE-124b-5. Tests assert built output, never config. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/14_TICKET-20261022-GE-124b-3.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -111,3 +112,4 @@ notes: |
   reactRemoveProperties is React-only, "one place" is achievable today and would
   need a per-framework equivalent the day a Vue or Svelte app lands. That gap is
   routed to GE-124b-5's reference doc rather than left implicit.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

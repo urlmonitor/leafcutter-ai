@@ -56,7 +56,7 @@ _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 
 _TIMEOUT = 20
-_SETUP_RELATED_LABELS = ("resolve-worktree-setup-script-path", "worktree-setup")
+_SETUP_RELATED_LABELS = ("workspace-ensure",)  # BO-4300c-3: the ONE workspace step (the script-path resolution and worktree-setup labels are retired)
 
 _FORBIDDEN_PERMISSION_VERDICT_MARKERS = ("permit", "permits_shell")
 _UNREADABLE_PHRASES = ("could not be read", "could not read", "cannot be read", "unreadable")

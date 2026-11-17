@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -61,9 +61,14 @@ expects_from:
   contract: "Resolved connected build set: dependency-ordered list of leaf (L2/L3) AC ids whose work_status is todo (readiness-agnostic)."
 origin_agent: BrainCandy
 created: 2026-08-10
-amended_by: []
+amended_by:
+- action: children-added
+  agent: business-analyst
+  date: '2026-11-16'
+  children: [BO-2400f-7-v, BO-2400f-7-vi, BO-2400f-7-vii, BO-2400f-7-viii, BO-2400f-7-ix, BO-2400f-7-x, BO-2400f-7-xi, BO-2400f-7-xii]
+  reason: "Seven behavioural children were added under this claim step on 2026-11-16 after run wf_f26bd73c-98c, where a claim stopped part-way was reported as never attempted: BO-2400f-7-v (the runner waits for a long command and has an unfinished reply), -vi (every command step states its time budget), -vii (a reply with no exit status that is not a decline ends as state unknown), -viii (the claim command tells held apart by its exit status), -ix (declined, ran-and-failed and held are three halts), -x (held relayed on standard error is still held) and -xi (claim tests use the real command's reply). BO-2400f-7-xii documents the new halt kinds in the fast-lane how-to. Child BO-2400f-7-iii was reset to todo the same day because its contention proof rested on a reply the real command cannot emit. All are todo, so this composite is reset done -> todo; leaving it done would make it a falsely-done composite. This record's own criteria are unchanged."
 superseded_by: null
-covered_by: [BO-2400f-7-i, BO-2400f-7-ii, BO-2400f-7-iii, BO-2400f-7-iv]
+covered_by: [BO-2400f-7-i, BO-2400f-7-ii, BO-2400f-7-iii, BO-2400f-7-iv, BO-2400f-7-v, BO-2400f-7-vi, BO-2400f-7-vii, BO-2400f-7-viii, BO-2400f-7-ix, BO-2400f-7-x, BO-2400f-7-xi, BO-2400f-7-xii]
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

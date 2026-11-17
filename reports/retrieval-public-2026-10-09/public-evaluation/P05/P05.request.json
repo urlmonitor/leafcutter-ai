@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "goal": "How many ACs concern test writing? Exclude parent requirements.",
+  "caller": {
+    "schema_version": "1.0",
+    "id": "public-retrieval-evaluator",
+    "kind": "host"
+  },
+  "scope": {
+    "schema_version": "1.0",
+    "workspace_id": "public-retrieval-proof",
+    "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01",
+    "revision": {
+      "schema_version": "1.0",
+      "commit": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+      "dirty": false,
+      "tree_fingerprint": null
+    },
+    "component_ids": [],
+    "read_roots": [
+      "docs"
+    ],
+    "source_ids": [
+      "knowledge.graph"
+    ],
+    "technologies": []
+  },
+  "requested_output_schema": "leafcutter.evidence_bundle.v1",
+  "input_payload_schema": "leafcutter.research_request.v1",
+  "input_payload": {
+    "question": "How many ACs concern test writing? Exclude parent requirements.",
+    "evidence_needs_only": true,
+    "evidence_needs": [
+      {
+        "id": "need.question",
+        "category": "task_context",
+        "priority": "required",
+        "question": "How many ACs concern test writing? Exclude parent requirements."
+      }
+    ]
+  },
+  "initial_evidence": [],
+  "context": {
+    "schema_version": "1.0",
+    "host": null,
+    "capabilities": [],
+    "conversation": [],
+    "observations": []
+  },
+  "constraints": [],
+  "permissions": [
+    "read_repo"
+  ]
+}

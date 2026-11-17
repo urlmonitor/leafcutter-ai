@@ -61,7 +61,7 @@ it_requirements:
   config_schema_fragment:
     reachability_verdict:
       type: object
-      description: "Extension of the verify_done_eligible() verdict dict with the third eligibility condition: { eligible: bool, reason: str, refusal_cause: 'proof_not_through_entry_point'|'no_entry_point_reaches_code'|'observation_unavailable'|null, unit: str|null, entry_point: str|null, offending_test: str|null } merged into the existing keys. refusal_cause null preserves today's two-condition behaviour verbatim."
+      description: "Extension of the verify_done_eligible() verdict dict with the third eligibility condition: { eligible: bool, reason: str, refusal_cause: 'proof_not_through_entry_point'|'no_entry_point_reaches_code'|null, unit: '<repo-relative source path>'|null, entry_point: '<repo-relative source path>:<callable>'|null, offending_test: str|null } merged into the existing keys. refusal_cause null preserves today's two-condition behaviour verbatim. 'proof_not_through_entry_point' is this rule's only cause and is set only from a reach record whose reached_through is the literal 'not_reached'; 'no_entry_point_reaches_code' belongs to BO-2900a-3 and is listed only because the two rules share the verdict dict. There is NO cause for an unwatched run or an undecidable question: such a record yields no verdict and leaves every key of the verdict exactly as the rule-not-invoked evaluation returns it (BO-2900a-2-ii, BO-2900a-2-iii). While the rule is report-only (BO-2900a-1-ii) none of these keys is written to the verdict at all; the same facts travel on the structured finding instead."
   reference_file_path: "scripts/ac_store/done_proof.py"
   n_location_rule: "1"
   required_skills:
@@ -70,17 +70,17 @@ it_requirements:
     - "./build-self.sh"
   constraints:
     - "Extend verify_done_eligible() in scripts/ac_store/done_proof.py — do NOT create a second eligibility oracle. The two incumbent conditions (at least one '# covers:<id>' test exists; every such test PASSES) run first and are unchanged; reachability is evaluated only after both pass, so today's failure messages are untouched."
-    - "'The unit exposes a runtime way in' is decided mechanically: the module holding the implementing code, or a module that imports it, defines a module-level callable main(argv) — the same surface `python <module> <action> ...` reaches (cf. fast_lane.main, scripts/build_orchestration/fast_lane.py:925). Record the resolved entry point as '<module path>:main' in the verdict. Never infer an entry point from filename, folder, docstring, or an `if __name__` text match."
-    - "THE SCOPE FENCE IS MECHANICAL: when no entry point resolves, this rule returns no verdict at all and hands off to the BO-2900a-3 no-way-in rule. Two disjoint refusal_cause values, never one merged 'unreachable' verdict — BO-2900e-1 specifies two different messages with two different clearing actions."
-    - "The reached-through fact is CONSUMED from the BO-2900a-2 observation record. This AC must not re-derive it and must not fall back to any source-text signal (import-statement scan, subprocess-string search, entry-point-name grep) when the observation is missing. A missing observation fails closed with refusal_cause 'observation_unavailable', distinct from both real refusals."
+    - "'The unit exposes a runtime way in' is decided mechanically, for the unit the AC's own record names and for no other (BO-2900a-1-iv): the unit is drawn from the AC's implemented_by .py entries, and it exposes a way in when it defines a module-level callable main(argv) — the same surface `python <module> <action> ...` reaches (cf. fast_lane.main, scripts/build_orchestration/fast_lane.py:925). Never select the unit from the proof's imports or from any other module that happens to import the implementing code, and never name in a finding a unit the record does not name. Record the resolved entry point as '<repo-relative source path>:<callable>', identified by resolved file path, never by module stem and never by a build-output copy (BO-2900a-1-iv). Never infer an entry point from filename, folder, docstring, or an `if __name__` text match."
+    - "THE SCOPE FENCE IS MECHANICAL: when the declared unit exposes no way in, this rule returns no verdict at all and hands off to the BO-2900a-3 no-way-in rule. When the record declares no resolvable unit, this rule returns no verdict and no finding and does not guess a unit (BO-2900a-1-iv). Two disjoint refusal_cause values, never one merged 'unreachable' verdict — BO-2900e-1 specifies two different messages with two different clearing actions."
+    - "The reached-through fact is CONSUMED from the BO-2900a-2 observation record. This AC must not re-derive it and must not fall back to any source-text signal (import-statement scan, subprocess-string search, entry-point-name grep) when the observation is missing, unwatched or undecidable. A record whose observation is 'unwatched' (BO-2900a-2-ii) or whose reached_through is 'undecidable' (BO-2900a-2-iii) gives NO VERDICT: the criterion is neither refused nor credited on that basis, a criterion whose every linked proof is such a record gets a verdict equal in every key to the rule-not-invoked verdict, and the case is announced through the BO-2900a-1-ii finding channel naming the proof and the unwatchable_cause or undecidable_cause, with no clearing action. It is never a refusal and never carries a refusal_cause. The refusal may fire only on the literal reached_through 'not_reached' — never on falsiness, never on entered_entry_point alone, and never on the derived observation_ok alias."
     - "The verdict must carry the unit, the un-entered entry point and the offending test nodeid so BO-2900e-1's first message is composable without re-deriving anything, and must be idempotent for a given tree plus test-run result."
-    - "done_proof.py is deployed via build_ac_store's deploy_map (scripts/build_phases.py:794). Any NEW module it imports (the BO-2900a-2 observer) MUST be added to that deploy_map in the same change or the deployed check_done_proof hook and the REQUIRED CI done-proof job crash with ModuleNotFoundError — see CLAUDE.md 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest'."
+    - "done_proof.py is deployed via build_ac_store's deploy_map (scripts/build_phases_ac_store.py, alongside the existing scripts/ac_store/done_proof*.py and _done_proof_*.py entries; re-verified 2026-10-21 — the list moved out of scripts/build_phases.py). Any NEW module it imports (the BO-2900a-2 observer) MUST be added to that deploy_map in the same change or the deployed check_done_proof hook and the REQUIRED CI done-proof job crash with ModuleNotFoundError — see CLAUDE.md 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest'."
 delivers_to:
   agent: python-coder
-  contract: "Extended verify_done_eligible() return dict: { eligible: bool, reason: str, refusal_cause: str|null, unit: str|null, entry_point: str|null, offending_test: str|null, passing_tests: [str], failing_tests: [str], dangling_tags: [dict] }. Consumed by scripts/commit_guardian/check_done_proof.py in all three modes (precommit, ci, ci-changed) and by the BO-2900e-1 message layer."
+  contract: "Extended verify_done_eligible() return dict: { eligible: bool, reason: str, refusal_cause: 'proof_not_through_entry_point'|'no_entry_point_reaches_code'|null, unit: '<repo-relative source path>'|null, entry_point: '<repo-relative source path>:<callable>'|null, offending_test: str|null, passing_tests: [str], failing_tests: [str], dangling_tags: [dict] }. unit and entry_point name the unit the AC's implemented_by declares, never a module stem or a build-output copy (BO-2900a-1-iv). An unwatched or undecidable reach record adds no key and changes no key (BO-2900a-2-ii, BO-2900a-2-iii). While the rule is report-only (BO-2900a-1-ii) the dict is equal in every key to the rule-not-invoked verdict and the facts travel on the structured finding { unit, entry_point, offending_test, refusal_cause } instead. Consumed by scripts/commit_guardian/check_done_proof.py in all three modes (precommit, ci, ci-changed) and by the BO-2900e-1 message layer."
 expects_from:
   ac_id: BO-2900a-2
-  contract: "Run-observation record, one per (proof test, code under proof): { test_nodeid: str, target: '<module>:<callable>', entry_point: '<module>:main'|null, entered_entry_point: bool, reached_through: bool, observation_ok: bool }, derived by watching the proof test execute — never from its source text."
+  contract: "The AMENDED reach_record of BO-2900a-2 (its it_requirements.config_schema_fragment is authoritative), one per (proof test, declared unit), derived by watching the proof test execute — never from its source text. This AC asks the question naming the declared unit it drew from the AC's implemented_by (BO-2900a-1-iv), so the subject is never empty (BO-2900a-2-iii), and reads these fields: { test_nodeid: str, unit: '<repo-relative source path>', entry_points: ['<repo-relative source path>:<callable>'], entered_entry_point: bool, reached_through: 'reached'|'not_reached'|'undecidable', undecidable_cause: 'subject_not_named'|null, observation: 'watched'|'unwatched', unwatchable_cause: 'non_python_child'|'isolated_interpreter'|'observer_displaced'|'recorded_nothing'|'propagation_failed'|'unknown'|null }. Only reached_through == 'not_reached' can lead to a refusal; 'undecidable' or observation 'unwatched' gives no verdict; entered_entry_point is read only to word the reason and can never produce a refusal by itself. observation_ok is a derived alias and is not read for the verdict. reached_code and processes are carried by the record but not needed by this rule."
 test_spec:
   - name: test_direct_import_proof_is_refused_when_unit_has_an_entry_point
     target_dir: unit_tests/ac_store/
@@ -157,6 +157,58 @@ notes: |
     proof that goes through the way in, one that imports directly) and compare the two
     verdicts. A test that reads the gate's source for the new condition passes on a
     gate that never applies it — the exact failure this tree exists to prevent.
+
+  2026-10-21 (IT PO). The technical contract is brought in line with the
+  2026-09-30 amendments. It had contradicted them, and a coder reading this record
+  alone would have built the fail-closed refusal that BO-2900a-2-ii exists to remove.
+  criteria, title, req_status and depends_on are untouched. work_status stays todo
+  and readiness stays reviewed. These are not protected fields, so the change
+  carries no amended_by entry. What changed:
+    (1) expects_from.contract. Before, it quoted the old record shape: one target
+        '<module>:<callable>', one entry_point, reached_through as a bool and
+        observation_ok. Now it names the amended reach_record of BO-2900a-2: unit,
+        the entry_points list, a three-way reached_through with undecidable_cause,
+        and observation with unwatchable_cause. It also says which fields this rule
+        reads and that only the literal 'not_reached' can refuse. It agrees with
+        BO-2900a-2 (the reach_record), BO-2900a-2-iii (the question names the
+        declared unit and the answer has three values) and BO-2900a-1-iv (the unit
+        comes from implemented_by).
+    (2) it_requirements.constraints, the observation constraint. Before: "A missing
+        observation fails closed with refusal_cause 'observation_unavailable'".
+        Now an unwatched record or an undecidable answer gives no verdict. The
+        criterion is neither refused nor credited, the verdict equals the
+        rule-not-invoked verdict, and the case is announced with its cause and no
+        clearing action. This agrees with BO-2900a-2-ii and BO-2900a-2-iii. The
+        ban on falling back to source-text signals is kept as it was.
+    (3) it_requirements.config_schema_fragment.reachability_verdict. Before, the
+        refusal_cause enum included 'observation_unavailable'. That value is
+        removed, and the description now says no cause exists for an unwatched or
+        undecidable record. It now spells unit and entry_point as source paths
+        (BO-2900a-1-iv) and notes that the dict is untouched while the rule is
+        report-only (BO-2900a-1-ii).
+    (4) The entry-point resolution constraint. Before, the unit was "the module
+        holding the implementing code, or a module that imports it", spelled
+        '<module path>:main'. Now the unit is the one the record's implemented_by
+        names and no other, and the entry point is spelled '<repo-relative source
+        path>:<callable>' by resolved path, never by stem or build-output copy.
+        This agrees with BO-2900a-1-iv.
+    (5) The scope-fence constraint. The hand-off to BO-2900a-3 is now scoped to "the
+        declared unit exposes no way in". A record that declares no unit gets no
+        verdict and no finding from this rule (BO-2900a-1-iv).
+    (6) delivers_to.contract. unit and entry_point are spelled as source paths. An
+        unwatched or undecidable record adds no key and changes no key. While
+        report-only, the dict equals the rule-not-invoked verdict and the facts go
+        on the structured finding. This agrees with BO-2900a-1-ii, BO-2900a-1-iv
+        and BO-2900a-2-ii.
+  Left alone on purpose, and they belong to other records: BO-2900a-1-ii (its
+  it_requirements and delivers_to) and BO-2900a-5 (its delivers_to) still list
+  'observation_unavailable' as a cause. BO-2900a-1-i still describes reached_through
+  as a bool. Each needs the same amendment before it is built. This record's
+  test_spec entries are protected test-designer output and were not edited.
+  Addendum, later the same day (IT PO): those three siblings have now received the
+  same amendment, so the paragraph above is history and not an open item. A
+  correction too: BO-2900a-5's contract is in its expects_from, not its
+  delivers_to.
 
   2026-09-30 (BA). work_status returned done -> todo, and three L3 children added
   (BO-2900a-1-ii report-only suspension, -iii the re-arm corpus, -iv the named

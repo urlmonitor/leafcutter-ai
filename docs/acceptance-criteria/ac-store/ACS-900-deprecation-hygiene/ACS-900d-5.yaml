@@ -1,0 +1,80 @@
+id: ACS-900d-5
+components:
+  - ac_store
+  - documentation_system
+readiness: approved
+priority: high
+title: "How-to guide shows how to retire a done record honestly by superseding it"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: done
+criteria: |
+  Given the retired-record exemption (ACS-900d-4 and its L3s) is implemented,
+  When a contributor needs to retire a record whose behaviour was deliberately
+    removed,
+  Then the AC traceability how-to guide gives the steps: set status
+    "superseded_by", list one or more existing successor ids in superseded_by,
+    leave work_status as it was, and stage the parent alongside,
+  And the guide states which gates no longer apply to a retired record
+    (covering-test proof, test contract, unfinished-children checks) and which
+    still do (schema shape, successor ids exist and are not the record itself,
+    parent/child links),
+  And the guide states that editing readiness, change_target, test tags or
+    test contracts to get a retired record past a gate is wrong,
+  And the status lifecycle table in the AC schema reference no longer claims
+    superseded records are excluded from enforcement without naming the
+    structural rules that still apply.
+depends_on: [ACS-900d, ACS-900d-4]
+doc_links:
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/how-to/done-proof-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/ac-store/open-high-ki-acs-20261015-superseded-records-held-to-forward-rules.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Edit the existing surfaces. Do not create a new doc. The retirement steps go in docs/how-to/ac-traceability-store.md, extending the existing 'If this AC is superseded by a newer one' passage at about line 452 into one retirement section shared with ACS-900d-3. The lifecycle wording goes in the Status Lifecycle table of docs/reference/ac-schema.md, the superseded_by and superseded rows at about lines 198-199."
+  - "The guide must state the exact retired rule as implemented: status superseded_by (canonical) or superseded (older form), with a non-empty superseded_by naming records that exist anywhere in the store, none of which is the record itself. It must state that status deprecated with no successor is NOT exempt and keeps the forward rules (user decision 1)."
+  - "The guide must state the composite rule: a retired child neither blocks nor proves its parent, and a live parent whose children are all retired needs its own covering test (user decision 2)."
+  - "Gate names must match the hook ids users see in refusals: check-done-proof (covering-test proof and composite rollup) and check-ac-schema (test contract, successor and self-supersession structural checks, schema shape), plus check-ac-parent-covered-by (parent/child links)."
+  - "Retire the false sentence. ac-schema.md currently says superseded records are 'excluded from active enforcement'. Replace it with the split between forward rules (exempt) and structural rules (still enforced). Do not delete the row."
+  - "Write this only after ACS-900d-4's behaviour is merged or on the same branch, and verify every gate claim against the implemented hooks, not against the AC text. If ACS-900d-4-ii reconciled the 'superseded' status enum, the doc must describe the reconciled state."
+  - "Edited docs must pass check-doc-frontmatter, check-doc-links and check-doc-length. The doc-length ratchet limits growth, so keep the retirement section compact."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900d-4
+  contract: "The implemented retired-record predicate (status superseded_by|superseded, non-empty existing successors, no self-reference; deprecated excluded), the forward gates it exempts (check-done-proof own-record and composite rollup, check-ac-schema test contract), and the structural rules that still apply (successor existence, self-supersession, schema shape, parent covered_by links)"
+test_required: false
+test_rationale: "Documentation-only AC (change_target docs). It produces no executable behaviour. The behaviour the guide describes is proven by the test_spec entries on ACS-900d-4 and its L3s. The doc surfaces are checked by the existing check-doc-frontmatter, check-doc-links and check-doc-length hooks."
+origin_agent: BrainCandy
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the [how-to] documentation_trigger on ACS-900d for the new
+  behaviour (ACS-900d-3 covers the earlier code-reconciliation pass cases).
+  Coordinate with ACS-900d-3 so both land in one coherent retirement section.
+  The last Then fixes ac-schema.md's Status Lifecycle table, which today says
+  superseded records are "excluded from active enforcement" — untrue for
+  done-proof until ACS-900d-4 lands, and incomplete afterwards.
+
+  IT-PO enrichment (2026-10-15): this AC needs no test contract. It is change_target
+  docs and draft, and the schema's test-contract rule only fires for approved
+  leaf code ACs. test_required is set to false with a rationale anyway, so
+  the intent is on record and the done-proof covers-tag waiver applies when it
+  is closed. The two user decisions (superseded only, and a live parent of
+  retired children needs its own test) are now required content of the guide.
+change_target: docs
+risk_surface: internal

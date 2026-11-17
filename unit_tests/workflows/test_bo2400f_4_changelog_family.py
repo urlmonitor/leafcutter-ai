@@ -143,7 +143,7 @@ for _p in (_UNIT_TESTS_DIR, _BUILD_ORCH_DIR, _RELEASE_DIR, _CHANGELOG_DIR):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import resolve_connected_reply, run_workflow_under_e2, workspace_ensure_from_opened  # noqa: E402
 
 import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
 
@@ -331,21 +331,13 @@ _RELEASABLE_FILES_MODIFIED = [
 # way through worktree -> resolve -> claim -> test-writer -> coder -> commit
 # -> pull-request without any early return, matching each phase's schema.
 _BASE_RESPONSES: dict = {
-    "fastlane-worktree": {
+    "workspace-ensure": workspace_ensure_from_opened({
         "worktree_path": "/tmp/fastlane-harness-wt",
         "branch": "fast-lane/bo-stub-1",
         "ac_store_path": "/tmp/fastlane-harness-wt/docs/acceptance-criteria",
         "created": True,
-    },
-    "fastlane-worktree-verify": {
-        "worktree_path": "/tmp/fastlane-harness-wt",
-        "raw": (
-            "worktree /tmp/fastlane-harness-wt\n"
-            "HEAD 0000000000000000000000000000000000000000\n"
-            "branch refs/heads/fast-lane/bo-stub-1"
-        ),
-    },
-    "resolve-connected": {"ac_ids": ["BO-STUB-1"], "message": "1 to build"},
+    }),
+    "resolve-connected": resolve_connected_reply({"ac_ids": ["BO-STUB-1"], "message": "1 to build"}),
     "claim-connected": _claim_fx.claim_ran(["BO-STUB-1"]),
     "test-writer-connected": {
         "status": "ok",
@@ -410,8 +402,7 @@ _BASE_RESPONSES: dict = {
         "status": "ok",
         "pr_url": "https://github.com/example/example/pull/1",
         "message": "PR opened",
-    },
-}
+    }, **_claim_fx.wrong_version_passing()}
 
 
 def _run(label_responses: dict):

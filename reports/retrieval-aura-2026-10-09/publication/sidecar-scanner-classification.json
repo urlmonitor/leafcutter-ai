@@ -1,0 +1,101 @@
+{
+  "scope": "exact rule/path/line only",
+  "findings": [
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": ".gitignore",
+      "line": 102,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    },
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": ".gitignore",
+      "line": 103,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    },
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": ".gitignore",
+      "line": 104,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    },
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": ".gitignore",
+      "line": 105,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    },
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": ".gitignore",
+      "line": 106,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    },
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": ".gitignore",
+      "line": 107,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    },
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": ".gitignore",
+      "line": 108,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    },
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": ".gitignore",
+      "line": 109,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    },
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": "reports/retrieval-aura-2026-10-09/publication/local-only-sidecars.json",
+      "line": 6,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    },
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": "reports/retrieval-aura-2026-10-09/publication/local-only-sidecars.json",
+      "line": 12,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    },
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": "reports/retrieval-aura-2026-10-09/publication/local-only-sidecars.json",
+      "line": 18,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    },
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": "reports/retrieval-aura-2026-10-09/publication/local-only-sidecars.json",
+      "line": 24,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    },
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": "reports/retrieval-aura-2026-10-09/publication/local-only-sidecars.json",
+      "line": 30,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    },
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": "reports/retrieval-aura-2026-10-09/publication/local-only-sidecars.json",
+      "line": 36,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    },
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": "reports/retrieval-aura-2026-10-09/publication/local-only-sidecars.json",
+      "line": 42,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    },
+    {
+      "rule": "ENTROPY_HIGH",
+      "path": "reports/retrieval-aura-2026-10-09/publication/local-only-sidecars.json",
+      "line": 48,
+      "classification": "verified exact local-only SQLite sidecar path, not a credential"
+    }
+  ]
+}

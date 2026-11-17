@@ -27,6 +27,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import sys
 from collections import Counter
@@ -34,9 +35,14 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+# The skill deploys to <output_root>/skills/feedback-analysis/scripts/; the shared reader sits in <output_root>/scripts/feedback/.
+_OUTPUT_ROOT = next(p for p in Path(__file__).resolve().parents[3:] if p.name != "gemini")  # the Gemini copy sits one directory deeper
+sys.path.insert(0, str(_OUTPUT_ROOT / "scripts" / "feedback"))
+
+import feedback_reader  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # Constants
-# ---------------------------------------------------------------------------
 
 # Closed vocabulary of feedback categories with severity weights.
 # Must stay in sync with config/feedback_categories.yaml.
@@ -76,67 +82,16 @@ _ACTIONABLE_RECOMMENDATIONS: dict[str, str] = {
 
 
 # ---------------------------------------------------------------------------
-# JSONL path resolution
+# Direct import with local fallback
 # ---------------------------------------------------------------------------
 
 
-def _find_default_jsonl() -> Path:
-    """Walk up from this file to find debugging/logs/feedback.jsonl.
-
-    Returns:
-        Path: Resolved path to feedback.jsonl (may not exist).
-    """
-    current = Path(__file__).resolve().parent
-    for _ in range(8):
-        candidate = current / "debugging" / "logs" / "feedback.jsonl"
-        if candidate.exists():
-            return candidate
-        # Also check for .claude/ marker (project root)
-        if (current / ".claude").is_dir():
-            return current / "debugging" / "logs" / "feedback.jsonl"
-        current = current.parent
-    # Fallback: relative to CWD
-    return Path("debugging") / "logs" / "feedback.jsonl"
-
-
-# ---------------------------------------------------------------------------
-# Direct import with subprocess fallback
-# ---------------------------------------------------------------------------
-
-
-def _import_aggregate():
-    """Try to import aggregate.filter_entries and aggregate._build_summary.
-
-    Returns:
-        module or None: The aggregate module, or None when import fails.
-    """
+def _import_sibling(name: str):
+    """Import a script from the install's ``scripts/feedback`` (on sys.path above), or None."""
     try:
-        # Try the known relative path from this script's location
-        scripts_feedback = Path(__file__).resolve().parents[4] / "scripts" / "feedback"
-        if scripts_feedback.exists() and str(scripts_feedback) not in sys.path:
-            sys.path.insert(0, str(scripts_feedback))
-        import aggregate as _agg  # type: ignore[import]
+        return importlib.import_module(name)
     except ImportError:
         return None
-    else:
-        return _agg
-
-
-def _import_list_tags():
-    """Try to import list_tags.count_tags.
-
-    Returns:
-        module or None: The list_tags module, or None when import fails.
-    """
-    try:
-        scripts_feedback = Path(__file__).resolve().parents[4] / "scripts" / "feedback"
-        if scripts_feedback.exists() and str(scripts_feedback) not in sys.path:
-            sys.path.insert(0, str(scripts_feedback))
-        import list_tags as _lt  # type: ignore[import]
-    except ImportError:
-        return None
-    else:
-        return _lt
 
 
 # ---------------------------------------------------------------------------
@@ -291,7 +246,7 @@ def _load_entries(
     Returns:
         list[dict]: Filtered entries.
     """
-    agg = _import_aggregate()
+    agg = _import_sibling("aggregate")
     if agg is not None:
         try:
             all_entries = agg._read_jsonl(jsonl_path)
@@ -344,7 +299,7 @@ def _get_top_tags(entries: list[dict], category: str, top_n: int) -> list[tuple[
     Returns:
         list[tuple[str, int]]: (tag, count) pairs sorted by count descending.
     """
-    lt = _import_list_tags()
+    lt = _import_sibling("list_tags")
     if lt is not None:
         try:
             cat_entries = [e for e in entries if e.get("category") == category]
@@ -654,7 +609,11 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    jsonl_path = Path(args.jsonl) if args.jsonl else _find_default_jsonl()
+    paths = feedback_reader.resolve(_OUTPUT_ROOT, "trend_report", feedback_sink=args.jsonl)
+    if paths is None:
+        return 1
+    jsonl_path = paths["feedback_sink"]
+    feedback_reader.report("trend_report", jsonl_path, len(_read_jsonl_fallback(jsonl_path)), None if args.jsonl else _OUTPUT_ROOT)
 
     # Load entries (possibly empty)
     try:

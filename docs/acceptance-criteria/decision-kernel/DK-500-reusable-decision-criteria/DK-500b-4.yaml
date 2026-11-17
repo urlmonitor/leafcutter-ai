@@ -1,0 +1,130 @@
+id: DK-500b-4
+title: Questions drafted during a decision run get grouping suggestions within that run's Jev budget
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given a decision run in which a criterion was drafted for a gap, "Can the format be read into the knowledge graph as one reviewed kind?",
+  And the published library holds cat-1dc11c5a2ffa7310, cat-d15d52392d7aa94c, cat-52b16c7b5a23106f, cat-d6ce5f78c181ebd1 and cat-1df63b670163b54e,
+  When the drafted criteria are grouped before the approval of proposals,
+  Then each drafted criterion is shown at that approval with its suggested existing category or with "none",
+  And every Jev call spent on this grouping counts against the run's Jev budget,
+  And a suggestion takes effect only when the person accepts it at that approval, and the person can change or undo it there,
+  And in a run whose library holds no published category, no grouping call is made.
+depends_on:
+- DK-500b
+- DK-500b-1
+- DK-500e-2
+covered_by:
+- DK-500b-4-i
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: DK-500e-2
+  contract: Gap criteria drafted in the run, each with wording, criterion_id and gap_concern (DK-500e-2 delivers_to).
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+- 'In-run grouping runs after gap drafting and before the approval of proposals, over the published non-retired categories only (Git, read through the generated index). It uses the same exact-match step and the same Jev choice question as offline grouping: one choice per drafted criterion that is not an exact match, batched into as few Jev calls as jev.max_questions_per_call allows.'
+- Every grouping Jev call counts against the run's Jev budget (limits.max_jev_calls) through the existing budget gate, and grouping is funded only after the research and assessment reserve (DK-500b-4-i).
+- The suggestion (category id or none, with reason and probability) is part of the approval-of-proposals payload built by the kernel. The transport skills need no change; if a skill change proves necessary it is a separate llm-expert AC.
+- 'An accepted suggestion links the drafted criterion to its category exactly like an unedited reuse (DK-500d-3): a membership addition is staged with the decision record and published only with it. A changed or undone suggestion stages nothing.'
+- Criteria a person adds at the approval are not grouped in the run.
+- With no published category, the grouping step makes no Jev call and the payload shows the plain drafted criteria.
+test_required: true
+test_spec:
+- name: test_drafted_criteria_shown_with_suggestion_or_none
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: At the approval of proposals the drafted criterion is shown with its suggested existing category or none.
+- name: test_grouping_jev_calls_count_against_run_budget
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The run's Jev call count rises by exactly the grouping calls made.
+- name: test_suggestion_effective_only_when_accepted
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Only an accepted suggestion stages a membership addition with the decision record.
+- name: test_person_can_change_or_undo_suggestion
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Changing or undoing the suggestion at the approval stages nothing for it.
+- name: test_empty_library_makes_no_grouping_call
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: With no published category the grouping step makes no Jev call.
+test_rationale: Run the decision capability through the public run/resume boundary with a scripted Jev provider and a recording host port; assert the approval payload, call counts and staged files. A direct-import unit test of a helper would not prove the forming flow wires the step.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  DECIDED METHOD (replaces the earlier pending-method note, which named the cancelled run run-b5af8c7fae2248ba): dec-a070edfb6465bced, option opt.jev_pick_existing, chosen by human:user on 2026-10-04 in run run-14655bf6d5e84cb3. Its question still says 'AC DK-300b' because the record is append-only; that is DK-500b after the 2026-10-05 renumbering. The method: (1) code places every wording that exactly matches a preferred or other label of an existing category, or shares a criterion id with a member, with no model call; (2) Jev answers one bounded choice per remaining wording over ALL existing non-retired categories (each shown by its preferred and other labels) plus 'none', while the library fits one choice question, and a merge is suggested only at p >= 0.8; (3) wordings left at 'none' become one-member candidate categories made by code, worded as the wording. No LLM anywhere in grouping and no broader-link suggestions. Cold start: no categories, so every wording is its own one-member candidate and Jev is not called. In a decision run: one Jev choice per drafted question within the run's Jev budget. Evidence for p >= 0.8: a live Jev trial on 82 wordings (22 in-category, 56 none, 4 pair probes) measured 100% precision (12/12) and 55% recall (12/22) at p >= 0.8, 94% / 68% at 0.7 and 78% / 82% at 0.5; caveats: LLM-drafted mock gold set approved as mock data, one run at one seed, small sample.
+  USER RULE (c), settled: grouping of questions drafted DURING a decision run is in scope, within the run's Jev budget, without slowing a run on an empty library. The flow's suggest-grouping scenario names "questions newly drafted for decisions" as input.
+  Criteria a person adds at the approval are not grouped in the run; they reach grouping through the next mining round once their decision is published (DK-500e feedback loop).
+  What an accepted in-run suggestion links the criterion to is the same link a reused criterion carries (DK-500d-3 decides how that link becomes a member pair).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: suggest-grouping; leafcutter/decision-forming: draft-for-gap.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: suggest-grouping
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+    source: mock
+    asof: '2026-10-04'
+  - flow: leafcutter/decision-forming
+    node: draft-for-gap
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-04'

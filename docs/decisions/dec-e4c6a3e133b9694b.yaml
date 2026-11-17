@@ -1,0 +1,1734 @@
+schema_version: '1.0'
+kind: decision
+id: dec-e4c6a3e133b9694b
+repository_id: leafcutter-ai
+title: One audience classifier (leafcutter_only / customer / both), chosen by Jev from described ...
+description: 'And one other thing regarding decisions: do they already have some kind of categories? I ...'
+decision_type: design
+question: "And one other thing regarding decisions: do they already have some kind of categories? \nI mean currently we build\
+  \ leafcutter and all decisions pretty much apply. But there could be some decisions that are also important for the customers.\
+  \ So actually we would have to have jev decide whether a decision / rule applies only to leafcutter itself or the harness\
+  \ itself. So e.g. how to fill product truth is a decision it has to form based on exising components - for customers but\
+  \ also for leafcutter itself.\nlet leafcutter research and decide which other categories / classifiers we need."
+components: []
+change_target: []
+risk_surface: []
+roadmap_phase: []
+file_globs: []
+repository_wide: true
+selected_option_id: opt-audience-classifier
+supersedes: []
+superseded_by: []
+related: []
+task_context:
+  goal: "And one other thing regarding decisions: do they already have some kind of categories? \nI mean currently we build\
+    \ leafcutter and all decisions pretty much apply. But there could be some decisions that are also important for the customers.\
+    \ So actually we would have to have jev decide whether a decision / rule applies only to leafcutter itself or the harness\
+    \ itself. So e.g. how to fill product truth is a decision it has to form based on exising components - for customers but\
+    \ also for leafcutter itself.\nlet leafcutter research and decide which other categories / classifiers we need."
+  component_ids: []
+  technologies: []
+  constraints: []
+rationale:
+  text: 'Design decision settled by a human. Kernel ranking (Jev''s per-criterion judgement, evidence not authority; stopped
+    researching because design_judgement after 1 research round(s)): 1. [opt-audience-classifier] One audience classifier
+    (leafcutter_only / customer / both), chosen by Jev from described candidates, with a user-set, risk-specific human-in-the-loop
+    threshold (required mean 0.78, 4/5 passed); 2. [opt-classifier-framework] A declared classifier framework: classifier
+    dimensions in config, each a described candidate list with its own risk-specific threshold; start with audience (required
+    mean 0.76, 3/5 passed); 3. [opt.added.17] Classifier 16: Who is affected (required mean 0.36, 1/5 passed); 4. [opt.added.13]
+    Classifier 12: Who decides (required mean 0.35, 1/5 passed); 5. [opt.added.16] Classifier 15: Domain (required mean 0.35,
+    1/5 passed); 6. [opt.added.12] Classifier 11: Trigger (required mean 0.34, 1/5 passed); 7. [opt.added.18] Classifier 17:
+    Objective (required mean 0.34, 1/5 passed); 8. [opt.added.8] Classifier 7: Frequency (required mean 0.33, 1/5 passed);
+    9. [opt.added.14] Classifier 13: Decision procedure (required mean 0.33, 1/5 passed); 10. [opt.added.20] Classifier 19:
+    Dependence on other decisions (required mean 0.33, 1/5 passed); 11. [opt.added.4] Classifier 3: Reversibility (required
+    mean 0.33, 1/5 passed); 12. [opt.added.2] Classifier 1: Scope (required mean 0.32, 1/5 passed); 13. [opt.added.5] Classifier
+    4: Urgency (required mean 0.31, 1/5 passed); 14. [opt-no-new-classifier] No new classifier: keep the current record fields
+    and Jev''s per-question precedent applicability (required mean 0.54, 0/5 passed); 15. [opt-audience-plus-binding] Audience
+    plus a binding classifier (must_rule / default / preference) (required mean 0.50, 0/5 passed); 16. [opt.added.15] Classifier
+    14: Basis for judgment (required mean 0.34, 0/5 passed); 17. [opt.added.11] Classifier 10: Complexity (required mean 0.33,
+    0/5 passed); 18. [opt.added.3] Classifier 2: Impact (required mean 0.33, 0/5 passed); 19. [opt.added.10] Classifier 9:
+    Structure (required mean 0.33, 0/5 passed); 20. [opt.added.1] Classifier: action (in which action, flow, etc) it was applied
+    (required mean 0.33, 0/5 passed); 21. [opt.added.7] Classifier 6: Uncertainty (required mean 0.33, 0/5 passed); 22. [opt.added.9]
+    Classifier 8: Familiarity (required mean 0.32, 0/5 passed); 23. [opt.added.19] Classifier 18: Form of choice (required
+    mean 0.32, 0/5 passed); 24. [opt.added.6] Classifier 5: Time horizon (required mean 0.32, 0/5 passed); 25. [opt.added.21]
+    Classifier 20: Commitment pattern (required mean 0.30, 0/5 passed). human:user chose option [opt-audience-classifier]
+    One audience classifier (leafcutter_only / customer / both), chosen by Jev from described candidates, with a user-set,
+    risk-specific human-in-the-loop threshold (kernel rank 1 of 25).'
+  origin: template
+assumptions:
+  - The threshold is calibrated on representative cases rather than read as a probability of correctness.
+unresolved_risks: []
+assessment:
+  basis: kernel_ranking
+  design_reason: design_judgement
+  confidence: 0.784
+  selected_rank: 1
+  ranking:
+    - option_id: opt-audience-classifier
+      rank: 1
+      required_passed: 4
+      required_total: 5
+      required_mean: 0.784
+      scores:
+        crit-classifier-is-used: 0.8
+        crit-covers-both-case: 0.88
+        crit-fixed-described-candidates: 0.85
+        crit-human-authority-kept: 0.9
+        crit-maintainability: 0.57
+        crit-small-change: 0.5
+        crit-use-existing-solution: 0.8
+        crit-user-settable-threshold: 0.85
+    - option_id: opt-classifier-framework
+      rank: 2
+      required_passed: 3
+      required_total: 5
+      required_mean: 0.758
+      scores:
+        crit-classifier-is-used: 0.48
+        crit-covers-both-case: 0.83
+        crit-fixed-described-candidates: 0.87
+        crit-human-authority-kept: 0.89
+        crit-maintainability: 0.7
+        crit-small-change: 0.41
+        crit-use-existing-solution: 0.85
+        crit-user-settable-threshold: 0.9
+    - option_id: opt.added.17
+      rank: 3
+      required_passed: 1
+      required_total: 5
+      required_mean: 0.36
+      scores:
+        crit-classifier-is-used: 0.11
+        crit-covers-both-case: 0.15
+        crit-fixed-described-candidates: 0.82
+        crit-human-authority-kept: 0.36
+        crit-maintainability: 0.32
+        crit-small-change: 0.29
+        crit-use-existing-solution: 0.19
+        crit-user-settable-threshold: 0.19
+    - option_id: opt.added.13
+      rank: 4
+      required_passed: 1
+      required_total: 5
+      required_mean: 0.35
+      scores:
+        crit-classifier-is-used: 0.11
+        crit-covers-both-case: 0.13
+        crit-fixed-described-candidates: 0.82
+        crit-human-authority-kept: 0.29
+        crit-maintainability: 0.33
+        crit-small-change: 0.3
+        crit-use-existing-solution: 0.2
+        crit-user-settable-threshold: 0.17
+    - option_id: opt.added.16
+      rank: 5
+      required_passed: 1
+      required_total: 5
+      required_mean: 0.348
+      scores:
+        crit-classifier-is-used: 0.1
+        crit-covers-both-case: 0.13
+        crit-fixed-described-candidates: 0.82
+        crit-human-authority-kept: 0.32
+        crit-maintainability: 0.31
+        crit-small-change: 0.27
+        crit-use-existing-solution: 0.19
+        crit-user-settable-threshold: 0.19
+    - option_id: opt.added.12
+      rank: 6
+      required_passed: 1
+      required_total: 5
+      required_mean: 0.344
+      scores:
+        crit-classifier-is-used: 0.1
+        crit-covers-both-case: 0.12
+        crit-fixed-described-candidates: 0.8
+        crit-human-authority-kept: 0.27
+        crit-maintainability: 0.33
+        crit-small-change: 0.34
+        crit-use-existing-solution: 0.22
+        crit-user-settable-threshold: 0.19
+    - option_id: opt.added.18
+      rank: 7
+      required_passed: 1
+      required_total: 5
+      required_mean: 0.342
+      scores:
+        crit-classifier-is-used: 0.1
+        crit-covers-both-case: 0.12
+        crit-fixed-described-candidates: 0.81
+        crit-human-authority-kept: 0.32
+        crit-maintainability: 0.3
+        crit-small-change: 0.26
+        crit-use-existing-solution: 0.18
+        crit-user-settable-threshold: 0.15
+    - option_id: opt.added.8
+      rank: 8
+      required_passed: 1
+      required_total: 5
+      required_mean: 0.334
+      scores:
+        crit-classifier-is-used: 0.1
+        crit-covers-both-case: 0.12
+        crit-fixed-described-candidates: 0.8
+        crit-human-authority-kept: 0.25
+        crit-maintainability: 0.32
+        crit-small-change: 0.33
+        crit-use-existing-solution: 0.2
+        crit-user-settable-threshold: 0.19
+    - option_id: opt.added.14
+      rank: 9
+      required_passed: 1
+      required_total: 5
+      required_mean: 0.334
+      scores:
+        crit-classifier-is-used: 0.1
+        crit-covers-both-case: 0.13
+        crit-fixed-described-candidates: 0.82
+        crit-human-authority-kept: 0.22
+        crit-maintainability: 0.32
+        crit-small-change: 0.29
+        crit-use-existing-solution: 0.21
+        crit-user-settable-threshold: 0.19
+    - option_id: opt.added.20
+      rank: 10
+      required_passed: 1
+      required_total: 5
+      required_mean: 0.334
+      scores:
+        crit-classifier-is-used: 0.11
+        crit-covers-both-case: 0.13
+        crit-fixed-described-candidates: 0.8
+        crit-human-authority-kept: 0.25
+        crit-maintainability: 0.32
+        crit-small-change: 0.31
+        crit-use-existing-solution: 0.19
+        crit-user-settable-threshold: 0.17
+    - option_id: opt.added.4
+      rank: 11
+      required_passed: 1
+      required_total: 5
+      required_mean: 0.328
+      scores:
+        crit-classifier-is-used: 0.11
+        crit-covers-both-case: 0.12
+        crit-fixed-described-candidates: 0.8
+        crit-human-authority-kept: 0.24
+        crit-maintainability: 0.32
+        crit-small-change: 0.37
+        crit-use-existing-solution: 0.17
+        crit-user-settable-threshold: 0.15
+    - option_id: opt.added.2
+      rank: 12
+      required_passed: 1
+      required_total: 5
+      required_mean: 0.324
+      scores:
+        crit-classifier-is-used: 0.12
+        crit-covers-both-case: 0.12
+        crit-fixed-described-candidates: 0.82
+        crit-human-authority-kept: 0.18
+        crit-maintainability: 0.3
+        crit-small-change: 0.31
+        crit-use-existing-solution: 0.2
+        crit-user-settable-threshold: 0.09
+    - option_id: opt.added.5
+      rank: 13
+      required_passed: 1
+      required_total: 5
+      required_mean: 0.308
+      scores:
+        crit-classifier-is-used: 0.11
+        crit-covers-both-case: 0.11
+        crit-fixed-described-candidates: 0.8
+        crit-human-authority-kept: 0.19
+        crit-maintainability: 0.31
+        crit-small-change: 0.39
+        crit-use-existing-solution: 0.13
+        crit-user-settable-threshold: 0.13
+    - option_id: opt-no-new-classifier
+      rank: 14
+      required_passed: 0
+      required_total: 5
+      required_mean: 0.54
+      scores:
+        crit-classifier-is-used: 0.17
+        crit-covers-both-case: 0.37
+        crit-fixed-described-candidates: 0.48
+        crit-human-authority-kept: 0.58
+        crit-maintainability: 0.69
+        crit-small-change: 0.85
+        crit-use-existing-solution: 0.78
+        crit-user-settable-threshold: 0.1
+    - option_id: opt-audience-plus-binding
+      rank: 15
+      required_passed: 0
+      required_total: 5
+      required_mean: 0.504
+      scores:
+        crit-classifier-is-used: 0.42
+        crit-covers-both-case: 0.82
+        crit-fixed-described-candidates: 0.68
+        crit-human-authority-kept: 0.35
+        crit-maintainability: 0.47
+        crit-small-change: 0.27
+        crit-use-existing-solution: 0.6
+        crit-user-settable-threshold: 0.23
+    - option_id: opt.added.15
+      rank: 16
+      required_passed: 0
+      required_total: 5
+      required_mean: 0.338
+      scores:
+        crit-classifier-is-used: 0.1
+        crit-covers-both-case: 0.12
+        crit-fixed-described-candidates: 0.79
+        crit-human-authority-kept: 0.29
+        crit-maintainability: 0.31
+        crit-small-change: 0.31
+        crit-use-existing-solution: 0.2
+        crit-user-settable-threshold: 0.17
+    - option_id: opt.added.11
+      rank: 17
+      required_passed: 0
+      required_total: 5
+      required_mean: 0.334
+      scores:
+        crit-classifier-is-used: 0.1
+        crit-covers-both-case: 0.13
+        crit-fixed-described-candidates: 0.79
+        crit-human-authority-kept: 0.27
+        crit-maintainability: 0.32
+        crit-small-change: 0.35
+        crit-use-existing-solution: 0.19
+        crit-user-settable-threshold: 0.21
+    - option_id: opt.added.3
+      rank: 18
+      required_passed: 0
+      required_total: 5
+      required_mean: 0.332
+      scores:
+        crit-classifier-is-used: 0.13
+        crit-covers-both-case: 0.14
+        crit-fixed-described-candidates: 0.73
+        crit-human-authority-kept: 0.27
+        crit-maintainability: 0.35
+        crit-small-change: 0.34
+        crit-use-existing-solution: 0.18
+        crit-user-settable-threshold: 0.14
+    - option_id: opt.added.10
+      rank: 19
+      required_passed: 0
+      required_total: 5
+      required_mean: 0.33
+      scores:
+        crit-classifier-is-used: 0.1
+        crit-covers-both-case: 0.13
+        crit-fixed-described-candidates: 0.77
+        crit-human-authority-kept: 0.26
+        crit-maintainability: 0.31
+        crit-small-change: 0.33
+        crit-use-existing-solution: 0.21
+        crit-user-settable-threshold: 0.19
+    - option_id: opt.added.1
+      rank: 20
+      required_passed: 0
+      required_total: 5
+      required_mean: 0.328
+      scores:
+        crit-classifier-is-used: 0.19
+        crit-covers-both-case: 0.15
+        crit-fixed-described-candidates: 0.49
+        crit-human-authority-kept: 0.17
+        crit-maintainability: 0.4
+        crit-small-change: 0.48
+        crit-use-existing-solution: 0.39
+        crit-user-settable-threshold: 0.07
+    - option_id: opt.added.7
+      rank: 21
+      required_passed: 0
+      required_total: 5
+      required_mean: 0.326
+      scores:
+        crit-classifier-is-used: 0.11
+        crit-covers-both-case: 0.12
+        crit-fixed-described-candidates: 0.79
+        crit-human-authority-kept: 0.23
+        crit-maintainability: 0.32
+        crit-small-change: 0.36
+        crit-use-existing-solution: 0.18
+        crit-user-settable-threshold: 0.17
+    - option_id: opt.added.9
+      rank: 22
+      required_passed: 0
+      required_total: 5
+      required_mean: 0.322
+      scores:
+        crit-classifier-is-used: 0.1
+        crit-covers-both-case: 0.12
+        crit-fixed-described-candidates: 0.79
+        crit-human-authority-kept: 0.22
+        crit-maintainability: 0.3
+        crit-small-change: 0.35
+        crit-use-existing-solution: 0.2
+        crit-user-settable-threshold: 0.17
+    - option_id: opt.added.19
+      rank: 23
+      required_passed: 0
+      required_total: 5
+      required_mean: 0.322
+      scores:
+        crit-classifier-is-used: 0.1
+        crit-covers-both-case: 0.13
+        crit-fixed-described-candidates: 0.79
+        crit-human-authority-kept: 0.24
+        crit-maintainability: 0.3
+        crit-small-change: 0.28
+        crit-use-existing-solution: 0.18
+        crit-user-settable-threshold: 0.16
+    - option_id: opt.added.6
+      rank: 24
+      required_passed: 0
+      required_total: 5
+      required_mean: 0.32
+      scores:
+        crit-classifier-is-used: 0.1
+        crit-covers-both-case: 0.12
+        crit-fixed-described-candidates: 0.79
+        crit-human-authority-kept: 0.23
+        crit-maintainability: 0.31
+        crit-small-change: 0.39
+        crit-use-existing-solution: 0.17
+        crit-user-settable-threshold: 0.14
+    - option_id: opt.added.21
+      rank: 25
+      required_passed: 0
+      required_total: 5
+      required_mean: 0.302
+      scores:
+        crit-classifier-is-used: 0.09
+        crit-covers-both-case: 0.11
+        crit-fixed-described-candidates: 0.78
+        crit-human-authority-kept: 0.18
+        crit-maintainability: 0.28
+        crit-small-change: 0.3
+        crit-use-existing-solution: 0.18
+        crit-user-settable-threshold: 0.14
+final_outcome:
+  status: pending
+  observed_at: null
+  note: ''
+options:
+  - id: opt-no-new-classifier
+    title: 'No new classifier: keep the current record fields and Jev''s per-question precedent applicability'
+    description: Decision records stay as they are; precedent lookup keeps matching as today, and whether a decision binds
+      customers stays implicit in its text.
+    assumptions:
+      - Per-question applicability keeps Leafcutter-internal decisions out of customers' projects well enough.
+    evidence_ids:
+      - ev-5e30cba917bb4d5c
+      - ev-2a1c5346fab0f00c
+    proposed_by: host.generate_options
+    approved_by: human:user
+  - id: opt-audience-classifier
+    title: One audience classifier (leafcutter_only / customer / both), chosen by Jev from described candidates, with a user-set,
+      risk-specific human-in-the-loop threshold
+    description: Each record gets an audience label, mirroring the shipped-versus-internal line components already carry ('leafcutter-ai
+      only; not shipped to adopters'). Jev selects it from fixed candidates whose descriptions are the criteria; at or above
+      the configured threshold (default 0.9) the label is applied and recorded as Jev's classification with its probability,
+      below it the human decides. The record itself still needs human approval. Precedent lookup in a customer's project offers
+      only customer and both records.
+    assumptions:
+      - The threshold is calibrated on representative cases rather than read as a probability of correctness.
+    evidence_ids:
+      - ev-a297882a8da2c395
+      - ev-c1f97a54cc4a0bb3
+      - ev-5e30cba917bb4d5c
+    proposed_by: host.generate_options
+    approved_by: human:user
+  - id: opt-audience-plus-binding
+    title: Audience plus a binding classifier (must_rule / default / preference)
+    description: 'As the audience option, plus how binding a record is: a must_rule, a default that applies unless overridden,
+      or a human preference that is never applied silently. The spec says unknown trade-offs need analysis or human preference
+      rather than a forced classifier judgement, so separating preferences from rules keeps them from being reused as rules.'
+    assumptions:
+      - Separating rules from preferences changes how precedent is offered.
+    evidence_ids:
+      - ev-c1f97a54cc4a0bb3
+      - ev-28d22bf100a5b212
+      - ev-a297882a8da2c395
+    proposed_by: host.generate_options
+    approved_by: human:user
+  - id: opt-classifier-framework
+    title: 'A declared classifier framework: classifier dimensions in config, each a described candidate list with its own
+      risk-specific threshold; start with audience'
+    description: 'Classifiers are data in the kernel config, as retrieval sources already are: each dimension lists described
+      candidates and its own human-in-the-loop threshold (default 0.9, user-settable, risk-specific). Jev classifies every
+      dimension in one batch when a record is staged; below threshold the human decides. New dimensions are added in config.
+      Ship audience first.'
+    assumptions:
+      - More dimensions will follow, so a generic mechanism pays off.
+    evidence_ids:
+      - ev-c1f97a54cc4a0bb3
+      - ev-760b2e37dfb53f38
+      - ev-a297882a8da2c395
+    proposed_by: host.generate_options
+    approved_by: human:user
+  - id: opt.added.1
+    title: 'Classifier: action (in which action, flow, etc) it was applied'
+    description: 'The owner''s proposal: classify each decision by the action or flow in which it was applied (alongside component,
+      which records already carry). To be evaluated on its own whether it makes sense.'
+    assumptions: []
+    evidence_ids:
+      - ev-d266b19356c21b89
+      - ev-fa9473fedc336810
+      - ev-71bf624148a12593
+      - ev-728dcbf376664ccc
+      - ev-49aca22a76998471
+      - ev-9f2800a8553e5dcf
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.2
+    title: 'Classifier 1: Scope'
+    description: 'Classification dimension ''Scope'' with possible categories: Strategic direction / tactical approach / operational
+      execution. One of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter decision records.'
+    assumptions: []
+    evidence_ids:
+      - ev-49525daf0d474937
+      - ev-88a9c68e59c53526
+      - ev-27558b02fa2b9c63
+      - ev-b5a6c3a64b4b81e0
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.3
+    title: 'Classifier 2: Impact'
+    description: 'Classification dimension ''Impact'' with possible categories: Minor / moderate / major / life-changing.
+      One of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter decision records.'
+    assumptions: []
+    evidence_ids:
+      - ev-1fefec228740eb78
+      - ev-77c072a4d8bfae34
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.4
+    title: 'Classifier 3: Reversibility'
+    description: 'Classification dimension ''Reversibility'' with possible categories: Easily reversible / costly to reverse
+      / irreversible. One of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter decision
+      records.'
+    assumptions: []
+    evidence_ids:
+      - ev-033a89fd552b2dbf
+      - ev-5bb3a288faec3b70
+      - ev-47dd3f88e91644fd
+      - ev-deb2eeffe7b738ac
+      - ev-c538a93722f1e35d
+      - ev-a297882a8da2c395
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.5
+    title: 'Classifier 4: Urgency'
+    description: 'Classification dimension ''Urgency'' with possible categories: Immediate / deadline-bound / flexible. One
+      of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter decision records.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.6
+    title: 'Classifier 5: Time horizon'
+    description: 'Classification dimension ''Time horizon'' with possible categories: Short-term / medium-term / long-term.
+      One of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter decision records.'
+    assumptions: []
+    evidence_ids:
+      - ev-fb1a0f5076e08cc8
+      - ev-1af4ace6bbfd0acd
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.7
+    title: 'Classifier 6: Uncertainty'
+    description: 'Classification dimension ''Uncertainty'' with possible categories: Outcomes known / probabilities estimable
+      / probabilities unknown. One of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter
+      decision records.'
+    assumptions: []
+    evidence_ids:
+      - ev-1bc2c0bf28081993
+      - ev-459b401f8113132a
+      - ev-cc72dc623453b554
+      - ev-cd7c2aa43500c5e4
+      - ev-0447ec8cd9b65b0e
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.8
+    title: 'Classifier 7: Frequency'
+    description: 'Classification dimension ''Frequency'' with possible categories: Routine / occasional / once-only. One of
+      the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter decision records.'
+    assumptions: []
+    evidence_ids:
+      - ev-3088cacf35bf14aa
+      - ev-a8617ef853e08b74
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.9
+    title: 'Classifier 8: Familiarity'
+    description: 'Classification dimension ''Familiarity'' with possible categories: Familiar situation / variation on experience
+      / entirely novel. One of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter decision
+      records.'
+    assumptions: []
+    evidence_ids:
+      - ev-e579935ced69e439
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.10
+    title: 'Classifier 9: Structure'
+    description: 'Classification dimension ''Structure'' with possible categories: Governed by clear rules / partly structured
+      / open-ended judgment. One of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter decision
+      records.'
+    assumptions: []
+    evidence_ids:
+      - ev-416a57d85d9f1b08
+      - ev-05b4a4dc600dd4a6
+      - ev-02143773887e8bc9
+      - ev-063210cdcec0f02c
+      - ev-fa18cf57748a7af6
+      - ev-737c63d22b168bed
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.11
+    title: 'Classifier 10: Complexity'
+    description: 'Classification dimension ''Complexity'' with possible categories: Few factors / many factors / many interacting
+      factors. One of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter decision records.'
+    assumptions: []
+    evidence_ids:
+      - ev-3a214fba3874db9f
+      - ev-c433a109065ea23c
+      - ev-aea693b1580551ab
+      - ev-37c03106417d6f61
+      - ev-f4ec7a00f2055466
+      - ev-94fc0e7015aba07e
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.12
+    title: 'Classifier 11: Trigger'
+    description: 'Classification dimension ''Trigger'' with possible categories: Proactive opportunity / reaction to an event
+      / mandatory requirement. One of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter
+      decision records.'
+    assumptions: []
+    evidence_ids:
+      - ev-a8efa72174a9319a
+      - ev-a0371436c9821496
+      - ev-69a7bb865647e9ee
+      - ev-c9ba4ee576eb5a93
+      - ev-3edb98ed5425f92d
+      - ev-c7f562f38c7b71a6
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.13
+    title: 'Classifier 12: Who decides'
+    description: 'Classification dimension ''Who decides'' with possible categories: Individual / pair / team / organization
+      / public. One of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter decision records.'
+    assumptions: []
+    evidence_ids:
+      - ev-e8f966c865eb3bea
+      - ev-49525daf0d474937
+      - ev-b57d5714ec514bdf
+      - ev-1db7c09667f7fccf
+      - ev-d50c84a905e670a0
+      - ev-a99e483936bc6c5d
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.14
+    title: 'Classifier 13: Decision procedure'
+    description: 'Classification dimension ''Decision procedure'' with possible categories: Unilateral / consultative / majority
+      vote / consensus / delegated. One of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter
+      decision records.'
+    assumptions: []
+    evidence_ids:
+      - ev-a297882a8da2c395
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.15
+    title: 'Classifier 14: Basis for judgment'
+    description: 'Classification dimension ''Basis for judgment'' with possible categories: Data / expertise / intuition /
+      values / convention. One of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter decision
+      records.'
+    assumptions: []
+    evidence_ids:
+      - ev-1a1e18b89d6d72d1
+      - ev-c8c6ffd1d45f57c6
+      - ev-09c1990469eb0b40
+      - ev-57ee70cfba0d79cb
+      - ev-2ee10a0490997b01
+      - ev-93d5859fefde3d63
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.16
+    title: 'Classifier 15: Domain'
+    description: 'Classification dimension ''Domain'' with possible categories: Financial / professional / interpersonal /
+      technical / political / personal. One of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter
+      decision records.'
+    assumptions: []
+    evidence_ids:
+      - ev-0ffbbb03acd632c1
+      - ev-0cdfe98f981e84b7
+      - ev-4cf8839b02faf2b9
+      - ev-81ab7c2276f71763
+      - ev-77ba37ece29b5261
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.17
+    title: 'Classifier 16: Who is affected'
+    description: 'Classification dimension ''Who is affected'' with possible categories: Self / specific others / organization
+      / wider society / future generations. One of the owner''s ideas, to be evaluated one by one whether it makes sense for
+      Leafcutter decision records.'
+    assumptions: []
+    evidence_ids:
+      - ev-e6eb394eb0fac812
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.18
+    title: 'Classifier 17: Objective'
+    description: 'Classification dimension ''Objective'' with possible categories: Maximize benefit / minimize harm / meet
+      a threshold / balance competing goals. One of the owner''s ideas, to be evaluated one by one whether it makes sense
+      for Leafcutter decision records.'
+    assumptions: []
+    evidence_ids:
+      - ev-4df9204888d7bbab
+      - ev-033a89fd552b2dbf
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.19
+    title: 'Classifier 18: Form of choice'
+    description: 'Classification dimension ''Form of choice'' with possible categories: Yes-or-no / selection among alternatives
+      / ranking / resource allocation / designing a new option. One of the owner''s ideas, to be evaluated one by one whether
+      it makes sense for Leafcutter decision records.'
+    assumptions: []
+    evidence_ids:
+      - ev-78eb68798826010f
+      - ev-77ba37ece29b5261
+      - ev-30f4df7db41810b6
+      - ev-21fab26fdc7290f5
+      - ev-c24fcfabbe8a475f
+      - ev-35f8c664326fa3ae
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.20
+    title: 'Classifier 19: Dependence on other decisions'
+    description: 'Classification dimension ''Dependence on other decisions'' with possible categories: Standalone / part of
+      a sequence / mutually dependent. One of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter
+      decision records.'
+    assumptions: []
+    evidence_ids:
+      - ev-f9f848c34b8c9d40
+      - ev-666a0226c17d07f7
+      - ev-09d6600aecef55c8
+      - ev-61a00fc2d1fe4d53
+      - ev-33477f1ad47b2301
+      - ev-ee0b11068f97e5c7
+    proposed_by: human:user
+    approved_by: human:user
+  - id: opt.added.21
+    title: 'Classifier 20: Commitment pattern'
+    description: 'Classification dimension ''Commitment pattern'' with possible categories: Commit all at once / commit in
+      stages / experiment and adapt. One of the owner''s ideas, to be evaluated one by one whether it makes sense for Leafcutter
+      decision records.'
+    assumptions: []
+    evidence_ids:
+      - ev-952af4390d91a9fa
+      - ev-5b1f20199bf05d10
+    proposed_by: human:user
+    approved_by: human:user
+criteria:
+  - id: crit-fixed-described-candidates
+    question: Is every classifier a fixed, described candidate list that Jev can select from, without inventing categories?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-1db7c09667f7fccf
+      - ev-d43b797119207ccb
+      - ev-c8c6ffd1d45f57c6
+      - ev-c24fcfabbe8a475f
+      - ev-96d4540ad1325310
+  - id: crit-classifier-is-used
+    question: Does each classifier change what happens (for example which precedents are offered in a customer's project),
+      rather than being metadata nobody reads?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-d43b797119207ccb
+      - ev-9b4625c8e164d3d1
+      - ev-94b6373d43d8b841
+      - ev-fa9473fedc336810
+      - ev-033a89fd552b2dbf
+  - id: crit-human-authority-kept
+    question: Below the threshold does the human decide, and above it is the label recorded as Jev's classification with its
+      probability, so no record self-authorizes?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-94b6373d43d8b841
+      - ev-5e30cba917bb4d5c
+      - ev-2a1c5346fab0f00c
+      - ev-1db7c09667f7fccf
+      - ev-4df9204888d7bbab
+  - id: crit-use-existing-solution
+    question: 'Use of existing solution: does it build on existing mechanisms (Jev candidate selection, config thresholds,
+      the shipped/internal line, the precedent filter)?'
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-77ba37ece29b5261
+      - ev-78eb68798826010f
+      - ev-a297882a8da2c395
+      - ev-28d22bf100a5b212
+      - ev-2a1c5346fab0f00c
+  - id: crit-maintainability
+    question: 'Maintainability: does it keep working with little upkeep as decisions and the harness evolve?'
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-033a89fd552b2dbf
+  - id: crit-user-settable-threshold
+    question: Is the human-in-the-loop threshold a user setting (default 90%), risk-specific, and defined on a named number
+      (winning probability or confidence)?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-c1f97a54cc4a0bb3
+      - ev-c24fcfabbe8a475f
+      - ev-94b6373d43d8b841
+      - ev-28d22bf100a5b212
+      - ev-063210cdcec0f02c
+  - id: crit-covers-both-case
+    question: Does it handle a decision that applies to both Leafcutter and customers, such as how to fill product truth?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-67881beb5eb08a66
+      - ev-9b4625c8e164d3d1
+      - ev-c7f562f38c7b71a6
+      - ev-09c1990469eb0b40
+      - ev-0ffbbb03acd632c1
+  - id: crit-small-change
+    question: Can it be put in place with a small change?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-5bb3a288faec3b70
+      - ev-a8617ef853e08b74
+      - ev-952af4390d91a9fa
+evidence:
+  - id: ev-760b2e37dfb53f38
+    locator: config/kernel_config.default.json#L98-L127 (sources)
+    category: task_context
+    content_hash: 6b5c3467418cb2170024d51fa6d7839ebb19b3a6ba315c7feedc889bb4b9568d
+    verification: source_verified
+    relevance: 0.83
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-96d4540ad1325310
+    locator: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md#L134-L160 (§Retrieval adapter `retrieve.repository`
+      (`capabilities/retr…)
+    category: task_context
+    content_hash: c87685042edee1d0f8700f058b7ffd848a60300739ea1d4e64c223872936ae7a
+    verification: source_verified
+    relevance: 0.8
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-a297882a8da2c395
+    locator: docs/components.json#L130-L153 (components > decision_kernel)
+    category: task_context
+    content_hash: 75dab6fd4b51a05841b0b2f99b1d025d3a3583d9c5c3eb0d9cf0188c7a64328e
+    verification: source_verified
+    relevance: 0.58
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-94b6373d43d8b841
+    locator: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md#L245-L247 (§As built (V0.1 round E))
+    category: task_context
+    content_hash: 7557f40ea5975edb782d99d84f8baf8e0f1f504e7eca5f8a7d9c47df6234bee9
+    verification: source_verified
+    relevance: 0.55
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-28d22bf100a5b212
+    locator: docs/explanation/kernel-feature-planning-and-knowledge-resolution.md#L38-L68 (§Background and Verified Baseline)
+    category: task_context
+    content_hash: 5d20271ecd1abaf6a750446b0e470cac62e3f43a1c200a4c81c1643822c54465
+    verification: source_verified
+    relevance: 0.53
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-c1f97a54cc4a0bb3
+    locator: docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-4-scheduler-jev-capabilities.md#L141-L161 (§9. Jev adapter
+      and evidence-based decisions [MVP] > 9.4 Separate assessment from authorization and completeness)
+    category: existing_patterns
+    content_hash: 8c66ce5a9df0adf6ffcbfd90531e3745009f6a44b3f5f3712a07c8b67a33bafa
+    verification: source_verified
+    relevance: 0.57
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-7caeb8163053969c
+    locator: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md#L274-L278 (§As built (decision store))
+    category: existing_patterns
+    content_hash: fcce247efd2a062157be713753e887de52bd58dd4800e8fc96b889704c48751c
+    verification: source_verified
+    relevance: 0.51
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-5e30cba917bb4d5c
+    locator: tickets/00_inbox/TICKET-20261001-KernelDecisionStore.md#L40-L52 (§Binding user decisions)
+    category: prior_decisions
+    content_hash: 028cbd546952eb92a277a51e2a5d86a39420bcdde1878953e10de234ae4ea697
+    verification: source_verified
+    relevance: 0.71
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-2a1c5346fab0f00c
+    locator: docs/architecture/components/decision-kernel.md#L105-L117 (§Decisions)
+    category: prior_decisions
+    content_hash: 41be9c8f3538315109e84f05b92b34104f0a84b20977689b05aed74d6d3c6d23
+    verification: source_verified
+    relevance: 0.56
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-227fef94a2a88076
+    locator: docs/explanation/kernel-feature-planning-and-knowledge-resolution.md#L100-L137 (§Context Selection from Five
+      Decisions to 10,000)
+    category: existing_patterns
+    content_hash: 0b434a722f501c9d6895cd52f5e144fbd30e49edee309030f226dec7cdbfc1d6
+    verification: source_verified
+    relevance: 0.83
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-67881beb5eb08a66
+    locator: docs/architecture/adrs/ADR-044-example-content-self-declares-its-product.md#L47-L75 (§Context)
+    category: existing_patterns
+    content_hash: 1fcdfff6ea33cdda73e9782665734e81aa13b215b393e27e233dac5a7562d222
+    verification: source_verified
+    relevance: 0.67
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-9b4625c8e164d3d1
+    locator: docs/reference/example-content-separation.md#L37-L66 (§The ownership rule)
+    category: existing_patterns
+    content_hash: 2a8bd8c0071cffd5580bd44962a27a845a7d23e8aaec806ed05632694c7ef206
+    verification: source_verified
+    relevance: 0.66
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-d43b797119207ccb
+    locator: docs/how-to/run-the-decision-kernel.md#L78-L102 (§Steps > Step 2 — Optionally write a config override > What
+      native retrieval reads (sources and grounding))
+    category: existing_patterns
+    content_hash: e029a0d6a849cccd534823d0070ccbe2182904235e177b206741efa66708e71a
+    verification: source_verified
+    relevance: 0.63
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-54241e0c6028f1e1
+    locator: docs/how-to/file-and-reuse-decisions-with-the-kernel.md#L73-L90 (§Steps > Step 5 — See the precedent in the next
+      run)
+    category: existing_patterns
+    content_hash: 8c5550e0bd1ffff30d90ce0fc534cccb4a4d2ba67ae65a5f613a0c14fcd28826
+    verification: source_verified
+    relevance: 0.54
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-d266b19356c21b89
+    locator: scripts/proposals/agent_self_description_glossary-triage.yaml#L3-L33 (proposed_frontmatter)
+    category: existing_patterns
+    content_hash: b409ff2bd347f850f40feaf6ea81dc666e30689be8ea7def84e75d1252bd4ab4
+    verification: source_verified
+    relevance: 0.58
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-fa9473fedc336810
+    locator: docs/how-to/authoring-product-truth-artifacts.md#L49-L67 (§Part 1 — The classify step (what does the request
+      need?))
+    category: existing_patterns
+    content_hash: 3226d1ec66bb43ff1342a42ac2e480d3cd31803ae63c21cfcf4a917c0682a2df
+    verification: source_verified
+    relevance: 0.57
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-71bf624148a12593
+    locator: docs/architecture/components/build-ticket-workflow-dispatch.md#L30-L75 (§Dispatch Flow)
+    category: existing_patterns
+    content_hash: 23dfcb8d0d98b3dfb02590f84f9976061a48f4e842f1f01ec2441bffe385b7bf
+    verification: source_verified
+    relevance: 0.56
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-728dcbf376664ccc
+    locator: docs/architecture/components/ux-prototyping.md#L126-L148 (§Connection to the Build Pipeline)
+    category: existing_patterns
+    content_hash: b61462b47f7a43ba5fdc9ebaede73197a172131eec43784800f0dcfe0c645654
+    verification: source_verified
+    relevance: 0.56
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-49aca22a76998471
+    locator: docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md#L84-L114 (§Decision)
+    category: existing_patterns
+    content_hash: 082df23745fa0b355d584bc01a26d9f1044a5bf000b2fa13acbfd690e3d13f78
+    verification: source_verified
+    relevance: 0.52
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-9f2800a8553e5dcf
+    locator: docs/architecture/adrs/ADR-021-plan-feature-product-truth-phase.md#L125-L149 (§Decision)
+    category: existing_patterns
+    content_hash: 5e573d57890d5ec1059a44cd75110762ed550c6b07622a1a9e2d2b3eff625ce8
+    verification: source_verified
+    relevance: 0.51
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-49525daf0d474937
+    locator: docs/analysis/2026-10-01-colony-memory-stage0-delta-3-lessons-adrs-ownership.md#L95-L107 (§(f) Ownership and
+      propagation plan (concept §33))
+    category: existing_patterns
+    content_hash: e46baa9dfe6334ef398b3fb705606a0752321f7047a450ad3ac5eb8eaca67cd1
+    verification: source_verified
+    relevance: 0.57
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-88a9c68e59c53526
+    locator: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-1.yaml#L129-L153 (notes)
+    category: existing_patterns
+    content_hash: e58148acf1baa6532ad6c3e1647e518c3b05891f78e8c17dc4c3e21d950004c1
+    verification: source_verified
+    relevance: 0.57
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-27558b02fa2b9c63
+    locator: docs/architecture/adrs/ADR-049-record-checker-trigger-scope.md#L195-L208 (§Consequences > Operational)
+    category: existing_patterns
+    content_hash: aed24043f72f441a5fe669deaf102d6389be00dfa0cd112e129e8f7d2c23048a
+    verification: source_verified
+    relevance: 0.55
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-b5a6c3a64b4b81e0
+    locator: docs/architecture/adrs/ADR-014-exception-guard-enforcement-scope.md#L124-L131 (§Consequences > Operational consequences)
+    category: existing_patterns
+    content_hash: 4497a6fd743b60e3c4da14440facc4059316b04df634da3c99646b2eeb298b73
+    verification: source_verified
+    relevance: 0.5
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-1fefec228740eb78
+    locator: docs/architecture/components/changelog.md#L30-L32 (§Design)
+    category: existing_patterns
+    content_hash: 050df4d4db0c3d977a4f443479fe77ffff83276900043b8318e34d7a8f884f5f
+    verification: source_verified
+    relevance: 0.73
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-77c072a4d8bfae34
+    locator: docs/architecture/adrs/ADR-018-agent-isolation-topology.md#L237-L263 (§Impact on in-flight ACs (BO-1600 / BP-1100e
+      / INF-600l))
+    category: existing_patterns
+    content_hash: 601bd6d47bc2f76cb020e9d5f7bfc790606a2ea1fff950b97421c5045ff54544
+    verification: source_verified
+    relevance: 0.54
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-033a89fd552b2dbf
+    locator: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md#L115-L135 (§3. Alternatives Considered)
+    category: existing_patterns
+    content_hash: 675aa6f237f85b23fa98802cd0212dd6f99ca743a5e1f43e8a02fbe1e2b4781e
+    verification: source_verified
+    relevance: 0.7
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-5bb3a288faec3b70
+    locator: docs/how-to/choose-build-path.md#L180-L209 (§Choosing inputs in practice)
+    category: existing_patterns
+    content_hash: 2a41a284787971aa710e56a2f0582960441396631c09f31fef935fcbebf93fdd
+    verification: source_verified
+    relevance: 0.66
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-47dd3f88e91644fd
+    locator: docs/known-issues/commit-guardian/open-high-ki-cg-20260928-first-commit-leaves-the-deployed-config-drifted.md#L137-L171
+      (§KI-CG-20260928 — the first commit in a worktree rewrites th…)
+    category: existing_patterns
+    content_hash: 4bfa5f49b2fb8f433b10f38639d8419a870ac3fa0c16c9139a8e5dfe91342527
+    verification: source_verified
+    relevance: 0.63
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-deb2eeffe7b738ac
+    locator: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md#L108-L115 (§Consequences
+      > Positive)
+    category: existing_patterns
+    content_hash: 977c1b83b5912a9e2c8e4a81b6c8130cb5b1e7cc2f3ab1c2bbaed64191c7c34d
+    verification: source_verified
+    relevance: 0.59
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-c538a93722f1e35d
+    locator: scripts/build_ownership.py#L105-L142 (def owns_installed_path)
+    category: existing_patterns
+    content_hash: 1b0056fd1ee0bac0ed60349371985f85eb80913ccd5398a22acc0853841756ee
+    verification: source_verified
+    relevance: 0.56
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-fb1a0f5076e08cc8
+    locator: docs/analysis/2026-10-01-neo4j-colony-memory-concept-8-adrs-and-propagation.md#L83-L93 (§ADR candidate H — Reinforcement
+      safety)
+    category: existing_patterns
+    content_hash: 129d6637d63f6ca09d92027a32a7272f61b068e6872750e276d3cacaefa39921
+    verification: source_verified
+    relevance: 0.66
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-1af4ace6bbfd0acd
+    locator: docs/analysis/2026-10-01-neo4j-colony-memory-concept-5-reinforcement-and-gaps.md#L75-L85 (§Level 3 — Long-term
+      evidence)
+    category: existing_patterns
+    content_hash: 221841ea997ad2926386581ddbaa328a08ee324da6cb3f9856bd019ba31bc9eb
+    verification: source_verified
+    relevance: 0.59
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-1bc2c0bf28081993
+    locator: docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-4-scheduler-jev-capabilities.md#L88-L132 (§9. Jev adapter
+      and evidence-based decisions [MVP] > 9.2 Illustrative adapter call)
+    category: existing_patterns
+    content_hash: a9f3eba988ab0162612de7cd9c050c13dce841baf9ea49e17fe34221b538e2b5
+    verification: source_verified
+    relevance: 0.74
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-459b401f8113132a
+    locator: kernel/capabilities/decision/combine.py#L91-L110 (def classify_missing)
+    category: existing_patterns
+    content_hash: 6a44d31fc5a9940f830843a72a46b178dc1e94910bdab4fed13c3fbd4fde4020
+    verification: source_verified
+    relevance: 0.72
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-cc72dc623453b554
+    locator: docs/explanation/kernel-feature-planning-and-knowledge-resolution.md#L138-L168 (§Uncertainty Beyond Unclear Words)
+    category: existing_patterns
+    content_hash: 73fc0ad8c055e9149e666fb8734c59f9f0f01d3b959cfa15792505c3dba01d66
+    verification: source_verified
+    relevance: 0.71
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-cd7c2aa43500c5e4
+    locator: docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-7-later-stages.md#L107-L121 (§18. Engineering workflows
+      and executable component policies… > 18.2 Readiness is an explicit gate)
+    category: existing_patterns
+    content_hash: 1b5e50eb88c10bfb9a97fa65e25127563d036f1eba49db3a5af2e52e69f79cd6
+    verification: source_verified
+    relevance: 0.67
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-0447ec8cd9b65b0e
+    locator: docs/reference/product-truth-checker-outcomes.md#L50-L55 (§The four outcomes)
+    category: existing_patterns
+    content_hash: a9f7f46b4cef730e5a9c62ba5558332c1466a95b59c80d0c59b77d9e7e8c343c
+    verification: source_verified
+    relevance: 0.5
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-3088cacf35bf14aa
+    locator: scripts/feedback/list_tags.py#L1-L24 (module level)
+    category: existing_patterns
+    content_hash: 1840e879f4ab603954742cdb8285cf01d745bb7dc1ef7fb09852d19761544967
+    verification: source_verified
+    relevance: 0.69
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-a8617ef853e08b74
+    locator: docs/acceptance-criteria/infrastructure/INF-1400-routine-decisions-second-opinion/INF-1400.yaml#L17-L25 (criteria)
+    category: existing_patterns
+    content_hash: cd341d003495b2ebe1212b9487b2ac9151a2658569aad75bf4d7d1f8b4902bb2
+    verification: source_verified
+    relevance: 0.5
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-e579935ced69e439
+    locator: docs/how-to/ac-driven-build-loop.md#L46-L90 (§Prerequisites)
+    category: existing_patterns
+    content_hash: 18df9a9c10123982dcea234b09b9ced27388b8f1f0b8e76f4703e7bdd3e11d2e
+    verification: source_verified
+    relevance: 0.59
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-416a57d85d9f1b08
+    locator: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100h-7-i.yaml#L10-L31 (criteria)
+    category: existing_patterns
+    content_hash: 083f6f719698774356bac751fd896cfa1441b1314da945d93e025c50c4093af1
+    verification: source_verified
+    relevance: 0.71
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-05b4a4dc600dd4a6
+    locator: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100h-3.yaml#L29-L33 (it_requirements)
+    category: existing_patterns
+    content_hash: a69ec4850d42300a92612ee35a116977ac142f833a5f37c888380cec8ca8cede
+    verification: source_verified
+    relevance: 0.7
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-02143773887e8bc9
+    locator: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100c-3.yaml#L12-L20 (criteria)
+    category: existing_patterns
+    content_hash: 68782ac377fa406ab05db527a680961ab760853d349089d26443855b9e23b620
+    verification: source_verified
+    relevance: 0.68
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-063210cdcec0f02c
+    locator: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100i-10.yaml#L14-L40 (criteria)
+    category: existing_patterns
+    content_hash: 9ed019ee7954801f92d8a5bfe58f89ca992bf32fba74c1ca32c43b63941bf032
+    verification: source_verified
+    relevance: 0.68
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-fa18cf57748a7af6
+    locator: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100i-6.yaml#L13-L34 (criteria)
+    category: existing_patterns
+    content_hash: c0761513bf0d041b36ed8c3a839984a30c22eebfeec51a5b3cbc0b6b2060b863
+    verification: source_verified
+    relevance: 0.67
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-737c63d22b168bed
+    locator: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100h-4.yaml#L29-L32 (it_requirements)
+    category: existing_patterns
+    content_hash: 24d05b8a749df5e34cdbfa618a2ee3ee746399b944ca537ce2f087fd54500a53
+    verification: source_verified
+    relevance: 0.67
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-3a214fba3874db9f
+    locator: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c-4-i.yaml#L94-L114 (notes)
+    category: existing_patterns
+    content_hash: 42611c9269227ef9f6ae945c666829a09d0dcfdbfb10311b895b99cb3d664c8a
+    verification: source_verified
+    relevance: 0.76
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-c433a109065ea23c
+    locator: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c-4.yaml#L45-L45 (estimated_complexity)
+    category: existing_patterns
+    content_hash: 31b714783152dd95d4c54fd22ee334003e4292054629d24d049a973a924eb827
+    verification: source_verified
+    relevance: 0.74
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-aea693b1580551ab
+    locator: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a-3.yaml#L43-L43 (estimated_complexity)
+    category: existing_patterns
+    content_hash: 8fd52f9c624c8d0b2ab9cd61a827cb7f934dbed020a3db11778dccf3e990db49
+    verification: source_verified
+    relevance: 0.71
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-37c03106417d6f61
+    locator: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b-2-i.yaml#L32-L32 (estimated_complexity)
+    category: existing_patterns
+    content_hash: 8fd52f9c624c8d0b2ab9cd61a827cb7f934dbed020a3db11778dccf3e990db49
+    verification: source_verified
+    relevance: 0.71
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-f4ec7a00f2055466
+    locator: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c-1.yaml#L48-L48 (estimated_complexity)
+    category: existing_patterns
+    content_hash: 31b714783152dd95d4c54fd22ee334003e4292054629d24d049a973a924eb827
+    verification: source_verified
+    relevance: 0.71
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-94fc0e7015aba07e
+    locator: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200d-1-i.yaml#L36-L36 (estimated_complexity)
+    category: existing_patterns
+    content_hash: 8fd52f9c624c8d0b2ab9cd61a827cb7f934dbed020a3db11778dccf3e990db49
+    verification: source_verified
+    relevance: 0.7
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-a8efa72174a9319a
+    locator: scripts/ac_store/_gtfa_doc_gates.py#L82-L128 (def _doc_gate_suppressed)
+    category: existing_patterns
+    content_hash: 0c7548100d92f46d994dd21dc68e00f24fbec00e124f3b4bd41b3419fff8bcd4
+    verification: source_verified
+    relevance: 0.82
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-a0371436c9821496
+    locator: docs/explanation/documentation-coverage-flow.md#L182-L188 (§4. Where it breaks > 4.2 The trigger is the code
+      classification, not the documen…)
+    category: existing_patterns
+    content_hash: 8e9e1ecd73fc915a0a24adcbc8902de3953534085d5ceb0dd50d7cda259f3359
+    verification: source_verified
+    relevance: 0.81
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-69a7bb865647e9ee
+    locator: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml#L27-L28 (documentation_triggers)
+    category: existing_patterns
+    content_hash: 934b74c5a197a9791c0bcf870749ebc2f1bd81299738ae9a7140ccbdf4a819ca
+    verification: source_verified
+    relevance: 0.73
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-c9ba4ee576eb5a93
+    locator: scripts/commit_guardian/check_hook_trigger_reachability.py#L332-L356 (module level)
+    category: existing_patterns
+    content_hash: 52d603cc58ac7babae2a7428a864a790a218a2315fb82411f3a8c5657a436915
+    verification: source_verified
+    relevance: 0.67
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-3edb98ed5425f92d
+    locator: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c.yaml#L27-L27 (documentation_triggers)
+    category: existing_patterns
+    content_hash: c992648b170247574dd719661e2861870999a570bfd7c087c9d6dd258506fe8e
+    verification: source_verified
+    relevance: 0.62
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-c7f562f38c7b71a6
+    locator: docs/known-issues/testing-quality/open-high-ki-tq-20260907-agent-eval-gate-has-never-evaluated-an-agent.md#L72-L96
+      (§KI-TQ-20260907-agent-eval-gate-has-never-evaluated-an-agent…)
+    category: existing_patterns
+    content_hash: b4397eb7ada6781c144ad93b0404f9953e5e54bc022fe12263e7f8853ef943e8
+    verification: source_verified
+    relevance: 0.54
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-e8f966c865eb3bea
+    locator: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200d.yaml#L12-L17 (criteria)
+    category: existing_patterns
+    content_hash: 953d820fd207dc178842d3ab6e41faa6e77539259f84b3da3927692dda7d8da5
+    verification: source_verified
+    relevance: 0.75
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-b57d5714ec514bdf
+    locator: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md#L42-L63 (§Context)
+    category: existing_patterns
+    content_hash: c01468916e539fe97d7f1994b7428b37b544aada7534a7fbce72cc8461ead401
+    verification: source_verified
+    relevance: 0.69
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-1db7c09667f7fccf
+    locator: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md#L35-L64 (§Context)
+    category: existing_patterns
+    content_hash: f40418516d8967d2845aa8df85766578a4681d4d7269a3e5eb963b6b04277299
+    verification: source_verified
+    relevance: 0.65
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-d50c84a905e670a0
+    locator: docs/reference/agent-teams-constraints.md#L127-L152 (§Interaction with Claude Code Workflows)
+    category: existing_patterns
+    content_hash: 48f225aba819f7aeaa7f5481d29a5aa04a821810c0ea75c212240c8b134139bf
+    verification: source_verified
+    relevance: 0.57
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-a99e483936bc6c5d
+    locator: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a-1.yaml#L121-L147 (notes)
+    category: existing_patterns
+    content_hash: 78fc31ad903e4740fcf948884f0824e28ab9c4331acc93867bc60b46c0177e1b
+    verification: source_verified
+    relevance: 0.52
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-1a1e18b89d6d72d1
+    locator: 'docs/analysis/2026-10-01-colony-memory-stage0-delta-3-lessons-adrs-ownership.md#L43-L54 (§(d) Live-QA lessons
+      mapped to the concept > The gap the lessons expose: approval provenance)'
+    category: existing_patterns
+    content_hash: 3cb1c8b5ef71aa7fd4c56693716c567db3e2f33146d70855b7890bf1acdb1548
+    verification: source_verified
+    relevance: 0.64
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-c8c6ffd1d45f57c6
+    locator: docs/analysis/2026-10-01-colony-memory-stage0-delta-3-lessons-adrs-ownership.md#L17-L33 (§(d) Live-QA lessons
+      mapped to the concept)
+    category: existing_patterns
+    content_hash: f470c0db62ea15870c6245bccb98bc6d1270980d7a73d6cc8a1e0c7ed7b66e0c
+    verification: source_verified
+    relevance: 0.63
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-09c1990469eb0b40
+    locator: docs/how-to/product-truth-schema-reference.md#L203-L229 (§Classifier eval — `classifier-eval.schema.json`)
+    category: existing_patterns
+    content_hash: 727a38fb60974978d4972c473d29aefe733d3bf4ef1c2fde257438a203c10460
+    verification: source_verified
+    relevance: 0.57
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-57ee70cfba0d79cb
+    locator: kernel/capabilities/decision/basis.py#L61-L85 (def validate_basis)
+    category: existing_patterns
+    content_hash: 8c94aacf605867ff8b790d1215495dce4036e80d7032e88fce25c95d6ef419a3
+    verification: source_verified
+    relevance: 0.56
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-2ee10a0490997b01
+    locator: docs/architecture/diagrams/c3-005-artifact-knowledge-graph.md#L146-L176 (§Legend — per-edge classification)
+    category: existing_patterns
+    content_hash: 1ef617555e3aaefada5f5c9ff8de55f9c197524e62eb04249e83fe6e3477a42e
+    verification: source_verified
+    relevance: 0.54
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-93d5859fefde3d63
+    locator: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b-2.yaml#L98-L114 (notes)
+    category: existing_patterns
+    content_hash: 6e7366cc9ec55458cbad2d19a11220c6c6662f4c2302c198399377a454da160a
+    verification: source_verified
+    relevance: 0.52
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-0ffbbb03acd632c1
+    locator: config/skill_registry.json#L364-L392 (skills)
+    category: existing_patterns
+    content_hash: 1e1a7585206bd6e45f797a6749bd0461f52d4d2a454d0499fade33c01ac6ee45
+    verification: source_verified
+    relevance: 0.58
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-0cdfe98f981e84b7
+    locator: config/skill_registry.json#L124-L169 (skills)
+    category: existing_patterns
+    content_hash: bae00a06b0b34ad5d95a6614b3b071ba68ba666f4142bdab430c3ef559cb96ad
+    verification: source_verified
+    relevance: 0.57
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-4cf8839b02faf2b9
+    locator: docs/reference/frontend-coder-capabilities.md#L47-L59 (§1. Design Principles (from the old frontend-design skill)
+      > Principle 2 — A primary colour with deliberate personality)
+    category: existing_patterns
+    content_hash: bb41847b076ebf675f1d23c1fdaa3598e3c59bf592b8421a7f072fc26ae759e0
+    verification: source_verified
+    relevance: 0.55
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-81ab7c2276f71763
+    locator: config/skill_registry.json#L328-L352 (skills)
+    category: existing_patterns
+    content_hash: 08a0221a01e7d17fc5865411bbc7255e2f19909f8eac337c7a8f4d111a16cc7f
+    verification: source_verified
+    relevance: 0.54
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-77ba37ece29b5261
+    locator: docs/how-to/run-the-decision-kernel.md#L143-L177 (§Steps > Step 3 — Write the task and start the run)
+    category: existing_patterns
+    content_hash: 479aabc8c99b280c4016d7042578eb5be4de02f5f34cd873c54def56da7cd0cf
+    verification: source_verified
+    relevance: 0.85
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-e6eb394eb0fac812
+    locator: docs/known-issues/testing-quality/open-high-ki-tq-20260907-agent-eval-gate-has-never-evaluated-an-agent.md#L16-L53
+      (§KI-TQ-20260907-agent-eval-gate-has-never-evaluated-an-agent…)
+    category: existing_patterns
+    content_hash: 34ca759c3705b666546a38fd50420b14c3fa2d1160c7f1379683fb677055fc79
+    verification: source_verified
+    relevance: 0.51
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-4df9204888d7bbab
+    locator: docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md#L195-L211 (§Configuration (`config/kernel_config.default.json`,
+      `config…)
+    category: existing_patterns
+    content_hash: ccf1a5ee5785e6ba0db7874b30fc75b3b722c958392c07148b70eb45e3bcdb1d
+    verification: source_verified
+    relevance: 0.64
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-78eb68798826010f
+    locator: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md#L232-L237 (§As built (intake intent))
+    category: existing_patterns
+    content_hash: 5a8e63c91f5fbfe8aaf3bc72b4115f5fb4d8ed842bd90a9bbb252c71461faf16
+    verification: source_verified
+    relevance: 0.86
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-30f4df7db41810b6
+    locator: kernel/intent/classify.py#L1-L46 (module level)
+    category: existing_patterns
+    content_hash: 3a3646b23316a17c37a08440cead8a294026e453b802ed9038900cbac66213c4
+    verification: source_verified
+    relevance: 0.84
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-21fab26fdc7290f5
+    locator: kernel/capabilities/decision/ranking.py#L1-L38 (module level)
+    category: existing_patterns
+    content_hash: 0fcd6ca8fa74eddd53faa85bab8c7a1d0f535253bed56df416bf73ea44f67ce9
+    verification: source_verified
+    relevance: 0.81
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-c24fcfabbe8a475f
+    locator: docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md#L126-L136 (§2. Settled decisions and important boundaries
+      [ALL STAGES] > 2.3 Corrections to avoid carrying earlier shorthand into co…)
+    category: existing_patterns
+    content_hash: 448b759bc3de03f88ba62e4a41895dc0b85344d8069b79be319f496dcac7fff0
+    verification: source_verified
+    relevance: 0.8
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-35f8c664326fa3ae
+    locator: kernel/intent/questions.py#L1-L41 (module level)
+    category: existing_patterns
+    content_hash: 2128dc796993c08477e96d7369e764e8375ade018aae6d443731e0dd549d8a11
+    verification: source_verified
+    relevance: 0.78
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-f9f848c34b8c9d40
+    locator: docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-4-scheduler-jev-capabilities.md#L133-L140 (§9. Jev adapter
+      and evidence-based decisions [MVP] > 9.3 Batching independent questions)
+    category: existing_patterns
+    content_hash: 3ece5e13368232fc2c48d75e275739a99052d870c05c365fde37d5ab450ec680
+    verification: source_verified
+    relevance: 0.87
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-666a0226c17d07f7
+    locator: docs/architecture/adrs/ADR-048-order-independent-per-ticket-completion.md#L104-L131 (§Decision)
+    category: existing_patterns
+    content_hash: e76266249c90ea8a8329c9f9013a65b046fc9c115e54492d98bd615008540f4e
+    verification: source_verified
+    relevance: 0.82
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-09d6600aecef55c8
+    locator: docs/architecture/adrs/ADR-025-first-class-flow-decisions.md#L37-L71 (§Context)
+    category: existing_patterns
+    content_hash: 70bc5d45a1607d6caa991d9707ff01658b59072cda0e49baf211cf3ee059cb65
+    verification: source_verified
+    relevance: 0.53
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-61a00fc2d1fe4d53
+    locator: docs/how-to/file-and-reuse-decisions-with-the-kernel.md#L45-L56 (§Steps > Step 2 — Publish it (explicit; never
+      part of a run))
+    category: existing_patterns
+    content_hash: 7d550018968621f3fe25b4ae7e92aa096eba1895a743311cbad54e98dee71f32
+    verification: source_verified
+    relevance: 0.52
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-33477f1ad47b2301
+    locator: docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md#L28-L60 (§Done-Proof Evaluation — Sequence Diagram)
+    category: existing_patterns
+    content_hash: 77e140255732a3d1524ee977474f6ff24084c9db23ffe09c2628941e9ce17db3
+    verification: source_verified
+    relevance: 0.52
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-ee0b11068f97e5c7
+    locator: docs/architecture/components/decision-kernel.md#L91-L102 (§Containers)
+    category: existing_patterns
+    content_hash: 8186485130f462169688010954f9473d7413fb1fd354d6235f4a4d748e6ec55b
+    verification: source_verified
+    relevance: 0.5
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-952af4390d91a9fa
+    locator: scripts/commit_classifier.py#L1-L32 (module level)
+    category: existing_patterns
+    content_hash: ee3da98f69dbb2768399d19a3d8c14f6bf803579f7de85c366dca6530dee1840
+    verification: source_verified
+    relevance: 0.61
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-5b1f20199bf05d10
+    locator: scripts/commit_pattern_learner.py#L1-L35 (module level)
+    category: existing_patterns
+    content_hash: 78de61aa7712ecccc7f7acbcb7bcc88cda31aa1be8a89efb311a46c6cb4b677b
+    verification: source_verified
+    relevance: 0.6
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-4456c295427a8dff
+    locator: kernel/memory/vocab.py#L1-L31 (module level)
+    category: existing_patterns
+    content_hash: d1b7ad7b2a3febfd76bde6ef1a5970fa63bd9ec2ec96a5c9c389d8f848095222
+    verification: source_verified
+    relevance: 0.9
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-a1f8e2344fafb482
+    locator: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md#L72-L78 (§Decision > 4. Filters use
+      only existing vocabularies)
+    category: existing_patterns
+    content_hash: be0a028412d4c6dac13cbe23c493ac5a5432ceabf6a7403cb6c00364f8b9599b
+    verification: source_verified
+    relevance: 0.89
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-dfe702434b6837c1
+    locator: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md#L64-L75 (§Decision >
+      1. One YAML file per approved decision)
+    category: existing_patterns
+    content_hash: cd688af29635374bc574f64451351826d99c1657b045812c37f7fc43e5e2bc4e
+    verification: source_verified
+    relevance: 0.89
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-b078ca4529962eeb
+    locator: kernel/memory/validate.py#L1-L51 (module level)
+    category: existing_patterns
+    content_hash: 4a11f139a7ff20f47c25a0b116f4557903c13b5066e3cf475521f57ca4326ac8
+    verification: source_verified
+    relevance: 0.87
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-263d2e03310fe329
+    locator: scripts/portability/README.md#L41-L63 (§Critical Context)
+    category: existing_patterns
+    content_hash: dc99aa0638f903a2632a2421eb5596952cf17d2239364ef479fce8e88c303370
+    verification: source_verified
+    relevance: 0.65
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+  - id: ev-eb2696f463b7d12a
+    locator: scripts/evals/run_agent_eval.py#L1-L30 (module level)
+    category: existing_patterns
+    content_hash: 36fbc17dcd1fa7e46354d6f2d347dad9a3a966814fcb59abbef270ea63735958
+    verification: source_verified
+    relevance: 0.53
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: true
+precedents_considered: []
+approval:
+  approval_status: approved
+  approved_by: human:user
+  approved_at: '2026-10-02T13:49:25Z'
+  note: ''
+provenance:
+  origin: learned
+  created_by_capability: decision
+  created_at: '2026-10-02T13:49:26Z'
+  run_id: run-35ecc5ce9780442d
+  root_task_id: task-00cea68c31a7485f
+  langfuse_trace_id: d1cf6cca5655445a160f172fffbd7153
+  langfuse_trace_url: null
+  repository_revision:
+    commit: null
+    dirty: false
+  policy_version: null
+  template_version: decision.assess@1
+  model_version: jev-latest
+  kernel_version: 0.1.0.dev0
+  decision_versions:
+    options: 221650b8af2a
+    criteria: 65938f9edad2
+    templates: decision.assess@1
+corrections: []

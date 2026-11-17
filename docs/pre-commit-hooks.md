@@ -4,7 +4,7 @@ description: "Reference for all pre-commit hooks enforced by the leafcutter comm
 type: reference
 status: active
 created: 2026-05-28
-last_updated: 2026-08-26
+last_updated: 2026-10-22
 components:
   - commit_guardian
 ---
@@ -56,6 +56,7 @@ flowchart TD
     H12 -->|fail| FIX
     FIX --> GC
 ```
+Limits, set-aside locations and run output for `check-doc-length`: [Document Length Standard](reference/document-length-standard.md).
 
 ## Build-Drift Check
 
@@ -70,6 +71,14 @@ flowchart LR
     D -->|output matches| PASS[hook passes\ncommit proceeds]
     D -->|output differs| FAIL[hook fails\nrun build.py to regenerate\nthen re-stage]
 ```
+
+## Agent Registry and Skill-Reference Check (check-agent-registry)
+
+Scope: the hook runs when the agent registry, its schema, or any staged
+`templates/**/*.md` file (agents, skills, commands, rules) is staged. It runs the
+same validator as the build, so a template that tells an agent to load a skill the
+package does not ship is refused at commit time, naming the template file and the
+skill. A commit that stages none of those paths passes without running the validator.
 
 ## Hook Configuration
 
@@ -290,3 +299,17 @@ coverage (BP-1100b-5, EPIC-BuildPipelinePhantomRemediation).
 | `enabled` | `true` | Set to `false` to disable the hook entirely. |
 | `scanned_source_globs` | `["templates/workflows-js/*.js", "templates/scripts/commit_guardian/*.py"]` | Glob patterns (matched via `fnmatch`) for source files whose presence-only coverage is rejected. DATA read from this key — never hardcoded in the hook. |
 | `waiver_marker` | `"presence-only"` | The comment marker recognised as `# <marker>: <reason>`. |
+
+## Folder Density Check (check-folder-density)
+
+Refuses a commit that takes a folder past 15 non-markdown files; a folder already over may not grow. Folders at or below a `folder_density.set_aside_locations` entry (`path` plus non-blank `ground`, matched by whole path components, never by name) are set aside, listed with their ground and counted apart from judged ones; 0 judged is reported, not passed. Shipped: `docs/acceptance-criteria/` (the AC store): records tools read and write and nobody navigates by hand; flat by design, one folder per feature family, bounded by the store's tree limits, not a file count.
+`docs/decisions/` (the decision kernel's record store): one file per decision, written and read by the kernel's publish, index and precedent tools; people review records in PRs, not by browsing.
+An absent or malformed declaration judges everything and says so; an empty one sets nothing aside (GE-133a).
+
+## Build-Epic Gate Verdicts (check-build-epic-gate-verdicts)
+
+Backstop for `/build-epic` (TQ-500g-1-viii): a ticket is not committed until both gate verdicts are on record. `build-epic.js` opens a marker per ticket (`gate_verdict_records.py open`); the red-baseline reader (`heavy_lane_gate --record`) and the wrong-version runner (`run`/`finish --record`) write their own verdicts under `<git-dir>/leafcutter/gate-verdicts/<ticket-key>/`. The hook reads those records only, never ticket comments or the supervisor's summary.
+- **No open marker: inert.** One git call and one directory listing, so commits outside `/build-epic` are unaffected.
+- **Marker open:** the commit must stage the marked ticket file, which needs both records. Missing blocks naming the missing verdict; unparseable or wrong shape blocks as unreadable; `gate_passed: false` blocks naming the reader's reason or the survivors. `applicable: false` passes, never reported as verified. Code staged with no marked ticket file blocks, naming every open marker and the exact `close` command.
+- **Staleness (wrong-version only):** every staged code path (extension in `file_size.checked_extensions`, minus `tickets/`, `docs/acceptance-criteria/`, `changelogs/`) must appear in the record's `paths` with the sha256 of its staged content, else the verdict is out of date.
+- **Errors:** before any marker is found the hook exits 0 with a warning; once found, any error blocks. Config: `build_epic_gate_verdicts.severity` (`block`). Residual risk: a commit made with `--no-verify`, or a supervisor that deletes the marker, bypasses it.

@@ -1,12 +1,13 @@
 ---
 agent_id: worktree-agent
 title: 'Agent Card: worktree-agent'
-description: 'Manages git worktree lifecycle — creates a new worktree for a feature
-  branch or reuses the existing epic worktree for an in-flight epic ticket; removes
-  a worktree after a branch merges. Create is non-destructive (no confirmation required).
-  Remove is destructive and requires an explicit "yes" after displaying the safety-check
-  report. Use when: user types /worktree; asks to create a worktree for a branch or
-  ticket; asks to remove or close a worktree after a PR merges.'
+description: 'Workspace lifecycle agent. Asks the workspace maker (scripts/worktree.py,
+  see docs/how-to/get-a-workspace.md) for the workspace of a feature branch or ticket,
+  and asks the maker to clear a workspace after a branch merges. Getting a workspace
+  is non-destructive (no confirmation required). Clearing one is destructive and requires
+  an explicit "yes" after the safety-check report. Use when: user types /worktree;
+  asks for a workspace for a branch or ticket; asks to clear or close a workspace
+  after a PR merges.'
 type: card
 status: active
 created: 2026-08-13
@@ -15,13 +16,7 @@ last_updated: '2026-08-13'
 ---
 # worktree-agent
 
-**Manages git worktree lifecycle — creates a new worktree for a feature branch
-or reuses the existing epic worktree for an in-flight epic ticket; removes a
-worktree after a branch merges. Create is non-destructive (no confirmation
-required). Remove is destructive and requires an explicit "yes" after
-displaying the safety-check report.
-Use when: user types /worktree; asks to create a worktree for a branch or
-ticket; asks to remove or close a worktree after a PR merges.**
+**Workspace lifecycle agent. Asks the workspace maker (scripts/worktree.py, see docs/how-to/get-a-workspace.md) for the workspace of a feature branch or ticket, and asks the maker to clear a workspace after a branch merges. Getting a workspace is non-destructive (no confirmation required). Clearing one is destructive and requires an explicit "yes" after the safety-check report. Use when: user types /worktree; asks for a workspace for a branch or ticket; asks to clear or close a workspace after a PR merges.**
 
 | Field | Value |
 |-------|-------|
@@ -79,8 +74,8 @@ flowchart TD
 
 | Name | Type | Description |
 |------|------|-------------|
-| `action` | string | The action to perform — "create <branch-or-ticket-path>" or "remove <branch-or-worktree-path>" |
-| `ticket_path` | file_path | Optional absolute path to the ticket markdown file, used only to derive the branch and worktree name. Never written to. |
+| `action` | string | The action to perform — "create <branch-or-ticket-path>" or "remove <branch-or-workspace-path>" |
+| `ticket_path` | file_path | Optional absolute path to the ticket markdown file, used only to derive the kind and slug for the workspace maker. Never written to. |
 
 ### Outputs
 
@@ -92,7 +87,7 @@ flowchart TD
 
 | Name | Type | Description |
 |------|------|-------------|
-| `git_worktree_and_branch` | — | Creates or removes the worktree directory, its branch, and (on remove) the matching remote branch |
+| `workspace_via_maker` | — | Asks the workspace maker to make or clear a workspace (the maker owns the folder, its install and its branch) |
 ---
 
 ## Tools Available
@@ -101,14 +96,14 @@ flowchart TD
 |------|
 | `Bash` |
 | `Read` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `feature` | conditional | — |
-| `signoff` | always | — |
+| `feature` | conditional | When a create request names an epic ticket path (an EPIC-*/ path segment), load feature and run its Epic Workflow with the ticket path as $ARGUMENTS. |
 ---
 
 ## Configuration
@@ -123,7 +118,7 @@ flowchart TD
 | Pattern | Trigger | Behavior | Related Agent |
 |---------|---------|----------|---------------|
 | Stop-and-Ask | condition requiring user decision or out-of-scope action | Do not proceed to Phase 4. | `None` |
-| Conditional Behavior | the script exits non-zero | surface stderr verbatim and abort | `None` |
-| Conditional Behavior | an existing epic worktree is reused (Epic Workflow branch) | report which worktree was reused and the branch it is on | `None` |
-| Pre-commit Bootstrap Verification | bootstrap step completes (build.py returns, exit 0 or non-zero) | After bootstrap, probe that <worktree>/.pre-commit-config.yaml exists and resolves (is not a dangling symlink). If the probe fails, emit a structured BOOTSTRAP ERROR (AC-5) message — distinguish "build.py ran but config missing" from "build.py not found" — and do NOT claim the worktree is ready or that hooks are active. Do NOT silently continue with PRE_COMMIT_ALLOW_NO_CONFIG=1 as the default; that env-var is a last-resort documented fallback only.
+| Conditional Behavior | the maker's answer is not "status":"ok", or it exits non-zero | surface the maker's code and message verbatim and abort | `None` |
+| Conditional Behavior | the maker's answer says the workspace was re-readied, not created | report that the maker returned the ready workspace for the same work | `None` |
+| Maker Answer Verification | the maker returns an answer | Do not claim the workspace is ready or that hooks are active unless the maker's ok answer says so. Never work around a refusal by hand.
  | `None` |

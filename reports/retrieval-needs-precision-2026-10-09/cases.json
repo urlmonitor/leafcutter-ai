@@ -1,0 +1,376 @@
+{
+  "frozen_before_any_new_model_output": true,
+  "authored_by": "BA/IT PO handoff; independently transcribed by evaluator",
+  "common": {
+    "exact_question_and_source_echo": true,
+    "literal_anchor_unchanged": true,
+    "hierarchy_scope": "not_applicable",
+    "hierarchy_levels": [],
+    "ordinary_status": "decided",
+    "ordinary_scope_resolution": "sufficient",
+    "forbidden_extra_fields": "Every offered required field outside the stated minimal set, incidental set, or explicit equivalent provenance alternative.",
+    "rationale_does_not_substitute_for_selections": true,
+    "interpretation_and_execution_are_separate": true,
+    "ordinary_detail_mode": "fields"
+  },
+  "cases": [
+    {
+      "id": "IP01",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "target": "KM-500c-2",
+      "context": [],
+      "expected": {
+        "kind": "fields",
+        "entity_types": [
+          "ac"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": [],
+        "completeness": "single_entity",
+        "detail_mode": "fields",
+        "status": "decided",
+        "scope_resolution": "sufficient",
+        "minimal_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "incidental_fields_allowed": [
+          "canonical_id",
+          "kind",
+          "title",
+          "source_sha",
+          "source_locator"
+        ]
+      }
+    },
+    {
+      "id": "IP02",
+      "question": "For KM-500c-1, what must tests demonstrate?",
+      "target": "KM-500c-1",
+      "context": [],
+      "expected": {
+        "kind": "fields",
+        "entity_types": [
+          "ac"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": [],
+        "completeness": "single_entity",
+        "detail_mode": "fields",
+        "status": "decided",
+        "scope_resolution": "sufficient",
+        "minimal_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "incidental_fields_allowed": [
+          "canonical_id",
+          "kind",
+          "title",
+          "source_sha",
+          "source_locator"
+        ]
+      }
+    },
+    {
+      "id": "IP03",
+      "question": "I am writing verification for KM-500a-2. Which required behaviors and prescribed checks must the tests prove?",
+      "target": "KM-500a-2",
+      "context": [],
+      "expected": {
+        "kind": "fields",
+        "entity_types": [
+          "ac"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": [],
+        "completeness": "single_entity",
+        "detail_mode": "fields",
+        "status": "decided",
+        "scope_resolution": "sufficient",
+        "minimal_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "incidental_fields_allowed": [
+          "canonical_id",
+          "kind",
+          "title",
+          "source_sha",
+          "source_locator"
+        ]
+      }
+    },
+    {
+      "id": "IP04",
+      "question": "What behavior does KM-500c-2 require?",
+      "target": "KM-500c-2",
+      "context": [],
+      "expected": {
+        "kind": "fields",
+        "entity_types": [
+          "ac"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": [],
+        "completeness": "single_entity",
+        "detail_mode": "fields",
+        "status": "decided",
+        "scope_resolution": "sufficient",
+        "minimal_fields": [
+          "criteria"
+        ],
+        "incidental_fields_allowed": [
+          "canonical_id",
+          "kind",
+          "title",
+          "source_sha",
+          "source_locator"
+        ]
+      }
+    },
+    {
+      "id": "IP05",
+      "question": "Show only the acceptance obligations of KM-500c-2; omit its test plan.",
+      "target": "KM-500c-2",
+      "context": [],
+      "expected": {
+        "kind": "fields",
+        "entity_types": [
+          "ac"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": [],
+        "completeness": "single_entity",
+        "detail_mode": "fields",
+        "status": "decided",
+        "scope_resolution": "sufficient",
+        "minimal_fields": [
+          "criteria"
+        ],
+        "incidental_fields_allowed": [
+          "canonical_id",
+          "kind",
+          "title",
+          "source_sha",
+          "source_locator"
+        ]
+      }
+    },
+    {
+      "id": "IP06",
+      "question": "Show only the authored test specification for KM-500c-2.",
+      "target": "KM-500c-2",
+      "context": [],
+      "expected": {
+        "kind": "fields",
+        "entity_types": [
+          "ac"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": [],
+        "completeness": "single_entity",
+        "detail_mode": "fields",
+        "status": "decided",
+        "scope_resolution": "sufficient",
+        "minimal_fields": [
+          "test_spec"
+        ],
+        "incidental_fields_allowed": [
+          "canonical_id",
+          "kind",
+          "title",
+          "source_sha",
+          "source_locator"
+        ]
+      }
+    },
+    {
+      "id": "IP07",
+      "question": "List only the declared test references on KM-500c-2; do not inspect their implementations or infer outcomes.",
+      "target": "KM-500c-2",
+      "context": [],
+      "expected": {
+        "kind": "declared_references",
+        "alternatives": [
+          "AC/ac_yaml + covered_by field + no relation + single_entity",
+          "Test/code + covered_by relation + canonical_id or source_locator + exhaustive_set; optional AC/ac_yaml + covered_by provenance side"
+        ],
+        "incidental_fields_allowed": [
+          "canonical_id",
+          "kind",
+          "title",
+          "source_sha",
+          "source_locator"
+        ],
+        "no_execution_claim": true,
+        "detail_mode": "fields"
+      }
+    },
+    {
+      "id": "IP08",
+      "question": "Show the source of one test declared to cover KM-500c-2.",
+      "target": "KM-500c-2",
+      "context": [],
+      "expected": {
+        "kind": "one_test_source",
+        "entity_types": [
+          "test"
+        ],
+        "document_types": [
+          "code"
+        ],
+        "relationships": [
+          "covered_by"
+        ],
+        "completeness": "examples",
+        "minimal_fields": [
+          "content"
+        ],
+        "incidental_fields_allowed": [
+          "canonical_id",
+          "kind",
+          "title",
+          "source_sha",
+          "source_locator"
+        ],
+        "optional_provenance_side": {
+          "entity_type": "ac",
+          "document_type": "ac_yaml",
+          "field": "covered_by"
+        },
+        "detail_mode": "fields"
+      }
+    },
+    {
+      "id": "IP09",
+      "question": "What are the implementation work status and lifecycle status of KM-500c-2?",
+      "target": "KM-500c-2",
+      "context": [],
+      "expected": {
+        "kind": "fields",
+        "entity_types": [
+          "ac"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": [],
+        "completeness": "single_entity",
+        "detail_mode": "fields",
+        "status": "decided",
+        "scope_resolution": "sufficient",
+        "minimal_fields": [
+          "work_status",
+          "status"
+        ],
+        "incidental_fields_allowed": [
+          "canonical_id",
+          "kind",
+          "title",
+          "source_sha",
+          "source_locator"
+        ]
+      }
+    },
+    {
+      "id": "IP10",
+      "question": "Return the complete canonical YAML document for KM-500c-2, including all authored fields.",
+      "target": "KM-500c-2",
+      "context": [],
+      "expected": {
+        "kind": "full_document",
+        "entity_types": [
+          "ac"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": [],
+        "completeness": "single_entity",
+        "detail_mode": "full_document",
+        "field_minimality_applies": false,
+        "execution_supported": false
+      }
+    },
+    {
+      "id": "IP11",
+      "question": "Did KM-500c-2's tests pass on the latest CI run? Cite the run and tested commit.",
+      "target": "KM-500c-2",
+      "context": [],
+      "expected": {
+        "kind": "execution_gap",
+        "status": "needs_resolution",
+        "scope_resolution": [
+          "unknown",
+          "discovery_needed"
+        ],
+        "standalone_unresolved": "needs_outside_catalog",
+        "explanation": "Actual execution outcome, run and tested commit are outside the offered meanings. Do not substitute status, a plan or a declaration for execution proof.",
+        "candidate_entity_types": [
+          "ac",
+          "test",
+          "document"
+        ],
+        "candidate_document_types": [
+          "ac_yaml",
+          "code",
+          "documentation"
+        ],
+        "investigative_fields_allowed": [
+          "canonical_id",
+          "kind",
+          "title",
+          "source_sha",
+          "source_locator",
+          "content"
+        ],
+        "execution_supported": false
+      }
+    },
+    {
+      "id": "IP12",
+      "question": "What is the implementation work status of KM-500c-2?",
+      "target": "KM-500c-2",
+      "context": [
+        "Earlier discussion concerned writing tests and their expected assertions."
+      ],
+      "expected": {
+        "kind": "fields",
+        "entity_types": [
+          "ac"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": [],
+        "completeness": "single_entity",
+        "detail_mode": "fields",
+        "status": "decided",
+        "scope_resolution": "sufficient",
+        "minimal_fields": [
+          "work_status"
+        ],
+        "incidental_fields_allowed": [
+          "canonical_id",
+          "kind",
+          "title",
+          "source_sha",
+          "source_locator"
+        ]
+      }
+    }
+  ]
+}

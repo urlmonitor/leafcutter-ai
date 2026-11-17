@@ -1,0 +1,64 @@
+{
+  "created_at": "2026-10-09T21:16:57.897436+00:00",
+  "authorization": "Root approved 12 fresh isolated host interpretations followed, only after review, by unchanged four-case public Aura retest.",
+  "stage1": {
+    "cases": 12,
+    "host_generations_per_case": 1,
+    "accepted_host_results_total": 12,
+    "jev_calls": 0,
+    "graph_calls": 0,
+    "retrieval_claim": false,
+    "entry": "RepositoryNeedsInterpreter.prepare -> existing isolated build_llm_needs_task/make_experiment_service -> actual compiled host packet -> actual durable submission ledger",
+    "scope": "Explicit published source pinned in request; no source retrieval by interpreter.",
+    "blindness": "Fresh fork_turns=none agent sees only actual packets and inputs, never cases.json, source-oracles, baseline or scoring.",
+    "execution_grading": "Not applicable; IP07 alternate exhaustive relation and IP10 full_document can be correctly interpreted while current execution is unsupported."
+  },
+  "stage2": {
+    "runs": 4,
+    "cases_file": "reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/plan.json",
+    "cases_file_sha256": "5a0277cbca586dbe12722dfbec0eb8ba340fc48f0f5f02615b30c37bc2f6d91d",
+    "unchanged_questions_and_expectations": true,
+    "max_jev_calls_per_run": 12,
+    "max_jev_calls_total": 48,
+    "max_accepted_host_results_per_run": 3,
+    "max_accepted_host_results_total": 12,
+    "entry": "Production build_environment with RecordingTracer only; real TypeSafe Jev, Aura backend and GitSourceResolver.",
+    "gate": "Stage1 independent semantic review and runtime code freeze required first; fresh blind agent and actual generation readiness.",
+    "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+    "generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887",
+    "active_drift": "Stop inconclusive; no implicit new-source freeze.",
+    "runtime_identity": "Capture current working runtime hashes separately from published data/writer SHA.",
+    "interpretation_required_fields": [
+      "criteria",
+      "test_spec"
+    ],
+    "axes": [
+      "interpretation sufficiency/minimality",
+      "faithful selected-field fulfillment",
+      "whole-question completeness",
+      "public terminal status",
+      "actual stale negative"
+    ]
+  },
+  "shared_limits": {
+    "retries": 0,
+    "graph_writes": 0,
+    "catalog_writes": 0,
+    "telemetry_exports": 0,
+    "threshold_changes": 0,
+    "gold_changes": 0
+  },
+  "case_manifest_sha256": "5bcdb6182f6123461e5fbca2d726b3937e3e731c9992f0417c7b1a6d5228662c",
+  "source_oracles_sha256": "8378d234e6b65eb440481d8cb3eda45f07e5be36ea4b98d9c2c3ce5cca53fd46",
+  "baseline_preservation": {
+    "path": "reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87",
+    "closure_integrity_sha256": "37cdaee57609b50cb190c411ce73b4eb3ba3b9e5cdc7eab377f032df146a2f3e",
+    "correct_positive_answers": 0,
+    "selected_fields_fulfilled": 3,
+    "public_completed": 1,
+    "stale_controls_passed": 1,
+    "actual_jev_calls": 7,
+    "accepted_host_results": 6
+  },
+  "status": "Planned; no new host/provider/backend evaluation run."
+}

@@ -1,0 +1,80 @@
+{
+  "prepared_at": "2026-10-09T20:57:44.501826+00:00",
+  "source_mode": "real Aura + immutable GitSourceResolver",
+  "repository_id": "leafcutter",
+  "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887",
+  "writer_code_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "publication_run_url": "https://github.com/urlmonitor/leafcutter-ai/actions/runs/37989481802",
+  "publication_metadata_source": "Explicit orchestrator-supplied workflow provenance; readiness independently read.",
+  "database": "84379aa6",
+  "env_file_reference": "C:\\Users\\Hendrik\\Code\\leafcutter\\.env",
+  "cases": [
+    {
+      "id": "A01",
+      "target": "KM-500c-2",
+      "catalog": false,
+      "negative": false,
+      "question": "For KM-500c-2, what must tests demonstrate?"
+    },
+    {
+      "id": "A02",
+      "target": "KM-500c-2",
+      "catalog": true,
+      "negative": false,
+      "question": "For KM-500c-2, what must tests demonstrate?"
+    },
+    {
+      "id": "A03",
+      "target": "KM-500c-1",
+      "catalog": false,
+      "negative": false,
+      "question": "For KM-500c-1, what must tests demonstrate?"
+    },
+    {
+      "id": "A04",
+      "target": "KM-500c-2",
+      "catalog": false,
+      "negative": true,
+      "question": "For KM-500c-2, what must tests demonstrate?"
+    }
+  ],
+  "case_hashes": {
+    "A01": {
+      "config.json": "2ae464fdea4bccf0db4381d618eff5d76ef0d69bf07f16e8e30da683d2f9e22c",
+      "request.json": "38d7f26f10e867eeeb703e5d059bb889c8472b5e7b92a634b58969d0a77a60f0"
+    },
+    "A02": {
+      "config.json": "40e5516fe84fe666a8c12b17b74b58faf09ff617e54042f0a93d161fd78e504a",
+      "request.json": "38d7f26f10e867eeeb703e5d059bb889c8472b5e7b92a634b58969d0a77a60f0"
+    },
+    "A03": {
+      "config.json": "fb5847e1296e054d49dca0904acf717d4eaeac604ddbb181c0f26b2144f42f5f",
+      "request.json": "08c34a306c07e36a1170982e5d8952a5b7f2be18de35b34706255dabfcb99e5f"
+    },
+    "A04": {
+      "config.json": "9f4cc3167f3aacb53f821b0e79dfc5dee7426d903455947921b16ee9f2ab9445",
+      "request.json": "b8540e71b96f6b4ae1c5353fffddda39196bd453accde524ae499cd8bb60ea4a"
+    }
+  },
+  "limits": {
+    "runs": 4,
+    "jev_calls_per_run": 12,
+    "jev_calls_total": 48,
+    "host_results_per_run": 3,
+    "host_results_total": 12,
+    "max_retries": 0,
+    "graph_writes": 0,
+    "catalog_writes": 0,
+    "telemetry_exports": 0
+  },
+  "oracle_sha256": "c1db6ff91ab52e1b835e810e4ddb2537f321aacf431501444ff6d411e17d69c6",
+  "expectations": {
+    "interpretation": "Named AC; criteria and authored test_spec required; immutable source scope.",
+    "execution": "All chosen fields fulfilled with matching source/generation/locators; complete canonical criteria/spec.",
+    "functional_success": "Interpretation sufficient AND execution fulfilled AND final public run completed.",
+    "negative": "A04 must actually execute a retrieval and return stale for its unavailable exact revision."
+  },
+  "host_policy": "Fresh blind host sees only actual packet and input refs; no gold, tests, old responses or scores.",
+  "rerun_policy": "No favorable model retries; interrupted attempts remain evidence, not automatically repeated."
+}

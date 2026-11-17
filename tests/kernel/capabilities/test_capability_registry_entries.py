@@ -29,8 +29,8 @@ from kernel.registry.eligibility import filter_candidates
 from tests.kernel.helpers import ScriptedExecutor, load_json, make_request_body
 
 CONFIG = Path(__file__).resolve().parents[3] / "config"
-HOST_IDS = ["host.formulate_question", "host.generate_options", "host.research",
-            "host.synthesize"]
+HOST_IDS = ["host.decompose_goal", "host.formulate_question", "host.generate_options", "host.query_build", "host.research",
+            "host.retrieval_needs", "host.synthesize"]
 
 
 def _table() -> BindingTable:
@@ -39,6 +39,7 @@ def _table() -> BindingTable:
     table.register("decision", "1.0.0", DecisionExecutor)
     table.register("research", "1.0.0", ResearchExecutor)
     table.register("retrieve.repository", "1.0.0", RepositoryRetrievalExecutor)
+    table.register("knowledge.activate_query", "1.0.0", ScriptedExecutor)
     for host_id in HOST_IDS:
         table.register(host_id, "1.0.0", ScriptedExecutor)
     return table
@@ -54,7 +55,11 @@ class TestEntries(unittest.TestCase):
     def test_every_entry_is_a_native_registration_of_this_ticket(self) -> None:
         for d in self.snapshot.descriptors:
             self.assertEqual(d.admission.kind, "native_registration")
-            self.assertEqual(d.admission.decision_ref, "TICKET-20260930-KernelBootstrapV0")
+            references = {"host.query_build": "TICKET-20261001-KM-500b-3",
+                          "knowledge.activate_query": "TICKET-20261001-KM-500b-3", "host.retrieval_needs": "ADR-053",
+                          "host.decompose_goal": "ADR-067"}
+            expected = references.get(d.id, "TICKET-20260930-KernelBootstrapV0")
+            self.assertEqual(d.admission.decision_ref, expected)
             self.assertEqual(d.version, "1.0.0")
             self.assertEqual(d.binding, d.id)
 
@@ -78,6 +83,7 @@ class TestEntries(unittest.TestCase):
             "host.generate_options": ([schema_ids.OPTIONS_REQUEST], [schema_ids.OPTIONS]),
             "host.synthesize": ([schema_ids.SYNTHESIS_REQUEST], [schema_ids.FINDINGS]),
             "host.research": ([schema_ids.RETRIEVAL_REQUEST], [schema_ids.EVIDENCE_BUNDLE]),
+            "host.retrieval_needs": ([schema_ids.RETRIEVAL_NEEDS_REQUEST], [schema_ids.RETRIEVAL_NEEDS_OUTPUT]),
             "host.formulate_question": ([schema_ids.HUMAN_QUESTION_REQUEST],
                                         [schema_ids.HUMAN_QUESTION_REQUEST]),
         }

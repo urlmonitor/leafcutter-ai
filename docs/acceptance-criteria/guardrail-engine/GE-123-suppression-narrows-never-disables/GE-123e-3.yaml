@@ -1,0 +1,333 @@
+id: GE-123e-3
+components:
+  - commit_guardian
+title: "The refusal names each heading at fault and the real way to get an id, and offers no way round the check"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a scratch repository with the commit checks installed,
+  And a staged change to the ticket file "tickets/00_inbox/TICKET-demo.md" that
+    appends two sign-off headings, each with no feedback-id line:
+    "### 2026-11-16 10:00 — python-coder (status: ok)" and
+    "### 2026-11-16 10:20 — pr-reviewer (status: ok)",
+  When the change is committed with an inline message and is refused,
+  Then the refusal names the ticket file "tickets/00_inbox/TICKET-demo.md" and
+    quotes each of the two headings in full,
+  And it names the feedback submission script "scripts/feedback/submit_feedback.py"
+    and the sign-off skill's section §2a as the way to obtain a real feedback id,
+  And it says that the id that script prints goes on a feedback-id line beneath
+    the heading,
+  And it says that an entry which signs nothing off carries the line
+    "feedback-id: (not-a-signoff)", and names no other value or convention for
+    such entries,
+  And it does not offer typing a feedback-id line by hand, without running that
+    script, as a remedy for a sign-off.
+
+  Given the same refused commit,
+  When the whole refusal text is searched,
+  Then it contains neither the token "[NO-FEEDBACK-CHECK]", nor any instruction to
+    add a word to the commit message, nor the name of any setting that switches
+    the check off,
+  Because a refusal that keeps offering a dead escape hatch sends every reader down
+    a dead end, and one that says only "add a line" invites the hand-typed id that
+    the record then cannot tell apart from a real one.
+
+  Given a staged ticket change that appends only the python-coder heading above,
+    with no feedback-id line,
+  When it is committed through the shared commit step and is refused,
+  Then the refusal quotes only that one heading and carries the same remedy text
+    as the inline-message refusal.
+
+  Given that same refusal on the shared commit step, which routes a refusal from
+    this check to its automated fix-up,
+  When the automated fix-up repairs the ticket,
+  Then the feedback-id line it puts beneath the python-coder heading carries the
+    id printed by a run of "scripts/feedback/submit_feedback.py" that the fix-up
+    made for that sign-off, or "feedback-id: (not-a-signoff)" when the entry signs
+    nothing off,
+  And it never puts beneath a heading a feedback-id value that no run of that
+    script printed,
+  And the instruction the fix-up is given names that script and the sign-off
+    skill's section §2a as the only source of an id, names
+    "feedback-id: (not-a-signoff)" for entries that sign nothing off, and does not
+    tell it to add a feedback-id line by any other means,
+  Because a refusal that stops inviting the hand-typed id is undone if the
+    automated repair it routes to still types one.
+depends_on:
+  - GE-123e
+  - GE-123e-1
+  - BO-2000g-2
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "§2a is the one route to a real feedback id. The refusal must point at it, not describe a second procedure."
+  - path: docs/known-issues/supervisor-system/open-low-ki-ss-20261009-comment-templates-omit-the-feedback-id-line.md
+    relationship: related
+    status: exists
+    relevance: "Observed 2026-10-10 and 2026-10-13: agents answered this refusal by typing a fallback id without running the script, because the refusal says only 'add a line'. Its fix direction asks the refusal to name the script. This criterion discharges that item and no other item of that KI."
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20260901-feedback-id-escape-hatch-reads-the-previous-commit-message.md
+    relationship: related
+    status: exists
+    relevance: "The refusal currently advertises the token. The KI's fix direction: stop advertising a bypass that cannot be triggered."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123c.yaml
+    relationship: related
+    status: exists
+    relevance: "Anti-precedent: a documented-but-dead correction path is worse than none."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000g-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the one documented value for an entry that signs nothing off, feedback-id: (not-a-signoff), decided by the person at the gate. The refusal names it verbatim and invents no second convention (GE-123e notes, out-of-scope list)."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: related
+    status: exists
+    relevance: "The refusal text must be proven from the deployed hook, not the source tree."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: documentation-expert
+  contract: "The final refusal content as the deployed hook emits it on stderr: one entry per offending heading (repo-root-relative ticket path plus the verbatim heading line), and one fixed remedy block. The block names scripts/feedback/submit_feedback.py and signoff §2a, says the printed id goes on a feedback-id line beneath the heading, and names feedback-id: (not-a-signoff) for entries that sign nothing off. GE-123e-5 describes this text and must not contradict it."
+expects_from:
+  - ac_id: GE-123e-1
+    contract: "The refusal verdict and the set of offending headings it is raised for."
+  - ac_id: BO-2000g-2
+    contract: "The one documented value for an entry that signs nothing off, the literal line `feedback-id: (not-a-signoff)`, defined in exactly one place in templates/skills/signoff/SKILL.md. The refusal quotes it byte for byte and must not merge before that definition exists."
+declared_files:
+  - path: templates/scripts/commit_guardian/check_feedback_id.py
+    state: existing
+  - path: templates/scripts/precommit-autofix.json
+    state: existing
+it_requirements:
+  - "SHIPPING ORDER (binding): the refusal text that names `feedback-id: (not-a-signoff)` must not merge before BO-2000g-2 has defined that value in templates/skills/signoff/SKILL.md. Otherwise the refusal points at a value a reader cannot find. If both land in one change, the skill's definition and the refusal text must agree byte for byte on the value."
+  - "The refusal names the remedy by the same script path and section the signoff skill uses (scripts/feedback/submit_feedback.py, §2a) and restates no second procedure. The text the committer receives from the DEPLOYED hook must contain that literal path. Verify it from the deployed layout, not the source tree."
+  - "The remedy text is fixed. It is identical on every route and for any number of offending headings, and only the list of quoted headings varies. Every offending heading is quoted in full under its ticket path. None is truncated, and none is de-duplicated across files."
+  - "The refusal text contains no bypass token, no instruction to add words to the commit message, and no name of a skip setting. That includes the commit framework's per-hook SKIP setting and the shared commit step's skip handling. This forbids advertising only. The settings' behaviour is unchanged."
+  - "The refusal does not offer hand-typing a feedback-id line as a remedy for a sign-off. Whether the failure fallback value is ACCEPTED stays with the value-shape check (INF-500d-3 and later) and is not changed here."
+  - "PERMITTED, NOT REQUIRED: the refusal may mention that a heading which records no phase-agent sign-off can be written outside the sign-off heading form."
+  - "TEST EVIDENCE (binding): assert the refusal text as the committer receives it, from a real git commit on the inline route and from the shared commit step's answer on the agent route. Calling the message-building code directly is not evidence (GE-123c anti-precedent). Hand-writing COMMIT_EDITMSG and environment simulation are not evidence either (FP-7). Expected test home: unit_tests/commit_guardian/, reusing GE-123e-1's harness."
+  - "CANONICAL SOURCE: templates/scripts/commit_guardian/check_feedback_id.py (ADR-001). The deployed copies are build outputs."
+  - "AUTOMATED FIX-UP INSTRUCTION (fourth scenario; BA amendment approved by the person 2026-11-16). The check-feedback-id entry of templates/scripts/precommit-autofix.json (about :155-165) is what the shared commit step's fix-up is given for this check's refusal. Today its `description` and `instruction` both read 'Agent comment is missing feedback-id: line. Add the feedback-id per signoff SKILL.md §2a.', which invites a typed id. After the change, both fields name scripts/feedback/submit_feedback.py and signoff §2a as the only source of an id, say that the id a run of that script prints for that sign-off goes on the feedback-id line directly beneath the heading, name the literal line `feedback-id: (not-a-signoff)` (BO-2000g-2) for an entry that signs nothing off, and give no other way to add a feedback-id line: no bare 'add the line', no fallback value to type and no invented id. The wording agrees with the refusal's remedy text wherever the two name the same script, section or value. The entry's other keys (hook_id, category, model, subagent_type, disposition, agent, skills) are unchanged by this record. Edit the template only; the deployed copy (.claude/precommit-autofix.json in a built layout) is a build output (ADR-001). The file must stay valid JSON and every other entry must stay byte-identical."
+  - "FIX-UP EVIDENCE. The instruction clause is proven from the instruction text as the routing actually hands it to the fix-up for a check-feedback-id refusal, read from the deployed layout, not only from a search of the template. The two behaviour clauses of the fourth scenario describe what an LLM fix-up agent writes; that is not deterministic behaviour a unit test can run, so they carry needs_test false and are reviewed against the instruction. No test may fake a fix-up run by writing the repaired ticket itself and asserting on it."
+test_intent:
+  - clause: the refusal names the ticket file "tickets/00_inbox/TICKET-demo.md" and quotes each of the two headings in full
+    needs_test: true
+    reason: The quoted headings are computed from the staged diff, and dropping or truncating the second heading is a realistic fault.
+  - clause: it names the feedback submission script "scripts/feedback/submit_feedback.py" and the sign-off skill's section §2a as the way to obtain a real feedback id
+    needs_test: true
+    reason: The remedy text is what this record delivers, and it must be shown reaching the committer through a real commit, not through a direct call to the message builder.
+  - clause: it says that the id that script prints goes on a feedback-id line beneath the heading
+    needs_test: true
+    reason: The placement instruction is part of the emitted refusal and can be lost when the remedy text is rewritten.
+  - clause: 'it says that an entry which signs nothing off carries the line "feedback-id: (not-a-signoff)", and names no other value or convention for such entries'
+    needs_test: true
+    reason: The value must match BO-2000g-2's definition verbatim, and a second convention in the emitted text is a defect a test can catch.
+  - clause: it does not offer typing a feedback-id line by hand, without running that script, as a remedy for a sign-off
+    needs_test: true
+    reason: Agents demonstrably took the hand-typed shortcut that the old text offered, so its absence from the emitted refusal needs proof.
+  - clause: it contains neither the token "[NO-FEEDBACK-CHECK]", nor any instruction to add a word to the commit message, nor the name of any setting that switches the check off, Because a refusal that keeps offering a dead escape hatch sends every reader down a dead end, and one that says only "add a line" invites the hand-typed id that the record then cannot tell apart from a real one
+    needs_test: true
+    reason: A leftover bypass advertisement is a string in the emitted output, and a search of the real refusal catches it.
+  - clause: the refusal quotes only that one heading and carries the same remedy text as the inline-message refusal
+    needs_test: true
+    reason: The agent route carries the check's output inside the shared commit step's answer, so the text must be compared as that caller receives it.
+  - clause: 'the feedback-id line it puts beneath the python-coder heading carries the id printed by a run of "scripts/feedback/submit_feedback.py" that the fix-up made for that sign-off, or "feedback-id: (not-a-signoff)" when the entry signs nothing off'
+    needs_test: false
+    reason: What the fix-up writes is produced by an LLM agent at commit time, which no unit test can run deterministically, so the clause is held by the instruction it receives (proven under the third clause of this scenario) and checked at review.
+  - clause: it never puts beneath a heading a feedback-id value that no run of that script printed
+    needs_test: false
+    reason: An agent's choice not to type a value cannot be exercised by a deterministic test, so the guard is the routed instruction, which is tested, and the later value-shape check on the hook.
+  - clause: 'the instruction the fix-up is given names that script and the sign-off skill''s section §2a as the only source of an id, names "feedback-id: (not-a-signoff)" for entries that sign nothing off, and does not tell it to add a feedback-id line by any other means, Because a refusal that stops inviting the hand-typed id is undone if the automated repair it routes to still types one'
+    needs_test: true
+    reason: The routed instruction is data the fix-up receives for this check's refusal, and today's text invites a typed id, so a test of the instruction as routed catches a stale or partly updated entry.
+test_spec:
+  - name: test_ge_123e_3_refusal_names_ticket_and_quotes_both_headings
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Real inline git commit in a scratch repo with the DEPLOYED hook, staging two id-less headings (python-coder 10:00 and pr-reviewer 10:20) appended to tickets/00_inbox/TICKET-demo.md. Assert the refusal contains the repo-root-relative forward-slash path and both heading lines in full, each under the path."
+    proves_clause: 'the refusal names the ticket file "tickets/00_inbox/TICKET-demo.md" and quotes each of the two headings in full'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+  - name: test_ge_123e_3_refusal_names_submit_script_and_section_2a
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Same real refusal: assert the literal scripts/feedback/submit_feedback.py and the section marker §2a both appear in the text the committer receives from the deployed hook (not the source tree, not the message builder called directly). RED today."
+    proves_clause: 'it names the feedback submission script "scripts/feedback/submit_feedback.py" and the sign-off skill''s section §2a as the way to obtain a real feedback id'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+  - name: test_ge_123e_3_refusal_says_printed_id_goes_beneath_heading
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Same real refusal: assert the remedy block states that the id the script prints goes on a feedback-id line beneath the heading. RED today."
+    proves_clause: 'it says that the id that script prints goes on a feedback-id line beneath the heading'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+  - name: test_ge_123e_3_not_a_signoff_is_the_only_convention_named
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Same real refusal: it contains the literal line feedback-id: (not-a-signoff) byte for byte, and every feedback-id: literal in the remedy block is either that line or the placeholder form for the script's printed id; no second fallback value appears."
+    proves_clause: 'it says that an entry which signs nothing off carries the line "feedback-id: (not-a-signoff)", and names no other value or convention for such entries'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - the remedy names a second fallback value such as n/a or unknown
+      - the remedy omits the not-a-signoff line for entries that sign nothing off
+      - the remedy spells the not-a-signoff line differently from the sign-off skill definition
+  - name: test_ge_123e_3_refusal_does_not_invite_hand_typed_id
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Same real refusal: assert the old remedy sentence (Add 'feedback-id: <id>' on the line immediately after each heading) is gone, and that no sentence tells the reader to add a feedback-id line without running the script. RED today."
+    proves_clause: 'it does not offer typing a feedback-id line by hand, without running that script, as a remedy for a sign-off'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - the refusal keeps the bare instruction to add a feedback-id line after each heading
+      - the refusal names the script but still leads with add a line
+  - name: test_ge_123e_3_refusal_text_has_no_bypass_advertisement
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Search the whole real refusal text (inline route and shared-step hook_output) for NO-FEEDBACK-CHECK, any instruction to put a word in the commit message, and the skip setting names (SKIP, --no-verify, bypass, escape hatch). Fails if any is present. RED today."
+    proves_clause: 'it contains neither the token "[NO-FEEDBACK-CHECK]", nor any instruction to add a word to the commit message, nor the name of any setting that switches the check off, Because a refusal that keeps offering a dead escape hatch sends every reader down a dead end, and one that says only "add a line" invites the hand-typed id that the record then cannot tell apart from a real one'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - the refusal still ends with the include the token in the commit message to bypass sentence
+      - the refusal names the per-hook SKIP setting
+  - name: test_ge_123e_3_shared_step_refusal_quotes_one_heading_same_remedy
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "Run commit_changes.py as a subprocess for a change appending only the python-coder id-less heading. The one JSON answer is hook_failed; hook_output quotes only that heading (the pr-reviewer heading is absent) and its remedy block equals the inline-route remedy block byte for byte."
+    proves_clause: 'the refusal quotes only that one heading and carries the same remedy text as the inline-message refusal'
+    code_file: templates/scripts/commit_changes.py
+  - name: test_ge_123e_3_routed_autofix_instruction_names_script_and_forbids_typing
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Read the check-feedback-id entry (matched by hook_id) from the precommit-autofix.json copy in the deployed layout (.claude/precommit-autofix.json of the reference layout, no build.py spawn). Both description and instruction name scripts/feedback/submit_feedback.py and §2a as the only source, say the printed id goes directly beneath the heading, name feedback-id: (not-a-signoff), and contain none of the old text (Add the feedback-id per signoff SKILL.md §2a.). Entry keys hook_id, category, model, subagent_type, disposition, agent and skills equal today's values. No fix-up run is simulated."
+    proves_clause: 'the instruction the fix-up is given names that script and the sign-off skill''s section §2a as the only source of an id, names "feedback-id: (not-a-signoff)" for entries that sign nothing off, and does not tell it to add a feedback-id line by any other means, Because a refusal that stops inviting the hand-typed id is undone if the automated repair it routes to still types one'
+    code_file: templates/scripts/precommit-autofix.json
+    must_catch:
+      - only one of description and instruction is updated and the other keeps the old text
+      - the instruction names the script but still says to add the feedback-id line
+      - the instruction offers a fallback value to type
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+  - templates/scripts/commit_changes.py
+  - templates/scripts/precommit-autofix.json
+  - templates/scripts/commit_guardian/remedy_handoff.py
+  - unit_tests/commit_guardian/_ge_133a_harness.py
+file_findings:
+  - file: templates/scripts/commit_guardian/check_feedback_id.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It builds and prints the refusal text, including today's add-a-line and bypass sentences, that this criterion rewrites.
+    decision: null
+  - file: templates/scripts/precommit-autofix.json
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its check-feedback-id entry (lines 155-165) carries the fix-up description and instruction that today invite a typed id.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+  - templates/scripts/precommit-autofix.json
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PROMISE 3 OF GE-123e (actionable refusal, no advertised bypass).
+
+  NAMING THE SCRIPT IS A DELIBERATE, OBSERVABLE STRING, not an implementation
+  detail leaking into the criterion. The refusal text is the product here, and the
+  dispatcher fixed its content: it names scripts/feedback/submit_feedback.py and
+  signoff §2a.
+
+  WHY "NOT BY HAND". The supervisor-system KI records the current refusal's
+  shortest path to a pass: type a feedback-id line, often the fallback marker,
+  without running the script. The permission classifier has since refused those
+  typed ids as forged records and halted drives. A refusal that names the script
+  but still leads with "add a line" keeps that shortest path open. Whether the
+  fallback marker is ACCEPTED is the value-shape check's decision (INF-500d-3 and
+  later), out of scope here. This criterion governs only what the refusal tells
+  the reader to do.
+
+  ENTRIES THAT SIGN NOTHING OFF. GE-123e was amended on 2026-11-16, during this
+  decomposition, to say that the refusal should name BO-2000g's one documented
+  value, feedback-id: (not-a-signoff), and invent no second convention. That is
+  asserted above. The value belongs to BO-2000g-2. Whether this check ACCEPTS it is
+  not decided here: any non-blank value passes until the value-shape check lands.
+  The refusal must not be shipped before that value is documented in the sign-off
+  skill, or it points at something a reader cannot find.
+
+  PERMITTED, NOT REQUIRED: the refusal may also mention that a heading which records
+  no phase-agent sign-off can be written outside the sign-off heading form (the KI's
+  honest workaround, which GE-123e keeps valid). It is not asserted, because the L1
+  says "may".
+
+  "NO SETTING THAT SWITCHES THE CHECK OFF" covers the refusal TEXT only. It forbids
+  advertising the commit framework's per-check skip setting. That setting's
+  behaviour is out of scope and is not changed.
+
+  TEST-EVIDENCE RULE (for the IT PO; non-negotiable). Every scenario is verified
+  through REAL git commit calls in a scratch repository with the hook installed.
+  Use both an inline -m message and a message file passed the way the shared commit
+  step passes it, and drive the shared commit step itself for the agent route.
+  Assert the refusal text as the committer actually receives it on each route.
+  Calling the check's message-building code directly is not evidence that the text
+  reaches the committer, which is GE-123c's anti-precedent. Hand-writing the
+  last-commit-message file or setting the environment the check reads in place of a
+  commit is NOT evidence (FP-7).
+
+  IT PO RESOLUTION (2026-11-16). The dependency on BO-2000g-2 is now recorded in
+  expects_from, and the shipping order is a binding it_requirement: the refusal does
+  not merge before the signoff skill defines feedback-id: (not-a-signoff). depends_on
+  is the BA's field and is left unchanged. Adding BO-2000g-2 there is recommended.
+
+  BA AMENDMENT AT THE FINAL GATE (2026-11-16, person approved). BO-2000g-2 is now in
+  depends_on as well. A fourth scenario was added for the automated fix-up path:
+  the commit fix-up routing config (templates/scripts/precommit-autofix.json, the
+  check-feedback-id entry) sends this check's refusals to an agent told to "Add the
+  feedback-id per signoff SKILL.md §2a". That wording invites a hand-typed id, which
+  is the shortcut the refusal itself no longer offers. The person approved fixing
+  it under this record. FOR THE IT PO: that file is not yet in declared_files, and
+  the new clauses have no test_intent entries yet. The fix-up's behaviour is
+  agent-driven, so the IT PO decides how far a test can go beyond asserting the
+  instruction text the fix-up receives.
+
+  IT PO RECONCILIATION (2026-11-16). Resolved: templates/scripts/precommit-autofix.json
+  is now in declared_files, with an it_requirement for the check-feedback-id entry,
+  and the three new clauses have test_intent entries. Decision on test depth: the
+  instruction clause is tested from the routed instruction; the two clauses about what
+  the fix-up writes are needs_test false, because an LLM fix-up cannot be run
+  deterministically in a test. CAVEAT for the person: the fix-up is dispatched as a
+  mechanical general-purpose agent (model haiku). Following the new instruction, it
+  runs submit_feedback.py for a sign-off that another agent wrote, under that agent's
+  phase. That is a proxy submission, and the permission classifier has refused forged
+  records before (KI-SS-20261009). Whether the fix-up should instead hand the refusal
+  back to the signing agent is a routing decision this record does not make.

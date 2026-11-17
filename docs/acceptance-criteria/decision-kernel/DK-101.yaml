@@ -1,0 +1,46 @@
+id: DK-101
+title: "Enrichment preserves the request and separates supplied claims from sourced facts"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: superseded_by
+superseded_by: [DK-200a-3, DK-200a-3-i, DK-200a-3-ii, DK-200c-2]
+amended_by:
+  - reason: "2026-10-02 BA decomposition: replaced the broad preliminary requirement with focused L2/L3 successors under DK-200; historical criteria and evidence links are retained."
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given the request "Can you use leafcutter now? I mean run the kernel and know about it?"
+  And caller-supplied host identity, capabilities, conversation and observations,
+  And relevant permitted repository documentation,
+  When context enrichment runs,
+  Then the original goal remains verbatim,
+  And explicitly supplied caller context stays distinguishable from repository evidence,
+  And relevant excerpts carry a source, locator and content hash,
+  And workspace identity and registered capabilities ground what the request refers to,
+  And registration, documentation or caller claims never become proof of live runtime success.
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+origin_agent: Codex (user-requested context enrichment)
+created: 2026-10-02
+covered_by:
+  - tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentEvaluation::test_each_labelled_case_meets_the_context_contract
+  - tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_conversation_changes_actual_retrieval_for_the_same_pronoun_goal
+  - tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_recent_referent_survives_older_conversation_filling_query_budget
+  - tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_excerpt_cut_at_whitespace_hashes_the_retained_text
+  - tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_conversation_referent_reaches_downstream_research_and_retrieval
+implemented_by:
+  - kernel/contracts/context.py
+  - kernel/contracts/task.py
+  - kernel/context_enrichment.py
+  - kernel/enrichment_sources.py
+  - kernel/enrichment_projection.py
+  - kernel/adapters/claude_code/SKILL.md
+change_target: code
+risk_surface: internal

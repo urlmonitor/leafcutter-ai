@@ -16,7 +16,11 @@ BUSINESS CONTEXT: EPIC-BuildPipelinePhantomRemediation's own thesis, applied to
     Scope" section). A `# presence-only: <reason>` comment (non-empty reason)
     directly above the assertion is the deliberate-acceptance route.
 ARCHITECTURE: Reads the staged diff via `git diff --cached` (or HOOK_TEST_DIFF
-    for testing) and the `presence_only_assertion_guard` config section of
+    for testing); during a merge / revert / cherry-pick it instead judges the
+    authored change from the shared `_authored_change.get_authored_change()`
+    (GE-120e-1), so content carried in from the other side is not judged
+    again. A derivation that cannot be computed reports could-not-check and
+    never widens to the unscoped diff and the `presence_only_assertion_guard` config section of
     commit_guardian.json (or HOOK_TEST_CONFIG for testing — see
     unit_tests/commit_guardian/test_bp_1100b_5.py's module docstring for the
     full test-interface contract). Diff parsing and pattern detection live in
@@ -38,6 +42,25 @@ from pathlib import Path
 _SCANNER_DIR = Path(__file__).resolve().parent
 if str(_SCANNER_DIR) not in sys.path:
     sys.path.insert(0, str(_SCANNER_DIR))
+
+try:
+    from check_outcome import OUTCOME_COULD_NOT_CHECK, emit_result
+except ImportError:
+    # check_outcome.py is deployed alongside this file in every real layout;
+    # this fallback serves a working copy exposing this script in isolation.
+    # The values MUST stay in sync with check_outcome.py.
+    OUTCOME_COULD_NOT_CHECK = "could_not_check"
+
+    def emit_result(outcome: str) -> None:
+        """Fallback RESULT-line emitter used when check_outcome is absent."""
+        print(f"RESULT: {outcome}", file=sys.stdout)
+
+try:
+    from _authored_change import get_authored_change  # type: ignore[import]
+except ImportError:
+    # Deployed alongside this file in every real layout; fallback only for a
+    # working copy that exposes this script in isolation.
+    get_authored_change = None  # type: ignore[assignment]
 
 from _presence_only_scanner import (  # noqa: E402
     Violation,
@@ -122,6 +145,33 @@ def _get_staged_diff() -> str:
         sys.exit(1)
 
 
+def _get_scan_diff() -> str | None:
+    """Return the diff to scan: the authored change during a merge, else the staged diff.
+
+    Outside a merge (and under the HOOK_TEST_DIFF seam, or when the shared
+    module is unavailable) this is exactly :func:`_get_staged_diff`. During a
+    merge / revert / cherry-pick it is the shared GE-120e-1 authored change,
+    so content carried in from the other side is not judged again.
+
+    Returns:
+        The diff text, or ``None`` when the authored change could not be
+        derived (could-not-check; the caller MUST NOT widen to the unscoped
+        diff).
+    """
+    if os.environ.get("HOOK_TEST_DIFF") or get_authored_change is None:
+        return _get_staged_diff()
+    try:
+        authored = get_authored_change()
+    except Exception as exc:  # noqa: BLE001 - shared dependency may raise unpredictably; must degrade to could-not-check, never crash or widen (GE-120e-1 AC-5).
+        print(f"[{_HOOK_NAME}] WARNING: shared change-set derivation raised: {exc}", file=sys.stderr)
+        return None
+    if authored.could_not_check:
+        return None
+    if len(authored.states) <= 1:
+        return _get_staged_diff()  # not a merge: unchanged behaviour
+    return authored.diff_text  # merge-scoped; "" when nothing authored
+
+
 # ---------------------------------------------------------------------------
 # Reporting
 # ---------------------------------------------------------------------------
@@ -201,7 +251,16 @@ def main() -> int:
     # If this guard's own fixtures trip it, waive them in the test source with
     # a stated reason, like every other caller has to.
 
-    diff = _get_staged_diff()
+    diff = _get_scan_diff()
+    if diff is None:
+        print(
+            f"[{_HOOK_NAME}] WARNING: could not derive the authored (merge-scoped) "
+            "change set for this commit - skipping the scan rather than falling "
+            "back to the whole staged diff.",
+            file=sys.stderr,
+        )
+        emit_result(OUTCOME_COULD_NOT_CHECK)
+        return 0
     if not diff.strip() or not globs:
         return 0
 
@@ -238,4 +297,11 @@ if __name__ == "__main__":
 #   Detection logic lives in the companion _presence_only_scanner.py module
 #   to respect the 400-line file-size limit. See BP-1100b-5 and ticket
 #   09_bp1100b45_presence_only_assertions_stop_counting.md.
+# - 2026-10-17 [python-coder/TICKET-20261017-PresenceOnlyMergeAware]: During a
+#   merge / revert / cherry-pick the scan now reads the shared
+#   _authored_change.get_authored_change() (GE-120e-1) instead of a bare
+#   `git diff --cached`, which attributed every line the merged-in branch
+#   brought to the merge author. A plain commit is unchanged; a derivation
+#   that cannot be computed emits could-not-check and never widens to the
+#   unscoped diff. Same fix as check-folder-density / check-file-size.
 # ===========================================================================

@@ -1,0 +1,3419 @@
+{
+  "status": "final independent clause audit; local support and unfulfilled proof are separate",
+  "ticket_count": 15,
+  "clause_count": 111,
+  "source_data_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+  "evidence_note": "Each clause cites inspected implementation and actual exercised test nodes or explicit documentation review. External Jev/tracer boundaries are controlled. Partial rows are not full proof. Historical and latest runs are separately recorded in the matrix.",
+  "clauses": [
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-1",
+      "criterion": "the report distinguishes exact lookup, relationships, ambiguous research, no-match, correction and unsupported-data cases according to the available corpus",
+      "verdict": "limited_sample",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Original 12-case, six-family sample executed; no representative real-model or promotion measurement. Missing-gate rejection and comparison invalidation are tested.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_corpus.py",
+          "function": "run",
+          "line": 76
+        }
+      ],
+      "coverage_classification": "partial"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-2",
+      "criterion": "it records case counts, source and query versions, applicable model settings, expected and actual results, provenance validity, retrieval quality, content size and latency",
+      "verdict": "limited_sample",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Original 12-case, six-family sample executed; no representative real-model or promotion measurement. Missing-gate rejection and comparison invalidation are tested.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_evaluation.py",
+          "function": "test_public_evaluator_keeps_actual_expectations_and_not_run_denominator",
+          "line": 44
+        }
+      ],
+      "coverage_classification": "partial"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-3",
+      "criterion": "custom registered queries are evaluated through the same validated catalog entry point used by research",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_clauses.py",
+          "function": "test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest",
+          "line": 33
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-4",
+      "criterion": "partial, unavailable, denied or not-run cases remain visible with explicit denominators rather than being counted as correct empty answers",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_evaluation.py",
+          "function": "test_public_evaluator_outage_metrics_are_not_perfect_empty_results",
+          "line": 83
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-5",
+      "criterion": "mandatory quality and latency gates are chosen from a measured baseline before deciding whether the proposed change may be promoted",
+      "verdict": "limited_sample",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Original 12-case, six-family sample executed; no representative real-model or promotion measurement. Missing-gate rejection and comparison invalidation are tested.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_evaluation.py",
+          "function": "test_comparison_requires_declared_gates",
+          "line": 99
+        }
+      ],
+      "coverage_classification": "partial"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-6",
+      "criterion": "the comparison preserves reviewed assessment cases rather than treating candidate-authored passing examples as independent quality evidence",
+      "verdict": "limited_sample",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Original 12-case, six-family sample executed; no representative real-model or promotion measurement. Missing-gate rejection and comparison invalidation are tested.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_evaluation.py",
+          "function": "test_comparison_invalidates_changed_source_and_review",
+          "line": 110
+        }
+      ],
+      "coverage_classification": "partial"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-7",
+      "criterion": "an improvement is described as a governed query, ranking or knowledge change only to the extent actually evaluated",
+      "verdict": "limited_sample",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Original 12-case, six-family sample executed; no representative real-model or promotion measurement. Missing-gate rejection and comparison invalidation are tested.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_evaluation.py",
+          "function": "test_comparison_passing_sample_cannot_claim_representative_promotion",
+          "line": 127
+        }
+      ],
+      "coverage_classification": "partial"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-8",
+      "criterion": "query reuse does not claim model-weight training, autonomous rewriting of canonical knowledge or proven semantic usefulness from synthetic vectors alone",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_evaluation.py",
+          "function": "test_comparison_passing_sample_cannot_claim_representative_promotion",
+          "line": 127
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-9",
+      "criterion": "insufficient real corpus, model access or authorization leaves the relevant measurement not-run or limited rather than inventing a score.",
+      "verdict": "limited_sample",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Original 12-case, six-family sample executed; no representative real-model or promotion measurement. Missing-gate rejection and comparison invalidation are tested.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_evaluation.py",
+          "function": "test_comparison_passing_sample_cannot_claim_representative_promotion",
+          "line": 127
+        }
+      ],
+      "coverage_classification": "partial"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-10",
+      "criterion": "the first source-anchored batch identifies its twelve planned positive/control cases across six of the eight role-query families, without calling that sample a representative benchmark of all twenty-five questions",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_corpus.py",
+          "function": "run",
+          "line": 76
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-11",
+      "criterion": "required-field meaning, exact clauses, scope inclusion, complete versus truncated counts, declared versus executed proof, missing query versus missing source support, and execution versus question fulfillment are assessed against their independent expected outcomes",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_corpus.py",
+          "function": "run",
+          "line": 76
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-12",
+      "criterion": "missing or withheld work status cannot be replaced by lifecycle status, a shortened criterion cannot be accepted as complete, and a truncated dependent list cannot become an exact total",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_corpus.py",
+          "function": "run",
+          "line": 76
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-13",
+      "criterion": "test references without execution evidence cannot pass an executed-proof check, unsupported mappings cannot pass a query-build eligibility check, and absent trace evidence cannot pass a remote-observation check",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_corpus.py",
+          "function": "run",
+          "line": 76
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-14",
+      "criterion": "expected source-oracle values are kept separate from the actual tool response and cannot fill missing response fields during assessment",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_corpus.py",
+          "function": "run",
+          "line": 76
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-15",
+      "criterion": "planned, runnable, executed, passed, failed and not-run cases remain distinguishable; a specification alone has no passing result",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_evaluation.py",
+          "function": "test_public_evaluator_keeps_actual_expectations_and_not_run_denominator",
+          "line": 44
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-16",
+      "criterion": "expected query-family coverage and uncovered role questions remain visible when readiness or implementation-trace cases are deferred beyond the initial batch",
+      "verdict": "limited_sample",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Original 12-case, six-family sample executed; no representative real-model or promotion measurement. Missing-gate rejection and comparison invalidation are tested.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_corpus.py",
+          "function": "run",
+          "line": 76
+        }
+      ],
+      "coverage_classification": "partial"
+    },
+    {
+      "ac_id": "KM-500d-3",
+      "clause_id": "AC-17",
+      "criterion": "a changed answer meaning, required field, query behavior or source mapping invalidates any affected prior comparison until its expectations are reviewed again.",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-evaluation.json",
+        "test_query_answer_contract_acceptance_evaluation.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_rich_evaluation_executes_admitted_catalog_entry_with_pinned_digest"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/evaluation.py",
+          "function": "evaluate",
+          "line": 20
+        },
+        {
+          "file": "knowledge/evaluation_comparison.py",
+          "function": "compare_reports",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_evaluation.py",
+          "function": "test_comparison_invalidates_changed_source_and_review",
+          "line": 110
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-1",
+      "clause_id": "AC-1",
+      "criterion": "it identifies the requested fact as implementation work status and states the required population, hierarchy inclusion rule, project revision and completeness requirement",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/query_answer_planning.py",
+          "function": "plan_answer",
+          "line": 62
+        },
+        {
+          "file": "integrations/query_answer_scope.py",
+          "function": "merge_scope",
+          "line": 71
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_natural_question_produces_work_status_need_and_focused_clarification",
+          "line": 186
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-1",
+      "clause_id": "AC-2",
+      "criterion": "unresolved choices that change the answer are returned as focused clarification before a definitive count is produced",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/query_answer_planning.py",
+          "function": "plan_answer",
+          "line": 62
+        },
+        {
+          "file": "integrations/query_answer_scope.py",
+          "function": "merge_scope",
+          "line": 71
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_no_confident_required_facts_asks_about_facts_before_selection",
+          "line": 219
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-1",
+      "clause_id": "AC-3",
+      "criterion": "an explicit request for all L2 and L3 descendants of TQ-500f excluding only TQ-500f is accepted without asking the same scope question again",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/query_answer_planning.py",
+          "function": "plan_answer",
+          "line": 62
+        },
+        {
+          "file": "integrations/query_answer_scope.py",
+          "function": "merge_scope",
+          "line": 71
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_fully_explicit_natural_scope_reaches_selection_without_repeat_question",
+          "line": 204
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-1",
+      "clause_id": "AC-4",
+      "criterion": "a request to exclude all parent requirements is distinguished from excluding only that selected root",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/query_answer_planning.py",
+          "function": "plan_answer",
+          "line": 62
+        },
+        {
+          "file": "integrations/query_answer_scope.py",
+          "function": "merge_scope",
+          "line": 71
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_ambiguous_parent_exclusion_pauses_before_count_and_survives_restart",
+          "line": 130
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-1",
+      "clause_id": "AC-5",
+      "criterion": "the original question and the resolved answer requirements remain available to later query selection, result assessment and any resumed research",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/query_answer_planning.py",
+          "function": "plan_answer",
+          "line": 62
+        },
+        {
+          "file": "integrations/query_answer_scope.py",
+          "function": "merge_scope",
+          "line": 71
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_assessment_survives_clarification_and_reopened_service",
+          "line": 192
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-1",
+      "clause_id": "AC-6",
+      "criterion": "a required answer field cannot be removed merely because the first available query does not return it.",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/query_answer_planning.py",
+          "function": "plan_answer",
+          "line": 62
+        },
+        {
+          "file": "integrations/query_answer_scope.py",
+          "function": "merge_scope",
+          "line": 71
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_research_obligations_reach_actual_retrieval_and_persist",
+          "line": 96
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-2",
+      "clause_id": "AC-1",
+      "criterion": "the evidence exposes each requested available field under its own declared meaning with the AC identity, source revision and supporting locator",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance.py",
+        "test_query_answer_contract_acceptance_comparison.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/disclosure.py",
+          "function": "evidence",
+          "line": 187
+        },
+        {
+          "file": "knowledge/answers.py",
+          "function": "assess_answer",
+          "line": 18
+        },
+        {
+          "file": "knowledge/assessment_clauses.py",
+          "function": "compare_clauses",
+          "line": 13
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance.py",
+          "function": "test_cli_discloses_work_status_without_lifecycle_substitution",
+          "line": 23
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-2",
+      "clause_id": "AC-2",
+      "criterion": "the work-status answer is todo rather than active, and a source quotation preserves the canonical clause rather than presenting a generated paraphrase as exact text",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance.py",
+        "test_query_answer_contract_acceptance_comparison.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/disclosure.py",
+          "function": "evidence",
+          "line": 187
+        },
+        {
+          "file": "knowledge/answers.py",
+          "function": "assess_answer",
+          "line": 18
+        },
+        {
+          "file": "knowledge/assessment_clauses.py",
+          "function": "compare_clauses",
+          "line": 13
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance.py",
+          "function": "test_cli_exact_criterion_is_canonical_source_not_generated_summary",
+          "line": 39
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-2",
+      "clause_id": "AC-3",
+      "criterion": "lifecycle status, requirement status, implementation work status and readiness remain distinct even when their names or values resemble one another",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance.py",
+        "test_query_answer_contract_acceptance_comparison.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/disclosure.py",
+          "function": "evidence",
+          "line": 187
+        },
+        {
+          "file": "knowledge/answers.py",
+          "function": "assess_answer",
+          "line": 18
+        },
+        {
+          "file": "knowledge/assessment_clauses.py",
+          "function": "compare_clauses",
+          "line": 13
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance.py",
+          "function": "test_cli_discloses_work_status_without_lifecycle_substitution",
+          "line": 23
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-2",
+      "clause_id": "AC-4",
+      "criterion": "an absent, undisclosed or truncated required field is named in a structured unresolved-answer outcome instead of being filled from a similarly named field or hidden source inspection",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance.py",
+        "test_query_answer_contract_acceptance_comparison.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/disclosure.py",
+          "function": "evidence",
+          "line": 187
+        },
+        {
+          "file": "knowledge/answers.py",
+          "function": "assess_answer",
+          "line": 18
+        },
+        {
+          "file": "knowledge/assessment_clauses.py",
+          "function": "compare_clauses",
+          "line": 13
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance.py",
+          "function": "test_actual_source_absence_and_disclosure_omission_have_distinct_reasons",
+          "line": 193
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-2",
+      "clause_id": "AC-5",
+      "criterion": "an available partial answer identifies which requested facts are supported and which remain unresolved",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance.py",
+        "test_query_answer_contract_acceptance_comparison.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/disclosure.py",
+          "function": "evidence",
+          "line": 187
+        },
+        {
+          "file": "knowledge/answers.py",
+          "function": "assess_answer",
+          "line": 18
+        },
+        {
+          "file": "knowledge/assessment_clauses.py",
+          "function": "compare_clauses",
+          "line": 13
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance.py",
+          "function": "test_cli_truncated_exact_clause_cannot_fulfill_question",
+          "line": 87
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-2",
+      "clause_id": "AC-6",
+      "criterion": "a suggested duplicate or conflicting requirement cites the compared canonical clauses and labels interpretation separately from the recorded facts",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance.py",
+        "test_query_answer_contract_acceptance_comparison.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/disclosure.py",
+          "function": "evidence",
+          "line": 187
+        },
+        {
+          "file": "knowledge/answers.py",
+          "function": "assess_answer",
+          "line": 18
+        },
+        {
+          "file": "knowledge/assessment_clauses.py",
+          "function": "compare_clauses",
+          "line": 13
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_comparison.py",
+          "function": "test_public_comparison_keeps_each_clause_source_and_labels_candidate_inference",
+          "line": 27
+        },
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_comparison.py",
+          "function": "test_actual_canonical_source_clauses_remain_literal_under_duplicate_proposal",
+          "line": 75
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-2",
+      "clause_id": "AC-7",
+      "criterion": "similarity alone neither makes two requirements equivalent nor chooses authority between contradictory sources.",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance.py",
+        "test_query_answer_contract_acceptance_comparison.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/disclosure.py",
+          "function": "evidence",
+          "line": 187
+        },
+        {
+          "file": "knowledge/answers.py",
+          "function": "assess_answer",
+          "line": 18
+        },
+        {
+          "file": "knowledge/assessment_clauses.py",
+          "function": "compare_clauses",
+          "line": 13
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_comparison.py",
+          "function": "test_similarity_without_compared_supported_interpretation_establishes_no_authority",
+          "line": 44
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-3",
+      "clause_id": "AC-1",
+      "criterion": "the answer reports fifteen records, five done and ten todo with the selected root, included levels, relation, revision and declared counting method",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-neo4j.json",
+        "test_query_answer_contract_acceptance_clauses.py::test_duplicate_selected_rows_count_once_and_missing_status_has_unknown_bucket"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/populations.py",
+          "function": "retrieve_population",
+          "line": 19
+        },
+        {
+          "file": "knowledge/answers.py",
+          "function": "assess_answer",
+          "line": 18
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_neo4j.py",
+          "function": "exact_count",
+          "line": 107
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-3",
+      "clause_id": "AC-2",
+      "criterion": "records that themselves have children remain included under that root-only exclusion, while the distinct terminal-leaf request identifies its own eleven-record population",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-neo4j.json",
+        "test_query_answer_contract_acceptance_clauses.py::test_duplicate_selected_rows_count_once_and_missing_status_has_unknown_bucket"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/populations.py",
+          "function": "retrieve_population",
+          "line": 19
+        },
+        {
+          "file": "knowledge/answers.py",
+          "function": "assess_answer",
+          "line": 18
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_neo4j.py",
+          "function": "exact_count",
+          "line": 107
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-3",
+      "clause_id": "AC-3",
+      "criterion": "repeated paths to the same canonical AC do not increase the population",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-neo4j.json",
+        "test_query_answer_contract_acceptance_clauses.py::test_duplicate_selected_rows_count_once_and_missing_status_has_unknown_bucket"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/populations.py",
+          "function": "retrieve_population",
+          "line": 19
+        },
+        {
+          "file": "knowledge/answers.py",
+          "function": "assess_answer",
+          "line": 18
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_clauses.py",
+          "function": "test_duplicate_selected_rows_count_once_and_missing_status_has_unknown_bucket",
+          "line": 14
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-3",
+      "clause_id": "AC-4",
+      "criterion": "any unknown work status remains visible as unknown rather than being dropped, interpreted as todo or substituted from lifecycle status",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-neo4j.json",
+        "test_query_answer_contract_acceptance_clauses.py::test_duplicate_selected_rows_count_once_and_missing_status_has_unknown_bucket"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/populations.py",
+          "function": "retrieve_population",
+          "line": 19
+        },
+        {
+          "file": "knowledge/answers.py",
+          "function": "assess_answer",
+          "line": 18
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_clauses.py",
+          "function": "test_duplicate_selected_rows_count_once_and_missing_status_has_unknown_bucket",
+          "line": 14
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-3",
+      "clause_id": "AC-5",
+      "criterion": "the answer reports the known distinct records and states that the exact total and any complete status breakdown remain unresolved",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-neo4j.json",
+        "test_query_answer_contract_acceptance_clauses.py::test_duplicate_selected_rows_count_once_and_missing_status_has_unknown_bucket"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/populations.py",
+          "function": "retrieve_population",
+          "line": 19
+        },
+        {
+          "file": "knowledge/answers.py",
+          "function": "assess_answer",
+          "line": 18
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_neo4j.py",
+          "function": "partial",
+          "line": 124
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-3",
+      "clause_id": "AC-6",
+      "criterion": "a family count is never presented as a repository-wide count or as proof that the listed work passed tests.",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-neo4j.json",
+        "test_query_answer_contract_acceptance_clauses.py::test_duplicate_selected_rows_count_once_and_missing_status_has_unknown_bucket"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/populations.py",
+          "function": "retrieve_population",
+          "line": 19
+        },
+        {
+          "file": "knowledge/answers.py",
+          "function": "assess_answer",
+          "line": 18
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_neo4j.py",
+          "function": "contradiction",
+          "line": 154
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-4",
+      "clause_id": "AC-1",
+      "criterion": "an absent matching operation over supported source kinds, relationships and required fields is identified as a query-capability gap eligible for the existing governed build process",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-05-P/N",
+        "test_core.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/capability_fit.py",
+          "function": "assess_capability_fit",
+          "line": 11
+        },
+        {
+          "file": "integrations/query_graph.py",
+          "function": "build_query_growth_graph",
+          "line": 190
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_available_fields_with_missing_query_can_dispatch_builder",
+          "line": 286
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-4",
+      "clause_id": "AC-2",
+      "criterion": "an operation that exists but cannot expose a required canonical field is identified as a field availability gap rather than a complete answer or a query-only repair",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-05-P/N",
+        "test_core.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/capability_fit.py",
+          "function": "assess_capability_fit",
+          "line": 11
+        },
+        {
+          "file": "integrations/query_graph.py",
+          "function": "build_query_growth_graph",
+          "line": 190
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_missing_field_mapping_never_dispatches_query_builder",
+          "line": 270
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-4",
+      "clause_id": "AC-3",
+      "criterion": "a missing source-kind or relationship mapping is identified as an unsupported mapping before query creation is requested",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-05-P/N",
+        "test_core.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/capability_fit.py",
+          "function": "assess_capability_fit",
+          "line": 11
+        },
+        {
+          "file": "integrations/query_graph.py",
+          "function": "build_query_growth_graph",
+          "line": 190
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_corpus.py",
+          "function": "run",
+          "line": 76
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-4",
+      "clause_id": "AC-4",
+      "criterion": "a required fact absent from the canonical source is distinguished from a fact present in the source but omitted by projection or disclosure when attributable diagnostics establish that distinction",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-05-P/N",
+        "test_core.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/capability_fit.py",
+          "function": "assess_capability_fit",
+          "line": 11
+        },
+        {
+          "file": "integrations/query_graph.py",
+          "function": "build_query_growth_graph",
+          "line": 190
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance.py",
+          "function": "test_actual_source_absence_and_disclosure_omission_have_distinct_reasons",
+          "line": 193
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-4",
+      "clause_id": "AC-5",
+      "criterion": "when those diagnostics are unavailable the cause remains unknown rather than being guessed",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-05-P/N",
+        "test_core.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/capability_fit.py",
+          "function": "assess_capability_fit",
+          "line": 11
+        },
+        {
+          "file": "integrations/query_graph.py",
+          "function": "build_query_growth_graph",
+          "line": 190
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance.py",
+          "function": "test_cli_missing_work_status_stays_unresolved_without_oracle_backfill",
+          "line": 71
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-4",
+      "clause_id": "AC-6",
+      "criterion": "completed zero matches, missing input, unavailable services, denied access, stale evidence and exhausted limits retain their existing distinct outcomes",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-05-P/N",
+        "test_core.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/capability_fit.py",
+          "function": "assess_capability_fit",
+          "line": 11
+        },
+        {
+          "file": "integrations/query_graph.py",
+          "function": "build_query_growth_graph",
+          "line": 190
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance.py",
+          "function": "test_cli_best_effort_cannot_fulfill_outage_or_absent_exact_identity",
+          "line": 118
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-4",
+      "clause_id": "AC-7",
+      "criterion": "none of those outcomes independently authorizes query creation, canonical data changes or broader access.",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-05-P/N",
+        "test_core.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/capability_fit.py",
+          "function": "assess_capability_fit",
+          "line": 11
+        },
+        {
+          "file": "integrations/query_graph.py",
+          "function": "build_query_growth_graph",
+          "line": 190
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_missing_field_mapping_never_dispatches_query_builder",
+          "line": 270
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-5",
+      "clause_id": "AC-1",
+      "criterion": "it defines the separate meanings of lifecycle status, requirement status, work status, readiness, execution result and question fulfillment",
+      "verdict": "documentation_verified",
+      "evidence": [
+        "docs/reference/knowledge-retrieval-answers.md",
+        "documentation-verifier content, placeholder and staged diff inspection"
+      ],
+      "limitation": "Actual documentation-verifier phase completed; other lifecycle roles remain independently owned.",
+      "implementation_evidence": [
+        {
+          "file": "docs/reference/knowledge-retrieval-answers.md",
+          "function": "documentation contract and examples"
+        }
+      ],
+      "test_evidence": [
+        {
+          "review": "Final staged diff, canonical explicit-file placeholder scan, JSON examples, API/proof inspection",
+          "automated_behavior_test_required": false
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-5",
+      "clause_id": "AC-2",
+      "criterion": "it explains root-only versus terminal-leaf counting, known totals versus incomplete enumeration, source revision versus tested revision, and declared tests versus execution and deployment evidence",
+      "verdict": "documentation_verified",
+      "evidence": [
+        "docs/reference/knowledge-retrieval-answers.md",
+        "documentation-verifier content, placeholder and staged diff inspection"
+      ],
+      "limitation": "Actual documentation-verifier phase completed; other lifecycle roles remain independently owned.",
+      "implementation_evidence": [
+        {
+          "file": "docs/reference/knowledge-retrieval-answers.md",
+          "function": "documentation contract and examples"
+        }
+      ],
+      "test_evidence": [
+        {
+          "review": "Final staged diff, canonical explicit-file placeholder scan, JSON examples, API/proof inspection",
+          "automated_behavior_test_required": false
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-5",
+      "clause_id": "AC-3",
+      "criterion": "it describes missing-field, missing-source, unsupported-mapping, missing-query and unavailable-trace outcomes with examples that cannot be mistaken for completed answers",
+      "verdict": "documentation_verified",
+      "evidence": [
+        "docs/reference/knowledge-retrieval-answers.md",
+        "documentation-verifier content, placeholder and staged diff inspection"
+      ],
+      "limitation": "Actual documentation-verifier phase completed; other lifecycle roles remain independently owned.",
+      "implementation_evidence": [
+        {
+          "file": "docs/reference/knowledge-retrieval-answers.md",
+          "function": "documentation contract and examples"
+        }
+      ],
+      "test_evidence": [
+        {
+          "review": "Final staged diff, canonical explicit-file placeholder scan, JSON examples, API/proof inspection",
+          "automated_behavior_test_required": false
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-5",
+      "clause_id": "AC-4",
+      "criterion": "it maps all eight query families and all twenty-five role questions to supported evidence contracts or explicit source limitations",
+      "verdict": "documentation_verified",
+      "evidence": [
+        "docs/reference/knowledge-retrieval-answers.md",
+        "documentation-verifier content, placeholder and staged diff inspection"
+      ],
+      "limitation": "Actual documentation-verifier phase completed; other lifecycle roles remain independently owned.",
+      "implementation_evidence": [
+        {
+          "file": "docs/reference/knowledge-retrieval-answers.md",
+          "function": "documentation contract and examples"
+        }
+      ],
+      "test_evidence": [
+        {
+          "review": "Final staged diff, canonical explicit-file placeholder scan, JSON examples, API/proof inspection",
+          "automated_behavior_test_required": false
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-5",
+      "clause_id": "AC-5",
+      "criterion": "the same reference serves the field, impact and diagnosis features without creating competing definitions",
+      "verdict": "documentation_verified",
+      "evidence": [
+        "docs/reference/knowledge-retrieval-answers.md",
+        "documentation-verifier content, placeholder and staged diff inspection"
+      ],
+      "limitation": "Actual documentation-verifier phase completed; other lifecycle roles remain independently owned.",
+      "implementation_evidence": [
+        {
+          "file": "docs/reference/knowledge-retrieval-answers.md",
+          "function": "documentation contract and examples"
+        }
+      ],
+      "test_evidence": [
+        {
+          "review": "Final staged diff, canonical explicit-file placeholder scan, JSON examples, API/proof inspection",
+          "automated_behavior_test_required": false
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500e-5",
+      "clause_id": "AC-6",
+      "criterion": "planned evaluation cases and unavailable real-provider or deployment proof are identified as pending.",
+      "verdict": "documentation_verified",
+      "evidence": [
+        "docs/reference/knowledge-retrieval-answers.md",
+        "documentation-verifier content, placeholder and staged diff inspection"
+      ],
+      "limitation": "Actual documentation-verifier phase completed; other lifecycle roles remain independently owned.",
+      "implementation_evidence": [
+        {
+          "file": "docs/reference/knowledge-retrieval-answers.md",
+          "function": "documentation contract and examples"
+        }
+      ],
+      "test_evidence": [
+        {
+          "review": "Final staged diff, canonical explicit-file placeholder scan, JSON examples, API/proof inspection",
+          "automated_behavior_test_required": false
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-1",
+      "clause_id": "AC-1",
+      "criterion": "the answer identifies TQ-500f-2-i, TQ-500f-2-ii, TQ-500f-3-i, TQ-500f-5 and TQ-500f-6 with each supporting dependency declaration",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-impact.json",
+        "reports/knowledge-answer-neo4j.json"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/populations.py",
+          "function": "retrieve_population",
+          "line": 19
+        },
+        {
+          "file": "knowledge/assessment_impact.py",
+          "function": "impact",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_neo4j.py",
+          "function": "dependencies",
+          "line": 164
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-1",
+      "clause_id": "AC-2",
+      "criterion": "it states the relation direction, depth, source revision and inspected population",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-impact.json",
+        "reports/knowledge-answer-neo4j.json"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/populations.py",
+          "function": "retrieve_population",
+          "line": 19
+        },
+        {
+          "file": "knowledge/assessment_impact.py",
+          "function": "impact",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_neo4j.py",
+          "function": "dependencies",
+          "line": 164
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-1",
+      "clause_id": "AC-3",
+      "criterion": "hierarchy membership, declared dependency, implementation reference and inferred impact remain distinguishable rather than being treated as interchangeable edges",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-impact.json",
+        "reports/knowledge-answer-neo4j.json"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/populations.py",
+          "function": "retrieve_population",
+          "line": 19
+        },
+        {
+          "file": "knowledge/assessment_impact.py",
+          "function": "impact",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_neo4j.py",
+          "function": "dependencies",
+          "line": 164
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-1",
+      "clause_id": "AC-4",
+      "criterion": "a result that omits one dependent and declares truncation reports only its known subset without asserting a complete total",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-impact.json",
+        "reports/knowledge-answer-neo4j.json"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/populations.py",
+          "function": "retrieve_population",
+          "line": 19
+        },
+        {
+          "file": "knowledge/assessment_impact.py",
+          "function": "impact",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_impact.py",
+          "function": "run",
+          "line": 26
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-1",
+      "clause_id": "AC-5",
+      "criterion": "any requested comparison between two revisions identifies both revisions and limits its claims to the source changes and relationships actually inspected",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-impact.json",
+        "reports/knowledge-answer-neo4j.json"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/populations.py",
+          "function": "retrieve_population",
+          "line": 19
+        },
+        {
+          "file": "knowledge/assessment_impact.py",
+          "function": "impact",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_impact.py",
+          "function": "run",
+          "line": 26
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-1",
+      "clause_id": "AC-6",
+      "criterion": "absent code-consumer or transitive dependency evidence is named as an impact-analysis limitation rather than being filled by an exhaustive-consumer claim.",
+      "verdict": "locally_supported",
+      "evidence": [
+        "reports/knowledge-answer-impact.json",
+        "reports/knowledge-answer-neo4j.json"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/populations.py",
+          "function": "retrieve_population",
+          "line": 19
+        },
+        {
+          "file": "knowledge/assessment_impact.py",
+          "function": "impact",
+          "line": 12
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_impact.py",
+          "function": "run",
+          "line": 26
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-2",
+      "clause_id": "AC-1",
+      "criterion": "the answer lists declared references separately from observed execution evidence and identifies the revision and environment each report actually exercised",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_proof.py",
+          "function": "verification",
+          "line": 13
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "assessment_bundle",
+          "line": 90
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_research_returns_actual_declarations_and_historical_report_proof",
+          "line": 154
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-2",
+      "clause_id": "AC-2",
+      "criterion": "the reported scripted judgment and supplied candidate remain distinct from a real judgment-provider or coding-agent run",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_proof.py",
+          "function": "verification",
+          "line": 13
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "assessment_bundle",
+          "line": 90
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_research_returns_actual_declarations_and_historical_report_proof",
+          "line": 154
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-2",
+      "clause_id": "AC-3",
+      "criterion": "a reported partial research result remains partial even when the surrounding test passed",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_proof.py",
+          "function": "verification",
+          "line": 13
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "assessment_bundle",
+          "line": 90
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_research_returns_actual_declarations_and_historical_report_proof",
+          "line": 154
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-2",
+      "clause_id": "AC-4",
+      "criterion": "an AC's done status, an existing test reference, a passing local check and deployed operation are presented as separate facts",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_proof.py",
+          "function": "verification",
+          "line": 13
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "assessment_bundle",
+          "line": 90
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_assessment.py",
+          "function": "test_declared_test_references_are_not_execution_proof",
+          "line": 50
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-2",
+      "clause_id": "AC-5",
+      "criterion": "absent runtime or deployment evidence is reported as unverified for that claim, rather than as passing or failing",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_proof.py",
+          "function": "verification",
+          "line": 13
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "assessment_bundle",
+          "line": 90
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_missing_or_foreign_supplied_source_cannot_become_sufficient",
+          "line": 172
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-2",
+      "clause_id": "AC-6",
+      "criterion": "the revision storing a historical report is never substituted for the revision that report says it tested",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_proof.py",
+          "function": "verification",
+          "line": 13
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "assessment_bundle",
+          "line": 90
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_research_returns_actual_declarations_and_historical_report_proof",
+          "line": 154
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-2",
+      "clause_id": "AC-7",
+      "criterion": "neither available proof nor declared coverage is generalized beyond the specific behavior, environment and population it establishes.",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_proof.py",
+          "function": "verification",
+          "line": 13
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "assessment_bundle",
+          "line": 90
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_research_outage_never_relabels_supplied_report_as_discovered_proof",
+          "line": 306
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-3",
+      "clause_id": "AC-1",
+      "criterion": "the request identifies a decision policy and supplies some combination of recorded priority, readiness, work status, dependencies and proof",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance.py::test_actual_retrieval_readiness_uses_source_facts_not_conflicting_candidate_packet",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_readiness.py",
+          "function": "readiness",
+          "line": 13
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_research_readiness_uses_actual_facts_instead_of_packet_candidate",
+          "line": 242
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-3",
+      "clause_id": "AC-2",
+      "criterion": "it cites the available source facts and identifies the policy used to compare the candidates or assess the benefit",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance.py::test_actual_retrieval_readiness_uses_source_facts_not_conflicting_candidate_packet",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_readiness.py",
+          "function": "readiness",
+          "line": 13
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_research_readiness_uses_actual_facts_instead_of_packet_candidate",
+          "line": 242
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-3",
+      "clause_id": "AC-3",
+      "criterion": "recommendation or interpretation is labeled separately from canonical priority and recorded status",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance.py::test_actual_retrieval_readiness_uses_source_facts_not_conflicting_candidate_packet",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_readiness.py",
+          "function": "readiness",
+          "line": 13
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance.py",
+          "function": "test_actual_retrieval_readiness_uses_source_facts_not_conflicting_candidate_packet",
+          "line": 159
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-3",
+      "clause_id": "AC-4",
+      "criterion": "missing prerequisites, unresolved dependency evidence and absent execution or deployment proof remain visible for each affected conclusion",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance.py::test_actual_retrieval_readiness_uses_source_facts_not_conflicting_candidate_packet",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_readiness.py",
+          "function": "readiness",
+          "line": 13
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_research_readiness_uses_actual_facts_instead_of_packet_candidate",
+          "line": 242
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-3",
+      "clause_id": "AC-5",
+      "criterion": "a requirement marked done is not described as available to users without evidence for the requested environment",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance.py::test_actual_retrieval_readiness_uses_source_facts_not_conflicting_candidate_packet",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_readiness.py",
+          "function": "readiness",
+          "line": 13
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance.py",
+          "function": "test_actual_retrieval_readiness_uses_source_facts_not_conflicting_candidate_packet",
+          "line": 159
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-3",
+      "clause_id": "AC-6",
+      "criterion": "if the ranking policy or required source facts are unavailable, the response requests the missing decision input or reports that the ranking cannot be established",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance.py::test_actual_retrieval_readiness_uses_source_facts_not_conflicting_candidate_packet",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_readiness.py",
+          "function": "readiness",
+          "line": 13
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_assessment.py",
+          "function": "test_readiness_without_supplied_policy_cannot_invent_priority",
+          "line": 166
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-3",
+      "clause_id": "AC-7",
+      "criterion": "no recommendation silently changes canonical priorities, readiness or work status.",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance.py::test_actual_retrieval_readiness_uses_source_facts_not_conflicting_candidate_packet",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_readiness.py",
+          "function": "readiness",
+          "line": 13
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_research_readiness_uses_actual_facts_instead_of_packet_candidate",
+          "line": 242
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-4",
+      "clause_id": "AC-1",
+      "criterion": "an explanation based on inspected source identifies the attributable stages and supporting locations that establish the claimed field transformation",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_runtime_cause_requires_matching_supplied_attempt_and_remains_unverified",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_implementation",
+          "line": 35
+        },
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_runtime_cause",
+          "line": 79
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_research_returns_bounded_actual_source_interpretation",
+          "line": 267
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-4",
+      "clause_id": "AC-2",
+      "criterion": "declared implementation references are labeled as references rather than proof of a complete function or data-flow graph",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_runtime_cause_requires_matching_supplied_attempt_and_remains_unverified",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_implementation",
+          "line": 35
+        },
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_runtime_cause",
+          "line": 79
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_assessment.py",
+          "function": "test_inspected_actual_source_explanation_is_not_runtime_causation",
+          "line": 116
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-4",
+      "clause_id": "AC-3",
+      "criterion": "a source-based explanation remains distinguishable from a diagnosis of one particular runtime request",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_runtime_cause_requires_matching_supplied_attempt_and_remains_unverified",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_implementation",
+          "line": 35
+        },
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_runtime_cause",
+          "line": 79
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_research_returns_bounded_actual_source_interpretation",
+          "line": 267
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-4",
+      "clause_id": "AC-4",
+      "criterion": "a runtime-cause claim requires the matching request or diagnostic evidence in addition to source interpretation",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_runtime_cause_requires_matching_supplied_attempt_and_remains_unverified",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_implementation",
+          "line": 35
+        },
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_runtime_cause",
+          "line": 79
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_clauses.py",
+          "function": "test_runtime_cause_requires_matching_supplied_attempt_and_remains_unverified",
+          "line": 53
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-4",
+      "clause_id": "AC-5",
+      "criterion": "if implementation source or its approved inspection route is unavailable, the answer identifies that missing evidence and leaves the unobserved transformation unresolved",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_runtime_cause_requires_matching_supplied_attempt_and_remains_unverified",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_implementation",
+          "line": 35
+        },
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_runtime_cause",
+          "line": 79
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_assessment.py",
+          "function": "test_unbacked_source_stage_is_excluded",
+          "line": 133
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-4",
+      "clause_id": "AC-6",
+      "criterion": "the absence of an indexed code relationship is not treated as proof that the code or dependency does not exist.",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_runtime_cause_requires_matching_supplied_attempt_and_remains_unverified",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_implementation",
+          "line": 35
+        },
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_runtime_cause",
+          "line": 79
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_research_returns_bounded_actual_source_interpretation",
+          "line": 267
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-5",
+      "clause_id": "AC-1",
+      "criterion": "each recommended test or fixture is accompanied by the behavior it guards, its source reference and the inspected evidence supporting that recommendation",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_inspected_regression_scope_and_comparison_are_explicit_supplied_interpretation",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_regression",
+          "line": 111
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_research_preserves_inspected_fixture_and_missing_comparison_gap",
+          "line": 286
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-5",
+      "clause_id": "AC-2",
+      "criterion": "any claimed discriminating fixture identifies its seeded facts, expected result, comparison case and actual versus simulated boundaries",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_inspected_regression_scope_and_comparison_are_explicit_supplied_interpretation",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_regression",
+          "line": 111
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_clauses.py",
+          "function": "test_inspected_regression_scope_and_comparison_are_explicit_supplied_interpretation",
+          "line": 77
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-5",
+      "clause_id": "AC-3",
+      "criterion": "a declaration or filename alone is insufficient to claim a fixture reaches the required branch or catches the specified wrong outcome",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_inspected_regression_scope_and_comparison_are_explicit_supplied_interpretation",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_regression",
+          "line": 111
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_assessment.py",
+          "function": "test_inspected_test_without_comparison_remains_design_gap",
+          "line": 148
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-5",
+      "clause_id": "AC-4",
+      "criterion": "the proposed regression set states the inspected change scope and selection reasons without claiming exhaustive or minimal coverage when consumer evidence is incomplete",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_inspected_regression_scope_and_comparison_are_explicit_supplied_interpretation",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_regression",
+          "line": 111
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_clauses.py",
+          "function": "test_inspected_regression_scope_and_comparison_are_explicit_supplied_interpretation",
+          "line": 77
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-5",
+      "clause_id": "AC-5",
+      "criterion": "missing test requirements, fixture contents or execution evidence are reported as missing rather than inferred from a test name or a done AC",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_inspected_regression_scope_and_comparison_are_explicit_supplied_interpretation",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_regression",
+          "line": 111
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_research_preserves_inspected_fixture_and_missing_comparison_gap",
+          "line": 286
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500f-5",
+      "clause_id": "AC-6",
+      "criterion": "missing negative or comparison evidence remains an explicit test-design gap even if the available happy-path test passed.",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_assessment.py",
+        "test_query_answer_contract_acceptance_clauses.py::test_inspected_regression_scope_and_comparison_are_explicit_supplied_interpretation",
+        "test_query_answer_contract_acceptance_research_assessment.py"
+      ],
+      "limitation": "Public kernel research run/resume and final per-need assessment verified with scripted external judgment; supplied proof remains attributed, not independently executed.",
+      "implementation_evidence": [
+        {
+          "file": "knowledge/assessment_interpretation.py",
+          "function": "_regression",
+          "line": 111
+        },
+        {
+          "file": "integrations/knowledge_assessment.py",
+          "function": "finalize_assessment",
+          "line": 42
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py",
+          "function": "test_research_preserves_inspected_fixture_and_missing_comparison_gap",
+          "line": 286
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-1-i",
+      "clause_id": "AC-1",
+      "criterion": "its retrieval evidence and original-question fulfillment outcome remain available independently of remote observation delivery",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_observation.py",
+        "tests/kernel/observability/test_langfuse_tracer.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_cli.py",
+          "function": "main",
+          "line": 61
+        },
+        {
+          "file": "knowledge/observation.py",
+          "function": "fit_observation",
+          "line": 55
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_observation.py",
+          "function": "test_application_cli_telemetry_failure_preserves_single_retrieval",
+          "line": 133
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-1-i",
+      "clause_id": "AC-2",
+      "criterion": "the response distinguishes observations disabled from attempted delivery unavailable",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_observation.py",
+        "tests/kernel/observability/test_langfuse_tracer.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_cli.py",
+          "function": "main",
+          "line": 61
+        },
+        {
+          "file": "knowledge/observation.py",
+          "function": "fit_observation",
+          "line": 55
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_observation.py",
+          "function": "test_public_cli_disabled_observation_is_explicit",
+          "line": 48
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-1-i",
+      "clause_id": "AC-3",
+      "criterion": "neither attempt supplies a fabricated accessible trace or silently claims that the observation was recorded remotely",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_observation.py",
+        "tests/kernel/observability/test_langfuse_tracer.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_cli.py",
+          "function": "main",
+          "line": 61
+        },
+        {
+          "file": "knowledge/observation.py",
+          "function": "fit_observation",
+          "line": 55
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_observation.py",
+          "function": "test_real_app_observer_withholds_candidate_url_until_verified",
+          "line": 105
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-1-i",
+      "clause_id": "AC-4",
+      "criterion": "the unavailable observation cannot change missing evidence into a completed answer or an empty successful search",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_observation.py",
+        "tests/kernel/observability/test_langfuse_tracer.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_cli.py",
+          "function": "main",
+          "line": 61
+        },
+        {
+          "file": "knowledge/observation.py",
+          "function": "fit_observation",
+          "line": 55
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_observation.py",
+          "function": "test_public_cli_observer_failure_does_not_repeat_retrieval",
+          "line": 80
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-1-i",
+      "clause_id": "AC-5",
+      "criterion": "no observation failure causes the original retrieval or a capability build to repeat without the existing retry and authorization rules.",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_observation.py",
+        "tests/kernel/observability/test_langfuse_tracer.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_cli.py",
+          "function": "main",
+          "line": 61
+        },
+        {
+          "file": "knowledge/observation.py",
+          "function": "fit_observation",
+          "line": 55
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_observation.py",
+          "function": "test_verbose_observer_cannot_exceed_cumulative_page_budget",
+          "line": 174
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-1",
+      "clause_id": "AC-1",
+      "criterion": "the installation has an authorized configured observation service",
+      "verdict": "not_run",
+      "evidence": [
+        "test_query_answer_contract_acceptance_observation.py"
+      ],
+      "limitation": "Real remote observation authorization/ingestion/reference resolution remains pending.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "observation_summary",
+          "line": 22
+        },
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "RetrievalObserver",
+          "line": 47
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_observation.py",
+          "function": "test_public_cli_disabled_observation_is_explicit",
+          "line": 48
+        }
+      ],
+      "coverage_classification": "partial"
+    },
+    {
+      "ac_id": "KM-500g-1",
+      "clause_id": "AC-2",
+      "criterion": "the observation identifies the original requested answer, required facts, execution result and unresolved question outcome as separate information",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_observation.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "observation_summary",
+          "line": 22
+        },
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "RetrievalObserver",
+          "line": 47
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_observation.py",
+          "function": "test_real_app_observer_withholds_candidate_url_until_verified",
+          "line": 105
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-1",
+      "clause_id": "AC-3",
+      "criterion": "the missing work-status field and result completeness limitation remain visible even though execution succeeded",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_observation.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "observation_summary",
+          "line": 22
+        },
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "RetrievalObserver",
+          "line": 47
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_observation.py",
+          "function": "test_real_app_observer_withholds_candidate_url_until_verified",
+          "line": 105
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-1",
+      "clause_id": "AC-4",
+      "criterion": "the request, retrieval attempt, repository, available source revision, generation and selected query are correlated with the supporting evidence identifiers",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_observation.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "observation_summary",
+          "line": 22
+        },
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "RetrievalObserver",
+          "line": 47
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_observation.py",
+          "function": "test_real_app_observer_withholds_candidate_url_until_verified",
+          "line": 105
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-1",
+      "clause_id": "AC-5",
+      "criterion": "the caller receives an attributable observation reference or an explicit statement that remote observation was not established",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_observation.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "observation_summary",
+          "line": 22
+        },
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "RetrievalObserver",
+          "line": 47
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_observation.py",
+          "function": "test_public_cli_local_observation_is_unverified_and_once",
+          "line": 61
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-1",
+      "clause_id": "AC-6",
+      "criterion": "a claimed Langfuse reference resolves to the matching recorded attempt rather than merely being an unverified locally generated identifier",
+      "verdict": "not_run",
+      "evidence": [
+        "test_query_answer_contract_acceptance_observation.py"
+      ],
+      "limitation": "Real remote observation authorization/ingestion/reference resolution remains pending.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "observation_summary",
+          "line": 22
+        },
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "RetrievalObserver",
+          "line": 47
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_observation.py",
+          "function": "test_real_app_observer_withholds_candidate_url_until_verified",
+          "line": 105
+        }
+      ],
+      "coverage_classification": "partial"
+    },
+    {
+      "ac_id": "KM-500g-1",
+      "clause_id": "AC-7",
+      "criterion": "the recorded metadata follows existing privacy and access rules without exposing credentials or unrestricted source contents",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_observation.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "observation_summary",
+          "line": 22
+        },
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "RetrievalObserver",
+          "line": 47
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_observation.py",
+          "function": "test_real_app_observer_withholds_candidate_url_until_verified",
+          "line": 105
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-1",
+      "clause_id": "AC-8",
+      "criterion": "neither query success nor the presence of a trace turns an unresolved question into an answered one.",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_observation.py"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "observation_summary",
+          "line": 22
+        },
+        {
+          "file": "integrations/knowledge_observation.py",
+          "function": "RetrievalObserver",
+          "line": 47
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_observation.py",
+          "function": "test_public_cli_observer_failure_does_not_repeat_retrieval",
+          "line": 80
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-2",
+      "clause_id": "AC-1",
+      "criterion": "the first diagnosis identifies the evidenced field gap while the second identifies retrieval unavailability without claiming zero ACs exist",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-06-P/N"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_diagnosis.py",
+          "function": "diagnosis",
+          "line": 14
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_missing_fact_diagnosis_does_not_invent_remote_trace_or_root_cause",
+          "line": 251
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-2",
+      "clause_id": "AC-2",
+      "criterion": "any source revision and generation named in the diagnosis come from that attempt rather than a different run or the current workspace",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-06-P/N"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_diagnosis.py",
+          "function": "diagnosis",
+          "line": 14
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_foreign_evidence_diagnosis_compares_actual_scope_and_withholds_evidence",
+          "line": 232
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-2",
+      "clause_id": "AC-3",
+      "criterion": "current workspace, published source and historically tested revision remain distinguishable when the question concerns freshness",
+      "verdict": "qualified_prerequisite_open",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-06-P/N"
+      ],
+      "limitation": "Source/tested/workspace identities distinguished; broader publication freshness prerequisite KM-500d-2 remains todo.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_diagnosis.py",
+          "function": "diagnosis",
+          "line": 14
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_assessment.py",
+          "function": "test_reviewed_actual_historical_report_preserves_claims_and_distinct_revisions",
+          "line": 197
+        }
+      ],
+      "coverage_classification": "partial"
+    },
+    {
+      "ac_id": "KM-500g-2",
+      "clause_id": "AC-4",
+      "criterion": "when matching diagnostics establish a scope mismatch, the diagnosis states the expected and observed repository, revision, query or permission scope values that are known and cites the governing contract",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-06-P/N"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_diagnosis.py",
+          "function": "diagnosis",
+          "line": 14
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_foreign_evidence_diagnosis_compares_actual_scope_and_withholds_evidence",
+          "line": 232
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-2",
+      "clause_id": "AC-5",
+      "criterion": "unavailable comparison values remain unknown rather than being reconstructed from a different attempt",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-06-P/N"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_diagnosis.py",
+          "function": "diagnosis",
+          "line": 14
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_missing_fact_diagnosis_does_not_invent_remote_trace_or_root_cause",
+          "line": 251
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-2",
+      "clause_id": "AC-6",
+      "criterion": "any rerun recommendation identifies a bounded case and why it addresses the observed mismatch, without claiming proven minimality or broader permission",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-06-P/N"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_diagnosis.py",
+          "function": "diagnosis",
+          "line": 14
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_foreign_evidence_diagnosis_compares_actual_scope_and_withholds_evidence",
+          "line": 232
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-2",
+      "clause_id": "AC-7",
+      "criterion": "a more specific claim about credentials, network, provider, source mapping or field transformation requires matching diagnostic evidence",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-06-P/N"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_diagnosis.py",
+          "function": "diagnosis",
+          "line": 14
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_missing_fact_diagnosis_does_not_invent_remote_trace_or_root_cause",
+          "line": 251
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-2",
+      "clause_id": "AC-8",
+      "criterion": "absent or conflicting diagnostics produce an unknown-cause or unresolved outcome with the missing information named",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-06-P/N"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_diagnosis.py",
+          "function": "diagnosis",
+          "line": 14
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_missing_fact_diagnosis_does_not_invent_remote_trace_or_root_cause",
+          "line": 251
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-2",
+      "clause_id": "AC-9",
+      "criterion": "the next step addresses the established limitation under existing permissions, such as completing required evidence, checking publication state or obtaining the matching observation",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-06-P/N"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_diagnosis.py",
+          "function": "diagnosis",
+          "line": 14
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/test_query_answer_contract_acceptance_kernel.py",
+          "function": "test_foreign_evidence_diagnosis_compares_actual_scope_and_withholds_evidence",
+          "line": 232
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-2",
+      "clause_id": "AC-10",
+      "criterion": "source-inspected evaluation expectations are never substituted for what the failed retrieval actually returned.",
+      "verdict": "locally_supported",
+      "evidence": [
+        "test_query_answer_contract_acceptance_kernel.py",
+        "reports/knowledge-answer-evaluation.json:RQE-06-P/N"
+      ],
+      "limitation": "Local public interfaces and explicit controlled boundaries; no live provider claim.",
+      "implementation_evidence": [
+        {
+          "file": "integrations/knowledge_diagnosis.py",
+          "function": "diagnosis",
+          "line": 14
+        }
+      ],
+      "test_evidence": [
+        {
+          "file": "tests/knowledge/query_answer_contract_acceptance_corpus.py",
+          "function": "run",
+          "line": 76
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-3",
+      "clause_id": "AC-1",
+      "criterion": "the walkthrough starts from an explicit question and scope and shows how to inspect required fields, source revision, completeness and question fulfillment in the actual returned evidence",
+      "verdict": "documentation_verified",
+      "evidence": [
+        "docs/how-to/run-knowledge-retrieval.md",
+        "documentation-verifier content, placeholder and staged diff inspection"
+      ],
+      "limitation": "Actual documentation-verifier phase completed; other lifecycle roles remain independently owned.",
+      "implementation_evidence": [
+        {
+          "file": "docs/how-to/run-knowledge-retrieval.md",
+          "function": "documentation contract and examples"
+        }
+      ],
+      "test_evidence": [
+        {
+          "review": "Final staged diff, canonical explicit-file placeholder scan, JSON examples, API/proof inspection",
+          "automated_behavior_test_required": false
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-3",
+      "clause_id": "AC-2",
+      "criterion": "examples distinguish a root-excluded AC count, an incomplete status answer, a declared-test answer without execution proof, a missing query and an unsupported source mapping",
+      "verdict": "documentation_verified",
+      "evidence": [
+        "docs/how-to/run-knowledge-retrieval.md",
+        "documentation-verifier content, placeholder and staged diff inspection"
+      ],
+      "limitation": "Actual documentation-verifier phase completed; other lifecycle roles remain independently owned.",
+      "implementation_evidence": [
+        {
+          "file": "docs/how-to/run-knowledge-retrieval.md",
+          "function": "documentation contract and examples"
+        }
+      ],
+      "test_evidence": [
+        {
+          "review": "Final staged diff, canonical explicit-file placeholder scan, JSON examples, API/proof inspection",
+          "automated_behavior_test_required": false
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-3",
+      "clause_id": "AC-3",
+      "criterion": "an observation example shows how to follow a verified trace reference or recognize that no remote trace was established",
+      "verdict": "documentation_verified",
+      "evidence": [
+        "docs/how-to/run-knowledge-retrieval.md",
+        "documentation-verifier content, placeholder and staged diff inspection"
+      ],
+      "limitation": "Actual documentation-verifier phase completed; other lifecycle roles remain independently owned.",
+      "implementation_evidence": [
+        {
+          "file": "docs/how-to/run-knowledge-retrieval.md",
+          "function": "documentation contract and examples"
+        }
+      ],
+      "test_evidence": [
+        {
+          "review": "Final staged diff, canonical explicit-file placeholder scan, JSON examples, API/proof inspection",
+          "automated_behavior_test_required": false
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-3",
+      "clause_id": "AC-4",
+      "criterion": "it explains when to clarify, request further evidence, propose a governed query build or stop with an unresolved answer",
+      "verdict": "documentation_verified",
+      "evidence": [
+        "docs/how-to/run-knowledge-retrieval.md",
+        "documentation-verifier content, placeholder and staged diff inspection"
+      ],
+      "limitation": "Actual documentation-verifier phase completed; other lifecycle roles remain independently owned.",
+      "implementation_evidence": [
+        {
+          "file": "docs/how-to/run-knowledge-retrieval.md",
+          "function": "documentation contract and examples"
+        }
+      ],
+      "test_evidence": [
+        {
+          "review": "Final staged diff, canonical explicit-file placeholder scan, JSON examples, API/proof inspection",
+          "automated_behavior_test_required": false
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-3",
+      "clause_id": "AC-5",
+      "criterion": "canonical source inspection used to design an expected answer is identified separately from an actual tool demonstration",
+      "verdict": "documentation_verified",
+      "evidence": [
+        "docs/how-to/run-knowledge-retrieval.md",
+        "documentation-verifier content, placeholder and staged diff inspection"
+      ],
+      "limitation": "Actual documentation-verifier phase completed; other lifecycle roles remain independently owned.",
+      "implementation_evidence": [
+        {
+          "file": "docs/how-to/run-knowledge-retrieval.md",
+          "function": "documentation contract and examples"
+        }
+      ],
+      "test_evidence": [
+        {
+          "review": "Final staged diff, canonical explicit-file placeholder scan, JSON examples, API/proof inspection",
+          "automated_behavior_test_required": false
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-3",
+      "clause_id": "AC-6",
+      "criterion": "disabled services, missing authorization and unavailable real-provider or deployment proof remain visible rather than being presented as passing examples",
+      "verdict": "documentation_verified",
+      "evidence": [
+        "docs/how-to/run-knowledge-retrieval.md",
+        "documentation-verifier content, placeholder and staged diff inspection"
+      ],
+      "limitation": "Actual documentation-verifier phase completed; other lifecycle roles remain independently owned.",
+      "implementation_evidence": [
+        {
+          "file": "docs/how-to/run-knowledge-retrieval.md",
+          "function": "documentation contract and examples"
+        }
+      ],
+      "test_evidence": [
+        {
+          "review": "Final staged diff, canonical explicit-file placeholder scan, JSON examples, API/proof inspection",
+          "automated_behavior_test_required": false
+        }
+      ],
+      "coverage_classification": "covered"
+    },
+    {
+      "ac_id": "KM-500g-3",
+      "clause_id": "AC-7",
+      "criterion": "the walkthrough uses the shared reference definitions and states each example's actual verification status.",
+      "verdict": "documentation_verified",
+      "evidence": [
+        "docs/how-to/run-knowledge-retrieval.md",
+        "documentation-verifier content, placeholder and staged diff inspection"
+      ],
+      "limitation": "Actual documentation-verifier phase completed; other lifecycle roles remain independently owned.",
+      "implementation_evidence": [
+        {
+          "file": "docs/how-to/run-knowledge-retrieval.md",
+          "function": "documentation contract and examples"
+        }
+      ],
+      "test_evidence": [
+        {
+          "review": "Final staged diff, canonical explicit-file placeholder scan, JSON examples, API/proof inspection",
+          "automated_behavior_test_required": false
+        }
+      ],
+      "coverage_classification": "covered"
+    }
+  ],
+  "evaluated_at_utc": "2026-10-01T20:36:35.263192+00:00",
+  "alignment_checks": {
+    "tickets_checked": 13,
+    "passed": 13,
+    "command": "python scripts/commit_guardian/check_v2_ac_store_alignment.py --ticket <each code ticket>",
+    "stdout": "",
+    "stderr": "",
+    "exit_code": 0
+  },
+  "executing_code_digest": "35dab2b5b5eb925ede540aad9ddda3e65b95625d28e8241aef886fd5c8e63794",
+  "coverage_counts": {
+    "covered": 101,
+    "partial": 10
+  },
+  "final_working_tree_code_digest": "efea3056a9326c071825f309cf3e001d813461f0956a4133e49569cd7b05926c",
+  "post_test_formatting": "Only trailing whitespace on blank lines in four named kernel files; tested pre-format digest retained in acceptance matrix.",
+  "post_test_comment_repair": "Only 26 canonical DECISION HISTORY comment tags changed after whitespace cleanup; independent AST comparison unchanged; no behavior rerun. See acceptance matrix for exact before/after byte hashes.",
+  "observer_hook_repair": "Fixed sanitized warning added after main tests; independent affected cases passed 7/7. reports/knowledge-answer-observer-hook-tests.xml. Earlier broad evidence is historical, not relabeled as a rerun."
+}

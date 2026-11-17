@@ -1,0 +1,10 @@
+"""Offender shape 4: a module-level constant holding a fixed shared path."""
+import pathlib
+import tempfile
+
+SCRATCH_DIR = pathlib.Path(tempfile.gettempdir()) / "leaf_fixed_shape_d"
+
+
+def test_uses_the_module_level_constant():
+    SCRATCH_DIR.mkdir(exist_ok=True)
+    (SCRATCH_DIR / "out.txt").write_text("scratch")

@@ -112,7 +112,7 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import HarnessResult, run_workflow_under_e2, shell_step_reply, workspace_ensure_reply  # noqa: E402
 
 _WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 _REAL_FAST_LANE_PY = _REPO_ROOT / "scripts" / "build_orchestration" / "fast_lane.py"
@@ -205,22 +205,15 @@ def _build_fixture_c(worktree_root: Path) -> Path:
 # ---------------------------------------------------------------------------
 
 
-def _worktree_label_response(worktree_root: Path) -> dict[str, Any]:
-    return {
-        "worktree_path": str(worktree_root),
-        "branch": "fast-lane/test-bo2600b",
-        "ac_store_path": str(worktree_root / "docs" / "acceptance-criteria"),
-        "created": True,
-    }
-
-
 def _run_lane(
     worktree_root: Path,
     ac_id: str,
     extra_label_responses: dict[str, Any] | None = None,
     extra_args: dict[str, Any] | None = None,
 ) -> HarnessResult:
-    label_responses = {"fastlane-worktree": _worktree_label_response(worktree_root)}
+    label_responses = {"workspace-ensure": workspace_ensure_reply(
+        str(worktree_root), branch="fast-lane/test-bo2600b", created=True,
+        ac_store_path=str(worktree_root / "docs" / "acceptance-criteria"))}
     if extra_label_responses:
         label_responses.update(extra_label_responses)
     args = {"ac": ac_id}
@@ -530,7 +523,7 @@ class TestEmptyTightSetIsACleanStopThatSaysWhy(unittest.TestCase):
             self.worktree_root,
             "FLT-920a",
             extra_label_responses={
-                "resolve-connected": {"ac_ids": [], "message": "0 to build"},
+                "resolve-connected": shell_step_reply([]),
             },
         )
 
@@ -573,7 +566,7 @@ class TestEmptyTightSetIsACleanStopThatSaysWhy(unittest.TestCase):
             self.worktree_root,
             "FLT-920a",
             extra_label_responses={
-                "resolve-connected": {"ac_ids": [], "message": "0 to build"},
+                "resolve-connected": shell_step_reply([]),
             },
         )
 
@@ -614,7 +607,7 @@ class TestEmptyTightSetIsACleanStopThatSaysWhy(unittest.TestCase):
             self.worktree_root,
             "FLT-920a",
             extra_label_responses={
-                "resolve-connected": {"ac_ids": [], "message": "0 to build"},
+                "resolve-connected": shell_step_reply([]),
             },
         )
         self.assertEqual(
@@ -635,7 +628,7 @@ class TestEmptyTightSetIsACleanStopThatSaysWhy(unittest.TestCase):
             self.worktree_root,
             missing_id,
             extra_label_responses={
-                "resolve-connected": {"ac_ids": [], "message": real_missing_message},
+                "resolve-connected": shell_step_reply("", exit_status=1, stderr=real_missing_message),
             },
         )
         self.assertEqual(
@@ -645,10 +638,7 @@ class TestEmptyTightSetIsACleanStopThatSaysWhy(unittest.TestCase):
             "clean nothing-to-build outcome — that distinction must survive "
             f"the exclusion change (BO-2600b-1-ii). Got: {missing_result.result}"
         )
-        self.assertNotEqual(
-            missing_result.result.get("classification"),
-            None,
-        )
+        self.assertIsNotNone(missing_result.result.get("classification"))
         self.assertFalse(
             missing_result.result.get("nothing_to_build"),
             f"A resolution failure must not carry nothing_to_build=true. "

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="18.061" timestamp="2026-10-02T09:29:39.550737+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_exposes_complete_contract_and_future_fields" time="0.007"><failure message="AssertionError: assert {'canonical_i...r', ...}, ...} == {'canonical_i...summary', ...}&#10;  &#10;  Omitting 5 identical items, use -vv to show&#10;  Right contains 1 more item:&#10;  {'summary': 'An original reference summary'}&#10;  Use -v to get more diff">tests\knowledge\test_native_test.py:65: in test_test_reference_exposes_complete_contract_and_future_fields
+    assert record.metadata == expected
+E   AssertionError: assert {'canonical_i...r', ...}, ...} == {'canonical_i...summary', ...}
+E     
+E     Omitting 5 identical items, use -vv to show
+E     Right contains 1 more item:
+E     {'summary': 'An original reference summary'}
+E     Use -v to get more diff</failure></testcase></testsuite></testsuites>

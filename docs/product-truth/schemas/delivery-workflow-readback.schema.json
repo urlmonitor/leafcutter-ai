@@ -1,0 +1,58 @@
+{
+  "type": "object",
+  "properties": {
+    "readable": {
+      "type": "boolean"
+    },
+    "ticket_path": {
+      "type": "string"
+    },
+    "lifecycle_status": {
+      "type": "string"
+    },
+    "needed_phases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "signoffs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "handoff_target": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "signed_off_agents": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "failed_phases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "error": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "readable"
+  ],
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Source-reviewed RECORD_READBACK_SCHEMA",
+  "description": "Documentation transcription of templates/workflows-js/build-ticket.js::RECORD_READBACK_SCHEMA. This is the existing source shape, not a new runtime registration; automatic source/schema parity is not asserted."
+}

@@ -31,7 +31,9 @@ adopter_notes: |
   Requires emit_entry.py at leafcutter/scripts/changelog/emit_entry.py.
   If docs/components.json does not exist, falls back to free-form components entry.
   Create {{config.changelog_categories_path}} to add project-specific categorization
-  rules; if absent, changelog-agent uses conventional-commit prefix heuristics only.
+  rules. Set changelog_categories_path to "" to turn project rules off
+  (changelog-agent then uses conventional-commit prefix heuristics only); leave
+  the key out to use the shipped default location.
 requires_verification: true
 pre_flight_reads:
 - required: true
@@ -98,22 +100,9 @@ Maximum 50 commits per entry. If the range exceeds 50, group the rest under
 
 ## Step 3 — Categorize Commits
 
-First, attempt to load project-specific categorization rules:
+{{changelog_categories_step}}
 
-```bash
-cat "{{config.changelog_categories_path}}" 2>/dev/null
-```
-
-**If the file exists:** parse the rules table from it and apply those
-folder-path-to-category mappings in priority order. The file format is a
-Markdown table with columns `Category` and `Rule` (same format as the
-fallback table below). Use the rules as defined; do not supplement with
-hardcoded project-specific paths.
-
-**If the file does not exist (fallback):** apply only conventional-commit
-prefix heuristics. No file-path-based category guessing.
-
-Fallback heuristics (applied when no categories file is found):
+Fallback heuristics (the default categories, applied when no rules file is read):
 
 | Conventional-commit prefix | Category |
 |---------------------------|----------|
@@ -125,9 +114,6 @@ Fallback heuristics (applied when no categories file is found):
 | `test:` | Tests |
 | `perf:` | Performance |
 | *(no prefix)* | Other |
-
-When a project-specific categories file IS loaded, conventional-commit
-prefixes still take precedence over the file-path rules within that file.
 
 ## Step 4 — Create a Deployment Tag (prod-deploy flow only)
 

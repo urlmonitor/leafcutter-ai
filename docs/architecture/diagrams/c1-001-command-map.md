@@ -5,8 +5,15 @@ type: architecture
 diagram_type: context
 status: active
 created: 2026-06-08
-last_updated: 2026-06-08
-flight_level: L1
+last_updated: 2026-10-21
+flight_level: L1-Context
+root: true
+children:
+  - docs/architecture/diagrams/c2-001-ac-driven-pipeline.md
+  - docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+  - docs/architecture/diagrams/c2-003-ac-readiness-states.md
+  - docs/architecture/diagrams/c2-004-build-ac-flow.md
+  - docs/architecture/diagrams/c2-005-goal-to-epic-dispatch.md
 components:
   - build_pipeline
 related_docs:

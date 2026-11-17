@@ -1,0 +1,950 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="27" skipped="0" tests="27" time="0.702" timestamp="2026-10-02T08:52:30.848839+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_flow" name="test_flow_all_nested_fields_preserved_and_manifest_separate" time="0.029"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_all_nested_fields_pr0')
+
+    def test_flow_all_nested_fields_preserved_and_manifest_separate(tmp_path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: criterion
+        raw = _flow()
+        raw.update({
+            "product": "Leafcutter", "example_product": "demo", "level": "journey",
+            "realization": "spec", "superseded_by": None, "shape_version": 2,
+            "tags": [], "mock_data_ref": "leafcutter/example",
+            "impl_summary": {"done": 1, "in_progress": 0, "not_started": 1, "total": 2, "asof": "2026-10-02"},
+            "acceptance_scenarios": [{"for": "start", "given": "G", "when": "W", "then": "T"}],
+            "provenance": [{"action": "authored", "by": "person", "date": "2026-10-01", "note": "note"}],
+            "behind": {"confirmed_against": "commit", "changed": ["a.py"], "since": "2026-10-02"},
+            "confirmed": {"against": "commit", "state": {"path/a~b": "sig"}},
+            "future": {"nested": [None, {}, [], True, 4, "4"]},
+        })
+        raw["steps"][0].update({
+            "screen": "screen", "agent": "agent", "produces": ["Ticket"], "consumes": [],
+            "reads": ["source"], "writes": [], "implements": ["AC-1"],
+            "expands_to": "leafcutter/child", "impl_status": "done", "impl_asof": "2026-10-02",
+        })
+        raw["steps"].append({"id": "next", "label": "Next", "human": "Continues", "order": 2, "expands_to": ["leafcutter/child"]})
+        raw["branches"] = [{
+            "id": "stop", "from": "start", "condition": "cancel", "label": "Stop",
+            "human": "Cancel", "screen": "screen", "agent": "agent", "produces": [],
+            "consumes": ["Ticket"], "reads": [], "writes": [], "implements": [],
+            "impl_status": "not_started", "impl_asof": "2026-10-02", "outcome_kind": "exit",
+        }]
+        source = _source(tmp_path, raw)
+        entry = _entry()
+        entry.update({"title": "Manifest title", "tags": ["different"], "custom": {"value": 1}})
+        manifest = _manifest(tmp_path, [entry])
+        before = {p: p.read_bytes() for p in (source, manifest)}
+&gt;       (record,) = _extract(tmp_path)
+                    ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_flow.py:75: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_unregistered_sources_and_empty_shapes_stay_visible" time="0.006"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_unregistered_sources0')
+
+    def test_flow_unregistered_sources_and_empty_shapes_stay_visible(tmp_path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+        raw = _flow()
+        raw.update({"superseded_by": None, "branches": [], "provenance": [], "tags": []})
+        _source(tmp_path, raw)
+        _manifest(tmp_path, [{"type": "mockup", "id": "other", "path": "missing.html"}])
+        mirror = tmp_path / "docs/product-truth/generated/flows/mirror.flow.json"
+        mirror.parent.mkdir(parents=True)
+        mirror.write_text("not JSON", encoding="utf-8")
+&gt;       (record,) = _extract(tmp_path)
+                    ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_flow.py:102: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_real_corpus_deep_equality_and_no_rewrites" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">def test_flow_real_corpus_deep_equality_and_no_rewrites():
+        # covers: KM-400a-3-i
+        # type: integration
+        # angle: real_artifact
+        root = Path(__file__).resolve().parents[2]
+        paths = sorted((root / "docs/product-truth/flows").rglob("*.flow.json"))
+        before = {p: p.read_bytes() for p in paths}
+        source = {json.loads(data)["id"]: json.loads(data) for data in before.values()}
+&gt;       records = _extract(root)
+                  ^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_flow.py:117: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_missing_store_is_empty" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_missing_store_is_emp0')
+
+    def test_flow_missing_store_is_empty(tmp_path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+&gt;       assert _extract(tmp_path) == []
+               ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_flow.py:129: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_malformed_manifest_fails[{]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_malformed_manifest_f0')
+contents = '{'
+
+    @pytest.mark.parametrize("contents", ["{", "[]", "{}", '{"artifacts": {}}', '{"artifacts": [null]}'])
+    def test_flow_malformed_manifest_fails(tmp_path, contents):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        path = _manifest(tmp_path, [])
+        path.write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:140: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_malformed_manifest_fails[[]]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_malformed_manifest_f1')
+contents = '[]'
+
+    @pytest.mark.parametrize("contents", ["{", "[]", "{}", '{"artifacts": {}}', '{"artifacts": [null]}'])
+    def test_flow_malformed_manifest_fails(tmp_path, contents):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        path = _manifest(tmp_path, [])
+        path.write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:140: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_malformed_manifest_fails[{}]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_malformed_manifest_f2')
+contents = '{}'
+
+    @pytest.mark.parametrize("contents", ["{", "[]", "{}", '{"artifacts": {}}', '{"artifacts": [null]}'])
+    def test_flow_malformed_manifest_fails(tmp_path, contents):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        path = _manifest(tmp_path, [])
+        path.write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:140: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_malformed_manifest_fails[{&quot;artifacts&quot;: {}}]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_malformed_manifest_f3')
+contents = '{"artifacts": {}}'
+
+    @pytest.mark.parametrize("contents", ["{", "[]", "{}", '{"artifacts": {}}', '{"artifacts": [null]}'])
+    def test_flow_malformed_manifest_fails(tmp_path, contents):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        path = _manifest(tmp_path, [])
+        path.write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:140: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_malformed_manifest_fails[{&quot;artifacts&quot;: [null]}]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_malformed_manifest_f4')
+contents = '{"artifacts": [null]}'
+
+    @pytest.mark.parametrize("contents", ["{", "[]", "{}", '{"artifacts": {}}', '{"artifacts": [null]}'])
+    def test_flow_malformed_manifest_fails(tmp_path, contents):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        path = _manifest(tmp_path, [])
+        path.write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:140: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_unsafe_or_noncanonical_declared_path_fails[]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_unsafe_or_noncanonic0')
+path = ''
+
+    @pytest.mark.parametrize("path", ["", "../escape.flow.json", "flows/../escape.flow.json", "C:/escape.flow.json", "C:\\escape.flow.json", "/escape.flow.json", "\\\\server\\share\\escape.flow.json", "flows/example.json", "other/example.flow.json"])
+    def test_flow_unsafe_or_noncanonical_declared_path_fails(tmp_path, path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+        _manifest(tmp_path, [_entry(path=path)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_unsafe_or_noncanonical_declared_path_fails[../escape.flow.json]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_unsafe_or_noncanonic1')
+path = '../escape.flow.json'
+
+    @pytest.mark.parametrize("path", ["", "../escape.flow.json", "flows/../escape.flow.json", "C:/escape.flow.json", "C:\\escape.flow.json", "/escape.flow.json", "\\\\server\\share\\escape.flow.json", "flows/example.json", "other/example.flow.json"])
+    def test_flow_unsafe_or_noncanonical_declared_path_fails(tmp_path, path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+        _manifest(tmp_path, [_entry(path=path)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_unsafe_or_noncanonical_declared_path_fails[flows/../escape.flow.json]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_unsafe_or_noncanonic2')
+path = 'flows/../escape.flow.json'
+
+    @pytest.mark.parametrize("path", ["", "../escape.flow.json", "flows/../escape.flow.json", "C:/escape.flow.json", "C:\\escape.flow.json", "/escape.flow.json", "\\\\server\\share\\escape.flow.json", "flows/example.json", "other/example.flow.json"])
+    def test_flow_unsafe_or_noncanonical_declared_path_fails(tmp_path, path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+        _manifest(tmp_path, [_entry(path=path)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_unsafe_or_noncanonical_declared_path_fails[C:/escape.flow.json]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_unsafe_or_noncanonic3')
+path = 'C:/escape.flow.json'
+
+    @pytest.mark.parametrize("path", ["", "../escape.flow.json", "flows/../escape.flow.json", "C:/escape.flow.json", "C:\\escape.flow.json", "/escape.flow.json", "\\\\server\\share\\escape.flow.json", "flows/example.json", "other/example.flow.json"])
+    def test_flow_unsafe_or_noncanonical_declared_path_fails(tmp_path, path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+        _manifest(tmp_path, [_entry(path=path)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_unsafe_or_noncanonical_declared_path_fails[C:\\escape.flow.json]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_unsafe_or_noncanonic4')
+path = 'C:\\escape.flow.json'
+
+    @pytest.mark.parametrize("path", ["", "../escape.flow.json", "flows/../escape.flow.json", "C:/escape.flow.json", "C:\\escape.flow.json", "/escape.flow.json", "\\\\server\\share\\escape.flow.json", "flows/example.json", "other/example.flow.json"])
+    def test_flow_unsafe_or_noncanonical_declared_path_fails(tmp_path, path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+        _manifest(tmp_path, [_entry(path=path)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_unsafe_or_noncanonical_declared_path_fails[/escape.flow.json]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_unsafe_or_noncanonic5')
+path = '/escape.flow.json'
+
+    @pytest.mark.parametrize("path", ["", "../escape.flow.json", "flows/../escape.flow.json", "C:/escape.flow.json", "C:\\escape.flow.json", "/escape.flow.json", "\\\\server\\share\\escape.flow.json", "flows/example.json", "other/example.flow.json"])
+    def test_flow_unsafe_or_noncanonical_declared_path_fails(tmp_path, path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+        _manifest(tmp_path, [_entry(path=path)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_unsafe_or_noncanonical_declared_path_fails[\\\\server\\share\\escape.flow.json]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_unsafe_or_noncanonic6')
+path = '\\\\server\\share\\escape.flow.json'
+
+    @pytest.mark.parametrize("path", ["", "../escape.flow.json", "flows/../escape.flow.json", "C:/escape.flow.json", "C:\\escape.flow.json", "/escape.flow.json", "\\\\server\\share\\escape.flow.json", "flows/example.json", "other/example.flow.json"])
+    def test_flow_unsafe_or_noncanonical_declared_path_fails(tmp_path, path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+        _manifest(tmp_path, [_entry(path=path)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_unsafe_or_noncanonical_declared_path_fails[flows/example.json]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_unsafe_or_noncanonic7')
+path = 'flows/example.json'
+
+    @pytest.mark.parametrize("path", ["", "../escape.flow.json", "flows/../escape.flow.json", "C:/escape.flow.json", "C:\\escape.flow.json", "/escape.flow.json", "\\\\server\\share\\escape.flow.json", "flows/example.json", "other/example.flow.json"])
+    def test_flow_unsafe_or_noncanonical_declared_path_fails(tmp_path, path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+        _manifest(tmp_path, [_entry(path=path)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_unsafe_or_noncanonical_declared_path_fails[other/example.flow.json]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_unsafe_or_noncanonic8')
+path = 'other/example.flow.json'
+
+    @pytest.mark.parametrize("path", ["", "../escape.flow.json", "flows/../escape.flow.json", "C:/escape.flow.json", "C:\\escape.flow.json", "/escape.flow.json", "\\\\server\\share\\escape.flow.json", "flows/example.json", "other/example.flow.json"])
+    def test_flow_unsafe_or_noncanonical_declared_path_fails(tmp_path, path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+        _manifest(tmp_path, [_entry(path=path)])
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_invalid_registration_or_identity_fails[missing]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_invalid_registration0')
+case = 'missing'
+
+    @pytest.mark.parametrize("case", ["missing", "mismatch", "duplicate_id", "duplicate_path", "duplicate_unregistered"])
+    def test_flow_invalid_registration_or_identity_fails(tmp_path, case):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        entry = _entry()
+        entries = [entry]
+        if case != "missing":
+            _source(tmp_path, _flow("leafcutter/other" if case == "mismatch" else "leafcutter/example"))
+        if case == "duplicate_id":
+            entries.append(_entry(path="flows/leafcutter/second.flow.json"))
+        if case == "duplicate_path":
+            entries.append(_entry("leafcutter/other"))
+        if case == "duplicate_unregistered":
+            _source(tmp_path, _flow(), "second")
+        _manifest(tmp_path, entries)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:170: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_invalid_registration_or_identity_fails[mismatch]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_invalid_registration1')
+case = 'mismatch'
+
+    @pytest.mark.parametrize("case", ["missing", "mismatch", "duplicate_id", "duplicate_path", "duplicate_unregistered"])
+    def test_flow_invalid_registration_or_identity_fails(tmp_path, case):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        entry = _entry()
+        entries = [entry]
+        if case != "missing":
+            _source(tmp_path, _flow("leafcutter/other" if case == "mismatch" else "leafcutter/example"))
+        if case == "duplicate_id":
+            entries.append(_entry(path="flows/leafcutter/second.flow.json"))
+        if case == "duplicate_path":
+            entries.append(_entry("leafcutter/other"))
+        if case == "duplicate_unregistered":
+            _source(tmp_path, _flow(), "second")
+        _manifest(tmp_path, entries)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:170: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_invalid_registration_or_identity_fails[duplicate_id]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_invalid_registration2')
+case = 'duplicate_id'
+
+    @pytest.mark.parametrize("case", ["missing", "mismatch", "duplicate_id", "duplicate_path", "duplicate_unregistered"])
+    def test_flow_invalid_registration_or_identity_fails(tmp_path, case):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        entry = _entry()
+        entries = [entry]
+        if case != "missing":
+            _source(tmp_path, _flow("leafcutter/other" if case == "mismatch" else "leafcutter/example"))
+        if case == "duplicate_id":
+            entries.append(_entry(path="flows/leafcutter/second.flow.json"))
+        if case == "duplicate_path":
+            entries.append(_entry("leafcutter/other"))
+        if case == "duplicate_unregistered":
+            _source(tmp_path, _flow(), "second")
+        _manifest(tmp_path, entries)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:170: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_invalid_registration_or_identity_fails[duplicate_path]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_invalid_registration3')
+case = 'duplicate_path'
+
+    @pytest.mark.parametrize("case", ["missing", "mismatch", "duplicate_id", "duplicate_path", "duplicate_unregistered"])
+    def test_flow_invalid_registration_or_identity_fails(tmp_path, case):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        entry = _entry()
+        entries = [entry]
+        if case != "missing":
+            _source(tmp_path, _flow("leafcutter/other" if case == "mismatch" else "leafcutter/example"))
+        if case == "duplicate_id":
+            entries.append(_entry(path="flows/leafcutter/second.flow.json"))
+        if case == "duplicate_path":
+            entries.append(_entry("leafcutter/other"))
+        if case == "duplicate_unregistered":
+            _source(tmp_path, _flow(), "second")
+        _manifest(tmp_path, entries)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:170: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_invalid_registration_or_identity_fails[duplicate_unregistered]" time="0.006"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_invalid_registration4')
+case = 'duplicate_unregistered'
+
+    @pytest.mark.parametrize("case", ["missing", "mismatch", "duplicate_id", "duplicate_path", "duplicate_unregistered"])
+    def test_flow_invalid_registration_or_identity_fails(tmp_path, case):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        entry = _entry()
+        entries = [entry]
+        if case != "missing":
+            _source(tmp_path, _flow("leafcutter/other" if case == "mismatch" else "leafcutter/example"))
+        if case == "duplicate_id":
+            entries.append(_entry(path="flows/leafcutter/second.flow.json"))
+        if case == "duplicate_path":
+            entries.append(_entry("leafcutter/other"))
+        if case == "duplicate_unregistered":
+            _source(tmp_path, _flow(), "second")
+        _manifest(tmp_path, entries)
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:170: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_invalid_source_fails[{]" time="0.006"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_invalid_source_fails0')
+contents = '{'
+
+    @pytest.mark.parametrize("contents", ["{", "[]", "{}", '{"id": "invalid"}'])
+    def test_flow_invalid_source_fails(tmp_path, contents):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        source = _source(tmp_path, _flow())
+        source.write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:181: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_invalid_source_fails[[]]" time="0.006"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_invalid_source_fails1')
+contents = '[]'
+
+    @pytest.mark.parametrize("contents", ["{", "[]", "{}", '{"id": "invalid"}'])
+    def test_flow_invalid_source_fails(tmp_path, contents):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        source = _source(tmp_path, _flow())
+        source.write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:181: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_invalid_source_fails[{}]" time="0.007"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_invalid_source_fails2')
+contents = '{}'
+
+    @pytest.mark.parametrize("contents", ["{", "[]", "{}", '{"id": "invalid"}'])
+    def test_flow_invalid_source_fails(tmp_path, contents):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        source = _source(tmp_path, _flow())
+        source.write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:181: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_flow" name="test_flow_invalid_source_fails[{&quot;id&quot;: &quot;invalid&quot;}]" time="0.032"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.flow'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3026/test_flow_invalid_source_fails3')
+contents = '{"id": "invalid"}'
+
+    @pytest.mark.parametrize("contents", ["{", "[]", "{}", '{"id": "invalid"}'])
+    def test_flow_invalid_source_fails(tmp_path, contents):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        source = _source(tmp_path, _flow())
+        source.write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_flow.py:181: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_flow.py:11: in _extract
+    return importlib.import_module("knowledge.native_types.flow").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.flow'
+import_ = &lt;function _gcd_import at 0x000002294984BE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.flow'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase></testsuite></testsuites>

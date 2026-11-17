@@ -18,21 +18,24 @@
     {
       "id": "view-order",
       "label": "View Order",
-      "human": "The customer opens their order detail page to see the plant they received.",
+      "description": "The customer opens their order detail page to see the plant they received.",
+      "actor_kind": "human",
       "order": 1,
       "impl_status": "not_started"
     },
     {
       "id": "write-review",
       "label": "Write Review",
-      "human": "The customer composes a star rating and written review for the plant.",
+      "description": "The customer composes a star rating and written review for the plant.",
+      "actor_kind": "human",
       "order": 2,
       "impl_status": "not_started"
     },
     {
       "id": "submit-review",
       "label": "Submit Review",
-      "human": "The review is submitted and appears on the plant detail page.",
+      "description": "The shop saves the submitted review and shows it on the plant detail page.",
+      "actor_kind": "deterministic",
       "order": 3,
       "impl_status": "not_started"
     }
@@ -43,7 +46,8 @@
       "from": "write-review",
       "condition": "Customer has already reviewed this order item",
       "label": "Already Reviewed",
-      "human": "The customer has already left a review for this plant from this order; the system shows the existing review instead.",
+      "description": "The customer has already left a review for this plant from this order; the system shows the existing review instead.",
+      "actor_kind": "deterministic",
       "impl_status": "not_started"
     },
     {
@@ -51,7 +55,8 @@
       "from": "write-review",
       "condition": "Order item not yet delivered",
       "label": "Not Delivered",
-      "human": "The order has not been marked delivered yet; the system blocks the review form and prompts the customer to wait.",
+      "description": "The order has not been marked delivered yet; the system blocks the review form and prompts the customer to wait.",
+      "actor_kind": "deterministic",
       "impl_status": "not_started"
     }
   ],

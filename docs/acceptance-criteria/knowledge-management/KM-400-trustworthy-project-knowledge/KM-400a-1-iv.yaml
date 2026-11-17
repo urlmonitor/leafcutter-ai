@@ -1,0 +1,201 @@
+id: KM-400a-1-iv
+title: Agent metadata preserves registry declarations and template context independently
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+priority: medium
+work_status: done
+parent: KM-400a-1
+criteria: |
+  Given a registered agent declares its id, name, tier, role, portable flag, spawning declarations, ticket-phase flag, template reference and skills_used
+  And it also declares selection criteria, invoked skills, knowledge channels, document links, behavioral patterns or other optional fields
+  When the Agent record is exposed as graph metadata from the selected source revision
+  Then the complete authored registry entry is retained, including nested condition expressions and each nested object's associated fields
+  And fractional priority such as 11.5, false flags, explicit nulls and empty lists retain their values and types
+  And any referenced template's complete frontmatter and body are exposed separately with that template's own source provenance
+  And differences between registry and template name, description, model, tools, verification requirements or behavioral patterns remain inspectable without overwriting either source
+  And a missing or null template reference does not create fabricated template fields
+  And condition expressions, configuration references and prompt instructions remain stored data rather than actions performed during exposure
+
+  Given there is an unregistered agent template or the registry contains duplicate agent IDs or an unavailable referenced template
+  When agent metadata is prepared
+  Then an unregistered template cannot create an Agent record on its own
+  And duplicate identities or unavailable declared templates are reported explicitly rather than producing silently incomplete records
+depends_on: [KM-400a-1]
+doc_links:
+- path: docs/reference/artifact-knowledge-graph-data-map.md
+  relationship: context
+  status: exists
+- path: reports/native-fields/review-Agent.json
+  relationship: context
+  status: exists
+- path: reports/native-fields/code-Agent.json
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+- path: reports/native-fields/ac-linked-strict.xml
+  relationship: verifies
+  status: exists
+  relevance: 'Fresh strict execution after criterion-specific test tags: 388 passed and one Windows symlink-privilege
+    skip across 19 focused modules. Per-type cases resolve through the test catalog; no live database rerun is implied.'
+- path: docs/reference/artifact-knowledge-graph-data-map.md
+  relationship: context
+  status: exists
+- path: reports/native-fields/review-Agent.json
+  relationship: context
+  status: exists
+- path: reports/native-fields/code-Agent.json
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-02'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_native_agent.py::test_agent_preserves_all_registry_fields_and_separate_template_meanings
+- tests/knowledge/test_native_agent.py::test_agent_real_registry_preserves_all_entries_and_registered_templates
+- tests/knowledge/test_native_agent.py::test_agent_absent_registry_does_not_discover_unregistered_templates
+- tests/knowledge/test_native_agent.py::test_agent_invalid_registry_envelope_or_identity_fails
+- tests/knowledge/test_native_agent.py::test_agent_template_reference_cannot_escape_snapshot
+- tests/knowledge/test_native_agent.py::test_agent_missing_template_fails_explicitly
+- tests/knowledge/test_native_agent.py::test_agent_missing_and_null_template_fields_remain_distinct
+- tests/knowledge/test_native_metadata_integration.py::test_distinct_native_types_keep_colliding_names_and_explicit_memberships
+implemented_by:
+  - knowledge/native_types/agent.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Retrospective type-specific refinement of KM-400a-3-i. Registry and template are
+  separate authorities; identical field names are not interchangeable. Optional
+  ownership, output and condition declarations are preserved when authored, not
+  inserted when absent. The receipt compares all registered agents and template
+  sources. IT PO review and criterion-specific test links are recorded; user approval and fresh execution are separate.
+  Final bidirectional traceability and strict test evidence: reports/native-fields/ac-traceability.json.
+  Work status reflects linked test outcomes; reviewed readiness does not assert user approval.
+estimated_complexity: M
+it_requirements:
+- Template references must resolve inside the selected source snapshot, with missing declared sources reported explicitly;
+  no environment/configuration resolution or prompt execution occurs during extraction.
+- Returned registry and template metadata must be independent copies, preserving the ownership boundary between
+  the two authored sources.
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+- name: test_agent_preserves_all_registry_fields_and_separate_template_meanings
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Agent preserves all registry fields and separate template meanings.
+  covers:
+  - KM-400a-1-iv
+- name: test_agent_real_registry_preserves_all_entries_and_registered_templates
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: Agent real registry preserves all entries and registered templates.
+  covers:
+  - KM-400a-1-iv
+- name: test_agent_absent_registry_does_not_discover_unregistered_templates
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Agent absent registry does not discover unregistered templates.
+  covers:
+  - KM-400a-1-iv
+- name: test_agent_invalid_registry_envelope_or_identity_fails
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Agent invalid registry envelope or identity fails.
+  covers:
+  - KM-400a-1-iv
+- name: test_agent_template_reference_cannot_escape_snapshot
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Agent template reference cannot escape snapshot.
+  covers:
+  - KM-400a-1-iv
+- name: test_agent_missing_template_fails_explicitly
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Agent missing template fails explicitly.
+  covers:
+  - KM-400a-1-iv
+- name: test_agent_missing_and_null_template_fields_remain_distinct
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Agent missing and null template fields remain distinct.
+  covers:
+  - KM-400a-1-iv
+- name: test_distinct_native_types_keep_colliding_names_and_explicit_memberships
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Agent and Skill native records prove cross-kind identity separation and direct declared membership.
+  covers:
+  - KM-400a-1-iv
+  - KM-400a-1-v
+test_rationale: The verified catalog supplies exact existing reader-function anchors, including source-fixture,
+  boundary and failure checks. Only catalog-confirmed type-specific integration links are added. Shared lossless
+  property encoding, physical Neo4j publication, readback and retained-generation behavior remain covered by KM-400a-3-i;
+  these focused tests do not claim 17 independent live database journeys. This is retrospective traceability over
+  dated implementation receipts, not a newly performed TDD sequence. Subsequent strict execution is separately recorded
+  in reports/native-fields/ac-linked-strict.xml (388 passed, one skipped); no database test was rerun for these
+  annotation-only changes.
