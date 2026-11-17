@@ -1,0 +1,537 @@
+id: BO-4400g-2
+title: "One unattended pass clears exactly this project's workspaces whose work has landed and holds nothing unsent"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" with a shared project whose main line has been fetched, and these
+    workspaces of shop, each made by its workspace maker:
+    - "ff-1", whose two commits reached the main line unchanged (fast-forward merge),
+    - "mc-1", whose two commits reached the main line through a merge commit,
+    - "sq-1", whose three commits reached the main line only as one combined commit with
+      the same content under a new identifier (squash merge),
+    - "open-1", whose two commits are pushed to its own line on the shared project but
+      have not reached the main line (pull request open), with a file in it last changed
+      an hour ago,
+    - "landed-dirty", whose commits reached the main line, holding one uncommitted change
+      to a tracked file,
+    - "landed-plus", whose first commit reached the main line, carrying one further commit
+      that is on neither its own line on the shared project nor the main line,
+    - "fresh-1", made from the main line tip an hour ago and carrying no commit of its own yet,
+    - "idle-1", made from an earlier main line commit eight days ago, carrying no commit of
+      its own, holding nothing uncommitted, with no file in it changed for eight days,
+  And a project "blog" in the same parent folder with a workspace "ff-9" whose commits
+    reached blog's main line,
+  And shop's main checkout, on its main line with nothing uncommitted,
+  When the landed-work pass is run for shop with no person available and no input given,
+  Then "ff-1", "mc-1", "sq-1" and "idle-1" are cleared, each through the same clearing door a single
+    clearing request uses, and no folder of them remains,
+  And "open-1", "landed-dirty", "landed-plus" and "fresh-1" are each identical before and
+    after,
+  And blog's "ff-9" and shop's main checkout are identical before and after, and neither
+    appears in the pass's answer,
+  And every line of work on the shared project, and the shared main line, are identical
+    before and after,
+  And the pass ends with exactly one answer, without asking any question, which lists each
+    cleared workspace by work name and location, and each kept workspace by work name,
+    location and reason: "open-1" as not yet on the main line, "landed-dirty" as holding
+    unsent work naming the file by path, "landed-plus" as holding unsent work naming the
+    commit by identifier, and "fresh-1" as carrying no work of its own yet and idle for
+    less than seven days.
+depends_on: [BO-4400g, BO-4400g-1, BO-4300e-2, BO-4300e-2-iii, BO-4300c-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: >-
+      The holds-work / holds-nothing verdict, including content that reached the main line under a
+      new identifier. This pass is stricter: holds-nothing AND every commit on the main line.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2-iii.yaml
+    relationship: constrains
+    status: exists
+    relevance: Clearing only ever removes one of this project's own workspaces.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400d-1.yaml
+    relationship: related
+    status: exists
+    relevance: The routine sweep; see notes on how its workspace criterion differs from this pass.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: modifies
+    status: exists
+    relevance: Module table gains worktree_landed.py; the entry-points table gains the clear-landed verb.
+  - path: docs/components.json
+    relationship: modifies
+    status: exists
+    relevance: worktree_manager primary_code gains templates/scripts/worktree_landed.py.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c-1-i.yaml
+    relationship: constrains
+    status: exists
+    relevance: Content that reached the main line under a new identifier counts as on the main line.
+  - path: docs/reference/workspace-maker-answer.md
+    relationship: describes
+    status: exists
+    relevance: The door's answers the pass relays, and the code table any new answer must fit additively.
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: Templates are the source; deployed scripts are build outputs.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_landed.py
+    state: to_be_created
+  - path: templates/scripts/worktree.py
+    state: existing
+  - path: templates/scripts/worktree_remove.py
+    state: existing
+  - path: scripts/build_phases_script_deploy_standalone.py
+    state: existing
+  - path: docs/components.json
+    state: existing
+  - path: docs/architecture/components/worktree-manager.md
+    state: existing
+it_requirements:
+  - >-
+    SURFACE: the pass is a new verb of the one maker, clear-landed (with --preview for BO-4400g-3, the same
+    convention as migrate-legacy --preview). Its assessment and decision live in a new sibling module,
+    templates/scripts/worktree_landed.py. It is registered like every maker module: a named entry in
+    scripts/build_phases_script_deploy_standalone.py, a primary_code entry of worktree_manager in
+    docs/components.json, and a row in the module table and the entry-points table of
+    docs/architecture/components/worktree-manager.md. It is not merged into scripts/worktree/sweep_processes.py.
+    The routine sweep's workspace part runs this verb and takes its decision and kept reasons (ONE RULE, user
+    decision 2026-11-16; BO-4400d-1, BO-4400d-2); this record does not build the sweep's scratch,
+    outside-item or report jobs.
+  - >-
+    ONE DOOR: every clear the pass makes is the door's own remove request by work name (the BO-4400g-1
+    form), running the same checks a single request runs. The pass never deletes a folder itself, never
+    passes a discard token, never passes --delete-remote-branch, never pushes, and never stops or signals a
+    program. A door refusal is relayed as kept with the door's reason (PROCESS_HOLDS_FILES as in_use,
+    UNSENT_WORK as holds_unsent_work with the door's commits and files) and is never retried another way.
+  - >-
+    SCOPE: the workspaces come from this project's own workspace records in its landing place, the set the
+    maker's list reads, filtered to records that name this project. The main checkout and other projects'
+    workspaces are never assessed, never cleared and never appear in the answer. The door's own-project
+    scope check (BO-4300e-2-iii) still applies to every clear.
+  - >-
+    RECORD-LESS LEFTOVERS IN SCOPE: besides the records, the pass walks the workspace positions (kind/slug) of
+    this project's own landing place by the landing rule, and finds each folder there that has no workspace
+    record. Such a folder counts as this project's only on the evidence the door already uses for a
+    record-less folder (BO-4300e-2-xii: its leftover repository files name only this project's shared
+    project, compared the way the maker compares origin with the hub), never by its folder name or position
+    alone. A folder with no such evidence is not reported at all. The pass never judges a leftover by the
+    landed rule; it hands it to the door by the name its position gives (BO-4400g-1 resolves a name to the
+    position even when the record is gone) and reports the door's answer, under the HALF-CLEARED requirement
+    below.
+  - >-
+    LANDED RULE, DECIDED ONCE: one decision function, shared by the real pass, the preview and the per-work
+    mode below, clears a workspace only when the door's own unsent-work check (BO-4300e-2, with the content
+    check below) finds nothing unsent, and one of these holds. (a) The workspace has commits of its own
+    (commits on its line that are not on the base commit its record names), and all of them are on the shared
+    main line by identifier or by content. (b) It has no commit of its own, and no file in it has changed for
+    at least the no-own-work threshold. (c) All its own commits are on its own line on the shared project but
+    not all on the main line (pushed but unmerged; BO-4400g-2-v), and no file in it has changed for at least
+    the pushed-unmerged threshold. Any other workspace is kept with exactly one reason from the closed set
+    not_on_main, holds_unsent_work, no_own_work, in_use, landing_unconfirmed and shared_project_unreachable. A
+    pushed but unmerged line younger than its threshold reads as not_on_main.
+  - >-
+    PER-WORK MODE (the one command every flow sends; user decisions D2 and Q2, 2026-11-16): clear-landed
+    naming one work (--kind/--slug or --branch, through the BO-4400g-1 resolver) applies the same decision
+    function to that one workspace with no idle threshold at all. Branch (a) clears it through the door. A
+    workspace with no commit of its own and nothing unsent is cleared at once (BO-4400a-1-i). Pushed but
+    unmerged work is kept as not_on_main whatever its age, because branch (c) never applies in this mode.
+    The answer has the same shape as a whole pass, with that one work in cleared, kept or already_gone; work
+    that has no workspace is answered in already_gone with the BO-4400g-1-i no-workspace answer. A whole-project
+    pass (no work named) always applies both thresholds.
+  - >-
+    CONTENT, NOT IDENTITY: a squash merge leaves no per-commit counterpart on the main line, so containment
+    by content is judged for the workspace's own commits taken together, never commit by commit (a per-commit
+    patch match of the close-worktree kind misses a squash of several commits). When containment cannot be
+    shown positively, the workspace is kept as landing_unconfirmed (BO-4400g-2-i).
+  - >-
+    THE DOOR MUST AGREE: the door's unsent-work check must count a content-equivalent commit as on the main
+    line (BO-4100c-1, BO-4100c-1-i). Today it compares commits only by identity against the workspace's own
+    line and the main line, so a squash-merged workspace whose line was deleted on the shared project is
+    refused UNSENT_WORK, and the pass could never clear it without a token. The containment primitive has
+    one home, used by both the door's check and the pass. It is introduced once in the maker here, judging
+    the workspace's own commits together, and BO-4100c-1 reuses it later (user decision D3, 2026-11-16).
+  - >-
+    FRESH MAIN LINE ONLY: the pass decides against the shared project's current main line, confirmed by
+    contacting the shared project at the start of the pass, never against a remembered or stale main line.
+    When the shared project cannot be reached, nothing is cleared and the one answer says so (BO-4400g-2-i).
+  - >-
+    ASSESSMENT WRITES NOTHING: assessing writes, renames or deletes nothing in any workspace folder, its
+    repository included, and changes no branch, index or working file of the main checkout. The preview uses
+    the same assessment (BO-4400g-3). Only the door's own clear request, made for a workspace the pass
+    decided to clear, writes.
+  - >-
+    IDLE AGE: measured from the newest modification of any entry in the workspace folder (ignored files and
+    the repository's internals included), read before the pass or the door touches the workspace. A
+    timestamp that cannot be read, or lies in the future, counts as just changed. There are two thresholds,
+    each one named default kept in one place in worktree_landed.py: no-own-work, 7 days (user decision
+    2026-10-29), and pushed-unmerged, 14 days (user decision 2026-11-16, BO-4400g-2-v). They are the pass's
+    alone. The per-work mode, the flows, the sweep and the docs never repeat either value, and the two are
+    never merged into one.
+  - >-
+    LINES OF WORK ARE NEVER DELETED (user decision 2026-10-29): the refs of the shared project, its main line
+    included, and the local branches of the main checkout are byte-identical before and after a pass.
+  - >-
+    UNATTENDED: the pass never reads stdin and never prompts, it answers with exactly one JSON object under
+    BO-4300c-2, and every git and process call it makes is bounded in time so the pass never hangs. One
+    workspace's failure never aborts the rest of the pass. An internal error while assessing a workspace keeps
+    that workspace as landing_unconfirmed and never clears it (CLAUDE.md error-handling rules 1 to 4).
+  - >-
+    RE-CHECKED AT THE DOOR: the assessment is never the only check. The door's own program check and
+    unsent-work check run again at the moment of each clear (BO-4400g-2-iii), and concurrent passes are safe
+    through the maker's existing per-work mutual exclusion, with no second lock scheme (BO-4400g-2-iv).
+  - >-
+    ONE TEST SEAM: the pass has exactly one documented seam between its assessment and its clearing step, for
+    example an environment-provided barrier file that the pass waits on only when that variable is set. It is
+    inert otherwise and bounded in time. BO-4400g-2-iii and the sweep's race record BO-4400d-1-i (the sweep
+    runs this pass) both use it, so the write between assessment and clear is made the same deterministic way,
+    never by a sleep race. Its name and behaviour are documented in worktree-manager.md beside the verb.
+  - >-
+    HALF-CLEARED AND RECORD-LESS LEFTOVERS (BO-4300e-2-ix..xii) in this project's landing place are not
+    judged by the landed rule (user decision 2026-11-16, ONE RULE owned by the door): the pass hands each to
+    the clearing door, which clears it only under the door's own rule for a record-less leftover matching its
+    merged line (being specified in PR #1414). Until that door rule exists, they are left untouched and listed
+    as kept with reason landing_unconfirmed.
+  - >-
+    FILE SIZES: worktree.py (425 lines) and worktree_remove.py (485 lines) take wiring only, with a net line
+    count that does not grow. All new logic goes into worktree_landed.py. No limit is raised.
+  - >-
+    Must log at info level one line per workspace with its decision and reason, and at warning level any door
+    error. A discard token never appears in a log line.
+  - >-
+    Edit the template sources under templates/scripts/ only (ADR-001). The change reaches the deployed maker
+    through the normal build.
+  - >-
+    PROOF RUNS THE DEPLOYED MAKER: the deployed maker runs as a separate process against real temporary
+    repositories with a real bare hub (unit_tests/build_orchestration/_workspace_maker_fixtures.py), with real
+    fast-forward, merge-commit and squash merges made on the hub and a second project in the same parent
+    folder. No git mock, no import of a maker module for the asserted behaviour, no build.py spawn (the shared
+    reference layout), and isolated HOME and git config. Ages are set through file modification times.
+    Fixture note: make_project in _workspace_maker_fixtures.py fixes the directory names (project, hub.git)
+    under its tmp folder, so the second project ("blog") is built under its own tmp root beside the first.
+test_required: true
+test_intent:
+  - clause: '"ff-1", "mc-1", "sq-1" and "idle-1" are cleared, each through the same clearing door a single clearing request uses, and no folder of them remains'
+    needs_test: true
+    reason: Each of the four reaches the main line or goes idle in a different way, and a rule that misses any one leaves the pile-up in place.
+  - clause: '"open-1", "landed-dirty", "landed-plus" and "fresh-1" are each identical before and after'
+    needs_test: true
+    reason: Each is a distinct wrong-clear risk (pushed but unmerged, dirty, an extra unsent commit, a just-made workspace), so each must be snapshotted.
+  - clause: 'blog''s "ff-9" and shop''s main checkout are identical before and after, and neither appears in the pass''s answer'
+    needs_test: true
+    reason: A pass that walks the shared parent folder or the main checkout would clear or report another project's work.
+  - clause: every line of work on the shared project, and the shared main line, are identical before and after
+    needs_test: true
+    reason: The user decided the pass never deletes lines on the shared project, and only a comparison of the hub's refs shows it held.
+  - clause: 'the pass ends with exactly one answer, without asking any question, which lists each cleared workspace by work name and location, and each kept workspace by work name, location and reason: "open-1" as not yet on the main line, "landed-dirty" as holding unsent work naming the file by path, "landed-plus" as holding unsent work naming the commit by identifier, and "fresh-1" as carrying no work of its own yet and idle for less than seven days'
+    needs_test: true
+    reason: Every kept reason is computed from a different check, and the unattended caller acts only on this one answer.
+test_spec:
+  - name: test_pass_clears_ff_mc_sq_and_idle_workspaces_through_the_door
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Fixture of the criteria on real repositories: project "shop" (make_project) with workspaces made by the
+      deployed maker's ensure; commits pushed from each workspace to its own line on the bare hub; then on a
+      scratch clone of the hub a real fast-forward merge (ff-1), a real merge commit (mc-1) and a real squash
+      merge of the three commits as one (sq-1) are pushed to main, and the squashed line is deleted on the hub
+      (the normal end of a pull request). idle-1 is made from an earlier main commit, carries no commit, and every
+      file and directory in it has its mtime set (os.utime) eight days back, read before the pass runs. The test runs
+      python <deployed worktree.py> clear-landed --repo-root <shop> as a separate process, with stdin closed. The
+      four are in cleared with the door's own remove answer verbatim (removed_path equal to the location), and
+      os.path.lexists is false for each. This needs the squash content check that the door lacks today (the
+      door's _unsent_commits in worktree_remove.py compares by identity only), so sq-1 is red until the build.
+    proves_clause: '"ff-1", "mc-1", "sq-1" and "idle-1" are cleared, each through the same clearing door a single clearing request uses, and no folder of them remains'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_pass_keeps_open_dirty_plus_and_fresh_workspaces_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      On the same run, open-1 (two commits pushed to its own line, a file changed an hour ago), landed-dirty (landed
+      commits, one uncommitted change to a tracked file), landed-plus (first commit landed, one further commit on
+      neither its own line nor main) and fresh-1 (made from the tip an hour ago, no commit) are each byte-identical
+      before and after (files with .git, refs, mtime-sensitive fresh-1 compared by content hash). The pass reads
+      the idle age before it or the door touches any workspace.
+    proves_clause: '"open-1", "landed-dirty", "landed-plus" and "fresh-1" are each identical before and after'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_pass_never_touches_another_project_or_the_main_checkout
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A second real project "blog" (its own bare hub and clone in the same parent folder, built by a helper that
+      calls make_project with its own tmp root, since make_project fixes the directory names project and hub.git
+      and derives the landing place from the project directory name) has workspace ff-9 whose commits reached its
+      main. After the pass for shop, ff-9 and shop's main checkout (branch, index, files, refs) are identical, and
+      neither the ff-9 path nor the checkout path nor blog appears anywhere in the answer. The pass runs with
+      --repo-root shop and the blog project exists as a sibling that the maker's project search could mistake.
+    proves_clause: 'blog''s "ff-9" and shop''s main checkout are identical before and after, and neither appears in the pass''s answer'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_pass_deletes_no_line_of_work_and_never_moves_the_main_line
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      The refs of the bare hub (git for-each-ref on the hub, main line included) and the local branches of shop's
+      main checkout are byte-identical before and after the real pass, although it cleared four workspaces. The pass
+      is run with a git wrapper on PATH that fails the test if git push is ever invoked, so a push of any kind
+      (including --delete) is caught, not only a changed ref.
+    proves_clause: every line of work on the shared project, and the shared main line, are identical before and after
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_pass_answer_lists_cleared_and_each_kept_reason_with_commits_and_files
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Stdout is exactly one JSON object, status ok, verb clear-landed, preview false. cleared lists the four by
+      kind, slug, branch and absolute location, sorted by kind then slug. kept lists open-1 as not_on_main,
+      landed-dirty as holds_unsent_work with files naming the tracked file by workspace-relative path,
+      landed-plus as holds_unsent_work with commits holding the full 40-character id of the extra commit, and
+      fresh-1 as no_own_work. blog and the main checkout appear in no list. The process is run with stdin as a real
+      open pipe nobody writes to (Popen with wait, not communicate(), the WorkspaceCase.cli(stdin='open') trap) and
+      ends within a timeout, so no question is asked.
+    proves_clause: 'the pass ends with exactly one answer, without asking any question, which lists each cleared workspace by work name and location, and each kept workspace by work name, location and reason: "open-1" as not yet on the main line, "landed-dirty" as holding unsent work naming the file by path, "landed-plus" as holding unsent work naming the commit by identifier, and "fresh-1" as carrying no work of its own yet and idle for less than seven days'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_clear_landed_is_reachable_through_the_deployed_maker_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      main() with real argv: python <deployed worktree.py> clear-landed --repo-root <shop> is dispatched by the
+      maker's verb table (worktree.py _DISPATCH today has no such verb and answers USAGE exit 64) and, once built,
+      clears ff-1 through worktree_remove.cmd_remove. It also runs the per-work form clear-landed --kind feature
+      --slug sq-1 and clear-landed --branch feature/ff-1 on fresh workspaces and asserts the same one-work answer
+      (cleared, or kept not_on_main for a pushed unmerged one with no idle threshold applied).
+    proves_clause: '"ff-1", "mc-1", "sq-1" and "idle-1" are cleared, each through the same clearing door a single clearing request uses, and no folder of them remains'
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree_landed.py
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_admin.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+  - unit_tests/build_orchestration/_workspace_maker_builders.py
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      The maker verb clear-landed (clear-landed --preview for BO-4400g-3) answers one JSON object per
+      BO-4300c-2. A completed pass is status ok, code OK, exit 0, verb clear-landed, preview (bool), with three
+      lists. cleared holds [{kind, slug, branch, location, answer}], where answer is the door's own remove
+      answer verbatim; in a preview this list is would_clear, with the same items minus answer. kept holds
+      [{kind, slug, branch, location, reason, commits: [full 40-character id], files: [workspace-relative path,
+      forward slashes, sorted]}], with reason exactly one of not_on_main, holds_unsent_work, no_own_work,
+      in_use, landing_unconfirmed and shared_project_unreachable. already_gone holds [{kind, slug, branch,
+      location}] for a workspace another request cleared first. location is absolute. A pass whose shared
+      project cannot be reached is status refused, code FETCH_FAILED, exit 2: nothing is cleared and every
+      workspace is listed in kept with reason shared_project_unreachable. Every list is sorted by kind, then
+      slug. Any later field is additive. The per-work mode (clear-landed --kind K --slug S, or --branch B)
+      answers in the same shape for its one work. Consumed by BO-4400g-2-i..-v and BO-4400g-3 (whole pass and
+      preview), by BO-4400g-4 and BO-4400a-1 (per-work mode at a flow's end), and by BO-4400d-1 and BO-4400d-2
+      (the sweep's workspace part and its preview).
+  - agent: llm-expert
+    contract: >-
+      The per-work command clear-landed --kind feature --slug <name>, run by the absolute deployed maker path,
+      and its one-work answer: cleared (with the door's own remove answer) or kept with reason not_on_main or
+      holds_unsent_work. Used by the ship skill (BO-4400g-4-ii).
+  - agent: documentation-expert
+    contract: >-
+      The clear-landed and clear-landed --preview commands, the per-work form, the answer shape above, the
+      closed set of kept reasons with what each means, and the two idle rules (7 days for no work of its own,
+      14 days for pushed but unmerged work), for the how-to of BO-4400g-5.
+expects_from:
+  - ac_id: BO-4400g-1
+    contract: >-
+      remove by work name (--kind/--slug or --branch) through the door, answering ok with removed_path, a
+      refusal naming the unsent commits and files or the programs found, or the definite no-workspace answer
+      of BO-4400g-1-i.
+file_findings:
+  - file: templates/scripts/worktree.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its parser (build_parser, lines 256-296) and _DISPATCH table (lines 299-307) are where a clear-landed verb is registered beside migrate-legacy, and the file is 425 lines so wiring only.
+    decision: null
+  - file: templates/scripts/worktree_remove.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its _unsent_commits (lines 119-136) judges commits by identity only, which is the door check the content-equivalence requirement must change, at 485 lines so wiring only.
+    decision: null
+  - file: scripts/build_phases_script_deploy_standalone.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: NAMED_STANDALONE_SCRIPTS (lines 53-74) is the deploy list every maker module is named in, so worktree_landed.py gets its entry there.
+    decision: null
+  - file: docs/components.json
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: The worktree_manager entry's primary_code list (lines 664-685) is where templates/scripts/worktree_landed.py is added.
+    decision: null
+  - file: docs/architecture/components/worktree-manager.md
+    verdict: describes, does not implement
+    line_range: 146-175
+    found_in: null
+    reason: Its verb table and module table (lines 146-175) describe the maker's verbs and modules and gain the clear-landed row and the worktree_landed.py row.
+    decision:
+      choice: assignment stands
+      reason: The page is the reference the record updates beside the new verb and module (one row in each table), so no other agent owns the work.
+      by: it-po
+file_findings_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - scripts/build_phases_script_deploy_standalone.py
+  - docs/components.json
+  - docs/architecture/components/worktree-manager.md
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+  - reason: >-
+      User decision D3, 2026-11-16: the maker itself gains the content-equivalence check under this record,
+      and BO-4100c-1 reuses it later. depends_on drops BO-4100c-1, which would otherwise order BO-4100c-1
+      first, and the THE DOOR MUST AGREE requirement records the decision in place of its open sequencing
+      question. Criteria unchanged: "sq-1" (squash, cleared) and "open-1" (unmerged, kept) already state D3
+      here, and BO-4400g-2-ii states the deleted-line pair.
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      User answer Q2 at the BO-4400g plan-feature gate, 2026-11-16: the idle threshold guards only this
+      pass; a flow with nothing to deliver clears its own workspace at once. Notes only (the D2 note gains the
+      exception). Criteria and technical fields unchanged; see the IT PO leftovers on LANDED RULE.
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      User decision at the plan-feature gate, 2026-11-16 (14-day rule for pushed but unmerged work): new L3
+      BO-4400g-2-v added and covered_by updated. In the main scenario "open-1" gains an age (a file last
+      changed an hour ago) so it stays kept as not yet on the main line under the new rule. Notes gain the
+      decision. Technical fields are not changed: LANDED RULE ("a pushed but unmerged line ... never as
+      cleared"), IDLE AGE (one 7-day threshold) and the delivers_to reasons are left for the IT PO.
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      User decision at the BO-4400g plan-feature gate, 2026-11-16 (ONE RULE): notes only. The BOUNDARY vs
+      BO-4400d note's "Flagged, not resolved" is replaced by the decision that the routine sweep's workspace
+      part runs this pass and uses its decision and kept reasons.
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      User decision at the BO-4400g plan-feature gate, 2026-11-16 (leftovers: ONE RULE, owned by the door):
+      record-less and half-cleared leftovers are handed to the door's own leftover rule (being specified in PR
+      #1414) and are kept as landing_unconfirmed until it exists. Criteria unchanged, since no scenario covers
+      leftovers. Technical field fixed: the HALF-CLEARED it_requirement's "design default (open question for
+      the user)" is replaced by the decision. Notes gain a LEFTOVERS paragraph.
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      it-po second pass, 2026-11-16, technical fields only, after the gate decisions. LANDED RULE gains branch
+      (c), the 14-day rule of BO-4400g-2-v, and takes the holds-nothing half from the door's own unsent-work
+      check. A PER-WORK MODE requirement states the one command flows send (no idle thresholds). IDLE AGE names
+      the two thresholds. SURFACE says the sweep runs this verb. A RECORD-LESS LEFTOVERS IN SCOPE requirement
+      says how leftovers are found and told to be this project's. delivers_to names every consumer and adds
+      the llm-expert contract for ship. expects_from drops BO-4100c-1 (decision D3). Criteria unchanged.
+    by: it-po
+    at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17, after the test design: a ONE TEST SEAM requirement (one documented seam
+      between assessment and clear, shared with BO-4400d-1-i), and a fixture note in PROOF (make_project fixes
+      directory names, so the second project needs its own tmp root). The worktree-manager.md finding is decided
+      as assignment stands. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
+superseded_by: null
+covered_by: [BO-4400g-2-i, BO-4400g-2-ii, BO-4400g-2-iii, BO-4400g-2-iv, BO-4400g-2-v]
+implemented_by: []
+notes: |
+  User request item (2). "Landed" = every commit of the workspace's own line is on the main
+  line (by identifier, or by content for squash merges) AND the workspace holds nothing
+  unsent. Stricter than BO-4100c-1's holds-nothing, which also accepts "open-1" (pushed,
+  unmerged).
+
+  "fresh-1" is an unasked-for boundary: a just-made workspace with no commits of its own is
+  trivially "contained in main". Without this clause an hourly pass would delete workspaces
+  a run has just been given. It is kept with reason no-own-work while it is younger than
+  seven days idle.
+
+  USER DECISION (2026-10-29, BA gate): a workspace with no commits of its own, nothing
+  uncommitted and no file changed for seven days is abandoned and is cleared ("idle-1").
+  Idle is measured from the newest change to any file in the workspace, not from when it
+  was made, so a run still writing to it is never cleared.
+
+  USER DECISION (2026-10-29, BA gate): the pass never deletes lines of work on the shared
+  project -- the request is about disk space on this machine; deleting merged lines on the
+  shared project stays an explicit, per-request choice on a single clearing request.
+
+  USER DECISION (2026-11-16, D3): the content-equivalence check -- a line whose changes reached
+  the main line only as one combined commit with the same content, judged over all of the
+  line's own commits together, never commit by commit -- is built into the maker under this
+  record. BO-4100c-1 reuses it later, so this record no longer waits for BO-4100c-1.
+
+  USER DECISION (2026-11-16, D2): each flow applies this same landed rule to its own one
+  workspace at its end (BO-4400g-4, BO-4400a-1), so there is one rule, not a second one for
+  flows. The one exception (user decision Q2, 2026-11-16): the idle thresholds (seven days
+  here, fourteen in BO-4400g-2-v) guard only this unattended pass. A flow that ends with no
+  commit of its own and nothing unsent clears its own workspace at once (BO-4400a-1-i), so
+  "fresh-1" being kept is the pass's behaviour, never a flow's.
+
+  USER DECISION (2026-11-16, plan-feature gate): a workspace whose work is pushed to the shared
+  project but never reached the main line (a failed run, an abandoned or closed pull request,
+  or one still open but untouched) is cleared by this pass once it holds nothing unsent and no
+  file in it has changed for 14 days; its line on the shared project stays and can be fetched
+  again. The pass stays git-only. Younger ones stay kept as not yet on the main line, which is
+  why "open-1" is now given an age (a file changed an hour ago). BO-4400g-2-v states the rule;
+  the 7-day rule above is unchanged.
+
+  BOUNDARY vs BO-4400d (routine sweep), RESOLVED (user decision 2026-11-16, BO-4400g
+  plan-feature gate, ONE RULE): the routine sweep's workspace part runs this pass, with its
+  children's 7-day and 14-day idle rules, and uses its decision and kept reasons. The sweep
+  keeps its own job for expired scratch and outside items and its count-and-space report.
+  BO-4400d-1, -1-i, -2, -3 and -4 were amended to match the same day.
+
+  LEFTOVERS (user decision 2026-11-16, ONE RULE owned by the door): a record-less or
+  half-cleared leftover in this project's landing place is never judged by this pass's landed
+  rule. The pass hands it to the clearing door, which clears it only under the door's rule for
+  a record-less leftover matching its merged line, being specified in PR #1414 (not on main
+  yet, so it is deliberately absent from depends_on and doc_links). Until that rule exists,
+  the pass keeps such a leftover and reports it with reason landing_unconfirmed. This
+  replaces the former "design default, open question" in the HALF-CLEARED requirement.

@@ -1,0 +1,311 @@
+id: BO-4400g-1
+title: "A clearing request that names the work clears the same workspace the maker made for it"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" whose workspace maker made, each holding nothing unsent:
+    - a workspace for the feature "alpha", on the line of work "feature/alpha",
+    - a workspace for the feature "alpha-v2", on the line of work "feature/alpha-v2",
+    - a workspace for the fast-lane fix "tq-200d-3", on the line of work "fastlane/tq-200d-3",
+  And a workspace for the feature "beta" holding one unpushed commit and one uncommitted
+    file,
+  And each of the four was first looked up through the maker by the same name used below,
+    and its answered location recorded,
+  When clearing is requested by naming the work, never by giving a location:
+    "alpha" by its kind "feature" and short name "alpha",
+    "tq-200d-3" by its line-of-work name "fastlane/tq-200d-3",
+    and "beta" by its kind "feature" and short name "beta",
+  Then "alpha" and "tq-200d-3" are each answered cleared, and each answer states the
+    location that was cleared, equal to the location their lookup answered,
+  And no folder remains at either of those two locations,
+  And "alpha-v2" is identical before and after,
+  And "beta" is refused exactly as a clearing request giving its location is refused:
+    the refusal names the unpushed commit by identifier and the uncommitted file by path,
+    and "beta" is identical before and after,
+  And every request ends with exactly one answer and asks no question.
+depends_on: [BO-4400g, BO-4300e-1, BO-4300e-2, BO-4300a-2, BO-4300c-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: The clearing door whose refusal and no-prompt rules are reused unchanged for a name-based request.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: Lookup by name answers a definite location; clearing by the same name must agree with it.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300a-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: The one identity rule (kinds, short names, older spellings) the clearing request resolves through.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: One readable answer per request.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2-ix.yaml
+    relationship: constrains
+    status: exists
+    relevance: >-
+      Already gave remove the --kind/--slug form, resolved to the work's position by the landing rule so a
+      half-cleared leftover is reached when its record is gone, and left --branch off remove. This record
+      builds on that form and adds the line-of-work name; it does not restate the half-cleared rules.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: modifies
+    status: exists
+    relevance: Its entry-points row for remove still shows --path only; it gains every name form.
+  - path: docs/how-to/get-a-workspace.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workspace-maker-answer.md
+    relationship: describes
+    status: exists
+    relevance: Answer codes and fields of the maker; any new answer field or code must match it and be additive.
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: Templates are the source; deployed scripts are build outputs.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree.py
+    state: existing
+  - path: templates/scripts/worktree_remove.py
+    state: existing
+  - path: templates/scripts/worktree_admin.py
+    state: existing
+  - path: docs/architecture/components/worktree-manager.md
+    state: existing
+it_requirements:
+  - >-
+    BUILD ON WHAT SHIPPED (BO-4300e-2-ix, done): remove already accepts --kind/--slug, resolved to the
+    work's position by the landing rule. This record adds the line-of-work name form and the rule that a
+    name-based request is answered exactly like a request by location. It does not re-implement the
+    kind/slug form, the half-cleared finishing of BO-4300e-2-ix..xii, or any refusal of the door.
+  - >-
+    ONE RESOLVER: every name form remove accepts (kind and short name, line-of-work name, and each older
+    spelling ensure and locate accept under BO-4300a-2) resolves through the same identity resolution that
+    ensure and locate use, never a second copy. The named work must match exactly, never by prefix,
+    substring or similarity, so "alpha" never reaches "alpha-v2".
+  - >-
+    LINE-OF-WORK NAME: remove accepts the line-of-work name under the option spelling locate already uses
+    (--branch), added to the remove sub-parser in templates/scripts/worktree.py (wiring only). The name is resolved to the work's identity and position by the identity and landing rules,
+    not only by scanning workspace records, so it reaches the same folder that --path and --kind/--slug
+    reach, a leftover whose record is gone included. This removes the reason BO-4300e-2-ix gave for leaving
+    --branch off remove (record lookup fails once the record is gone). An alias that matches two
+    workspaces is refused AMBIGUOUS_LINE, as locate refuses it.
+  - >-
+    SAME DOOR, SAME ANSWER: once resolved, a name-based request runs exactly the path that a --path request
+    for that location runs (program check, unsent-work check, own-project scope check, deletion and the
+    post-check that nothing is left). Its answer, every refusal included, is the answer that --path request
+    would give, and an ok answer's removed_path equals the workspace_path that locate answers for the same
+    name.
+  - >-
+    The door still never reads stdin and never prompts (BO-4300e-2), and it answers with exactly one JSON
+    object under the BO-4300c-2 contract. Any new answer field or code is additive; the schema version and
+    every existing code stay unchanged.
+  - >-
+    FILE SIZES: worktree.py (425 lines) and worktree_remove.py (485 lines) are over the 400-line limit, so
+    the ratchet allows them wiring only, with a net line count that does not grow. The resolution logic goes
+    into worktree_admin.py (270 lines), which already holds the locate lookups, or into a new sibling module
+    registered like every maker module. No limit is raised.
+  - >-
+    Edit the template sources under templates/scripts/ only, never a deployed build output (ADR-001). The
+    change reaches the deployed maker through the normal build.
+  - >-
+    Must log at info level the name a request gave and the location it resolved to. A discard token never
+    appears in a log line.
+  - >-
+    PROOF RUNS THE DEPLOYED MAKER: the deployed maker (resolved through the shared test locator of
+    BO-4300f-4) runs as a separate process against real temporary repositories with a real bare hub (the
+    fixtures of unit_tests/build_orchestration/_workspace_maker_fixtures.py). No mock of git, no import of
+    a maker module for the asserted behaviour, no grep of its source, and no build.py spawn (the shared
+    reference layout). HOME and git's global and system config are isolated per test.
+test_required: true
+test_intent:
+  - clause: '"alpha" and "tq-200d-3" are each answered cleared, and each answer states the location that was cleared, equal to the location their lookup answered'
+    needs_test: true
+    reason: Resolving a name to a location is new computed behaviour, and an answer naming a different location than locate gives is the drift this record exists to stop.
+  - clause: no folder remains at either of those two locations
+    needs_test: true
+    reason: A name form that resolves but never reaches the door's deletion would answer cleared and leave the folder, which only the disk shows.
+  - clause: '"alpha-v2" is identical before and after'
+    needs_test: true
+    reason: A prefix or similarity match on the short name would clear the neighbouring work, so the neighbour must be snapshotted.
+  - clause: '"beta" is refused exactly as a clearing request giving its location is refused: the refusal names the unpushed commit by identifier and the uncommitted file by path, and "beta" is identical before and after'
+    needs_test: true
+    reason: A name-based route that skips the door's unsent-work check would lose work, so its refusal must equal the location request's refusal.
+  - clause: every request ends with exactly one answer and asks no question
+    needs_test: true
+    reason: Unattended callers stall on a prompt or misparse a second object, and both are observable on the deployed maker's output.
+test_spec:
+  - name: test_name_based_remove_answers_cleared_with_the_location_lookup_answered
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Fixture of the criteria: make alpha (feature), alpha-v2 (feature), tq-200d-3 (fastlane) and beta (feature,
+      one unpushed commit, one uncommitted file) with the deployed maker's ensure, record each workspace_path from
+      locate by the same name. Then run the deployed maker as a separate process, remove --kind feature --slug alpha
+      and remove --branch fastlane/tq-200d-3 (no --path). Each answer is status ok, exit 0, and its removed_path
+      equals the locate answer's workspace_path for that name. Today remove has no --branch option
+      (worktree_remove_half.add_target_args knows only --path, --kind, --slug), so the second request is a USAGE
+      refusal until the build adds it.
+    proves_clause: '"alpha" and "tq-200d-3" are each answered cleared, and each answer states the location that was cleared, equal to the location their lookup answered'
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_name_based_remove_leaves_no_folder_at_the_cleared_locations
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      After the two name-based requests of the fixture above, os.path.lexists is false for both locations (the
+      landing place's feature/alpha and fastlane/tq-200d-3 folders, repository folder included), and the maker's
+      list verb no longer reports either.
+    proves_clause: no folder remains at either of those two locations
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_name_based_remove_never_reaches_the_neighbouring_short_name
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Snapshot alpha-v2 before and after the request for alpha (self.snap(ws, with_git=True) and the refs of its
+      repository, the helpers of test_bo_4300e_2.WorkspaceCase). Identical. The request for alpha really cleared
+      alpha in the same run, so identical is not nothing ran. The match is exact on the resolved identity, never by
+      prefix or substring.
+    proves_clause: '"alpha-v2" is identical before and after'
+    code_file: templates/scripts/worktree_admin.py
+  - name: test_name_based_refusal_equals_the_refusal_of_a_location_request
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      For beta (WorkspaceCase.make_unsent: one unpushed commit, one uncommitted file) run remove --kind feature
+      --slug beta, then remove --path <beta>. Both answers are UNSENT_WORK, exit 2, and equal as objects (same
+      unsent.commits naming the commit by identifier, same unsent.files naming the file by path, same
+      discard_token). beta's files and refs are identical before and after both requests (snap with_git and refs).
+    proves_clause: '"beta" is refused exactly as a clearing request giving its location is refused: the refusal names the unpushed commit by identifier and the uncommitted file by path, and "beta" is identical before and after'
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_name_based_requests_end_with_one_answer_and_never_wait_for_input
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      Each request of the scenario (three cleared or refused ones) runs as a Popen with stdin a real open pipe
+      that nobody writes to and is awaited with proc.wait(timeout), not communicate(): the fixture trap is that
+      WorkspaceCase.cli(stdin='open') in test_bo_4300e_2.py calls communicate(), which closes the pipe and so
+      never holds stdin open. Stdout is exactly one JSON object (one non-empty line parsed by parse_answer), and the
+      process ends within the timeout.
+    proves_clause: every request ends with exactly one answer and asks no question
+    code_file: templates/scripts/worktree.py
+  - name: test_remove_by_line_of_work_name_is_reachable_through_the_real_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Runs python <deployed worktree.py> remove --branch feature/alpha --repo-root <project> as a subprocess (main()
+      with real argv, dispatch to worktree_remove.cmd_remove) and asserts the new behaviour occurs: ok, exit 0, the
+      folder is gone. Fails today with a USAGE answer (exit 64) because --branch is unknown to remove.
+    proves_clause: '"alpha" and "tq-200d-3" are each answered cleared, and each answer states the location that was cleared, equal to the location their lookup answered'
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_remove_half.py
+  - templates/scripts/worktree_admin.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+  - unit_tests/build_orchestration/_workspace_maker_fixtures.py
+  - unit_tests/build_orchestration/_workspace_maker_builders.py
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      The door's remove verb accepts the work's identity: --kind K --slug S (shipped by BO-4300e-2-ix) or
+      --branch <line-of-work name> (new), each resolved through the one identity rule locate uses, older
+      spellings included, to one workspace position; --path keeps its meaning. One JSON answer per BO-4300c-2:
+      ok (exit 0) carries removed_path (absolute) equal to locate's workspace_path for the same name; every
+      refusal is the one a --path request gives; a request for work that has no workspace gets the definite
+      no-workspace answer of BO-4400g-1-i; names that disagree or are incomplete are refused as BO-4400g-1-ii
+      states. Consumed by BO-4400g-1-i, BO-4400g-1-ii, the landed-work pass (BO-4400g-2) and every flow
+      (BO-4400g-4).
+  - agent: documentation-expert
+    contract: >-
+      The remove name forms (--kind/--slug, --branch, older spellings) exactly as the maker accepts them, and
+      remove's no-workspace answer for a repeated clear, for the how-to of BO-4400g-5.
+expects_from:
+  ac_id: BO-4300e-1
+  contract: >-
+    The maker's locate answer for a name: ok with workspace_path (absolute) only for a ready workspace,
+    refused NOT_FOUND or INCOMPLETE otherwise, reached through the one identity rule of BO-4300a-2 (kind and
+    short name, line-of-work name and older spellings; exact match only). A name-based remove must resolve to
+    the same workspace_path.
+file_findings:
+  - file: templates/scripts/worktree.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It owns the remove parser (lines 285-290, where --branch is absent) and the dispatch the new name form is wired through, and it is already 425 lines, so wiring only.
+    decision: null
+  - file: templates/scripts/worktree_remove.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: cmd_remove (line 396) is the one door whose path, program, unsent-work and own-project checks a name-based request must reuse, and it is 485 lines, so wiring only.
+    decision: null
+  - file: templates/scripts/worktree_admin.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the locate lookups (_find_by_branch with the alias spellings and AmbiguousBranch, _locate_by_name) that the one resolver for remove can reuse, at 270 lines.
+    decision: null
+  - file: docs/architecture/components/worktree-manager.md
+    verdict: describes, does not implement
+    line_range: 146-154
+    found_in: null
+    reason: Its verb table row for remove (line 152) still shows only --path, which is the documentation the record says must gain every name form.
+    decision:
+      choice: assignment stands
+      reason: The page is the reference the record updates beside its code change (the remove row gains --branch and --kind/--slug), so no other agent owns the work.
+      by: it-po
+file_findings_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_admin.py
+  - docs/architecture/components/worktree-manager.md
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+  - reason: >-
+      it-po third pass, 2026-11-17: the LINE-OF-WORK NAME requirement names the remove sub-parser in worktree.py
+      (already declared). The worktree-manager.md finding is decided as assignment stands. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
+superseded_by: null
+covered_by: [BO-4400g-1-i, BO-4400g-1-ii]
+implemented_by: []
+notes: |
+  User request item (1). Today the clearing request accepts only a location, while making
+  and looking up accept the work's identity; a caller therefore has to look up, parse and
+  re-send a path. Clearing by location keeps working (existing BO-4300e behaviour); this
+  record adds the name form. The "alpha" / "alpha-v2" pair is the prefix-bleed check that
+  BO-4300e-1 already applies to lookup.

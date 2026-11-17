@@ -1,0 +1,212 @@
+id: BO-4400g-3
+title: "A preview of the landed-work pass lists what it would clear and keep, and changes nothing"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the project "shop" with the eight workspaces of BO-4400g-2 ("ff-1", "mc-1", "sq-1",
+    "idle-1", "open-1", "landed-dirty", "landed-plus", "fresh-1"),
+  When the landed-work pass is run as a preview,
+  Then every workspace folder, every line of work in the project and on the shared project,
+    and the shared main line are identical before and after,
+  And the pass ends with exactly one answer, marked as a preview, that lists "ff-1", "mc-1",
+    "sq-1" and "idle-1" as would-be-cleared by work name and location, and the other four
+    as kept with the same reasons a real pass gives,
+  And when the real pass is run next, with nothing changed in between, it clears exactly
+    "ff-1", "mc-1", "sq-1" and "idle-1",
+  And given one more workspace "ff-4" whose commits reached the main line is added and the
+    preview is run again, "ff-4" is added to the would-be-cleared list and nothing else in
+    the answer changes.
+depends_on: [BO-4400g, BO-4400g-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400g-2.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400d-2.yaml
+    relationship: related
+    status: exists
+    relevance: The routine sweep's preview and space tally; this preview reports the landed-work decision only.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: modifies
+    status: exists
+    relevance: The clear-landed entry-points row gains --preview.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_landed.py
+    state: to_be_created
+  - path: templates/scripts/worktree.py
+    state: existing
+  - path: docs/architecture/components/worktree-manager.md
+    state: existing
+it_requirements:
+  - >-
+    ONE ASSESSMENT: the preview runs the same assessment and the same decision function as the real pass
+    (BO-4400g-2), with only the clearing step replaced by listing. There is no separately written, looser or
+    stricter rule.
+  - >-
+    WRITES NOTHING: the preview writes, renames or deletes nothing in any workspace folder (its repository
+    included), the main checkout, the landing place or the shared project. It sends no remove request to the
+    door, and it holds no lock or temporary item that outlives its answer.
+  - >-
+    The preview answer is the clear-landed answer with preview true and would_clear in place of cleared. Its
+    kept entries and reasons are exactly those a real pass would give at that moment. A shared project that
+    cannot be reached gives the same refused FETCH_FAILED answer as the real pass, with nothing in
+    would_clear.
+  - >-
+    Every list is in a stable order (by kind, then slug), so adding one workspace changes only that
+    workspace's own entry.
+  - >-
+    The flag is --preview on the clear-landed verb, the convention migrate-legacy --preview already uses.
+    worktree.py (425 lines) takes wiring only, with no net growth. No limit is raised.
+  - >-
+    PROOF RUNS THE DEPLOYED MAKER against the eight-workspace fixture of BO-4400g-2 with a real bare hub. A
+    snapshot of every workspace folder (repository included), the main checkout and the hub's refs is taken
+    before and after the preview. The real pass then runs with nothing changed in between. No git mock, no
+    build.py spawn, and isolated HOME and git config.
+test_required: true
+test_intent:
+  - clause: every workspace folder, every line of work in the project and on the shared project, and the shared main line are identical before and after
+    needs_test: true
+    reason: A preview that fetches into a workspace or calls the door would change the disk, which only a full snapshot catches.
+  - clause: the pass ends with exactly one answer, marked as a preview, that lists "ff-1", "mc-1", "sq-1" and "idle-1" as would-be-cleared by work name and location, and the other four as kept with the same reasons a real pass gives
+    needs_test: true
+    reason: A preview whose list or reasons differ from the real decision misleads the person who reads it before running the pass.
+  - clause: when the real pass is run next, with nothing changed in between, it clears exactly "ff-1", "mc-1", "sq-1" and "idle-1"
+    needs_test: true
+    reason: A preview written as a separate rule passes its own checks and still disagrees with the real pass, which only running both shows.
+  - clause: given one more workspace "ff-4" whose commits reached the main line is added and the preview is run again, "ff-4" is added to the would-be-cleared list and nothing else in the answer changes
+    needs_test: true
+    reason: An unstable order or a decision that depends on the other workspaces would change more than one entry.
+test_spec:
+  - name: test_preview_changes_no_workspace_ref_or_main_checkout
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      The eight-workspace fixture of BO-4400g-2 on real repositories. Snapshot every workspace folder (files with
+      .git, plus mtimes of the folders so a fetch's FETCH_HEAD write shows), shop's main checkout and its refs, the
+      landing place listing (lock folders included) and the bare hub's refs. Run python <deployed worktree.py>
+      clear-landed --preview --repo-root <shop> as a subprocess. All snapshots are identical after, the lock
+      folder or file the maker uses for ensure is absent, and no remove request reached the door (no workspace is
+      in state clearing). The same snapshot after the later real pass differs only by the four cleared.
+    proves_clause: every workspace folder, every line of work in the project and on the shared project, and the shared main line are identical before and after
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_preview_answer_lists_would_clear_and_the_real_pass_kept_reasons
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Exactly one JSON object, status ok, preview true, with would_clear listing ff-1, mc-1, sq-1 and idle-1 by kind,
+      slug, branch and absolute location (no answer key), and kept listing open-1 (not_on_main), landed-dirty and
+      landed-plus (holds_unsent_work with file and commit named) and fresh-1 (no_own_work), sorted by kind then
+      slug. The test then runs the real pass on the same state and compares its kept list and its cleared locations to
+      the preview's entry for entry.
+    proves_clause: the pass ends with exactly one answer, marked as a preview, that lists "ff-1", "mc-1", "sq-1" and "idle-1" as would-be-cleared by work name and location, and the other four as kept with the same reasons a real pass gives
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_real_pass_after_preview_clears_exactly_the_previewed_four
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      With nothing changed in between, the real pass's cleared list equals the preview's would_clear list (by kind,
+      slug, location), and the four remaining workspaces are identical to their pre-preview snapshots. An
+      unreachable-hub variant gives the preview the same refused FETCH_FAILED answer as the real pass with an empty
+      would_clear.
+    proves_clause: when the real pass is run next, with nothing changed in between, it clears exactly "ff-1", "mc-1", "sq-1" and "idle-1"
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_adding_ff_4_changes_only_its_own_preview_entry
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Add workspace ff-4 (commits reached main by a real fast-forward on the hub), run the preview again. The new
+      answer equals the old with exactly one more would_clear entry for ff-4 in its sorted place and every other
+      entry (would_clear and kept) byte-equal as JSON, so the order is stable and no entry depends on the others.
+    proves_clause: given one more workspace "ff-4" whose commits reached the main line is added and the preview is run again, "ff-4" is added to the would-be-cleared list and nothing else in the answer changes
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_preview_flag_is_reachable_through_the_maker_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      main() with real argv: python <deployed worktree.py> clear-landed --preview in a subprocess exits 0 with
+      preview true (the --preview flag convention of migrate-legacy in worktree_migrate.add_parser, wired in
+      worktree.py's build_parser and _DISPATCH), where today the verb is an unknown choice and exits 64.
+    proves_clause: the pass ends with exactly one answer, marked as a preview, that lists "ff-1", "mc-1", "sq-1" and "idle-1" as would-be-cleared by work name and location, and the other four as kept with the same reasons a real pass gives
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree_landed.py
+  - templates/scripts/worktree.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-2
+  contract: >-
+    The clear-landed assessment and decision function and its answer shape, of which the preview reuses
+    everything except the clearing step (would_clear in place of cleared, preview true).
+file_findings:
+  - file: templates/scripts/worktree.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: build_parser (lines 256-296) and _DISPATCH (lines 299-307) are where the clear-landed verb and its --preview flag are wired, beside migrate-legacy, and the file is 425 lines so wiring only.
+    decision: null
+  - file: docs/architecture/components/worktree-manager.md
+    verdict: describes, does not implement
+    line_range: 146-154
+    found_in: null
+    reason: Its verb table (line 154 shows migrate-legacy [--preview]) describes the verbs and gains the clear-landed --preview row.
+    decision:
+      choice: assignment stands
+      reason: The page is the reference the record updates beside the --preview flag (one row), so no other agent owns the work.
+      by: it-po
+file_findings_opened_files:
+  - templates/scripts/worktree.py
+  - docs/architecture/components/worktree-manager.md
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+  - reason: >-
+      it-po third pass, 2026-11-17: the worktree-manager.md finding is decided as assignment stands. Criteria
+      unchanged.
+    by: it-po
+    at: "2026-11-17"
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  User request item (2), "a dry-run listing what it would clear". The preview and the real
+  pass must make the same decision from the same assessment -- the wrong version this
+  catches is a preview that uses a looser or separately written rule. Bytes freed are not
+  asked for here; BO-4400d-2 owns the space tally.

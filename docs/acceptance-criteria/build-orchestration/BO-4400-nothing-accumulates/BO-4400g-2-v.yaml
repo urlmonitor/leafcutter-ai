@@ -1,0 +1,237 @@
+id: BO-4400g-2-v
+title: "A workspace whose work is pushed but never merged is cleared by the pass after 14 days idle; a younger one is kept"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the project "shop" with a shared project whose main line has been fetched, no
+    service that knows about pull requests reachable, and these workspaces of shop, each
+    made by its workspace maker and each with two commits of its own that are pushed to
+    its own line on the shared project but have not reached the main line:
+    - "stale-1", holding nothing uncommitted, with no file in it changed for 15 days,
+    - "ten-day-1", holding nothing uncommitted, with no file in it changed for 10 days,
+    - "recent-1", holding nothing uncommitted, with a file in it last changed 3 days ago,
+    - "stale-dirty", holding one uncommitted change to a tracked file made 15 days ago,
+      with no file in it changed since,
+    - "stale-ahead", holding nothing uncommitted but carrying one further commit, made 15
+      days ago, that is on neither its own line on the shared project nor the main line,
+      with no file in it changed since,
+  When the landed-work pass is run for shop with no person available and no input given,
+  Then "stale-1" is cleared through the same clearing door a single clearing request uses,
+    and no folder of it remains,
+  And the line of work of "stale-1" on the shared project, and the shared main line, are
+    identical before and after, so its two commits can still be fetched,
+  And "ten-day-1", "recent-1", "stale-dirty" and "stale-ahead" are each identical before
+    and after,
+  And the pass's one answer lists "stale-1" as cleared by work name and location, and
+    lists as kept: "ten-day-1" and "recent-1" as not yet on the main line, "stale-dirty"
+    as holding unsent work naming the file by path, and "stale-ahead" as holding unsent
+    work naming the commit by identifier.
+depends_on: [BO-4400g-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400g-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: >-
+      The landed-work pass, its idle measure (newest change to any file in the workspace), its kept reasons
+      and its rule that lines of work on the shared project are never deleted; this record adds the 14-day
+      branch for pushed but unmerged work.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: The holds-work / holds-nothing verdict that must read holds-nothing before the 14-day branch applies.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400d-1.yaml
+    relationship: related
+    status: exists
+    relevance: The routine sweep clears pushed but unmerged workspaces without an age; see the boundary note in BO-4400g-2.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: The door's unsent-work check counts a commit on the workspace's own line on the shared project as sent, so it agrees with this branch at clear time.
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_landed.py
+    state: to_be_created
+it_requirements:
+  - >-
+    THE 14-DAY BRANCH is branch (c) of BO-4400g-2's one decision function, never a separate rule. A workspace
+    is cleared when the door's unsent-work check finds nothing unsent, all its own commits are on its own line
+    on the shared project, not all are on the main line, and no file in it has changed for at least the
+    pushed-unmerged threshold. That threshold is a named default of 14 days, kept in one place in
+    worktree_landed.py, apart from the 7-day no-own-work threshold. It never borrows the 7-day value, which
+    "ten-day-1" catches.
+  - >-
+    "On its own line on the shared project" is judged against the shared project's refs as the pass's
+    start-of-pass contact found them (BO-4400g-2 FRESH MAIN LINE ONLY), never against a remembered
+    remote-tracking ref. A commit on neither that line nor the main line keeps the workspace as
+    holds_unsent_work naming the commit by full identifier; an uncommitted change keeps it as
+    holds_unsent_work naming the file.
+  - >-
+    GIT ONLY: the pass asks no pull-request service anything (no gh, no hosting API, no network call besides
+    the git contact with the shared project), and no answer depends on whether one is reachable. A still-open
+    but idle pull request is the same case as "stale-1" (user decision 2026-11-16).
+  - >-
+    The workspace's line on the shared project and the shared main line are never deleted or pushed to.
+    BO-4400g-2's never-delete rule applies unchanged, and this branch adds no exception to it.
+  - >-
+    The per-work mode used by flows never applies this branch, so a flow never clears pushed but unmerged
+    work (BO-4400g-4, BO-4400a-1).
+  - >-
+    The clear goes through the door like every other clear, and a door refusal is relayed as BO-4400g-2 states.
+  - >-
+    PROOF RUNS THE DEPLOYED MAKER as a separate process against real temporary repositories with a real bare
+    hub. Lines are pushed to the hub and nothing is merged; ages are set through file modification times (15,
+    10 and 3 days). The hub's refs are snapshotted before and after. No pull-request tool or service is
+    reachable in the test (for example, a gh on PATH that fails the test if it is called). No git mock, no
+    build.py spawn, and isolated HOME and git config.
+test_required: true
+test_intent:
+  - clause: '"stale-1" is cleared through the same clearing door a single clearing request uses, and no folder of it remains'
+    needs_test: true
+    reason: A pass without the 14-day branch keeps every abandoned pushed workspace forever, which is the pile-up this branch removes.
+  - clause: the line of work of "stale-1" on the shared project, and the shared main line, are identical before and after, so its two commits can still be fetched
+    needs_test: true
+    reason: Clearing is only safe because the work stays on the shared project, so a pass that also deletes the line would lose it.
+  - clause: '"ten-day-1", "recent-1", "stale-dirty" and "stale-ahead" are each identical before and after'
+    needs_test: true
+    reason: Each one fails a different part of the rule (10 days catches a reused 7-day threshold, 3 days is plainly young, an uncommitted change, an unpushed commit), so each must be snapshotted.
+  - clause: 'the pass''s one answer lists "stale-1" as cleared by work name and location, and lists as kept: "ten-day-1" and "recent-1" as not yet on the main line, "stale-dirty" as holding unsent work naming the file by path, and "stale-ahead" as holding unsent work naming the commit by identifier'
+    needs_test: true
+    reason: The kept reasons and the named file and commit are computed by different checks, and the unattended caller acts only on this answer.
+test_spec:
+  - name: test_pushed_unmerged_workspace_idle_15_days_is_cleared_through_the_door
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Five workspaces of "shop", each with two commits pushed to its own line on the real bare hub and nothing
+      merged. Ages are set with os.utime over every file and directory of the workspace (repository internals
+      included): stale-1 15 days, ten-day-1 10 days, recent-1 has a file 3 days old, stale-dirty and stale-ahead 15
+      days. A gh script that fails the test if it is called is first on PATH (and no hosting API is reachable).
+      clear-landed --repo-root <shop> (deployed maker, separate process) lists stale-1 in cleared with the door's
+      remove answer and no folder remains. Red until branch (c) is built.
+    proves_clause: '"stale-1" is cleared through the same clearing door a single clearing request uses, and no folder of it remains'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_clearing_a_pushed_workspace_leaves_its_line_and_main_on_the_hub
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      The hub's refs (git for-each-ref on the bare hub, snapshotted before and after) are identical, main included,
+      and git fetch of stale-1's line from a fresh clone of the hub still yields its two commits, read back from the
+      real hub.
+    proves_clause: the line of work of "stale-1" on the shared project, and the shared main line, are identical before and after, so its two commits can still be fetched
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_ten_day_recent_dirty_and_ahead_workspaces_are_kept_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      ten-day-1 (10 days, catches the 7-day value reused), recent-1 (3 days), stale-dirty (one uncommitted change to
+      a tracked file, made 15 days ago) and stale-ahead (one further commit on neither its line nor main, 15 days)
+      are each identical before and after (files with .git, refs).
+    proves_clause: '"ten-day-1", "recent-1", "stale-dirty" and "stale-ahead" are each identical before and after'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_answer_lists_cleared_and_each_kept_reason_for_the_pushed_workspaces
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The one answer lists stale-1 in cleared by kind, slug, branch and absolute location, ten-day-1 and recent-1 in
+      kept with reason not_on_main, stale-dirty as holds_unsent_work with files naming the tracked file by
+      workspace-relative path, stale-ahead as holds_unsent_work with commits holding the extra commit's full
+      40-character id. A per-work request clear-landed --kind feature --slug stale-1 (no idle threshold) keeps the
+      15-day pushed workspace as not_on_main, so a flow never clears pushed but unmerged work.
+    proves_clause: 'the pass''s one answer lists "stale-1" as cleared by work name and location, and lists as kept: "ten-day-1" and "recent-1" as not yet on the main line, "stale-dirty" as holding unsent work naming the file by path, and "stale-ahead" as holding unsent work naming the commit by identifier'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_pushed_unmerged_pass_is_reachable_through_the_real_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The scenario is run with python <deployed worktree.py> clear-landed as a real subprocess with real argv and
+      the failing-gh PATH, never by importing a maker module.
+    proves_clause: '"stale-1" is cleared through the same clearing door a single clearing request uses, and no folder of it remains'
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree_landed.py
+  - templates/scripts/worktree.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-2
+  contract: >-
+    The one decision function with branch (c) and its named 14-day pushed-unmerged threshold, the clear-landed
+    answer with kept reasons not_on_main and holds_unsent_work (commits and files named), and the never-delete
+    rule for lines on the shared project.
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  USER DECISION (2026-11-16, plan-feature gate): a workspace whose work is pushed to the
+  shared project but never reached the main line -- a failed run, an abandoned or closed pull
+  request, or one still open but untouched -- is cleared by the unattended landed-work pass once it holds nothing unsent
+  (every commit on its own line on the shared project, nothing uncommitted) AND no file in it
+  has changed for 14 days. The work stays on its line on the shared project and can be
+  fetched again. A younger pushed but unmerged workspace stays kept as not yet on the main
+  line. The 7-day rule for workspaces with no commits of their own is unchanged. The 14-day
+  rule is the pass's alone, like the 7-day one: a flow still clears its own workspace only
+  once its work has landed, or at once when it had nothing to deliver.
+
+  GIT ONLY: the pass never asks a pull-request service whether a pull request is open, closed
+  or abandoned; it cannot tell those apart and does not need to. The Given makes no such
+  service reachable, so a pass that depends on one cannot clear "stale-1".
+
+  STILL OPEN BUT IDLE IS NOT A BUG (user decision, 2026-11-16): because the pass is git-only, a
+  workspace whose pull request is still open but whose files have not changed for 14 days is,
+  to the pass, the same case as "stale-1", and it is cleared. That is intended. The work stays
+  on its line on the shared project, the pull request is untouched, and asking the workspace
+  maker for that work again makes a workspace that resumes the line. No separate scenario is
+  written for it, since the pass sees nothing that would tell it apart from "stale-1".
+
+  FIXTURES BEYOND THE USER'S THREE (BA additions, flagged): "ten-day-1" (idle 10 days) catches
+  a pass that reuses the 7-day threshold for pushed but unmerged work, which "recent-1" (3
+  days) alone would not. "stale-ahead" covers the "every commit on its own line" half of
+  holding nothing unsent, which "stale-dirty" (uncommitted change) does not.
+
+  Placed as an L3 of BO-4400g-2 (fifth child; the tree-limit hook caps only L1s per L0 and
+  L2s per L1). Technical fields are left for the IT PO, including BO-4400g-2's LANDED RULE
+  and IDLE AGE requirements, which still name one threshold and say a pushed but unmerged
+  line is never cleared.

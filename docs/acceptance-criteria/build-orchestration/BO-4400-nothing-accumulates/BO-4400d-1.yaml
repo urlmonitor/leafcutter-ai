@@ -14,13 +14,21 @@ roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
 criteria: |
-  Given a test machine holding seven workspaces:
-    - "idle-1" and "idle-2", each holding nothing unsent, with no run active in them,
-    - "leftover-1", an unregistered remnant found by discovery, holding nothing unsent,
+  Given a test project holding nine workspaces:
+    - "idle-1", whose commits all reached the main line, and "idle-2", carrying no commit
+      of its own with no file in it changed for 8 days, each holding nothing unsent, with
+      no run active in them,
+    - "leftover-1", an unregistered remnant found by discovery, whose commits all reached
+      the main line, holding nothing unsent,
     - "unsent-1", whose branch carries one commit not on the shared project,
-    - "dirty-1", holding one uncommitted change to a version-controlled file,
+    - "dirty-1", whose commits all reached the main line, holding one uncommitted change
+      to a version-controlled file,
     - "noverdict-1", whose version control data cannot be read,
-    - "active-1", holding nothing unsent, with a run currently active in it,
+    - "active-1", whose commits all reached the main line, holding nothing unsent, with a
+      run currently active in it,
+    - "pushed-1", whose commits are on its own line on the shared project but not on the
+      main line, holding nothing unsent, with a file in it last changed an hour ago,
+    - "fresh-1", carrying no commit of its own, made an hour ago,
   And the designated scratch location holds five items: three past their expiry under
     the scratch age and ownership rule, and two within it,
   And one outside item (a Python environment) whose workspace was cleared earlier but
@@ -29,11 +37,21 @@ criteria: |
   Then "idle-1", "idle-2" and "leftover-1" are removed through the one shared clearing
     door, the three expired scratch items are removed, and the orphaned outside item
     is removed,
-  And "unsent-1", "dirty-1", "noverdict-1" and "active-1" and the two unexpired scratch
-    items exist afterwards and are byte-identical to their state before the sweep,
+  And "unsent-1", "dirty-1", "noverdict-1", "active-1", "pushed-1" and "fresh-1" and the
+    two unexpired scratch items exist afterwards and are byte-identical to their state
+    before the sweep,
+  And each kept workspace is reported with the reason the landed-work pass gives for it,
+    "pushed-1" as not yet on the main line and "fresh-1" as carrying no work of its own
+    yet,
   And no person is asked to confirm anything during the sweep.
-depends_on: [BO-4400d, BO-4300c-1-iii, BO-4100c-1, BO-4100c-3, BO-4100e-1, BO-1800d, BO-4400b-1, BO-4400f-1]
+depends_on: [BO-4400d, BO-4300c-1-iii, BO-4100c-1, BO-4100c-3, BO-4100e-1, BO-1800d, BO-4400b-1, BO-4400f-1, BO-4400g-2]
 doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400g-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: >-
+      ONE RULE (user decision 2026-11-16): the sweep's workspace part runs this landed-work pass, with its
+      children's 7-day and 14-day idle rules, and uses its decision and kept reasons.
   - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-1-iii.yaml
     relationship: constrains
     status: exists
@@ -60,33 +78,75 @@ delivers_to:
     contract: >-
       Sweep entry point and selection result: one JSON object {status: "ok" | "partial", mode:
       "preview" | "real", removed: [{kind: "workspace" | "scratch" | "outside", location: absolute
-      path, bytes: int}], kept: [{kind, location, reason: "holds_unsent_work" | "no_verdict" |
-      "in_use" | "not_expired"}], failed: [{kind, location, reason: str, bytes: int}]}. Consumed by
+      path, bytes: int}], kept: [{kind, location, reason: for a workspace, the landed-work pass's
+      own kept reason verbatim (BO-4400g-2: not_on_main | holds_unsent_work | no_own_work | in_use |
+      landing_unconfirmed | shared_project_unreachable); for scratch, "not_expired"}], failed:
+      [{kind, location, reason: str, bytes: int}]}. Consumed by
       the report (BO-4400d-2), the session-start trigger (BO-4400d-3) and BO-4400f-1-i/-1-ii/-3-i.
   - agent: architecture-diagram-author
-    contract: "The sweep's component boundary and the capabilities it calls (listing, verdict, in-use check, the one door, outside-item inventory, scratch rule) for BO-4400d-5."
+    contract: "The sweep's component boundary and the capabilities it calls (the landed-work pass for workspaces, which uses the listing, verdict, in-use check and the one door; the outside-item inventory; the scratch rule) for BO-4400d-5."
 expects_from:
-  ac_id: BO-4400f-1
-  contract: "The scratch age and ownership rule deciding which scratch items are expired."
+  - ac_id: BO-4400g-2
+    contract: >-
+      The whole-project clear-landed answer (and clear-landed --preview), run once per installed project: cleared
+      workspaces with the door's own removed answer, kept workspaces with exactly one reason from not_on_main,
+      holds_unsent_work, no_own_work, in_use, landing_unconfirmed and shared_project_unreachable, and
+      already_gone.
+  - ac_id: BO-4400f-1
+    contract: "The scratch age and ownership rule deciding which scratch items are expired."
 package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_sweep.py
+    state: to_be_created
+  - path: scripts/build_phases_script_deploy_standalone.py
+    state: existing
+  - path: docs/components.json
+    state: existing
+  - path: docs/architecture/components/worktree-manager.md
+    state: existing
 it_requirements:
   - >-
-    SURFACE: a new sweep, delivered either as a verb of the one maker or as a sibling stdlib-only
-    script under templates/scripts/ deployed beside it by a named deploy-manifest entry
-    (scripts/build_phases_script_deploy.py and scripts/build_deploy_manifest_helpers.py). It is
-    distinct from scripts/worktree/sweep_processes.py (orphan processes) and must not be merged
-    into it.
+    SURFACE, DECIDED 2026-11-17 (the test-designer found no declared entry point): the sweep is a new sibling
+    stdlib-only script, templates/scripts/worktree_sweep.py, with its own CLI (python
+    <install-root>/scripts/worktree_sweep.py [--dry-run] [--json] [--repo-root P]). It is deployed beside the
+    maker by a named entry in scripts/build_phases_script_deploy_standalone.py and registered like every maker
+    module: a primary_code entry of worktree_manager in docs/components.json and a row in the module table of
+    docs/architecture/components/worktree-manager.md. It is not a maker verb, because worktree.py (425 lines)
+    is over the size limit and already gains clear-landed. It reaches workspaces only by running the deployed
+    maker's clear-landed as a subprocess per project, and scratch only through the existing expiry rule in
+    templates/scripts/scratch.py (classify), which it reuses and does not copy. No packaged sweep entry point
+    exists today: scratch.py has its own scratch-only sweep CLI, and the operator's ~/bin/wsl-reclaim is
+    machine-local and outside the package. It is distinct from scripts/worktree/sweep_processes.py (orphan
+    processes) and must not be merged into it.
   - >-
     The sweep DECIDES NOTHING ITSELF: the workspace set comes from the maker's list / BO-4100e
-    discovery (incl. unregistered leftovers), the verdict from BO-4100c-1 (no verdict -> kept,
-    BO-4100c-3), in-use from the BO-1800d signal, expiry from the BO-4400f-1 rule, orphaned
-    outside items from BO-4400b-1's inventory. Every workspace removal is a request to the one
-    door (remove verb); the sweep never deletes a workspace folder directly.
+    discovery (incl. unregistered leftovers), and which workspaces are cleared or kept, with what
+    reason, is the landed-work pass's decision (BO-4400g-2 and its children; ONE RULE, user decision
+    2026-11-16), which uses the BO-4100c-1 verdict (no verdict -> kept, BO-4100c-3) and hands a
+    record-less leftover to the door's own leftover rule (being specified in PR #1414). Expiry comes from the
+    BO-4400f-1 rule and orphaned outside items from BO-4400b-1's inventory. Every workspace removal is a
+    request to the one door, made by the pass; the sweep never deletes a workspace folder directly.
+  - >-
+    IN USE, DECIDED: for workspaces the in-use source is the pass's, which is the door's own program check
+    (BO-4300e-2-iv). It runs first on every clear and fails closed, and its refusal is reported as in_use. The
+    sweep adds no second in-use signal for workspaces; BO-1800d's promise (housekeeping never disturbs work
+    in flight) is met by that check. "active-1" is proven by a real process whose working folder is inside it.
+  - >-
+    PER PROJECT: the sweep's workspace part runs the deployed maker's clear-landed once for each installed
+    project it covers, addressed by that project's --repo-root (and clear-landed --preview for the preview of
+    BO-4400d-2). Each project's decision and kept reasons are taken verbatim, and one project's workspaces are
+    never judged or reported under another's.
   - >-
     Never prompts, never reads stdin, never passes discard authorisation.
   - >-
-    The sweep's remove requests go through the door's own verdict check at the moment of removal;
-    the in-use check is repeated immediately before each removal (BO-4400d-1-i).
+    The workspace clears the pass makes for the sweep go through the door's own unsent-work and program
+    checks at the moment of removal, so the verdict and the in-use check are both taken again right before
+    each removal (BO-4400d-1-i, BO-4400g-2-iii).
+  - >-
+    BUILD ORDER: the "leftover-1" half of the first test can only pass once the door's rule for a record-less
+    leftover matching its merged line exists (being specified in PR #1414, not on main). Until then the pass
+    keeps it as landing_unconfirmed, so that test part is written only after that rule lands, with the
+    fixture built the way the door's rule matches.
   - >-
     PREREQUISITE: BO-4300c-1-iii (a build restores the tracked files it changes). Without it every
     finished workspace reads holds-work and the sweep reclaims nothing; the sweep must not work
@@ -96,20 +156,59 @@ it_requirements:
     failure never aborts the sweep (BO-4400d-2-i).
   - >-
     PROOF runs the DEPLOYED sweep as a separate process against real temporary repositories with a
-    real bare hub, seven real workspaces in the listed states, a real scratch location with five
+    real bare hub, nine real workspaces in the listed states (merges made on the hub, ages set
+    through file modification times), a real scratch location with five
     labelled items (ages set via the label's created time and file mtimes), a real orphaned
-    environment folder in a temporary HOME, and a real running process holding active-1's in-use
-    signal. Byte-identity by hashing every file before and after. No mock of git, no import of the
+    environment folder in a temporary HOME, and a real running process whose working folder is inside
+    active-1 (the door's program check). Byte-identity by hashing every file before and after. No mock of git, no import of the
     sweep module, no build.py spawn.
 test_required: true
+test_intent:
+  - clause: '"idle-1", "idle-2" and "leftover-1" are removed through the one shared clearing door, the three expired scratch items are removed, and the orphaned outside item is removed'
+    needs_test: true
+    reason: Each removal comes from a different rule (landed, idle, the door's leftover rule, scratch expiry, the outside inventory), so each must be seen gone.
+  - clause: '"unsent-1", "dirty-1", "noverdict-1", "active-1", "pushed-1" and "fresh-1" and the two unexpired scratch items exist afterwards and are byte-identical to their state before the sweep'
+    needs_test: true
+    reason: Each is a distinct wrong-removal risk, and pushed-1 and fresh-1 are exactly where the old holds-nothing rule and the pass disagree.
+  - clause: 'each kept workspace is reported with the reason the landed-work pass gives for it, "pushed-1" as not yet on the main line and "fresh-1" as carrying no work of its own yet'
+    needs_test: true
+    reason: Under ONE RULE the sweep relays the pass's reasons, and a sweep with reasons of its own would drift from the pass.
+  - clause: no person is asked to confirm anything during the sweep
+    needs_test: true
+    reason: An unattended sweep stalls on any question, which a run with stdin closed shows.
 test_spec:
   - name: test_sweep_removes_finished_leftovers_expired_scratch_and_orphan
+    proves_clause: '"idle-1", "idle-2" and "leftover-1" are removed through the one shared clearing door, the three expired scratch items are removed, and the orphaned outside item is removed'
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: criterion
-    description: "idle-1, idle-2, leftover-1, the three expired scratch items and the orphaned environment are gone after the sweep."
+    description: "idle-1, idle-2, leftover-1, the three expired scratch items and the orphaned environment are gone after the sweep. The leftover-1 part is written only once the door's record-less leftover rule exists (see the BUILD ORDER it_requirement)."
+  - name: test_sweep_keeps_pushed_and_fresh_workspaces_and_reports_the_pass_reasons
+    proves_clause: 'each kept workspace is reported with the reason the landed-work pass gives for it, "pushed-1" as not yet on the main line and "fresh-1" as carrying no work of its own yet'
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      pushed-1 (pushed to its own line, not merged, a file changed an hour ago) and fresh-1 (no commit of its
+      own, made an hour ago) are byte-identical after the sweep. The sweep reports pushed-1 kept as not_on_main
+      and fresh-1 as no_own_work. For every kept workspace, the reported reason equals the reason the deployed
+      maker's clear-landed --preview gives for that workspace on the same fixture, run by the test beforehand.
+    must_catch:
+      - "sweep clears by holds-nothing alone instead of the pass's rule (pushed-1 and fresh-1 removed)"
+      - "sweep reports a kept reason of its own instead of the pass's reason"
   - name: test_sweep_keeps_unsent_dirty_noverdict_active_and_unexpired_byte_identical
+    proves_clause: '"unsent-1", "dirty-1", "noverdict-1", "active-1", "pushed-1" and "fresh-1" and the two unexpired scratch items exist afterwards and are byte-identical to their state before the sweep'
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -120,6 +219,10 @@ test_spec:
       - "no-verdict treated as holds-nothing"
       - "in-use check skipped"
   - name: test_sweep_removes_workspaces_only_through_the_door
+    proves_clause: '"idle-1", "idle-2" and "leftover-1" are removed through the one shared clearing door, the three expired scratch items are removed, and the orphaned outside item is removed'
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -128,28 +231,126 @@ test_spec:
     must_catch:
       - "sweep deletes workspace folders directly"
   - name: test_sweep_asks_nobody_anything
+    proves_clause: no person is asked to confirm anything during the sweep
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: failure
     description: "With stdin closed and a timeout, the sweep completes."
+  - name: test_sweep_workspace_part_runs_the_deployed_clear_landed_verb_once_per_project
+    proves_clause: '"idle-1", "idle-2" and "leftover-1" are removed through the one shared clearing door, the three expired scratch items are removed, and the orphaned outside item is removed'
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Grounding added at the test-designer pass (nothing above is weakened). The deployed sweep is run as a separate
+      process through its real entry point against two installed projects "shop" and "blog" (each its own real bare hub
+      and landing place; make_project fixes the directory names project and hub.git under its tmp, so each project is
+      built under its own tmp root). Each project's landed workspace (a real fast-forward merge on its hub) is cleared
+      by the deployed maker's clear-landed addressed with that project's --repo-root, the result lists each workspace
+      under its own project only, and a recording wrapper first on PATH shows the sweep ran no git push. No record
+      declares the sweep's entry point (the SURFACE requirement leaves it a maker verb or a sibling script), so the
+      build fixes it and this test is written against the path the build documents.
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_leftover_1_is_kept_as_landing_unconfirmed_until_the_door_leftover_rule_lands
+    proves_clause: '"unsent-1", "dirty-1", "noverdict-1", "active-1", "pushed-1" and "fresh-1" and the two unexpired scratch items exist afterwards and are byte-identical to their state before the sweep'
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Builds leftover-1 as a record-less folder in the landing place whose repository leftovers (FETCH_HEAD and
+      config url) name only this project's shared project, the evidence worktree_remove_half.names_project uses. Until
+      the door rule of PR #1414 exists the sweep keeps it, reporting reason landing_unconfirmed, and it is
+      byte-identical afterwards. The assertion that it is removed is added only when that rule is on main
+      (BUILD ORDER it_requirement), so the first test above stays red for that part and the record cannot be
+      marked done before PR #1414.
+    code_file: templates/scripts/worktree_remove_half.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+  - templates/scripts/worktree_remove_half.py
 test_rationale: >-
-  The sweep's whole promise is its selection, and every one of the twelve items is a distinct case.
+  The sweep's whole promise is its selection, and every one of the fourteen items is a distinct case.
   Only real repositories in real states, swept by the deployed script, show that each case lands on
   the right side.
 origin_agent: business-analyst
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: >-
+      User decision at the BO-4400g plan-feature gate, 2026-11-16 (ONE RULE): the sweep's workspace part runs
+      the landed-work pass (BO-4400g-2 and its children, including the 7-day and 14-day idle rules) and uses
+      its decision and kept reasons; the scratch and outside-item parts and the report are unchanged. Criteria:
+      "a test machine" becomes "a test project"; idle-1, leftover-1, dirty-1 and active-1 get landed commits
+      and idle-2 becomes no own work with 8 days idle, so each still tests what it tested; two kept fixtures
+      are added ("pushed-1", pushed but unmerged and recent; "fresh-1", no own work, an hour old); one
+      And-clause reports kept workspaces with the pass's reasons. depends_on and doc_links gain BO-4400g-2.
+      Technical fields fixed: the delivers_to kept-reason enum and the diagram contract, the DECIDES NOTHING
+      ITSELF requirement, the PROOF fixture count, and the test_rationale count.
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      User decision at the BO-4400g plan-feature gate, 2026-11-16 (leftovers: ONE RULE, owned by the door): the
+      removal of "leftover-1" stays and now comes from the landed-work pass handing it to the door's own
+      leftover rule (being specified in PR #1414). Criteria unchanged. The notes replace the open flag with the
+      decision and its build-order consequence. Technical field fixed: the DECIDES NOTHING ITSELF requirement
+      names the hand-off.
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      it-po, 2026-11-16 (ONE RULE). New it_requirements: IN USE, DECIDED (the door's program check is the pass's
+      and the sweep's in-use source, with no second signal), PER PROJECT (clear-landed once per installed
+      project) and BUILD ORDER (leftover-1's test only after the door's leftover rule). The re-check
+      requirement and PROOF name the door's checks. A test_spec entry covers pushed-1 and fresh-1 kept and the
+      pass's reasons. expects_from gains BO-4400g-2. Criteria unchanged.
+    by: it-po
+    at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17: SURFACE decided as the new sibling script templates/scripts/worktree_sweep.py
+      (no packaged sweep entry point exists; scratch.py's sweep is scratch-only, wsl-reclaim is machine-local),
+      and declared_files added (the script plus its three-way registration). worktree.py and
+      worktree_remove_half.py, named as code under test, are edited by BO-4400g-2 and the door's leftover rule,
+      not here. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: [BO-4400d-1-i]
 implemented_by: []
 notes: |
   Gap G4. Backstop for anything end-of-route clearing (BO-4400a) misses: crashed sessions,
   pile-up from before BO-4400a existed, workspaces kept by halted runs whose work was later
-  sent by hand. The sweep does not decide anything itself -- verdicts come from BO-4100c,
-  "active" from BO-1800d, expiry from BO-4400f-1, clearing from BO-4300e. Its own promise is
-  the selection: each of the seven workspaces and five scratch items is a distinct case and
-  the wrong selection on any one turns a clause red.
+  sent by hand. The sweep does not decide anything itself -- the workspace decision comes
+  from the landed-work pass (BO-4400g-2), which uses the BO-4100c verdict; "active" from
+  BO-1800d, expiry from BO-4400f-1, clearing from BO-4300e. Its own promise is the selection:
+  each of the nine workspaces and five scratch items is a distinct case and the wrong
+  selection on any one turns a clause red.
+
+  ONE RULE (user decision 2026-11-16, BO-4400g plan-feature gate): the sweep no longer clears
+  a workspace just because it holds nothing unsent. It clears exactly what the landed-work
+  pass clears: work landed on the main line, or no work of its own and 7 days idle, or work
+  pushed but unmerged and 14 days idle. Its kept reasons are the pass's. "pushed-1" and
+  "fresh-1" are the cases where the old rule and the pass disagree (the old rule would have
+  removed both).
+
+  LEFTOVER-1 (user decision 2026-11-16, ONE RULE owned by the door): the removal of
+  "leftover-1", a record-less remnant whose work reached the main line, stays as written. It
+  now happens because the landed-work pass hands the leftover to the clearing door, and the
+  door clears it under its own rule for a record-less leftover matching its merged line,
+  being specified in PR #1414. That rule is not on main yet, so it is deliberately absent from
+  depends_on and doc_links. Until it exists, the pass keeps "leftover-1" as
+  landing_unconfirmed and this record's first Then cannot pass. Build this record only after
+  that rule. The fixture is not reworded to restate the door's matching rule; its test must
+  build "leftover-1" so the door's rule matches it.
+
   Prior art outside the package: the operator's machine-local hourly reclaim timer
   (~/bin/wsl-reclaim). The packaged sweep replaces its workspace/scratch half for every
   install; the machine-local tool is not modified by this record.

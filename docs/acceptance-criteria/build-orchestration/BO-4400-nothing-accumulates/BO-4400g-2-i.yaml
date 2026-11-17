@@ -1,0 +1,200 @@
+id: BO-4400g-2-i
+title: "When landing cannot be confirmed, the landed-work pass keeps the workspace"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a workspace "sq-2" whose two commits were squash-merged into the main line, after
+    which a later commit on the main line changed the same lines again, so that the main
+    line no longer holds sq-2's content in the form sq-2 made it,
+  And the maker cannot establish that sq-2's content reached the main line,
+  When the landed-work pass is run,
+  Then "sq-2" is identical before and after,
+  And the answer lists "sq-2" as kept with the reason that its landing could not be
+    confirmed, naming its two commits by identifier.
+
+  Given the shared project cannot be reached when the landed-work pass starts,
+  And the project has a workspace "ff-1" whose commits reached the main line as last
+    fetched,
+  When the landed-work pass is run,
+  Then no workspace is cleared, "ff-1" included,
+  And the pass ends with exactly one answer stating that the shared project could not be
+    reached and that nothing was cleared,
+  And the answer is distinguishable from a pass that found nothing to clear.
+depends_on: [BO-4400g-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c-1.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workspace-maker-answer.md
+    relationship: describes
+    status: exists
+    relevance: FETCH_FAILED is the existing refused code for a shared project that cannot be fetched.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_landed.py
+    state: to_be_created
+it_requirements:
+  - >-
+    KEEP, NEVER GUESS: landing counts as confirmed only on positive evidence that the workspace's own
+    commits, taken together, are on the current shared main line by identifier or by content. Anything else
+    keeps the workspace as landing_unconfirmed and names its own commits by full identifier: the content
+    changed again on the main line, objects that cannot be read, a git error, or a check that ran out of
+    time.
+  - >-
+    UNREACHABLE SHARED PROJECT: the pass contacts the shared project before it assesses anything. When that
+    contact fails, nothing is cleared, the door is not called, and the one answer is status refused, code
+    FETCH_FAILED, exit 2, listing every workspace as kept with reason shared_project_unreachable. That is
+    distinguishable by status and code from an ok pass whose cleared list is empty.
+  - >-
+    A main line the pass remembers from an earlier fetch is never a basis for clearing. The contact is
+    bounded in time, and a timeout counts as unreachable.
+  - >-
+    Neither outcome writes into any workspace folder or the main checkout, or changes the refs of the shared
+    project.
+  - >-
+    PROOF RUNS THE DEPLOYED MAKER against real temporary repositories with a real bare hub. Unreachable is
+    made by moving the hub folder away, and the content conflict by a real squash merge followed by a real
+    commit on the main line that changes the same lines. No git mock, no build.py spawn, and isolated HOME
+    and git config.
+test_required: true
+test_intent:
+  - clause: '"sq-2" is identical before and after'
+    needs_test: true
+    reason: A containment check that guesses on changed content would clear sq-2 and lose its work, which a snapshot catches.
+  - clause: the answer lists "sq-2" as kept with the reason that its landing could not be confirmed, naming its two commits by identifier
+    needs_test: true
+    reason: The reason and the named commits are what a person needs to decide by hand, and both are computed.
+  - clause: no workspace is cleared, "ff-1" included
+    needs_test: true
+    reason: Deciding from the stale main line when the shared project cannot be reached is the wrong version this clause catches.
+  - clause: the pass ends with exactly one answer stating that the shared project could not be reached and that nothing was cleared
+    needs_test: true
+    reason: An unattended timer only learns of the failure through this answer, so its content must be pinned.
+  - clause: the answer is distinguishable from a pass that found nothing to clear
+    needs_test: true
+    reason: If the two answers look the same, a timer reports success while nothing is ever cleared.
+test_spec:
+  - name: test_squash_then_changed_again_keeps_the_workspace_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      sq-2 has two commits editing lines of one tracked file and pushed to its own line on the real bare hub. On a
+      scratch clone of the hub the test squash-merges them into main as one commit, then adds a second commit to
+      main that changes the same lines again, and pushes main. After clear-landed --repo-root <project> (deployed
+      maker, separate process) sq-2 is identical (files with .git, refs) and not in cleared.
+    proves_clause: '"sq-2" is identical before and after'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+    must_catch:
+      - a containment check that guesses landed when the squashed content changed again on the main line
+      - a containment check that compares only identifiers and clears a squash-merged workspace
+  - name: test_unconfirmed_landing_is_kept_naming_both_commits_by_full_identifier
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The one answer lists sq-2 in kept with reason landing_unconfirmed and commits equal to the two full 40-character
+      ids (git rev-list of the workspace's own commits), in the clear-landed shape of BO-4400g-2.
+    proves_clause: the answer lists "sq-2" as kept with the reason that its landing could not be confirmed, naming its two commits by identifier
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_unreachable_shared_project_clears_nothing_including_landed_ff_1
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      ff-1's commits reached main (real fast-forward on the hub) and the workspace has fetched it. Then the hub
+      folder is renamed away so origin cannot be reached, and the pass runs. ff-1 still exists and is identical,
+      the door is never called (no clearing marker is written into it).
+    proves_clause: no workspace is cleared, "ff-1" included
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+    must_catch:
+      - a pass that decides from the main line remembered by the workspace's last fetch
+  - name: test_unreachable_answer_is_refused_fetch_failed_listing_every_workspace_kept
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      The same run answers exactly one JSON object, status refused, code FETCH_FAILED, exit 2, cleared empty, every
+      workspace of the project in kept with reason shared_project_unreachable, and a message saying the shared
+      project could not be reached and that nothing was cleared. The contact is bounded in time (the whole run ends
+      within a timeout, no prompt: the hub path is made unreachable, not an interactive host).
+    proves_clause: the pass ends with exactly one answer stating that the shared project could not be reached and that nothing was cleared
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_unreachable_pass_is_distinguishable_from_a_pass_with_nothing_to_clear
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Run the pass on the same project with the hub reachable and only a pushed unmerged workspace: answer status ok,
+      exit 0, code OK, cleared empty. Assert the two answers differ in status, code and exit code, so a timer can tell
+      them apart.
+    proves_clause: the answer is distinguishable from a pass that found nothing to clear
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_both_outcomes_are_reachable_through_the_real_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Both outcomes above are produced by running python <deployed worktree.py> clear-landed with real argv in a
+      subprocess, and the exit codes read from the process (2 for the unreachable pass, 0 for the empty one).
+    proves_clause: the answer is distinguishable from a pass that found nothing to clear
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree_landed.py
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-2
+  contract: >-
+    The clear-landed answer, with kept reasons landing_unconfirmed (own commits named by full identifier) and
+    shared_project_unreachable (status refused, code FETCH_FAILED, exit 2, nothing cleared).
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The user's request says "including squash/merge-commit cases where detectable". This
+  record states what happens where it is NOT detectable: keep, never guess. Deciding from a
+  stale main line (no fetch) is the wrong version the second scenario catches.

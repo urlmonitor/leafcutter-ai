@@ -16,11 +16,14 @@ criteria: |
   Work finishes, space comes back -- nothing piles up behind you.
 
   Every run that does work on your behalf tidies up after itself as soon as its
-  work is safely handed over for review, not days later when someone remembers to
-  run a separate wrap-up step. Its workspace, its supporting material and its
-  temporary files all go with it, leaving nothing behind anywhere on the machine,
-  while work that never reached the team is always kept. Whatever does slip through
-  is swept up routinely, and you are warned long before space runs out.
+  work has landed on the shared main line -- straight away if it had nothing to
+  deliver, and without anyone stepping in if the work lands after the run has
+  ended -- not days later when someone remembers to run a separate wrap-up step.
+  Its workspace, its supporting material and its temporary files all go with it,
+  leaving nothing behind anywhere on the machine, while work that has not yet been
+  sent to the team is always kept and work that did reach the team stays safe with
+  the team, so nothing is ever lost. Whatever does slip through is swept up
+  routinely, and you are warned long before space runs out.
 depends_on: []
 doc_links:
   - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e.yaml
@@ -45,9 +48,36 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: >-
+      User decision at the BO-4400g plan-feature gate, 2026-11-16: a workspace is cleared once its
+      work has landed on the main line (its pull request merged, or its work merged directly), not as
+      soon as it is handed over for review. Criteria: only the timing sentence is reworded; title,
+      tagline and every other sentence unchanged. Notes: KEY FRAMING DECISION reworded to the same
+      timing, and an AMENDED line added.
+    by: product-owner
+    at: "2026-11-16"
+  - reason: >-
+      Second user decision at the BO-4400g plan-feature gate, 2026-11-16: work sent to the shared
+      project but never landed on the main line (failed run, abandoned or closed pull request) is not
+      lost by clearing its workspace, because it stays on its line on the shared project; the landed-work
+      pass clears such a workspace once nothing unsent remains and no file in it has changed for 14 days.
+      Criteria: "while work that never reached the team is always kept" strengthened to say unsent work
+      is always kept and work that reached the team stays safe there, so nothing is ever lost. Notes: the
+      KEY FRAMING DECISION's "unsent or unmerged work is never removed" corrected to this rule, and an
+      AMENDED (2) line added.
+    by: product-owner
+    at: "2026-11-16"
+  - reason: >-
+      Third user decision at the BO-4400g plan-feature gate, 2026-11-16 (git-only option): the 14-day
+      rule also covers a pull request that is still open but untouched for 14 days. The pass does not look
+      at pull-request state; the work stays safe on the shared project, and asking for the work again
+      resumes its line. Notes: the KEY FRAMING DECISION's open-pull-request phrase gains "or once nothing
+      unsent remains and nothing in it has changed for 14 days". Criteria unchanged.
+    by: product-owner
+    at: "2026-11-16"
 superseded_by: null
-covered_by: [BO-4400a, BO-4400b, BO-4400c, BO-4400d, BO-4400e, BO-4400f]
+covered_by: [BO-4400a, BO-4400b, BO-4400c, BO-4400d, BO-4400e, BO-4400f, BO-4400g]
 implemented_by: []
 notes: |
   ORIGIN. The user, 2026-10-09: "and same for the tmp files. we need clear ACs that provide
@@ -74,9 +104,29 @@ notes: |
   (halted runs keep their work). All of these are todo/unbuilt as of 2026-10-09; the BA
   must sequence BO-4400 children behind them via depends_on rather than restating them.
 
-  KEY FRAMING DECISION. The cleanup point is the moment the work is up for review (pull
-  request opened = work pushed = nothing unsent), NOT finalize-feature, which runs too
-  rarely. Finalize may still clear, but no route may rely on it.
+  KEY FRAMING DECISION (amended 2026-11-16). The cleanup point is the moment the work has
+  LANDED on the main line (its pull request merged, or its work merged directly) -- NOT the
+  moment the pull request is opened, and NOT finalize-feature, which runs too rarely. A run
+  whose pull request is still open when it ends keeps its workspace, and the unattended
+  landed-work pass (BO-4400g) clears it once the work lands, or once nothing unsent remains
+  and nothing in it has changed for 14 days; a run that ends with nothing to
+  deliver (no commits of its own) clears its own workspace right away. Unsent work (not on
+  the shared project, or uncommitted) is never removed. Work that was sent to the shared
+  project but never reached the main line (a failed run, an abandoned or closed pull
+  request) is not lost by clearing, because it stays on its line on the shared project: the
+  landed-work pass clears such a workspace once nothing unsent remains AND no file in it has
+  changed for 14 days, and keeps younger ones. Finalize may still clear, but no route may
+  rely on it.
+
+  AMENDED 2026-11-16 (user decision at the BO-4400g plan-feature gate): cleanup timing moved
+  from "handed over for review / pull request opened" to "work landed on the main line". The
+  ORIGIN quote above ("latest when opening the PR") is kept verbatim as history; the KEY
+  FRAMING DECISION supersedes it.
+
+  AMENDED (2) 2026-11-16 (second user decision, same gate): sent-but-never-landed work is
+  safe on the shared project, so its workspace is cleared by the landed-work pass after 14
+  days with no change once nothing unsent remains. Only unsent work is never removed. This
+  replaces the first amendment's "unsent or unmerged work is never removed".
 
   DECIDED 2026-10-09 by BrainCandy (resolves BO-4300 Q8): clearing a workspace whose
   verdict is "holds nothing unsent" (BO-4100c) needs NO caller-supplied confirmation

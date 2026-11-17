@@ -36,9 +36,10 @@ Read this before authoring or decomposing ACs in this component.
 - **BO-4400** ("Your machine stays clean no matter how much automation runs on it",
   2026-10-09) occupies the 4400 slot; next free L0 hundred is **BO-4500**. Boundary
   vs BO-4300: "how a workspace is cleared safely" (the door) -> BO-4300e; "that it IS
-  cleared, by every route, on time (at the latest once the work is up for review, never
-  relying on finalize), and that nothing is left anywhere on the machine incl. temporary
-  files" -> BO-4400. BO-4400 uses BO-4300e / BO-4100c / BO-4100e and must not restate them.
+  cleared, by every route, on time (once its work has landed on the main line, or by the
+  landed-work pass BO-4400g when it lands after the route ends; never relying on
+  finalize), and that nothing is left anywhere on the machine incl. temporary files" ->
+  BO-4400. (Timing amended 2026-11-16 from "at the latest once the work is up for review".) BO-4400 uses BO-4300e / BO-4100c / BO-4100e and must not restate them.
 - **This line has now gone stale four times** — it has previously claimed
   BO-1900, BO-2300, BO-3300 and BO-3900 while the store had already moved past each.
   Treat the number above as a hint, never as an answer: `ls` the component

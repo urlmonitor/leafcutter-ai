@@ -1,5 +1,5 @@
 id: BO-4400a-2-i
-title: "A run that fails after its pull request opened, with nothing unsent, still clears and still reports the failure"
+title: "A run that fails after its pull request opened keeps its workspace until its work lands, clears it once landed, and still reports the failure"
 component: build-orchestration
 components:
   - build_orchestration
@@ -16,16 +16,25 @@ risk_surface: safety
 criteria: |
   Given the quick fix has pushed its commits and opened its pull request, and a step it
     runs after that fails without creating any new commit or changing any file in the
-    workspace,
+    workspace, while the pull request is still open and not merged into the main line,
   When the run returns its final result,
-  Then no folder remains at the location its workspace occupied,
+  Then the workspace still exists, identical to its state when the step failed,
   And the final result reports the run as failed and names the failing step,
-  And the final result also contains the one shared clearing door's answer reporting
-    the workspace removed,
+  And the final result also reports the workspace as kept because its work is not yet
+    on the main line, leaving it for the landed-work pass,
   And given instead the step after the pull request creates one new commit and then
     fails before pushing it,
   When the run returns its final result,
   Then the workspace still exists and the final result names that one commit as kept.
+
+  Given the quick fix has pushed its commits and opened its pull request, that pull
+    request has been merged into the main line, and a step the quick fix runs after the
+    merge fails without creating any new commit or changing any file in the workspace,
+  When the run returns its final result,
+  Then no folder remains at the location its workspace occupied,
+  And the final result reports the run as failed and names the failing step,
+  And the final result also contains the one shared clearing door's answer reporting the
+    workspace removed.
 depends_on: [BO-4400a-2]
 doc_links:
   - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
@@ -38,30 +47,96 @@ expects_from:
   ac_id: BO-4400a-2
   contract: "Halt-path handling that keeps work and names it."
 package_surface: false
+declared_files:
+  - path: templates/workflows-js/quick-fix.js
+    state: existing
 it_requirements:
+  - >-
+    HARNESS PREREQUISITE: the three PROOF variants run the real maker through the exec bridge that BO-4400g-4
+    adds to unit_tests/_workflow_engine_harness.py, so this record is built after that bridge.
   - >-
     quick-fix.js issues the route-end clearing request after a post-pull-request step fails, using
     BO-4400a-1's shared step; the final result reports status failed, names the failing step, and
-    carries the door's answer (removed, or UNSENT_WORK relayed as kept work).
+    carries the clearing answer (kept as not_on_main while the pull request is open, UNSENT_WORK relayed
+    as kept work, removed only once the work has landed).
   - >-
     The run's failure status is never overwritten by a successful clear, and a refused clear never
     turns the run's failure into a second, different error.
   - >-
     PROOF: deployed quick-fix workflow under unit_tests/_workflow_engine_harness.py; the failing
-    post-PR step is a scripted reply (one variant with no file change, one that makes a real commit
-    in the workspace and then fails); maker executed for real. Isolation and no-build.py rules as
-    BO-4400a-1.
+    post-PR step is a scripted reply in three variants: one with no file change while the pull request is
+    still open; one that makes a real commit in the workspace and then fails; and one where the pull request
+    has been merged on the real bare hub (squash merge with the line deleted, the repository's default) and the
+    step after the merge then fails with no file change. The maker is executed for real. Isolation and
+    no-build.py rules as BO-4400a-1.
 test_required: true
+test_intent:
+  - clause: the workspace still exists, identical to its state when the step failed
+    needs_test: true
+    reason: Clearing on the pushed but unmerged line would remove it, which a snapshot catches.
+  - clause: the final result reports the run as failed and names the failing step
+    needs_test: true
+    reason: A clearing answer must never overwrite the run's failure, in either scenario, and the result field shows it.
+  - clause: the final result also reports the workspace as kept because its work is not yet on the main line, leaving it for the landed-work pass
+    needs_test: true
+    reason: The kept reason must come from the real one-work answer, not the success flag.
+  - clause: given instead the step after the pull request creates one new commit and then fails before pushing it
+    needs_test: false
+    reason: This line sets up the second variant's fixture and is not an outcome of the run.
+  - clause: the workspace still exists and the final result names that one commit as kept
+    needs_test: true
+    reason: A clear on any failure without consulting the verdict would lose the new commit; the door's refusal must reach the result.
+  - clause: no folder remains at the location its workspace occupied
+    needs_test: true
+    reason: A route that clears only on success leaves a landed workspace behind after a post-merge failure, which the disk shows.
+  - clause: 'the final result also contains the one shared clearing door''s answer reporting the workspace removed'
+    needs_test: true
+    reason: The clear must go through the door even on a failed run, which its answer in the result shows.
 test_spec:
-  - name: test_post_pr_failure_with_nothing_unsent_clears_and_reports_failure
+  - name: test_post_pr_failure_with_open_pull_request_keeps_workspace_and_reports_failure
+    proves_clause: the workspace still exists, identical to its state when the step failed
+    code_file: templates/workflows-js/quick-fix.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: discrimination
-    description: "No folder remains; the result is failed, names the failing step and contains the door's removed answer."
+    description: "The workspace is unchanged; the result is failed, names the failing step and reports the workspace kept as not yet on the main line."
     must_catch:
-      - "only clear on success (workspace left behind holding nothing)"
+      - "clear on the pushed but unmerged line (the door's pushed-counts-as-sent verdict used instead of the landed rule)"
+      - "the run's failed status replaced by the clearing answer"
+  - name: test_post_pr_failure_with_open_pull_request_names_the_failing_step
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      In the open-pull-request variant the final result's status is failed and it names the failing step; the
+      clearing answer never replaces the run's own failed status.
+    proves_clause: the final result reports the run as failed and names the failing step
+    code_file: templates/workflows-js/quick-fix.js
+  - name: test_post_pr_failure_with_open_pull_request_reports_kept_not_on_main
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      In the same variant the result also carries the maker's real one-work answer, kept with reason not_on_main,
+      relayed verbatim and not as removed.
+    proves_clause: the final result also reports the workspace as kept because its work is not yet on the main line, leaving it for the landed-work pass
+    code_file: templates/workflows-js/quick-fix.js
+  - name: test_post_pr_failure_after_one_new_commit_is_the_variant_the_given_describes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The scripted step after the pull request makes one new real commit in the workspace and then fails before
+      pushing it: the run is driven through that variant, which is the premise of the next entry's assertions.
+    proves_clause: given instead the step after the pull request creates one new commit and then fails before pushing it
+    code_file: templates/workflows-js/quick-fix.js
   - name: test_post_pr_failure_with_new_unpushed_commit_keeps_workspace
+    proves_clause: the workspace still exists and the final result names that one commit as kept
+    code_file: templates/workflows-js/quick-fix.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -69,20 +144,105 @@ test_spec:
     description: "The workspace still exists and the result names the one new commit as kept."
     must_catch:
       - "clear on any post-PR failure without consulting the verdict"
+  - name: test_post_merge_failure_clears_workspace_and_still_reports_failure
+    proves_clause: no folder remains at the location its workspace occupied
+    code_file: templates/workflows-js/quick-fix.js
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      The pull request is merged on the real bare hub, then the step after the merge fails with no file change.
+      No folder remains at the workspace location. The result is failed, names the failing step, and contains the
+      door's own removed answer (removed_path equal to the workspace path).
+    must_catch:
+      - "only clear on success (workspace left behind holding nothing, after its work landed)"
+      - "the run's failed status replaced by the clearing answer"
+      - "a squash-merged line judged by commit identity, so the landed workspace is kept"
+  - name: test_quick_fix_post_pr_failure_reaches_its_clearing_step_in_the_deployed_flow
+    proves_clause: the final result reports the run as failed and names the failing step
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Grounding added at the test-designer pass (nothing above is weakened). The deployed quick-fix.js is run under
+      run_workflow_under_e2 with the scripted failing post-pull-request step (three variants); in each the clearing
+      dispatch is recorded after the failure, the result stays failed and names the failing step. quick-fix.js
+      carries no clearing dispatch today, so each variant is red until the build. The live shell stand-in is a
+      prerequisite (the harness replays static label_responses).
+    code_file: templates/workflows-js/quick-fix.js
+  - name: test_merged_squash_with_deleted_line_is_judged_by_content_in_the_real_maker
+    proves_clause: 'the final result also contains the one shared clearing door''s answer reporting the workspace removed'
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Third variant, at the maker: after a real squash merge on the hub with the line deleted (the repository's
+      default), clear-landed --kind K --slug S clears the workspace. The door today compares commits by identity only
+      (worktree_remove._unsent_commits), so without BO-4400g-2's content check it answers UNSENT_WORK and the variant
+      fails, which is the wrong version this entry catches. The maker proof belongs to BO-4400g-2-ii, this entry
+      pins that quick fix's third variant depends on it.
+    code_file: templates/scripts/worktree_remove.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/quick-fix.js
+  - templates/scripts/worktree_remove.py
 test_rationale: >-
-  The rule is that clearing follows the verdict, not the success flag. Two scripted failures that
-  differ only in whether a commit was left unsent are the minimal pair that separates the two
-  plausible wrong versions.
+  The rule is that keeping or clearing follows the workspace's state, not the success flag, and the
+  kept reason says which state. Three scripted failures make the set. Two differ only in whether a commit
+  was left unsent: one is kept as not yet on the main line, the other names the unsent commit. The third
+  fails only after the merge, so a workspace whose work has landed is cleared although the run failed. That
+  is the one case where "only clear on success" and the landed rule disagree.
 origin_agent: business-analyst
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: >-
+      User decision at the BO-4400g plan-feature gate, 2026-11-16 (Q3, merged timing of D2): with its pull
+      request still open, the failed run keeps its workspace as not yet on the main line instead of clearing
+      it. Title and the first half reworded (the Given now says the pull request is still open); the second
+      half is unchanged. Technical fields fixed: the first it_requirement's answer list, the first test_spec
+      entry (name, description, must_catch), the test_rationale and the notes' named wrong versions.
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      User decision at the plan-feature gate, 2026-11-16 (closing the gap flagged above): a second scenario is
+      added in which a step fails after the pull request has merged; the workspace is cleared through the door
+      and the run is still reported failed. The title gains "clears it once landed". Notes record wrong version
+      (4), "only clear on success". The new scenario has no test_spec entry yet, and the PROOF it_requirement
+      still names only two scripted variants (IT PO).
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      it-po, 2026-11-16: test_spec gains test_post_merge_failure_clears_workspace_and_still_reports_failure
+      (must_catch "only clear on success"), the PROOF it_requirement names the third, merged-then-failed
+      variant, and the test_rationale covers three variants. Criteria unchanged.
+    by: it-po
+    at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17: declared_files added (quick-fix.js) and a HARNESS PREREQUISITE requirement.
+      Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
-  The decision to clear follows the workspace's verdict, not the run's success flag.
-  Named wrong versions: (1) "only clear on success" -- first half red (workspace left behind
-  with nothing in it, exactly the pile-up this L0 exists to stop); (2) "clear on any
-  post-PR failure" without consulting the verdict -- the second half is still protected by
-  the door's refusal, so the run must report the refusal as work kept, not as a clearing
-  error.
+  The decision to keep or clear follows the workspace's state (the landed rule), not the
+  run's success flag. Named wrong versions: (1) clearing on the pushed but unmerged line --
+  first half red, the folder is gone; (2) the run's failure replaced by the clearing answer --
+  first half red; (3) "clear on any post-PR failure" without consulting the verdict -- the
+  second half is still protected by the door's refusal, so the run must report the refusal as
+  work kept, naming the commit, not as a clearing error.
+
+  AMENDED 2026-11-16 (user decision Q3, merged timing D2): the first half used to clear,
+  because a pushed line counted as sent. It now keeps the workspace for the landed-work pass
+  (BO-4400g-2).
+
+  AMENDED 2026-11-16 (user decision, plan-feature gate): a second scenario has a step fail
+  after the pull request has merged. The workspace is cleared and the run is still reported
+  failed, so the named wrong version (4) "only clear on success" -- folder left behind holding
+  nothing -- is caught here again.

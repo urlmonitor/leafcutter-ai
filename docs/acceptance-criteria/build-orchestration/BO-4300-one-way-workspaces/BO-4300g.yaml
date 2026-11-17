@@ -20,7 +20,11 @@ criteria: |
   itself, removes nothing, and permission for one workspace never reaches its neighbour.
   Steps that only look things up or run one command are handled by helpers that cannot
   remove anything at all, and finalize's own tidy-up names its exact workspace -- or, when
-  it cannot be sure which one that is, leaves everything as it was.
+  it cannot be sure which one that is, leaves everything as it was. The one exception is a
+  flow's own clearing request at the end of its run: such a helper may run it, because that
+  single command itself names exactly the flow's own workspace by the work's name, never by
+  a location, and clears nothing else. Finalize's own tidy-up is not part of that exception
+  and stays as described above.
 depends_on: [BO-4300, BO-4300e]
 doc_links:
   - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md
@@ -42,6 +46,18 @@ created: 2026-10-23
 amended_by:
 - reason: final-gate-title-restored
   by: human:user
+- reason: >-
+    User decision D1, 2026-11-16 (BO-4400g plan-feature run): one sentence added stating the permitted
+    exception, a flow's own end-of-run clearing request run by a one-command helper as the single
+    name-based clearing command. Every other sentence unchanged.
+  by: business-analyst
+  at: "2026-11-16"
+- reason: >-
+    User answer Q1 at the BO-4400g plan-feature gate, 2026-11-16: finalize step 7 stays exactly as BO-4300g-3
+    defines it (worktree-agent with removal_authorization). One sentence added after the exception stating that
+    finalize's tidy-up is not part of it; notes record the confirmation in place of the open flag.
+  by: business-analyst
+  at: "2026-11-16"
 superseded_by: null
 covered_by: [BO-4300g-1, BO-4300g-2, BO-4300g-3]
 implemented_by: []
@@ -82,10 +98,28 @@ notes: |
      only from a definite ok answer for the expected branch, and nothing else leads to a removal
      dispatch (BO-4300g-3-i).
 
+  USER DECISION D1, 2026-11-16 (BO-4400g plan-feature run, IT PO gate): every flow's own
+  end-of-run clearing request (BO-4400g-4, BO-4400a-1) is sent as the exact name-based clearing
+  command through shell-runner (ADR-070), not through worktree-agent. That one command counts
+  as the caller's authorization for exactly that one workspace: it names the workspace by kind
+  and short name or by line-of-work name, never by a location, and a workflow's request that
+  carries it names that workspace "in the request itself", which is this L1's rule. Why this
+  and not a removal-capable dispatch with removal_authorization: it keeps every flow off the
+  agent the KI is about, and it needs no second authorization shape. The exception is bounded
+  by BO-4300g-2 (only the run's own clearing command, naming its own work) and checked
+  repo-wide by BO-4300g-2-i. Finalize step 7 stays exactly as BO-4300g-3 defines it
+  (worktree-agent with removal_authorization, finalize's one removal-capable dispatch);
+  confirmed by the user (Q1, 2026-11-16), and the criteria now say finalize's tidy-up is not
+  part of the exception. Title is PO wording and is unchanged; a PO review of the added
+  sentences is recommended.
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
 # - 2026-10-24 [business-analyst/ac-tree-split/caller-authorized-workspace-removal]:
 #   Created as a sibling of BO-4300e by a Pattern C split (user decision); covers the three
 #   caller-authorization L2s authored 2026-10-23. Title is PO-domain wording pending PO review.
+# - 2026-11-16 [business-analyst/plan-feature/clear-merged-workspaces]:
+#   User decision D1: one sentence added for the flow's own name-based clearing command.
+#   User answer Q1: one sentence added -- finalize's tidy-up is not part of that exception.
 # ====================================================================

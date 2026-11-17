@@ -1,0 +1,219 @@
+id: BO-4400g-1-i
+title: "Clearing by an older spelling clears the one workspace for that work, and asking again is safe"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the epic "Files Stay Workable" has one workspace, made when it was requested by its
+    older spelling "EPIC-FilesStayWorkable", holding nothing unsent,
+  And the epic "Files Stay Workable Two" has its own workspace, holding nothing unsent,
+  When clearing is requested by the older spelling "EPIC-FilesStayWorkable",
+  Then the one workspace of "Files Stay Workable" is answered cleared and no folder of it
+    remains,
+  And the workspace of "Files Stay Workable Two" is identical before and after,
+  And a lookup of the epic by its current kind and short name then answers that no
+    workspace exists for it.
+
+  Given that workspace has already been cleared,
+  When clearing is requested again, once by the older spelling and once by the current
+    kind and short name,
+  Then each request is answered with a definite statement that no workspace exists for
+    that work, not with a failure,
+  And every remaining workspace of the project is identical before and after.
+depends_on: [BO-4400g-1, BO-4300a-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300a-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: Older spellings are aliases of the same work; never orphaned, never twinned.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: Locate's own NOT_FOUND answer for work with no workspace stays as it is; only remove's answer is added here.
+  - path: docs/reference/workspace-maker-answer.md
+    relationship: describes
+    status: exists
+    relevance: Answer codes and fields; the no-workspace answer of remove must be additive to it.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_remove.py
+    state: existing
+  - path: templates/scripts/worktree_admin.py
+    state: existing
+it_requirements:
+  - >-
+    A remove request that names work which has no workspace (never made, or already cleared) gets a
+    definite no-workspace answer that a caller can tell apart from a clear and that is not a failure, since
+    every caller stops on any non-ok answer (workspace-maker-answer.md, caller rule 1). Decided (user
+    accepted the default, Q3, 2026-11-16): status ok, exit 0, code OK, no removed_path, an additive field
+    absent set to true, and a message naming the work. THIS IS A CHANGE: today remove answers such a request
+    NOT_FOUND (refused, exit 2). For a name-based request that answer becomes the ok/absent answer, and any
+    existing test that pins NOT_FOUND for a by-name request of missing work is updated in the same change. A --path request for a location that holds nothing keeps today's
+    answer.
+  - >-
+    An older spelling and the current kind and short name resolve to the same single workspace (BO-4300a-2).
+    Neither ever reaches a second workspace for the alias, nor the neighbouring work whose name extends it
+    ("Files Stay Workable Two").
+  - >-
+    The no-workspace decision is read-only: it creates, writes, renames or deletes nothing, takes no lock
+    that outlives the answer, and makes no network call.
+  - >-
+    Repeated requests are idempotent: the second and every later request for the same name change nothing
+    anywhere and give the same answer.
+  - >-
+    Locate keeps its own NOT_FOUND answer for work with no workspace (BO-4300e-1); only remove's answer is
+    added. Any new field is additive and the schema version stays.
+  - >-
+    File sizes: worktree_remove.py (485 lines) takes wiring only, with a net line count that does not grow;
+    the logic lives beside the shared resolver of BO-4400g-1. No limit is raised.
+  - >-
+    PROOF RUNS THE DEPLOYED MAKER as a separate process against real temporary repositories with a real
+    bare hub (unit_tests/build_orchestration/_workspace_maker_fixtures.py). No git mock, no import of a maker
+    module for the asserted behaviour, no build.py spawn, and isolated HOME and git config.
+test_required: true
+test_intent:
+  - clause: the one workspace of "Files Stay Workable" is answered cleared and no folder of it remains
+    needs_test: true
+    reason: An older spelling must resolve through the one identity rule to the real workspace, which a resolver that only knows current names would miss.
+  - clause: the workspace of "Files Stay Workable Two" is identical before and after
+    needs_test: true
+    reason: A prefix match on the epic name would clear the neighbouring epic, so the neighbour must be snapshotted.
+  - clause: a lookup of the epic by its current kind and short name then answers that no workspace exists for it
+    needs_test: true
+    reason: A clear that removed only an alias twin would leave the real workspace for the current name, which only a lookup afterwards shows.
+  - clause: each request is answered with a definite statement that no workspace exists for that work, not with a failure
+    needs_test: true
+    reason: Flows and the landed-work pass both clear, so a repeat that answers as a failure would halt the second caller.
+  - clause: every remaining workspace of the project is identical before and after
+    needs_test: true
+    reason: A repeat request that resolves loosely when the workspace is gone could reach another workspace, which a snapshot catches.
+test_spec:
+  - name: test_older_spelling_clears_the_one_workspace_of_the_epic
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Make the epic workspace with the deployed maker's ensure --kind epic --slug EPIC-FilesStayWorkable (older
+      spelling) and a second one for "Files Stay Workable Two" (its own slug). Run remove --kind epic --slug
+      EPIC-FilesStayWorkable as a subprocess. Answer ok, exit 0, removed_path equals the location ensure answered,
+      and no folder remains there (the helper shape of test_bo_4300e_2.WorkspaceCase, KIND overridden to epic).
+    proves_clause: the one workspace of "Files Stay Workable" is answered cleared and no folder of it remains
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_neighbouring_epic_is_identical_after_the_clear
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Snapshot of the "Files Stay Workable Two" workspace (files with .git and refs) is identical before and after
+      the older-spelling request, which cleared its own target in the same run.
+    proves_clause: the workspace of "Files Stay Workable Two" is identical before and after
+    code_file: templates/scripts/worktree_admin.py
+  - name: test_lookup_by_current_name_answers_no_workspace_after_the_clear
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      After the clear, locate --kind epic --slug <current short name> answers NOT_FOUND (locate keeps its own
+      NOT_FOUND answer, BO-4300e-1) and the landing place holds no folder for the epic under either spelling, so
+      no alias twin was left behind.
+    proves_clause: a lookup of the epic by its current kind and short name then answers that no workspace exists for it
+    code_file: templates/scripts/worktree_admin.py
+  - name: test_repeated_clear_answers_no_workspace_not_a_failure
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Request the clear again, once by the older spelling and once by the current kind and short name. Each answer
+      is status ok, exit 0, code OK, carries no removed_path, an additive field absent true and a message naming the
+      work. Today the same request answers NOT_FOUND, refused, exit 2 (cmd_remove finds no record and returns
+      NOT_FOUND), so this test is red until the build. A --path request for a location holding nothing keeps
+      NOT_FOUND (asserted in the same test, so the old answer is not weakened).
+    proves_clause: each request is answered with a definite statement that no workspace exists for that work, not with a failure
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_repeat_requests_change_nothing_anywhere
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Snapshot every remaining workspace of the project (files with .git, refs) plus the landing place's directory
+      listing and the main checkout's refs before and after the two repeat requests: identical, and a second pair of
+      repeats gives the same answers (idempotent). No file or lock is created in the landing place.
+    proves_clause: every remaining workspace of the project is identical before and after
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_repeat_clear_is_reachable_through_the_real_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      main() with real argv in a subprocess: python <deployed worktree.py> remove --kind epic --slug <name>
+      --repo-root <project> for work that has no workspace exits 0 with the no-workspace answer.
+    proves_clause: each request is answered with a definite statement that no workspace exists for that work, not with a failure
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_admin.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-1
+  contract: >-
+    remove accepts the work's identity (--kind/--slug or --branch, older spellings included) through the one
+    resolver that locate uses, and answers exactly as a --path request for the resolved location.
+file_findings:
+  - file: templates/scripts/worktree_remove.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: cmd_remove (lines 396-427) is where a request with no record ends in NOT_FOUND today, so it is the place the no-workspace answer is wired, with the logic beside the shared resolver.
+    decision: null
+  - file: templates/scripts/worktree_admin.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the alias resolution that makes the older spelling and the current name reach the same single workspace, so the no-workspace decision sits beside it.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_admin.py
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+  - reason: >-
+      it-po third pass, 2026-11-17: the first it_requirement says explicitly that remove answers NOT_FOUND today
+      and that the by-name answer for missing work changes to ok with absent true. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  A repeat clear must not be a failure: flows and the landed-work pass both clear, and the
+  second caller arriving after the first is the normal case, not an error.
