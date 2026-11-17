@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-14'
+last_updated: '2026-11-17'
 components:
   - build_pipeline
 related_docs:
@@ -101,13 +101,13 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 50** (1 blocker, 21 high, 3 medium, 25 low) · **Resolved: 14** (KI-BP-007 resolved 2026-10-15) (recounted from the directory 2026-10-14; the table below still lacks rows for some entries filed since 2026-09-28)
+**Open: 51** (0 blocker, 22 high, 4 medium, 25 low) · **Resolved: 14** (recounted from the directory 2026-11-17, after KI-BP-018's filename was corrected from blocker to the medium its entry has stated since 2026-09-01; the table below still lacks rows for some entries filed since 2026-09-28)
 
 ## Open
 
 | Severity | Issue | File |
 |---|---|---|
-| `blocker` | KI-BP-018 — No build phase can fail the build, the deploy set is hand-listed in ~26 places, and nothing verifies the deployed tree is complete | [open-blocker-ki-bp-018.md](build-pipeline/open-blocker-ki-bp-018.md) |
+| `medium` | KI-BP-018 — No build phase can fail the build, the deploy set is hand-listed in ~26 places, and nothing verifies the deployed tree is complete (findings 1 and 3 fixed; finding 2, the hand-listed deploy set, remains; filename corrected from blocker 2026-11-17) | [open-medium-ki-bp-018.md](build-pipeline/open-medium-ki-bp-018.md) |
 | `high` | KI-BP-001 — The documented self-host build command destroys `docs/INDEX.md` on every run | [resolved-high-ki-bp-001.md](build-pipeline/resolved/resolved-high-ki-bp-001.md) |
 | `high` | KI-BP-004 — A worktree's deployed hooks are frozen at build time, so after merging `main` the gates enforce the previous ruleset | [open-high-ki-bp-004.md](build-pipeline/open-high-ki-bp-004.md) |
 | `high` | KI-BP-20261007 — RETRACTED: "`check-product-truth-validate` fails closed on an undeclared `aiosqlite` dependency" — tested and disproved; `aiosqlite` is supplied transitively by `langgraph-checkpoint-sqlite==3.1.1` (`requirements-dev.txt:52`) and the real cause was a stale local `.venv` | [resolved-high-ki-bp-20261007-product-truth-gate-fails-closed-on-an-undeclared-dependency.md](build-pipeline/resolved/resolved-high-ki-bp-20261007-product-truth-gate-fails-closed-on-an-undeclared-dependency.md) |

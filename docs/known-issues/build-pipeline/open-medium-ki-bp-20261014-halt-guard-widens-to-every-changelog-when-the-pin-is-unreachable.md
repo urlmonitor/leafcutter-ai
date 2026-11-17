@@ -11,7 +11,7 @@ components:
 related_docs:
   - docs/known-issues/build-pipeline.md
   - docs/known-issues/README.md
-  - docs/known-issues/build-pipeline/open-blocker-ki-bp-018.md
+  - docs/known-issues/build-pipeline/open-medium-ki-bp-018.md
 ---
 
 # KI-BP-20261014-halt-guard-widens-to-every-changelog-when-the-pin-is-unreachable — an unanswerable "what changed since the pin?" is answered "everything"

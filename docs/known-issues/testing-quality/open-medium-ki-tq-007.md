@@ -1,11 +1,11 @@
 ---
 title: "KI-TQ-007 — Six review rounds verified a component without once asking what invokes it"
-description: "critical as a pattern — the largest miss in the GE-122 review, and the one every"
+description: "medium since 2026-11-17 (was critical as a pattern) — detection shipped in #787; 4 hook scripts remain unregistered by design, and nothing yet reconciles what the package advertises against what the registry runs"
 type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-11-17'
 components:
   - testing_quality
 related_docs:
@@ -17,10 +17,11 @@ related_docs:
 
 > One known issue, split out of `docs/known-issues/testing-quality.md` on
 > 2026-09-14. Index: [testing-quality.md](../testing-quality.md).
-> Filename severity is the three-level index bucket (`blocker`); the
-> original grading is the `**Severity:**` line below, unchanged.
+> Filename severity is `medium` since the reclassification of 2026-11-17 (see the note at
+> the end); the original grading is kept on the `**Severity:**` line below.
 
-- **Severity:** critical as a pattern — the largest miss in the GE-122 review, and the one every
+- **Severity:** medium since 2026-11-17 (see *Reclassified 2026-11-17* at the end). Originally
+  graded critical as a pattern — the largest miss in the GE-122 review, and the one every
   other finding was standing on
 - **Status:** **open as a pattern, with detection shipped and remediation under way** (updated
   2026-09-14). The detection half is closed:
@@ -122,5 +123,26 @@ close the pattern entry itself: the review-method gap this entry tracks is a pro
 reviews are conducted*, not of any one instance, and the instance closing is exactly the kind
 of individual fix this entry warns will keep recurring until the method itself is enforced.
 Kept open.
+
+## Reclassified 2026-11-17: critical (blocker bucket) to medium
+
+Re-verified against origin/main `70971399d`.
+- **Detection is fixed.** `97fb472f6` (#787) added
+  `unit_tests/commit_guardian/test_hook_registration_inventory.py`. Its
+  `test_no_unregistered_hook_scripts_beyond_baseline` (:190-215) fails CI on any hook script on
+  disk that no `hooks_manifest` entry invokes, and fails again when the baseline goes stale.
+- **The backlog is down from 18 to 4, and all four are known.** `UNREGISTERED_BASELINE`
+  (:97-117) holds `check_ac_coverage.py`, `check_doc_coverage.py`, `check_docstrings.py` and
+  `check_documentation.py`, under the file's "KNOWN AND WANTED" comment (:85). The five-name
+  list in the 2026-09-23 note above is out of date: `check_complexity.py` was registered as
+  `check-complexity` in `ab46caa02`.
+- **Still open.** Nothing checks what the package advertises (README, `config.py`, settings)
+  against what the registry runs. A script with a settings block and no registry entry is
+  caught; a check the docs promise and nothing runs is not.
+
+**Follow-up:** GE-120h-1 and GE-120h-2 (both `readiness: approved`, `work_status: todo`) under
+`docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/`. GE-120h-3 stays
+`todo`: its covering tests pass locally, but its child GE-120h-3-i is `todo` with no covering
+test, so the parent cannot be marked done yet.
 
 ---

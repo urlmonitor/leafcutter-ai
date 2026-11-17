@@ -1,11 +1,11 @@
 ---
 title: "KI-BO-20261012-documentation-expert-cannot-reach-its-specialists-in-the-flat-driver — /build-feature runs documentation-expert as a flat depth-1 phase, where the one route its template allows to a written doc (dispatching a specialist through the Agent tool) does not exist, so a doc-bearing ticket either halts or passes by breaking the template"
-description: "blocker — documentation-expert may not write docs itself and must dispatch reference-author, how-to-author, adr-author, explanation-author or architecture-diagram-author through the Agent tool. build-feature.js dispatches every phase as a depth-1 agent(), and a depth-1 agent has no Agent tool (ADR-006, ADR-019). In run wf_54e15913-aea five tickets reached the phase: four halted, and the fifth signed off ok by writing the docs itself, against its own constraint. 39 of the epic's 48 tickets carried documentation-expert: needed. The specialists are already phases in phaseOrder, and the BO-3700 promotion wire already dispatches a promoted phase, so the driver can run them. Nothing routes the work there."
+description: "medium since 2026-11-17 (was blocker; mitigated by BO-2200c-5-vii's leaf mode, structural fix BO-3100c-2) — documentation-expert may not write docs itself and must dispatch reference-author, how-to-author, adr-author, explanation-author or architecture-diagram-author through the Agent tool. build-feature.js dispatches every phase as a depth-1 agent(), and a depth-1 agent has no Agent tool (ADR-006, ADR-019). In run wf_54e15913-aea five tickets reached the phase: four halted, and the fifth signed off ok by writing the docs itself, against its own constraint. 39 of the epic's 48 tickets carried documentation-expert: needed. The specialists are already phases in phaseOrder, and the BO-3700 promotion wire already dispatches a promoted phase, so the driver can run them. Nothing routes the work there."
 type: reference
 category: reference
 status: active
 created: '2026-10-12'
-last_updated: '2026-10-12'
+last_updated: '2026-11-17'
 components:
   - build_orchestration
   - documentation_system
@@ -15,7 +15,8 @@ related_docs:
   - docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
   - docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
   - docs/known-issues/build-orchestration/open-high-ki-bo-20260914-autofix-re-dispatch-is-specified-at-a-depth-that-cannot-execute.md
-  - docs/known-issues/build-orchestration/open-blocker-ki-bo-20260925-1309.md
+  - docs/known-issues/build-orchestration/open-medium-ki-bo-20260925-1309.md
+  - docs/known-issues/build-orchestration/resolved/resolved-high-ki-bo-20261012-documentation-expert-phase-cannot-dispatch-doc-specialists.md
   - docs/known-issues/build-orchestration/open-low-ki-bo-20261009-one-halted-ticket-stops-the-whole-epic-run.md
   - docs/known-issues/supervisor-system/open-low-ki-ss-20260927-commit-signoff-precedes-the-commit.md
   - docs/known-issues/supervisor-system/open-high-ki-ss-20260826-agent-routed-around-a-blocked-capability.md
@@ -23,10 +24,11 @@ related_docs:
 
 # KI-BO-20261012-documentation-expert-cannot-reach-its-specialists-in-the-flat-driver — the documentation phase cannot do its job where /build-feature runs it
 
-> Filename severity is the three-level index bucket (`blocker`); the original grading is the
-> `**Severity:**` line below.
+> Filename severity is `medium` since the reclassification of 2026-11-17 (see the note at the
+> end); the original grading is kept on the `**Severity:**` line below.
 
-- **Severity:** blocker. Under `/build-feature`, a ticket that needs `documentation-expert`
+- **Severity:** medium since 2026-11-17 (see *Reclassified 2026-11-17* at the end). Originally
+  graded blocker. Under `/build-feature`, a ticket that needs `documentation-expert`
   cannot reach `done` by that agent's own rules. If the agent obeys its template, the ticket
   halts. That happened to four of the five tickets that reached the phase. The only way
   through is to break the template, which the fifth did, and that skips the specialist's
@@ -210,3 +212,25 @@ of that. `KI-BO-20261009-1832`: the driver refuses a handoff to a phase the hand
 added.
 
 **Pattern:** a phase whose only success path is a dispatch, run where dispatch does not exist.
+
+## Reclassified 2026-11-17: blocker to medium
+
+Re-verified against origin/main `70971399d`.
+- **Mitigated: the halt is gone.** `3dde0c665`, PR #1228 (BO-2200c-5-vii, done) added a LEAF
+  MODE instruction to the `documentation-expert` dispatch (`build-feature.js`:2186-2195). The
+  agent picks the specialist, reads that specialist's template and canonical how-to, and
+  writes the doc itself by those rules. The override applies to that dispatch only. A
+  doc-bearing ticket no longer halts here, and the self-authoring is now sanctioned rather
+  than a silent template violation.
+- **Still open: the structural defect.** The specialists are never dispatched as phases,
+  although `explanation-author`, `how-to-author` and `reference-author` sit in `phaseOrder`
+  (:421). The template still says never to write a doc (`documentation-expert.md`:204, :373).
+  `glossary-triage` is still reached only through the Agent tool, so it is unreachable here.
+  ADR-019's depth diagram (:156) and the registry's `spawned_by: ["ticket-supervisor"]` are
+  uncorrected.
+- **Duplicate closed.** `KI-BO-20261012-documentation-expert-phase-cannot-dispatch-doc-specialists`
+  recorded the same defect from another run on the same day. It is moved to `resolved/` as a
+  duplicate of this entry, mitigated by the same commit.
+
+**Follow-up:** the structural fix is BO-3100c-2 (`readiness: approved`, `work_status: todo`),
+`docs/acceptance-criteria/build-orchestration/BO-3100-delegated-work-completes/BO-3100c-2.yaml`.

@@ -1,11 +1,11 @@
 ---
 title: "KI-CG-20260909-gate-root-files — `check-root-files` refuses 5 legitimate root files and matches `M`, so registering it makes `ruff.toml` and `LEAFCUTTER_VERSION` permanently uneditable"
-description: "high (as a blocker to registration); trivial to fix."
+description: "low since 2026-11-17 (was high, filed under blocker) — the M-status half is fixed (PR #857); five tracked root files are still missing from the shipped allowlist, which bites only when one of them arrives as an addition."
 type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-11-17'
 components:
   - commit_guardian
 related_docs:
@@ -17,10 +17,11 @@ related_docs:
 
 > One known issue, split out of `docs/known-issues/commit-guardian.md` on
 > 2026-09-14. Index: [commit-guardian.md](../commit-guardian.md).
-> Filename severity is the three-level index bucket (`blocker`); the
-> original grading is the `**Severity:**` line below, unchanged.
+> Filename severity is `low` since the reclassification of 2026-11-17 (see the note at the
+> end); the original grading is kept on the `**Severity:**` line below.
 
-- **Severity:** high (as a blocker to registration); trivial to fix.
+- **Severity:** low since 2026-11-17 (see *Reclassified 2026-11-17* at the end). Originally
+  graded high (as a blocker to registration); trivial to fix.
 - **Status:** open — no AC. Smallest of the set; likely a single short session.
 - **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-09 · **Last seen:** 2026-09-09
 - **Where:** `templates/scripts/commit_guardian/check_root_files.py:34` (`git diff --cached --name-status`), `:51` (the status filter); allowlist at `commit_guardian.json` → `root_files.allowed_files` / `allowed_extensions`.
@@ -134,3 +135,22 @@ is read as new". Same allowlist gap, different diff status, and `A`-only matchin
 help because a merge genuinely presents the path as `A`.
 
 ---
+
+## Reclassified 2026-11-17: blocker bucket to low, kept open
+
+Re-verified against origin/main `70971399d`.
+- **Half fixed.** `check_root_files.py`:55 matches only `A` and `R` statuses (GE-120e-1-ii,
+  PR #857). Editing a tracked root file is no longer refused.
+- **Open half.** `ruff.toml`, `requirements-dev.txt`, `build-self.sh`, `SETUP.md` and
+  `LEAFCUTTER_VERSION` are all tracked at the root and still absent from
+  `root_files.allowed_files` (`commit_guardian.json`:148-180); `allowed_extensions` is still
+  `.json` only. The gate fires only when one of the five arrives as an addition: added fresh,
+  deleted and re-added, or brought in by a merge into a branch that lacks it. The newest of the
+  five, `LEAFCUTTER_VERSION`, was added on 2026-08-10, so any branch forked after that already
+  has all five. The workaround, `SKIP=check-root-files` on that one commit, is cheap.
+
+**Note for the proper fix:** three of the five (`build-self.sh`, `SETUP.md`,
+`LEAFCUTTER_VERSION`) are specific to this repository, and the allowlist ships to consumers.
+Adding all five blindly would widen every adopter's allowlist. The fix needs a repo-local
+override of the allowlist, or a short AC that decides which names are defensible as general
+defaults. It should not be a blind addition.

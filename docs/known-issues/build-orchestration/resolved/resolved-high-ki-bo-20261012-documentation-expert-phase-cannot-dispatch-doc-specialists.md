@@ -5,28 +5,37 @@ type: reference
 category: reference
 status: active
 created: '2026-10-12'
-last_updated: '2026-10-12'
+last_updated: '2026-11-17'
 components:
   - build_orchestration
 related_docs:
   - docs/known-issues/build-orchestration.md
+  - docs/known-issues/build-orchestration/open-medium-ki-bo-20261012-documentation-expert-cannot-reach-its-specialists-in-the-flat-driver.md
   - docs/known-issues/build-orchestration/open-high-ki-bo-20260914-autofix-re-dispatch-is-specified-at-a-depth-that-cannot-execute.md
-  - docs/known-issues/build-orchestration/open-blocker-ki-bo-20260925-1309.md
+  - docs/known-issues/build-orchestration/open-medium-ki-bo-20260925-1309.md
   - docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
 ---
 
 # KI-BO-20261012-documentation-expert-phase-cannot-dispatch-doc-specialists — the documentation-expert phase can never produce a doc
 
 > One known issue, filed on sight during the GE-132a-1 build (PR #1155, merged as
-> `08879303`). Index: [build-orchestration.md](../build-orchestration.md).
+> `08879303`). Index: [build-orchestration.md](../../build-orchestration.md).
 > Filename severity is the three-level index bucket (`high`); the original grading is the
 > `**Severity:**` line below.
+
+> **Resolved 2026-11-17 as a duplicate.** This entry records the same defect as
+> [KI-BO-20261012-documentation-expert-cannot-reach-its-specialists-in-the-flat-driver](../open-medium-ki-bo-20261012-documentation-expert-cannot-reach-its-specialists-in-the-flat-driver.md),
+> filed the same day from a different run. The halt both describe was mitigated by
+> `3dde0c665`, PR #1228 (BO-2200c-5-vii): `build-feature.js`:2186-2195 now tells the phase to
+> write the doc itself by the chosen specialist's template and how-to. That entry stays open
+> at medium for the structural fix, BO-3100c-2. Track it there.
 
 - **Severity:** high. The ticket cannot reach commit through the driver. The phase that owns the
   doc cannot write it, the verifier then correctly fails, and the commit phase correctly refuses.
   Nothing wrong lands, but no ticket whose contract names a documentation file can finish through
   `/build-feature` without someone writing the doc by hand.
-- **Status:** open, no AC.
+- **Status:** resolved 2026-11-17, duplicate of
+  KI-BO-20261012-documentation-expert-cannot-reach-its-specialists-in-the-flat-driver.
 - **Occurrences:** 1 run, 2 blockers (2026-10-12, run `wf_ce79f3ce-861`, ticket
   `TICKET-20261012-GE-132a-1`).
 - **First seen:** 2026-10-12 · **Last seen:** 2026-10-12
