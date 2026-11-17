@@ -127,11 +127,11 @@ def test_same_generation_publish_cannot_clear_current_markers():
         paused, resume = asyncio.Event(), asyncio.Event()
         original = second._run
 
-        async def delayed(statement, parameters=None, write=False):
+        async def delayed(statement, parameters=None, write=False, **kwargs):
             if "UNWIND $rows AS row MERGE (n:AC " in statement and not paused.is_set():
                 paused.set()
                 await resume.wait()
-            return await original(statement, parameters, write)
+            return await original(statement, parameters, write, **kwargs)
 
         second._run = delayed
         try:
