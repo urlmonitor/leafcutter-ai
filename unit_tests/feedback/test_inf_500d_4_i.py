@@ -82,8 +82,8 @@ def _tmpdir(base: Path) -> Path:
 def _assert_refusal(proc, declaration: Path, reason: str) -> None:
     assert proc.returncode != 0, f"refusal must be non-zero; stdout={proc.stdout!r} stderr={proc.stderr!r}"
     assert proc.stdout == "", f"nothing may be printed on stdout (a caller would capture it as the id): {proc.stdout!r}"
-    lines = h.stderr_lines(proc)
-    assert len(lines) == 1, f"exactly one stderr line expected, got {lines!r}"
+    lines = h.refusal_lines(proc)  # every non-blank stderr line minus the one INF-500d-3 'submit-failed:' line
+    assert len(lines) == 1, f"exactly one human-readable refusal line expected, got {lines!r}"
     assert str(declaration) in lines[0], f"the line must name the expected declaration {declaration}: {lines[0]!r}"
     assert re.search(reason, lines[0], re.IGNORECASE), f"the line must say which condition failed ({reason!r}): {lines[0]!r}"
 

@@ -101,8 +101,8 @@ def test_submit_feedback_refuses_a_sink_that_is_not_directly_under_the_root(tmp_
 
     assert proc.returncode != 0, f"a sink outside the root must be refused: stdout={proc.stdout!r} stderr={proc.stderr!r}"
     assert proc.stdout == "", f"nothing may be printed on stdout (a caller would capture it as the id): {proc.stdout!r}"
-    lines = h.stderr_lines(proc)
-    assert len(lines) == 1, f"exactly one stderr line expected, got {lines!r}"
+    lines = h.refusal_lines(proc)  # every non-blank stderr line minus the one INF-500d-3 'submit-failed:' line
+    assert len(lines) == 1, f"exactly one human-readable refusal line expected, got {lines!r}"
     assert str(h.declaration_path(out_root)) in lines[0], f"the line must name the declaration: {lines[0]!r}"
     assert "operational_log_root" in lines[0], f"the line must name the rule it broke: {lines[0]!r}"
     assert h.sha256(sink) == digest, "the report was appended to a sink the root does not own"

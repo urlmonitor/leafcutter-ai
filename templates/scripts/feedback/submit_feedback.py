@@ -41,6 +41,20 @@ Exit codes:
     0: success (feedback_id printed to stdout)
     1: validation failure, or the declared sink cannot be determined (error
        details on stderr; nothing on stdout, nothing written)
+    2: argument-parser error (usage text on stderr, nothing on stdout)
+
+Failure line (AC INF-500d-3): on every failure exit this script controls, stderr
+    carries exactly one line "submit-failed:<reason>:<category>" beside the
+    human-readable ERROR lines; stdout stays empty and the exit is non-zero.
+    <reason> is one of the ids in submit_failure_reasons.json (beside this
+    file, read on every run; unreadable means exit 1 with no reason line and no
+    built-in list); <category> is the --category value, or "-". Mapping:
+    parser errors, source-argument errors, unknown category, bad tags, bad
+    --addressed-by -> malformed-submission; writer check -> writer-not-allowed;
+    PyYAML missing, categories file unreadable / unparseable / empty / holding
+    an entry without id -> facility-unavailable; declared-sink refusal, sink
+    directory, open or append failure, --jsonl parent not creatable ->
+    destination-unwritable. written-uncited is decided by the caller.
 
 Output streams on success (callers parse these -- keep them stable):
     stdout: exactly one line, the feedback_id (fb_YYYY-MM-DD_xxxxxxxx).
@@ -91,6 +105,7 @@ if _HERE not in sys.path:
 
 import feedback_sink  # noqa: E402
 import feedback_validation as _fv  # noqa: E402
+import submit_failure as _sf  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Configuration root discovery
@@ -175,7 +190,8 @@ def _load_categories(config_path: Path | None = None) -> dict:
         dict: Mapping from category id string to category dict.
 
     Raises:
-        SystemExit: When the config file cannot be read or parsed.
+        SystemExit: When the config file cannot be read, parsed or used (no
+            categories, or an entry without a string id).
     """
     try:
         import yaml  # type: ignore[import]
@@ -202,11 +218,19 @@ def _load_categories(config_path: Path | None = None) -> dict:
             file=sys.stderr,
         )
         sys.exit(1)
+    except (yaml.YAMLError, UnicodeDecodeError) as exc:
+        print(f"ERROR: Cannot parse feedback_categories.yaml at {Path(path).resolve()}: {exc}", file=sys.stderr)
+        sys.exit(1)
 
-    cats: dict = {}
-    for entry in data.get("categories", []):
-        cats[entry["id"]] = entry
-    return cats
+    entries = data.get("categories") if isinstance(data, dict) else None
+    if not isinstance(entries, list) or not entries or not all(isinstance(e, dict) and isinstance(e.get("id"), str) for e in entries):
+        print(
+            f"ERROR: feedback_categories.yaml at {Path(path).resolve()} is unusable: "
+            "it needs a non-empty 'categories' list whose entries each have a string 'id'.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return {entry["id"]: entry for entry in entries}
 
 
 # ---------------------------------------------------------------------------
@@ -214,15 +238,23 @@ def _load_categories(config_path: Path | None = None) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def _build_parser() -> argparse.ArgumentParser:
+def _build_parser(
+    reporter: _sf.Reporter | None = None, raw_argv: list[str] | None = None,
+) -> argparse.ArgumentParser:
     """Build and return the argument parser for submit_feedback.py.
+
+    Args:
+        reporter: Prints the reason line when a usage error ends the run.
+        raw_argv: The raw arguments, from which that line takes its category.
 
     Returns:
         argparse.ArgumentParser: Configured parser.
     """
-    parser = argparse.ArgumentParser(
+    parser = _sf.ReasonedParser(
         description="Emit one structured feedback entry to feedback.jsonl.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        reporter=reporter,
+        raw_argv=raw_argv or [],
     )
     parser.add_argument("--ticket", default=None, help="Ticket file path (optional in hook mode).")
     parser.add_argument("--phase", required=True, help="Agent name or hook writer id.")
@@ -377,12 +409,12 @@ def _prepare_sink(jsonl_arg: str | None) -> Path | None:
     """
     if jsonl_arg:
         path = Path(jsonl_arg)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
-    path, refusal = feedback_sink.resolve_feedback_sink(_CONFIG_DIR.parent)
-    if path is None:
-        print(refusal, file=sys.stderr)
-        return None
+    else:
+        declared, refusal = feedback_sink.resolve_feedback_sink(_CONFIG_DIR.parent)
+        if declared is None:
+            print(refusal, file=sys.stderr)
+            return None
+        path = declared
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
@@ -445,6 +477,79 @@ def _write_sidecar(feedback_id: str) -> Path | None:
 # ---------------------------------------------------------------------------
 
 
+def _load_validated_categories(args: argparse.Namespace, reporter: _sf.Reporter, category: str) -> dict:
+    """Load the categories (facility-unavailable on failure) and check the category is one of them.
+
+    Args:
+        args: Parsed argument namespace.
+        reporter: Prints the reason line when a step exits non-zero.
+        category: The category part for the reason line.
+
+    Returns:
+        dict: The categories keyed by id.
+    """
+    with reporter.scope(_sf.FACILITY_UNAVAILABLE, category):
+        cats = _load_categories(Path(args.config) if args.config else None)
+    with reporter.scope(_sf.MALFORMED_SUBMISSION, category):
+        _fv.validate_category(args.category, cats)
+    return cats
+
+
+def _validate_submission(args: argparse.Namespace, cats: dict, reporter: _sf.Reporter, category: str) -> list[str]:
+    """Run the writer, tag and --addressed-by checks; return the validated tags.
+
+    Args:
+        args: Parsed argument namespace; ``addressed_by`` is replaced by the parsed list.
+        cats: The loaded categories.
+        reporter: Prints the reason line when a check exits non-zero.
+        category: The category part for the reason line.
+
+    Returns:
+        list[str]: The validated tags.
+    """
+    if args.source == "agent":
+        with reporter.scope(_sf.WRITER_NOT_ALLOWED, category):
+            _fv.validate_writer(args.phase, args.category, cats)
+    with reporter.scope(_sf.MALFORMED_SUBMISSION, category):
+        tags = _fv.validate_tags(args.tags)
+        # validate_addressed_by parses and validates the JSON; it mutates args
+        # by replacing the raw string with the parsed list (or leaves it None).
+        args.addressed_by = _fv.validate_addressed_by(getattr(args, "addressed_by", None))
+    return tags
+
+
+def _append_entry(jsonl_path: Path, entry: dict, feedback_id: str) -> bool:
+    """Append the entry under an advisory flock and print the id; False when the sink fails.
+
+    The id is printed to stdout INSIDE the lock, after the flush succeeded, so
+    stdout delivery is serialised with the append (no empty-capture race) and
+    a failed append leaves stdout empty.
+
+    Args:
+        jsonl_path: The file to append to.
+        entry: The JSONL entry.
+        feedback_id: The id printed on success.
+
+    Returns:
+        bool: True when the record was appended, False after a WARNING naming the OS error.
+    """
+    try:
+        with open(jsonl_path, "a", encoding="utf-8") as fh:
+            if _FCNTL_AVAILABLE:
+                _fcntl.flock(fh, _fcntl.LOCK_EX)
+            try:
+                fh.write(json.dumps(entry, separators=(",", ":")) + "\n")
+                fh.flush()
+                print(feedback_id)
+            finally:
+                if _FCNTL_AVAILABLE:
+                    _fcntl.flock(fh, _fcntl.LOCK_UN)
+    except OSError as exc:
+        print(f"[submit_feedback] WARNING: could not write {jsonl_path}: {exc}", file=sys.stderr)
+        return False
+    return True
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point for submit_feedback.py.
 
@@ -455,28 +560,26 @@ def main(argv: list[str] | None = None) -> int:
         int: Exit code (0 on success, 1 on validation failure or when the
             declared sink cannot be determined).
     """
-    args = _build_parser().parse_args(argv)
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    reporter = _sf.open_reporter(__file__)
+    if reporter is None:
+        return 1
+    args = _build_parser(reporter, raw_argv).parse_args(raw_argv)
+    category = _sf.category_token(args.category)
 
     err = _validate_source_args(args)
     if err:
         print(err, file=sys.stderr)
+        reporter.emit(_sf.MALFORMED_SUBMISSION, category)
         return 1
 
-    config_path = Path(args.config) if args.config else None
-    cats = _load_categories(config_path)
-    _fv.validate_category(args.category, cats)
-
-    if args.source == "agent":
-        _fv.validate_writer(args.phase, args.category, cats)
-
-    tags = _fv.validate_tags(args.tags)
-    # validate_addressed_by parses and validates the JSON; it mutates args
-    # by replacing the raw string with the parsed list (or leaves it None).
-    args.addressed_by = _fv.validate_addressed_by(getattr(args, "addressed_by", None))
+    cats = _load_validated_categories(args, reporter, category)
+    tags = _validate_submission(args, cats, reporter, category)
     severity = _resolve_severity(args, cats)
 
     jsonl_path = _prepare_sink(args.jsonl)
     if jsonl_path is None:
+        reporter.emit(_sf.DESTINATION_UNWRITABLE, category)
         return 1
 
     now = datetime.now(timezone.utc)
@@ -484,26 +587,9 @@ def main(argv: list[str] | None = None) -> int:
     feedback_id = _fv.generate_feedback_id(timestamp, args.phase, args.ticket or "")
     entry = _build_entry(args, tags, severity, feedback_id, timestamp)
 
-    # ------------------------------------------------------------------
-    # Write JSONL (atomic under concurrent writes via advisory flock)
-    # ------------------------------------------------------------------
-    try:
-        fh = open(jsonl_path, "a", encoding="utf-8")
-    except OSError as exc:
-        print(f"[submit_feedback] WARNING: could not open {jsonl_path}: {exc}", file=sys.stderr)
+    if not _append_entry(jsonl_path, entry, feedback_id):
+        reporter.emit(_sf.DESTINATION_UNWRITABLE, category)
         return 1
-    with fh:
-        if _FCNTL_AVAILABLE:
-            _fcntl.flock(fh, _fcntl.LOCK_EX)
-        try:
-            fh.write(json.dumps(entry, separators=(",", ":")) + "\n")
-            fh.flush()
-            # Print feedback_id to stdout INSIDE the lock so stdout delivery
-            # is serialised with the append, preventing empty-capture races.
-            print(feedback_id)
-        finally:
-            if _FCNTL_AVAILABLE:
-                _fcntl.flock(fh, _fcntl.LOCK_UN)
 
     # Sidecar temp file -- fallback recovery when stdout capture fails. The
     # path goes to stderr (not stdout) to avoid disrupting FB_ID=$(...).
@@ -521,6 +607,20 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-11-16 [python-coder/fastlane/INF-500d-3]:
+#   Every failure exit this script controls now prints exactly one stderr line
+#   "submit-failed:<reason>:<category>" (reason from submit_failure_reasons.json,
+#   handled by the new sibling submit_failure.py). Reason per exit path: parser,
+#   source-argument, category, tag and --addressed-by errors -> malformed-
+#   submission; writer check -> writer-not-allowed; PyYAML missing, categories
+#   file unreadable / unparseable / empty / entry without id (the last three were
+#   tracebacks) -> facility-unavailable; declared-sink refusal, sink directory,
+#   --jsonl parent mkdir (was a traceback), open and append OSError (append was a
+#   traceback) -> destination-unwritable. The vocabulary is read on every run and
+#   an unreadable file exits 1 with no reason line and no built-in list, so the
+#   caller rule reads facility-unavailable. main() was split into
+#   _load_validated_categories, _validate_submission and _append_entry to stay
+#   within the complexity limit. Success output is unchanged. (AC INF-500d-3)
 # - 2026-11-16 [python-coder/fastlane/inf-100c-2-4]:
 #   feedback_categories.yaml now has an ordered candidate list
 #   (_categories_candidates): first the _find_config_root() directory (the

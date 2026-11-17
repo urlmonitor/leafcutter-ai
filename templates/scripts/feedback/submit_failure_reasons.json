@@ -1,0 +1,42 @@
+{
+  "description": "Closed set of reasons a feedback submission can fail, shared by submit_feedback.py, the check-feedback-id hook, the instruction surfaces and the hold queue. Identifiers are stable once shipped and are never renamed; a new reason is added only by amending acceptance criterion INF-500d-3.",
+  "reasons": [
+    {
+      "id": "writer-not-allowed",
+      "meaning": "The submitter was not permitted to write the category it named, so nothing was written.",
+      "record_written": false,
+      "detected_by": "script"
+    },
+    {
+      "id": "malformed-submission",
+      "meaning": "The submission was refused as malformed before anything was written: a bad argument, an unrecognised category, a badly shaped tag or a badly shaped reference list.",
+      "record_written": false,
+      "detected_by": "script"
+    },
+    {
+      "id": "facility-unavailable",
+      "meaning": "The submission facility itself was unavailable: its entry point is missing, a library it depends on is not installed, or its configuration cannot be used, so nothing was written.",
+      "record_written": false,
+      "detected_by": "caller"
+    },
+    {
+      "id": "destination-unwritable",
+      "meaning": "The destination for the report could not be written, so the report was lost.",
+      "record_written": false,
+      "detected_by": "script"
+    },
+    {
+      "id": "written-uncited",
+      "meaning": "The report was written successfully but the caller did not capture the record identifier, so a stored record exists and must not be filed again.",
+      "record_written": true,
+      "detected_by": "caller"
+    }
+  ],
+  "marker_form": "feedback-id: (submit-failed:<reason>:<category>)",
+  "stderr_line_form": "submit-failed:<reason>:<category>",
+  "patterns": {
+    "real_id": "^fb_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9a-f]{8}$",
+    "reasoned_marker": "^\\(submit-failed:([a-z][a-z0-9-]*):([^\\s:()]+)\\)$",
+    "legacy_bare": "^\\(submit-failed\\)$"
+  }
+}

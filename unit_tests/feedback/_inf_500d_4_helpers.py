@@ -238,6 +238,23 @@ def stderr_lines(proc: subprocess.CompletedProcess[str]) -> list[str]:
     return [line for line in proc.stderr.splitlines() if line.strip()]
 
 
+REASON_LINE_PREFIX = "submit-failed:"
+
+
+def refusal_lines(proc: subprocess.CompletedProcess[str]) -> list[str]:
+    """The human-readable refusal lines of a failed run: ``stderr_lines`` minus ONE reason line.
+
+    INF-500d-3 adds one ``submit-failed:<reason>:<category>`` line beside the human-readable refusal. The
+    exclusion removes at most one line, and only a line that begins with ``submit-failed:`` (no stripping, so an
+    indented line is kept); a second such line, or any other extra line, still counts.
+    """
+    lines = stderr_lines(proc)
+    for index, line in enumerate(lines):
+        if line.startswith(REASON_LINE_PREFIX):
+            return lines[:index] + lines[index + 1:]
+    return lines
+
+
 def without_paths(text: str, *paths: Path | str) -> str:
     """``text`` with every given path removed, longest first.
 
