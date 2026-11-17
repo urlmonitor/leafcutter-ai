@@ -98,11 +98,9 @@ class TestFaultOnlyInDeployedCopyFailsSuite(unittest.TestCase):
     the faulted copy via the override seam, and require it fails naming
     the broken behaviour."""
 
-    layout_root: Path
-
     @classmethod
     def setUpClass(cls) -> None:
-        cls.layout_root = ensure_deployed_layout()
+        ensure_deployed_layout()  # build (or reuse) the shared layout once, before any test runs
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory(prefix="bo4300f4-fault-")
@@ -193,6 +191,10 @@ class TestSuiteRunsDeployedMakerFromEveryStartingPoint(unittest.TestCase):
         self.assertNotIn(
             "templates", maker_path.parts,
             msg=f"locator resolved a templates/ path, not the install copy: {maker_path}",
+        )
+        self.assertTrue(
+            maker_path.is_relative_to(self.layout_root),
+            msg=f"locator resolved {maker_path}, outside the install layout {self.layout_root}",
         )
 
         made = make_project(self.tmp_path, layout="dev")

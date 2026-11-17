@@ -81,7 +81,8 @@ class TestTq600a13xviProofDecisions(unittest.TestCase):
         # covers: TQ-600a-13-xvi
         # angle: discrimination
         """AC-xvi: a report built from pytest's own xpass shape (passed + wasxfail, labelled by the proof's status) and
-        one built from the masking plugin's shape both fail a whole-lane judgement; a plain pass does not.
+        one built from the legacy masked shape (``outcome = "xfailed"``, the masking plugin's shape before PR #1432)
+        both fail a whole-lane judgement; a plain pass does not.
 
         Wrong versions caught: ``xpassed`` is accepted as green in a whole-lane proof.
         """
@@ -118,9 +119,10 @@ class TestTq600a13xviProofDecisions(unittest.TestCase):
     def test_tq_600a_13_xvi_the_status_label_reads_the_masking_plugin_s_outcome(self):
         # covers: TQ-600a-13-xvi
         # angle: discrimination
-        """AC-xvi: ``pytest_ac_enforcement`` masks a failure by setting ``report.outcome = "xfailed"`` with ``failed`` and
-        ``skipped`` both False. That reads ``xfailed``, never ``xpassed`` (which is also not green); pytest's own xfail
-        (skipped + wasxfail) is ``xfailed`` and its xpass (passed + wasxfail) is ``xpassed``.
+        """AC-xvi: since PR #1432 ``pytest_ac_enforcement`` masks a failure with pytest's own xfail shape
+        (``report.outcome = "skipped"`` plus ``wasxfail``), which reads ``xfailed``. Before that it set
+        ``report.outcome = "xfailed"`` with ``failed`` and ``skipped`` both False; a report of that legacy shape also
+        reads ``xfailed``, never ``xpassed`` (which is also not green). pytest's xpass (passed + wasxfail) is ``xpassed``.
 
         Wrong versions caught: the masked report is labelled xpassed and a whole-lane judge lets it through.
         """

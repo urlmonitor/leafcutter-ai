@@ -420,14 +420,23 @@ class TestDeterminationHonoursAnExplicitManifestPath(unittest.TestCase):
         nonexistent = Path(tempfile.gettempdir()) / "ge120e2-does-not-exist-manifest.json"
         self.assertFalse(nonexistent.exists())
 
-        with self.assertRaises(Exception) as ctx:
+        with (
+            self.assertLogs(determine_change_set_sources.__module__, level="WARNING") as logged,
+            self.assertRaises(FileNotFoundError) as ctx,
+        ):
             determine_change_set_sources(nonexistent)
 
-        self.assertNotIsInstance(
-            ctx.exception,
-            KeyboardInterrupt,
-            "A missing manifest path must surface as a reported failure, "
-            "never be swallowed into a silent fallback or a bare pass.",
+        # The failure names the path it was given: it read exactly that path and
+        # did not fall back to the installed manifest.
+        self.assertEqual(
+            Path(ctx.exception.filename),
+            nonexistent,
+            "A missing manifest path must surface as a reported failure on "
+            "that very path, never a silent fallback to another manifest.",
+        )
+        self.assertTrue(
+            any(str(nonexistent) in line for line in logged.output),
+            f"The unreadable manifest must be reported at WARNING; logged: {logged.output!r}",
         )
 
 
