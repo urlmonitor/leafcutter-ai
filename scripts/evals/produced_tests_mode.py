@@ -14,13 +14,16 @@ ARCHITECTURE: ``run_produced_tests_mode`` is dispatched by run_agent_eval.main()
     a git sandbox (the fixture plus the scripts the template names, ``{{config.output_root}}``
     rendered to the sandbox), exports the test files it wrote as ``*.py.recorded`` beside its
     reply as report.md, and scores them exactly like a recorded gold output. Gold mode makes no
-    model call.
+    model call. When LEAFCUTTER_EVAL_KEEP_OUTPUTS names a directory, each live row's produced
+    folder is copied to <dir>/<eval set name>/<row id>/ before scoring, so a failed row can be checked.
 """
 
 from __future__ import annotations
 
 import argparse
+import importlib
 import logging
+import os
 import shutil
 import tempfile
 from datetime import datetime, timezone
@@ -31,9 +34,12 @@ from typing import Any
 import produced_tests_runs as runs
 import produced_tests_scoring as scoring
 import produced_tests_transcript as capture
+from agent_launch.command import AgentLaunchError
+from agent_launch.harness_failure import launch_failed, stop_run
 
 logger = logging.getLogger("run_agent_eval")
 OUTPUT_ROOT_PLACEHOLDER = "{{config.output_root}}"
+KEEP_OUTPUTS_ENV = "LEAFCUTTER_EVAL_KEEP_OUTPUTS"
 LOCAL_NOTE = "LOCAL RUN: scored on this machine only; the CI eval gate has not run this eval."
 
 
@@ -73,6 +79,15 @@ def support_for(agent_cfg: dict, repo_root: Path) -> tuple[tuple[Path, str], ...
     return tuple((repo_root / rel, rel) for rel in agent_cfg.get("support_scripts", []))
 
 
+def row_input(row: dict, agent_cfg: dict, sandbox: Path) -> str:
+    """What the agent is asked: the row's input, or, when the config names an ``input_builder`` module, what its
+    ``build_dispatch_input(row, sandbox)`` makes of the built sandbox (TQ-200d-3)."""
+    builder = agent_cfg.get("input_builder")
+    if builder:
+        return importlib.import_module(builder).build_dispatch_input(row, sandbox)
+    return row[agent_cfg.get("input_field", "input")]
+
+
 def live_output(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path, work_dir: Path, harness: ModuleType, timeout: int) -> Path:
     """Run the agent on *row* in a git sandbox and return the directory of what it produced (model call).
 
@@ -84,7 +99,7 @@ def live_output(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path,
     base = runs.build_sandbox(repo_root / expected["fixture"], agent_box, runs.hold_back_dirs(expected.get("assertions", [])),
                               support_for(agent_cfg, repo_root))
     try:
-        args = (render_prompt(system_prompt, agent_box), row[agent_cfg.get("input_field", "input")], agent_cfg.get("model", "sonnet"),
+        args = (render_prompt(system_prompt, agent_box), row_input(row, agent_cfg, agent_box), agent_cfg.get("model", "sonnet"),
                 timeout, agent_box, agent_cfg.get("tools", "Read,Write,Edit,Bash"))
         transcript = None
         if agent_cfg.get("capture_transcript"):
@@ -96,27 +111,50 @@ def live_output(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path,
         if transcript is not None:
             (out_dir / capture.TRANSCRIPT_NAME).write_text(transcript, encoding="utf-8")
     finally:
-        runs.remove_tree(agent_box)
+        runs.remove_tree_quietly(agent_box)
     return out_dir
 
 
-def score_one(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path, harness: ModuleType, *, score_gold: bool, timeout: int) -> dict[str, Any]:
-    """Score one row; a harness or sandbox failure is a failed row carrying its error, never a skip."""
+def keep_outputs(out_dir: Path, agent_cfg: dict, row_id: str) -> Path | None:
+    """Copy a live row's produced folder to ``$KEEP_OUTPUTS_ENV/<eval set name>/<row id>/`` (replacing an older copy)."""
+    root = os.environ.get(KEEP_OUTPUTS_ENV, "")
+    if not root:
+        return None
+    target = Path(root) / Path(agent_cfg["eval_set"]).stem / str(row_id)
+    if target.exists():
+        runs.remove_tree(target)
+    shutil.copytree(out_dir, target)
+    logger.info("kept live outputs of row %s at %s", row_id, target)
+    return target
+
+
+def score_in(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path, harness: ModuleType, work_dir: Path, *,
+             score_gold: bool, timeout: int) -> dict[str, Any]:
+    """Score one row inside its temp folder *work_dir*; a harness or sandbox failure is a failed row carrying its error."""
     field_name = agent_cfg.get("expected_field", "expected")
     expected = row.get(field_name, {})
-    with tempfile.TemporaryDirectory(prefix="produced-tests-") as tmp:
-        work_dir = Path(tmp)
-        try:
-            if score_gold:
-                output_dir = repo_root / expected["gold_output"]
-            else:
-                output_dir = live_output(row, agent_cfg, system_prompt, repo_root, work_dir, harness, timeout)
-            return scoring.score_row(row, output_dir, work_dir / "score", repo_root=repo_root, expected_field=field_name,
-                                     support=support_for(agent_cfg, repo_root))
-        except (runs.SandboxError, harness.EvalHarnessError, OSError, KeyError) as exc:
-            logger.warning("row %s could not be scored: %r", row.get("id"), exc)
-            record = {"passed": False, "assertions": [], "judge": None}
-            return {"id": row.get("id", "?"), "negative": bool(expected.get("negative")), "score": record, "error": repr(exc)}
+    try:
+        if score_gold:
+            output_dir = repo_root / expected["gold_output"]
+        else:
+            output_dir = live_output(row, agent_cfg, system_prompt, repo_root, work_dir, harness, timeout)
+            keep_outputs(output_dir, agent_cfg, row.get("id", "?"))
+        return scoring.score_row(row, output_dir, work_dir / "score", repo_root=repo_root, expected_field=field_name,
+                                 support=support_for(agent_cfg, repo_root))
+    except (runs.SandboxError, harness.EvalHarnessError, OSError, KeyError) as exc:
+        launch_failed(exc, row.get("id", "?"))
+        logger.warning("row %s could not be scored: %r", row.get("id"), exc)
+        record = {"passed": False, "assertions": [], "judge": None}
+        return {"id": row.get("id", "?"), "negative": bool(expected.get("negative")), "score": record, "error": repr(exc)}
+
+
+def score_one(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path, harness: ModuleType, *, score_gold: bool, timeout: int) -> dict[str, Any]:
+    """Score one row in an explicit temp folder removed tolerantly (TQ-200d-5-iv); a failure is a failed row, never a skip."""
+    tmp = tempfile.mkdtemp(prefix="produced-tests-")
+    try:
+        return score_in(row, agent_cfg, system_prompt, repo_root, harness, Path(tmp), score_gold=score_gold, timeout=timeout)
+    finally:
+        runs.remove_tree_quietly(Path(tmp))
 
 
 def aggregate(rows: list[dict]) -> dict[str, Any]:
@@ -161,7 +199,10 @@ def run_produced_tests_mode(args: argparse.Namespace, agent_cfg: dict, rows: lis
         return 2
     selected = select_rows(rows, args)
     timeout = args.timeout or int(agent_cfg.get("timeout", 900))
-    scored = [score_one(r, agent_cfg, system_prompt, repo_root, harness, score_gold=args.score_gold, timeout=timeout) for r in selected]
+    try:
+        scored = [score_one(r, agent_cfg, system_prompt, repo_root, harness, score_gold=args.score_gold, timeout=timeout) for r in selected]
+    except AgentLaunchError as exc:
+        return stop_run(args, repo_root, exc, harness.write_results, run_context="local")
     if not scored:
         logger.error("No produced-tests rows were scored")
         return 2

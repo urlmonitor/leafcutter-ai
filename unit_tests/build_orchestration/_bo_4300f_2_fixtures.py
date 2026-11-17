@@ -210,7 +210,8 @@ def howto_texts() -> dict[str, str]:
 def paragraphs(text: str) -> list[tuple[int, str]]:
     """``(first line number, paragraph text)`` blocks separated by blank lines."""
     out: list[tuple[int, str]] = []
-    start, buf = 1, []
+    start = 1
+    buf: list[str] = []
     for i, line in enumerate(text.splitlines(), 1):
         if line.strip():
             if not buf:

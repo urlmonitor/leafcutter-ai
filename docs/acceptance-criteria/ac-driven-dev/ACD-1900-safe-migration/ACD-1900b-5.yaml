@@ -48,10 +48,14 @@ it_requirements:
   - "Reuse the shared dual-read spec resolver from ACD-1900b-1 -- do not author a second resolver in the prose. The gate's coverage-resolution must consume the resolved AC's deliverable checklist as the data input to its pass/block verdict, so a thin ticket is actually verified (never a fixed skip)."
   - "Read-side foundation only (phase_acbuild_1_foundation): when coverage cannot be resolved the gate falls back to advisory / dual-read, it does NOT block. The enforce-time \"absent -> blocker\" flip is the separate twin ACD-1900c-6 -- do not implement enforce-time blocking here (ADR-026 rule 5: the silent-skip stays until the enforce stage after fat tickets drain)."
   - "No executable pytest surface is authored here (agent-template prose change) -- see test_required. Per CLAUDE.md 'Gate/Workflow ACs verify behaviorally, not by grep', behavioral correctness is proven by the paired python-coder gate-verdict tests (ACD-1900b-3) plus an ADR-026 rule-7 real-thin-ticket spot-check that runs the gate against a real thin ticket whose resolved AC has an unmet deliverable and asserts it BLOCKS (not ok), and against one whose deliverables are all signed and asserts ok -- never grep-only."
-test_required: false
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-12
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class prompt: test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. Criteria and readiness unchanged."
 superseded_by: null
 covered_by:
   - ACD-1900b-5-i

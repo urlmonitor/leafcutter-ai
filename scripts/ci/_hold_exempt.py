@@ -122,7 +122,8 @@ def _strip_inline_code(text: str) -> str:
     Linear: the next run of each length is found once, from the end, never by rescanning.
     """
     runs = [(m.start(), m.end()) for m in BACKTICKS_RE.finditer(text)]
-    nxt, after = {}, [None] * len(runs)
+    nxt: dict[int, int] = {}
+    after: list[int | None] = [None] * len(runs)
     for i in range(len(runs) - 1, -1, -1):
         length = runs[i][1] - runs[i][0]
         after[i], nxt[length] = nxt.get(length), i

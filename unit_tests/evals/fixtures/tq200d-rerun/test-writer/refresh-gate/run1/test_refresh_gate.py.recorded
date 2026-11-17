@@ -1,0 +1,32 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from refresh_gate import should_refresh
+
+
+def test_refresh_fires_when_both_due():
+    # covers: TQ-9201
+    # angle: criterion
+    assert should_refresh(refresh_due=True, retry_due=True) is True
+
+
+def test_refresh_blocked_when_retry_not_due():
+    # covers: TQ-9201
+    # angle: discrimination
+    # Old gate `if refresh_due:` ignores retry_due and would return True here.
+    # New gate `if refresh_due and retry_due:` must return False.
+    assert should_refresh(refresh_due=True, retry_due=False) is False
+
+
+def test_refresh_blocked_when_refresh_not_due():
+    # covers: TQ-9201
+    # angle: boundary
+    assert should_refresh(refresh_due=False, retry_due=True) is False
+
+
+def test_refresh_blocked_when_neither_due():
+    # covers: TQ-9201
+    # angle: boundary
+    assert should_refresh(refresh_due=False, retry_due=False) is False

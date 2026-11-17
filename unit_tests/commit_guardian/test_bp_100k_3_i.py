@@ -170,6 +170,12 @@ class TestFreshlyBuiltTreeHasNoFalseAlarms(unittest.TestCase):
     """BP-100k-3-i: a freshly-built, unmodified checkout yields zero
     uncomparable artifacts, no drift, and a clean exit from both gates."""
 
+    _isolated_tree: Path
+    _build_result: subprocess.CompletedProcess[str]
+    _build_drift_hook: Path
+    _output_drift_hook: Path
+    _manifest_sanity_error: str | None
+
     @classmethod
     def setUpClass(cls) -> None:
         # Isolated target: a fresh tempdir, never this worktree's own root, so
@@ -339,6 +345,7 @@ class TestFreshlyBuiltTreeHasNoFalseAlarms(unittest.TestCase):
             ("check-build-drift", match_build, combined_build),
             ("check-output-drift", match_output, combined_output),
         ):
+            assert isinstance(match, re.Match)
             reported_uncomparable = int(match.group(3))
             exempt_lines = _EXEMPT_LINE_RE.findall(combined)
             gap_lines = _GAP_LINE_RE.findall(combined)

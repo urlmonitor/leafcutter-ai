@@ -1,0 +1,210 @@
+id: BO-2000g-3-ii
+components:
+  - build_orchestration
+  - commit_guardian
+title: "Only an explicitly marked heading-schema illustration is exempt from the lint, and the mark exempts that one heading alone"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000g-3.yaml
+criteria: |
+  Given the signoff skill's heading-schema illustration
+    (`### YYYY-MM-DD HH:MM — <agent-name> (status: ok|blocker|question|handoff)`), the
+    ticket-authoring skill's Comments-section heading illustration, and the
+    building-epics skill's routing illustration
+    (`### YYYY-MM-DD HH:MM — <agent> (status: ok|handoff|blocker|question)`), each
+    carrying the heading-schema-illustration mark the signoff skill defines,
+  When the template lint runs,
+  Then it does not fail on any of the three illustrations.
+
+  Given the same signoff-skill illustration with its mark removed,
+  When the lint runs,
+  Then it fails on that illustration. An example is not exempted because its agent slot
+    is a placeholder, because its status tag lists several values, or because nothing
+    follows it inside its fenced block.
+
+  Given one skill file holding a marked illustration and, further down, an unmarked
+    example `### 2026-05-08 15:25 — pr-reviewer (status: blocker)` followed directly by
+    a prose line,
+  When the lint runs,
+  Then it fails on the unmarked example and names its line number. The mark covers only
+    the heading it annotates, never the rest of its fenced block or its file.
+
+  Given a heading quoted inside a prose sentence, not at the start of a line (for
+    example "the heading must be exactly `### YYYY-MM-DD HH:MM — <your-name> (status: ok)`"),
+  When the lint runs,
+  Then that quotation is not treated as an example and is not examined.
+depends_on:
+  - BO-2000g-3
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/ticket-authoring/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Holds the third illustration the criteria now name (the routing illustration at ~:555)."
+  - path: templates/agents/_signoff_block.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+declared_files:
+  - path: unit_tests/prompt_assembly/test_bo_2000g_3_ii.py
+    state: to_be_created
+it_requirements:
+  - >-
+    The mark's literal text is read from its definition in the signoff skill (BO-2000g-1). It is
+    never retyped in this test or in the lint. The test fails loudly when the definition cannot
+    be found.
+  - >-
+    The first scenario runs against the real files as shipped and names each of the three
+    illustrations (signoff, ticket-authoring, building-epics ~:555) by file, so a run in which one
+    of them is not found fails rather than passing on the other two.
+  - >-
+    The mark-removed scenario and the one-file scenario run on temporary copies of the real files,
+    with the mark taken out or an unmarked example added. The test never edits templates.
+  - >-
+    The prose-quotation scenario uses the real sentence in templates/agents/_signoff_block.md
+    (~:19) as well as a synthetic one.
+test_intent:
+  - clause: "it does not fail on any of the three illustrations"
+    needs_test: true
+    reason: "A mark the lint does not recognise, or recognises in only some of the three layouts (the signoff block, the ticket-authoring heading line, the building-epics routing illustration), leaves the corrected tree failing."
+  - clause: "it fails on that illustration. An example is not exempted because its agent slot is a placeholder, because its status tag lists several values, or because nothing follows it inside its fenced block"
+    needs_test: true
+    reason: "An exemption inferred from a placeholder agent slot, a multi-value status tag or an empty rest of the block would also exempt real copyable examples that use placeholders."
+  - clause: "it fails on the unmarked example and names its line number. The mark covers only the heading it annotates, never the rest of its fenced block or its file"
+    needs_test: true
+    reason: "A file-wide or block-wide exemption would let one mark in the signoff skill hide all of its §6 examples, which are the known violators."
+  - clause: "that quotation is not treated as an example and is not examined"
+    needs_test: true
+    reason: "Matching `### ` anywhere in a line, instead of at line start after indentation, would demand a feedback-id line inside the prose of _signoff_block.md."
+delivers_to: null
+expects_from:
+  - ac_id: BO-2000g-3
+    contract: >-
+      The lint entry point, which takes a root directory and returns {examined, exempted,
+      failures: [{file, heading_line, first_body_line}]}.
+  - ac_id: BO-2000g-1
+    contract: >-
+      The explicit heading-schema-illustration mark: a literal token defined once in the signoff
+      skill and placed on the signoff, ticket-authoring and building-epics illustrations.
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Wrong versions this record catches:
+  (1) Inferring the exemption from placeholders (`<agent-name>`, `ok|blocker|...`). Every
+  real template example also uses placeholders (`YYYY-MM-DD HH:MM`, `<sha>`), so an
+  inferred rule ends up exempting the very examples the lint exists to check.
+  (2) A file-wide or block-wide exemption. One mark in the signoff skill would then
+  exempt all of its §6 examples, which are the known violators.
+  (3) Treating the inline mention in the shared sign-off block (_signoff_block.md:19,
+  "exactly `### YYYY-MM-DD HH:MM — <your-name> (status: ok)`" inside a sentence) as an
+  example. That would force a feedback-id line into prose.
+  The clause "the mark exempts that heading alone" was not asked for. It is what stops
+  the exemption from swallowing the fix.
+test_spec:
+  - name: test_the_three_marked_illustrations_do_not_fail_the_lint
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The mark token is read from its definition in the signoff skill (fail loudly when absent). Runs the
+      lint on the real files as shipped and names each illustration by file: signoff skill heading-schema
+      block, ticket-authoring Comments heading line, building-epics routing illustration. Each must be
+      found and counted as exempted, so a run where one is missing fails rather than passing on the
+      other two.
+    proves_clause: 'it does not fail on any of the three illustrations'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+  - name: test_removing_the_mark_makes_the_signoff_illustration_fail
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      On a tmp_path copy of the signoff skill the mark is taken out of the heading-schema illustration
+      only. The lint fails on that heading although its agent slot is <agent-name>, its status tag lists
+      four values and nothing follows it inside its fenced block. Templates are never edited.
+    proves_clause: 'it fails on that illustration. An example is not exempted because its agent slot is a placeholder, because its status tag lists several values, or because nothing follows it inside its fenced block'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+    must_catch:
+      - an exemption inferred from a placeholder agent slot
+      - an exemption inferred from a status tag that lists several values
+      - an exemption inferred from nothing following the heading inside its fenced block
+  - name: test_the_mark_exempts_only_the_one_heading_it_annotates
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      One tmp_path skill file holds a marked illustration and, further down, an unmarked
+      ### 2026-05-08 15:25 — pr-reviewer (status: blocker) followed directly by a prose line. The lint
+      fails on the unmarked example and names its 1-based line number. A second case puts the unmarked
+      heading inside the same fenced block as the marked one.
+    proves_clause: 'it fails on the unmarked example and names its line number. The mark covers only the heading it annotates, never the rest of its fenced block or its file'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+    must_catch:
+      - a file-wide exemption once one mark appears in the file
+      - a block-wide exemption covering the rest of the marked fenced block
+      - an exemption that reads the mark from any line near the heading rather than the annotated heading
+  - name: test_a_heading_quoted_mid_sentence_is_not_an_example
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      The real sentence in templates/agents/_signoff_block.md (item 3, exactly
+      ### YYYY-MM-DD HH:MM — <your-name> (status: ok) inside prose) is run through the lint, and so is a
+      synthetic sentence. Neither is examined: examined does not count it and no failure names it.
+    proves_clause: 'that quotation is not treated as an example and is not examined'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+    must_catch:
+      - a recogniser that matches ### anywhere in a line rather than at line start after indentation
+      - a lint that demands a feedback-id line inside the prose of _signoff_block.md
+  - name: test_exemption_is_reached_through_a_fresh_interpreter_run_over_the_real_tree
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: >-
+      Runs the lint entry point in a fresh python -I subprocess from the repo root over the real
+      templates tree, prints the result as JSON, and asserts exit 0, exempted of at least three, and no
+      failure naming any of the three illustration files at its illustration heading.
+    proves_clause: 'it does not fail on any of the three illustrations'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/skills/signoff/SKILL.md
+  - templates/skills/ticket-authoring/SKILL.md
+  - templates/skills/building-epics/SKILL.md
+  - templates/agents/_signoff_block.md
+  - unit_tests/prompt_assembly/test_signoff_block_protocol.py

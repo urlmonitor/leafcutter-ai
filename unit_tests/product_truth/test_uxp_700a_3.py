@@ -144,7 +144,7 @@ class TestFreshInstallRecordHoldsZeroArtifacts(unittest.TestCase):
         """Fresh-import the DEPLOYED product_ownership.py (never the source copy)."""
         scripts_dir_str = str(scripts_dir)
         sys.path.insert(0, scripts_dir_str)
-        self.addCleanup(lambda: scripts_dir_str in sys.path and sys.path.remove(scripts_dir_str))
+        self.addCleanup(lambda: sys.path.remove(scripts_dir_str) if scripts_dir_str in sys.path else None)
         sys.modules.pop("product_ownership", None)
         module = importlib.import_module("product_ownership")
         self.addCleanup(lambda: sys.modules.pop("product_ownership", None))
@@ -332,6 +332,10 @@ class TestUxp700a3ReachableFromEntryPoint(unittest.TestCase):
     tempdir instead, exactly as test_uxp_700a_1.py's own reachability
     TestCase does.
     """
+
+    _isolated_tree: Path
+    _build_result: subprocess.CompletedProcess[str]
+    _pt: Path
 
     @classmethod
     def setUpClass(cls) -> None:

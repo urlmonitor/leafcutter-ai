@@ -1,0 +1,350 @@
+id: BO-2400f-10-iv
+components:
+  - build_orchestration
+title: "A claim whose outcome is unknown is reconciled against the store and released, so a run never strands a claim it may have made"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run has resolved a set of five acceptance criteria, three of them
+    reading todo and two already reading in_progress before the claim was asked for,
+  And the claim step ends as "state unknown" (BO-2400f-7-vii) or as a claim command that
+    ran and failed (BO-2400f-7-ix),
+  When the run ends,
+  Then before it reports, the run reads the work_status of each of the five in the store it
+    claimed in, changing none of them,
+  And each of the three that now reads in_progress is released back to todo through the
+    run's release step (BO-2400f-10-i), with the release outcome reported as BO-2400f-10-ii
+    requires,
+  And neither of the two that already read in_progress before the claim is released,
+  And the halt names the members the reconciliation found claimed and released, and the
+    members it found unchanged.
+
+  Given the same run, in which the claim had changed nothing before it stopped,
+  When the reconciliation reads the store,
+  Then no release is asked for,
+  And the halt says the reconciliation found nothing claimed.
+
+  Given the reconciliation cannot read the store, or its own reply is "state unknown",
+  When the run reports,
+  Then the halt names each of the three todo members as possibly left at in_progress, and
+    says a later run aimed at them will be refused while they stay there (BO-2400f-8),
+  And it does not report them as released or as unclaimed.
+
+  Given a run that ended after a reconciled release,
+  When the operator starts a new run for the same acceptance criterion from that store,
+  Then the new run is not refused or narrowed on the ground that any of the three is
+    already claimed.
+depends_on: [BO-2400f-10, BO-2400f-10-i, BO-2400f-10-ii, BO-2400f-7-vii, BO-2400f-7-ix]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "Today an unknown-state claim releases nothing, so a claim that completed before the runner stopped is orphaned (2026-11-16 analysis)."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-10-iii.yaml
+    relationship: related
+    status: exists
+    relevance: "Releases on a halt after a claim that succeeded, and forbids a release before one. This record covers the case between: a claim whose outcome the run does not know."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-12-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Same rule from the other side: never release what this run did not claim. The pre-claim in_progress members are protected for that reason."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+declared_files:
+  - path: templates/workflows-js/fast-lane-ship.js
+    state: existing
+it_requirements:
+  config_schema_fragment:
+    claim_reconciliation:
+      type: object
+      required: [read_ok, claimed_and_released, unchanged, possibly_left_in_progress, release_outcome]
+      properties:
+        read_ok:
+          type: boolean
+          description: False when the store could not be read or the read step's reply was state unknown.
+        claimed_and_released:
+          type: array
+          items:
+            type: string
+          description: Members that read todo before the claim and in_progress at reconciliation, then released.
+        unchanged:
+          type: array
+          items:
+            type: string
+          description: Members whose work_status is unchanged since the resolve step, pre-claim in_progress members included.
+        possibly_left_in_progress:
+          type: array
+          items:
+            type: string
+          description: Members that read todo before the claim and whose state the run could not confirm (read failed, or release not confirmed).
+        release_outcome:
+          description: BO-2400f-10-i's fast_lane_release_outcome, or null when no release was asked for.
+  reference_file_path: templates/workflows-js/build-ticket.js
+  n_location_rule: "one reconciliation path, reached from both the state_unknown and the claim_command_failed claim halts"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - >-
+      THIS RUN'S CLAIM IS DERIVED FROM TWO READS, NEVER FROM THE RESOLVED SET ALONE. A member
+      counts as claimed by this run only if it read todo at resolve and reads in_progress at
+      reconciliation. A member that read in_progress at resolve is never released. The
+      pre-claim statuses come from the resolve step's own report, held in the run; they are
+      not re-read or inferred.
+    - >-
+      THE RECONCILIATION READ CHANGES NOTHING. It is a command step of the reads-store kind
+      (BO-2400f-5-i), read against acStoreRoot, the store the claim was made in, with a stated
+      budget of no less than 600 seconds (BO-2400f-7-vi). Prefer an existing read-only command
+      of the lane that reports work_status for given ids. If none exists and a new read-only
+      subcommand is needed, that widens this record's files to scripts/build_orchestration/
+      and must be raised at sign-off rather than added silently.
+    - >-
+      THE RELEASE GOES THROUGH THE EXISTING RELEASE STEP (BO-2400f-10-i) with only the derived
+      ids, and its outcome is reported by BO-2400f-10-ii's fail-closed reading. No release is
+      asked for when the derived set is empty.
+    - >-
+      FAIL CLOSED WHEN THE READ FAILS. A failed or state-unknown reconciliation read reports
+      every pre-claim todo member as possibly left at in_progress, says a later run aimed at
+      them will be refused while they stay there, and asks for no release. It never reports
+      them as released or as unclaimed.
+    - >-
+      THE RUN HALTS AFTER RECONCILING, even when every todo member is found claimed (the BA's
+      stated assumption). Reconciling never turns a halted claim into a proceeding build.
+    - >-
+      The known gap is stated, not hidden: a second run in the same workspace that claims
+      between this run's resolve and its reconciliation would be mistaken for this run's claim.
+      Owner-aware claims are out of scope.
+test_intent:
+  - clause: before it reports, the run reads the work_status of each of the five in the store it claimed in, changing none of them
+    needs_test: true
+    reason: Today an unknown-state claim reads nothing before it reports, and a read that wrote would itself change the claim.
+  - clause: each of the three that now reads in_progress is released back to todo through the run's release step (BO-2400f-10-i), with the release outcome reported as BO-2400f-10-ii requires
+    needs_test: true
+    reason: A claim that completed before the runner stopped is orphaned unless it is released, and only the store read back from disk shows it was.
+  - clause: neither of the two that already read in_progress before the claim is released
+    needs_test: true
+    reason: Releasing a member another run holds is the most damaging error the reconciliation can make.
+  - clause: the halt names the members the reconciliation found claimed and released, and the members it found unchanged
+    needs_test: true
+    reason: The operator acts on these two lists, which are computed from two reads and can easily be swapped or merged.
+  - clause: no release is asked for
+    needs_test: true
+    reason: An empty derived set that still dispatched a release would risk returning other runs' members to todo.
+  - clause: the halt says the reconciliation found nothing claimed
+    needs_test: true
+    reason: Without this statement a halt after reconciliation reads the same as one where the run never looked.
+  - clause: the halt names each of the three todo members as possibly left at in_progress, and says a later run aimed at them will be refused while they stay there (BO-2400f-8)
+    needs_test: true
+    reason: When the read fails the run must still name what it may have stranded, which is the fail-closed half of the record.
+  - clause: it does not report them as released or as unclaimed
+    needs_test: true
+    reason: Either report would be a guess presented as a fact when the run could not read the store.
+  - clause: the new run is not refused or narrowed on the ground that any of the three is already claimed
+    needs_test: true
+    reason: A release that left any member at in_progress would make the next run refuse, so this is the end-to-end proof that the release took effect.
+test_spec:
+  - name: test_reconciliation_reads_the_store_before_reporting_and_changes_nothing
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Drives fast-lane-ship.js through the workflow-engine harness with a resolved set of five (three todo, two
+      in_progress) and the claim step answered by an unfinished reply. The recorded dispatches must include a
+      command-step read made after claim-connected and before the terminal return, against the store the claim was
+      made in, stating a budget of at least 600 seconds. The recorded read command is then run against a temp copy of
+      the store and the bytes of every record must be unchanged. The wrong version it catches is a lane that reports
+      without reading, or a read that writes.
+    proves_clause: before it reports, the run reads the work_status of each of the five in the store it claimed in, changing none of them
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_members_found_claimed_are_released_through_the_release_step_with_only_those_ids
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The reconciliation read is answered with the three todo members now at in_progress. The release dispatch the
+      lane records must name exactly those three ids, and the halt must report the release outcome as BO-2400f-10-ii
+      requires (released ids, unreleased ids, executor).
+    proves_clause: each of the three that now reads in_progress is released back to todo through the run's release step (BO-2400f-10-i), with the release outcome reported as BO-2400f-10-ii requires
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_members_that_were_in_progress_before_the_claim_are_never_released
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Same run. The release request must not contain either of the two ids that read in_progress at resolve, and the
+      derivation uses the resolve step's own pre-claim statuses, not the resolved set alone.
+    proves_clause: neither of the two that already read in_progress before the claim is released
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - a release of the whole resolved set that returns another run's members to todo
+      - claimed derived from in_progress at reconciliation alone with no pre-claim todo condition
+  - name: test_halt_names_the_released_members_and_the_unchanged_members_in_separate_lists
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Same run. The payload must carry claimed_and_released equal to the three ids and unchanged equal to the two
+      pre-claim in_progress ids, each in its own field and not merged or swapped.
+    proves_clause: the halt names the members the reconciliation found claimed and released, and the members it found unchanged
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - the two lists merged into one
+      - the released and unchanged lists swapped
+  - name: test_no_release_is_asked_for_when_the_claim_changed_nothing
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      The reconciliation read reports all five members at their pre-claim statuses. No dispatch whose label starts
+      with release may be recorded after the claim step.
+    proves_clause: no release is asked for
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - an empty derived set that still dispatches a release
+  - name: test_halt_says_the_reconciliation_found_nothing_claimed
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Same unchanged-store run. The halt message must state that the reconciliation found nothing claimed, so a
+      halt after reconciling reads differently from one where the run never looked.
+    proves_clause: the halt says the reconciliation found nothing claimed
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_a_failed_reconciliation_read_names_each_todo_member_as_possibly_left_in_progress
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The reconciliation read is answered with null, with an unfinished reply and with a non-zero exit status, one
+      per subTest. Each halt must name the three pre-claim todo members as possibly left at in_progress, say that a
+      later run aimed at them will be refused while they stay there, and dispatch no release.
+    proves_clause: the halt names each of the three todo members as possibly left at in_progress, and says a later run aimed at them will be refused while they stay there (BO-2400f-8)
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_a_failed_reconciliation_read_never_reports_released_or_unclaimed
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Same failed reads. The payload must carry read_ok false, an empty claimed_and_released, the three ids in
+      possibly_left_in_progress, and its text must not say released or unclaimed for them.
+    proves_clause: it does not report them as released or as unclaimed
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - a failed read reported as nothing claimed
+      - a failed read reported as released
+  - name: test_ran_and_failed_claim_is_reconciled_through_the_same_path_and_the_run_still_halts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      The claim reply is captured from the real claim command with an id the store does not contain (exit 1), so the
+      halt is claim_command_failed. The same reconciliation dispatches must follow, and even when the read finds every
+      todo member claimed the run returns a halt and dispatches no test-writer, coder, commit or pull request step.
+    proves_clause: before it reports, the run reads the work_status of each of the five in the store it claimed in, changing none of them
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - reconciliation reached only from the state unknown halt
+      - a reconciled claim that turns the halt into a proceeding build
+  - name: test_a_new_run_after_a_reconciled_release_is_not_refused_or_narrowed_on_a_real_store
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      On a fixture store in a temp directory the real claim command flips three todo members to in_progress, the
+      release command the lane recorded for the reconciliation is run as a subprocess with the derived ids, the
+      records are read back with yaml.safe_load, and a second real claim for the same target is run. It must exit 0
+      with all three claimed and none excluded, which shows the release took effect on disk. The wrong version it
+      catches is a release that left any member at in_progress and so makes the next run refuse.
+    proves_clause: the new run is not refused or narrowed on the ground that any of the three is already claimed
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_reconciliation_is_reachable_through_the_workflow_dispatch_from_both_claim_halts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: >-
+      Runs fast-lane-ship.js as the engine does (run_workflow_under_e2 with args ac), once with an unfinished claim
+      reply and once with a failing claim reply, and asserts in each the run's terminal return value carries the
+      claim_reconciliation figures, so both halts reach the one reconciliation path.
+    proves_clause: before it reports, the run reads the work_status of each of the five in the store it claimed in, changing none of them
+    code_file: templates/workflows-js/fast-lane-ship.js
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/fast-lane-ship.js
+  - scripts/build_orchestration/fast_lane.py
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/workflows/_bo2400f5iii_fixtures.py
+  - unit_tests/workflows/_fast_lane_claim_fixtures.py
+  - unit_tests/workflows/test_bo2400f_7_iii_claim_refusal_workflow.py
+file_findings:
+  - file: templates/workflows-js/fast-lane-ship.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the claim step and its halts, none of which reconciles or releases for an unknown-state claim today, so it is the surface the reconciliation is added to.
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/fast-lane-ship.js
+delivers_to: null
+expects_from:
+  - ac_id: BO-2400f-7-vii
+    contract: "A state_unknown halt at the claim step {halt_kind: 'state_unknown', step: 'claim', agent, reply_excerpt, target}, plus the resolved set with each member's work_status as read before the claim was asked for (BO-2400f-1)."
+  - ac_id: BO-2400f-7-ix
+    contract: "A claim_command_failed claim-step outcome {halt_kind: 'claim_command_failed', exit_status, stderr}, which triggers the same reconciliation."
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Observed 2026-11-16, run wf_f26bd73c-98c: the claim was stopped part-way, the run said "never
+  attempted" and released nothing. A later run claimed normally, so most likely nothing had
+  been changed, but the run could not know that and did not check.
+
+  HOW THE RUN KNOWS WHICH MEMBERS ARE ITS OWN WITHOUT AN OWNER RECORD. The resolve step already
+  reports each member's work_status before the claim. A member that read todo then and reads
+  in_progress after an unknown-state claim is taken as this run's claim. A member that read
+  in_progress before is never touched. Owner-aware claims (a token per claim) are out of scope
+  and come later; until then one gap is known and accepted: a second run in the same workspace
+  that claims between this run's resolve and its reconciliation would be mistaken for this
+  run's claim. The 2026-11-16 analysis rates that unlikely.
+
+  ASSUMPTION, NOT ASKED: the run halts after reconciling, even when the reconciliation finds
+  that every todo member was claimed. Proceeding on a claim whose command was stopped is not
+  safe to judge from status alone. If the operator wants the run to continue instead when the
+  claim is found complete, that is a change to this record.
+
+  Ran-and-failed is included because a command that stopped with an error after it began
+  changing records may have claimed some members; checking costs one read.

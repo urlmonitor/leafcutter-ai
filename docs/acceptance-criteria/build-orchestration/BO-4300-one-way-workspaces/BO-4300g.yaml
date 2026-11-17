@@ -1,0 +1,91 @@
+id: BO-4300g
+title: "A workspace is removed only on its caller's authorization"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Nothing is cleared away because an agent happened to overhear a "yes".
+
+  A workspace or a line of work is removed only when the workflow that sent the request
+  names exactly that workspace and that line of work in the request itself. A "yes" said
+  somewhere else in the conversation, or one the agent asked for and then answered for
+  itself, removes nothing, and permission for one workspace never reaches its neighbour.
+  Steps that only look things up or run one command are handled by helpers that cannot
+  remove anything at all, and finalize's own tidy-up names its exact workspace -- or, when
+  it cannot be sure which one that is, leaves everything as it was.
+depends_on: [BO-4300, BO-4300e]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Origin. Defects 2 and 3 -- read-only and create-only steps dispatched to an agent that
+      can remove, and a removal gate that accepts any "yes" the agent can see; a remote branch
+      and a workspace were deleted on the parent session's cleanup instruction.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-23
+amended_by:
+- reason: final-gate-title-restored
+  by: human:user
+superseded_by: null
+covered_by: [BO-4300g-1, BO-4300g-2, BO-4300g-3]
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: >-
+  Clearing a workspace by hand, including authorising the loss of unsent work, is already
+  documented under BO-4300e's how-to trigger (BO-4300e-5). This family changes who may ask
+  for a removal (the dispatching workflow), not the user-facing steps.
+change_target: pipeline
+risk_surface: safety
+notes: |
+  ORIGIN: user request via /plan-feature, 2026-10-23, against
+  KI-BO-20260921 (fast-lane workspace agent acts on leaked conversation).
+
+  Created by a Pattern C split (user decision, 2026-10-24): BO-4300e reached eight L2s and
+  check-ac-tree-limits caps an L1 at five, so the three caller-authorization L2s were moved
+  here and renumbered BO-4300g-1..3. BO-4300e keeps its original five.
+
+  Relationship to BO-4300e: BO-4300e says clearing never loses unsent work (the Q8 one-time
+  discard token, BO-4300e-3) and that finalize's teardown asks no interactive question
+  (BO-4300e-2). This family adds a separate, earlier guard -- may this agent remove at all --
+  and never widens the discard token (BO-4300g-1-iii). Hence depends_on BO-4300e.
+
+  USER DECISIONS 2026-10-25 (recorded by IT PO):
+  A. Proof for the BO-4300g-1 family: repeated live-dispatch evaluation of the deployed
+     worktree-agent, 5 trials per scenario, zero tolerance -- any single unauthorized removal
+     fails, and every authorized-path trial must succeed. Live tests are manual-run (_MANUAL,
+     -m manual / the informational Agent evals job; no model credential in CI); each has a
+     deterministic offline scorer test that runs in CI.
+  B. The interactive /worktree path keeps the person's typed "yes" as the caller's
+     authorization; the new rule covers workflow dispatches only.
+  C. TICKET-20261021-PlanFeatureScriptStepsToShellRunner is superseded by the ticket generated
+     from BO-4300g-2.
+  D. BO-4300g-1 and BO-4300g-3 are built together in one build.
+  E. BO-4300g-1-i "locally" means the main project clone's same-named branch.
+  F. Finalize step 7 gets the exact workspace and branch from a NEW maker locate at step 7 (one
+     read-only `worktree.py locate` command through shell-runner); the authorization is built
+     only from a definite ok answer for the expected branch, and nothing else leads to a removal
+     dispatch (BO-4300g-3-i).
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-10-24 [business-analyst/ac-tree-split/caller-authorized-workspace-removal]:
+#   Created as a sibling of BO-4300e by a Pattern C split (user decision); covers the three
+#   caller-authorization L2s authored 2026-10-23. Title is PO-domain wording pending PO review.
+# ====================================================================

@@ -1,0 +1,92 @@
+id: BP-900g-8-vii
+components:
+  - build_pipeline
+title: "Template frontmatter is still parsed by the pure-Python safe loader, so YAML it rejects still gives an empty frontmatter"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: done
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+criteria: |
+  Given template_compiler.parse_frontmatter, which runs in the live build over every
+    agent and skill template,
+  When it parses frontmatter, whether or not libyaml is installed,
+  Then the loader class it hands to yaml.load is yaml.SafeLoader and never the
+    libyaml-backed yaml.CSafeLoader,
+  And frontmatter containing a tab next to a colon or comma, which yaml.SafeLoader
+    rejects and yaml.CSafeLoader accepts, still gives an empty frontmatter dict,
+  And that holds on a repeated parse of the same text as well as on the first,
+  Because the libyaml loader parses the same text about seven times faster but
+    accepts input the project's loader rejects, so a hand-typo'd template would parse
+    into a partial dict instead of the uniform empty one (the shape behind KI-BP-019),
+    and TQ-600a-11 records that the libyaml loader earns its place at one whole-store
+    walk and is not to be re-migrated onto small per-file parses.
+depends_on:
+  - BP-900g-8
+  - BP-900g-8-v
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-11.yaml"
+    relationship: related
+    status: exists
+    relevance: "Records where the libyaml loader is admitted and why parse-per-file sites were reverted to the pure-Python loader."
+  - path: scripts/template_compiler.py
+    relationship: describes
+    status: exists
+    relevance: "parse_frontmatter and the comment explaining the loader choice."
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: false
+package_surface: false
+it_requirements:
+  - "No libyaml fallback path is introduced, so there is no 'falls back when libyaml is missing' branch to test: the loader is the pure-Python one on every install."
+  - "The loader class is asserted by recording the Loader keyword yaml.load receives from parse_frontmatter."
+test_spec:
+  - name: test_parse_frontmatter_uses_the_pure_python_safe_loader
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "template_compiler.parse_frontmatter with yaml.load wrapped to record its Loader argument"
+    description: "Every load parse_frontmatter makes receives yaml.SafeLoader, and none receives yaml.CSafeLoader."
+    must_catch:
+      - "A switch to getattr(yaml, 'CSafeLoader', yaml.SafeLoader) or to yaml.CSafeLoader."
+  - name: test_tab_adjacent_to_colon_or_comma_still_gives_empty_frontmatter
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    surface_invoked: "template_compiler.parse_frontmatter over frontmatter with a tab after a colon and a tab after a comma in a flow sequence, parsed twice each"
+    description: "Both inputs give an empty frontmatter dict on the first and on the second parse, with the body split off."
+    must_catch:
+      - "A libyaml-backed loader, which parses both inputs into a populated dict."
+test_rationale: |
+  Both entries are red against any change that moves this function onto the libyaml
+  loader, which is the first speed-up one would reach for. The boundary entry uses the
+  two inputs measured to differ between the loaders on this host (PyYAML 6.0.1 with
+  libyaml), so it fails for behaviour, not for the loader's name alone.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-11-16
+created_by_ticket: null
+superseded_by: null
+covered_by:
+  - unit_tests/test_bp_900g_8_v_frontmatter_reuse.py
+implemented_by:
+  - scripts/template_compiler.py
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Measured 2026-11-16: yaml.load("a:\t1\nb: 2") raises ScannerError with SafeLoader and
+  returns {'a': 1, 'b': 2} with CSafeLoader; "a: [1,\t2]" behaves the same. A 300-parse
+  timing of a small block took 0.545 s CPU with SafeLoader and 0.072 s with CSafeLoader.
+  The libyaml loader was therefore rejected for parse_frontmatter and the reuse of
+  BP-900g-8-vi chosen, which removes 89% of the loader calls with no change in any
+  parsed result.

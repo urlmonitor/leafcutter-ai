@@ -18,11 +18,12 @@ from __future__ import annotations
 import ast
 from collections import Counter
 from collections.abc import Iterator
-from typing import NamedTuple
+from typing import NamedTuple, TypeVar
 
 import _cs_edits as edits_mod
 import _cs_guards as guards_mod
 
+_Positioned = TypeVar("_Positioned", bound=ast.expr | ast.stmt)
 _DEFS = (ast.FunctionDef, ast.AsyncFunctionDef)
 _OPS = {ast.Eq: "==", ast.NotEq: "!=", ast.Is: "is", ast.IsNot: "is not", ast.Lt: "<", ast.LtE: "<=",
         ast.Gt: ">", ast.GtE: ">=", ast.In: "in", ast.NotIn: "not in"}
@@ -92,9 +93,9 @@ def _body_nodes(func: ast.AST) -> Iterator[ast.AST]:
         yield from ast.walk(stmt)
 
 
-def _by_position(nodes: list[ast.AST]) -> list[ast.AST]:
+def _by_position(nodes: list[_Positioned]) -> list[_Positioned]:
     """*nodes* in source order."""
-    return sorted(nodes, key=lambda n: (n.lineno, n.col_offset))  # type: ignore[attr-defined]
+    return sorted(nodes, key=lambda n: (n.lineno, n.col_offset))
 
 
 def _callee(call: ast.Call) -> tuple[str | None, bool]:
@@ -192,7 +193,7 @@ def facts_of(func: ast.AST) -> list[_Fact]:
         if isinstance(node, ast.Assert):
             out.extend(_pair_facts(node.test))
         else:
-            out.extend(_call_facts(node))  # type: ignore[arg-type]
+            out.extend(_call_facts(node))
     return out
 
 
@@ -213,7 +214,7 @@ def comparison_detail(base: ast.AST, now: ast.AST) -> str | None:
 def _approx_calls(func: ast.AST) -> list[ast.Call]:
     """The ``pytest.approx`` / ``approx`` calls of *func* in source order."""
     found = [n for n in _body_nodes(func) if isinstance(n, ast.Call) and _callee(n)[0] == "approx"]
-    return _by_position(found)  # type: ignore[return-value]
+    return _by_position(found)
 
 
 def _expected(call: ast.Call) -> str | None:

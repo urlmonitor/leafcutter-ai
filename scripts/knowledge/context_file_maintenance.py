@@ -34,7 +34,7 @@ logger = logging.getLogger("context_file_maintenance")
 # ---------------------------------------------------------------------------
 
 #: Canonical filename for skill-scoped context files.
-#: MUST be uppercase with underscore separator per agent_knowledge_system.md §2.1.
+#: MUST be uppercase with underscore separator per agent_knowledge_system.md "Architecture Overview".
 CONTEXT_FILENAME: str = "PROJECT_CONTEXT.md"
 
 #: Entry count threshold above which a summary section is generated / refreshed.

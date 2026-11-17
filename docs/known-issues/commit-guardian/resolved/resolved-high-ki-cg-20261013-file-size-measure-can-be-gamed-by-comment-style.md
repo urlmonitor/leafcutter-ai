@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-13'
-last_updated: '2026-10-23'
+last_updated: '2026-10-25'
 components:
   - commit_guardian
 related_docs:
@@ -37,8 +37,9 @@ related_docs:
   `test_ge_127d_4.py`). The refusal advice no longer names a free comment style (GE-127d-5).
   Remaining formatting route, out of scope here and recorded in GE-127d-3's notes: joining several
   statements onto one line lowers both counts. Closed 2026-10-23 for Python and the JavaScript
-  family by GE-127d-3-v (`test_ge_127d_3_v.py`): a line counts once per statement it holds. SQL and
-  shell lines still count once each.
+  family by GE-127d-3-v (`test_ge_127d_3_v.py`): a line counts once per statement it holds. One-line
+  blocks, SQL and shell followed on 2026-10-25 (GE-127d-3-vi, `test_ge_127d_3_vi.py`), with joined
+  statements keyed as they would stand alone, so joining or splitting adds nothing to the repayment.
 - **Status when filed:** open, no AC. Measurement verified on `origin/main` `964f23a60`.
 - **Occurrences:** 1 (ticket 11 of EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace, 2026-10-13).
 - **First seen:** 2026-10-13 · **Last seen:** 2026-10-13

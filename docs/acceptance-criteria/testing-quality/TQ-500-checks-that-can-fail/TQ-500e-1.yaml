@@ -89,16 +89,7 @@ expects_from:
     The named alteration and revert confirmation. This AC adds the durability
     requirement: what TQ-500a-3 asks the writer to state must remain legible and
     actionable to someone who arrives long afterwards.
-test_required: false
-test_rationale: |
-  Genuinely test-free at this AC's boundary, on the BP-1100g-5 precedent. The
-  deliverable is template prose setting a durability bar on the shape TQ-500a-3
-  already establishes. A test asserting the bar is described in a template is
-  source-presence evidence and passes on an implementation that records nothing.
-
-  The observable half is TQ-500e-2 and TQ-500e-2-i, which assert that the
-  recorded answer is retrievable later without re-running anything — which is the
-  only way self-containment can actually be checked.
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-31
 amended_by:
@@ -113,6 +104,10 @@ amended_by:
       requirement so it does not demand embedded transcripts, which would collide
       with check-doc-length and push writers back to pointers. test_required
       false; the observable half is TQ-500e-2 / TQ-500e-2-i. criteria untouched.
+  - action: amended
+    agent: it-po
+    date: '2026-11-03'
+    reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -135,3 +130,8 @@ notes: |
   done badge when the evidence has lapsed. This AC does no re-examination — it makes the
   original demonstration legible at the time it is taken, so that a later reader, human
   or a TQ-400 sweep, has something to read.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.

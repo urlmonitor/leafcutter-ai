@@ -1,0 +1,102 @@
+"""
+MODULE: test_refresh_totals
+GOAL: Prove the stored procedure refresh_totals() returns exactly the rows
+    currently present in the totals table -- no more, no fewer, and no
+    stale/substitute data.
+NOT YET IMPLEMENTED: refresh_totals() does not exist in the schema yet. This
+    test is written RED, before the procedure: resolve_test_db_address()
+    will raise DbConnectionTestNotConfiguredError (testing_context.
+    db_connection_test is unset in this project's skills_config.json), and
+    even once a test database is configured, `SELECT * FROM
+    refresh_totals();` will fail with psycopg2.errors.UndefinedFunction
+    until the procedure is created. Either failure is a valid red state for
+    code that does not exist yet.
+
+    To make this test green:
+      1. Set testing_context.db_connection_test in .claude/skills_config.json
+         to a reachable postgres:// / postgresql:// test database URL.
+      2. Create the `totals` table (id, label, amount columns -- see
+         setUp() below) if it is not already part of the schema.
+      3. Create `refresh_totals()` as a set-returning SQL function
+         (`CREATE FUNCTION refresh_totals() RETURNS TABLE(id int, label
+         text, amount numeric) ...`) that selects and returns every row of
+         the totals table, unmodified.
+"""
+
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, "<scripts-dir>")
+from db_check.checker import resolve_test_db_address
+
+import psycopg2
+
+
+class TestRefreshTotals(unittest.TestCase):
+    def setUp(self):
+        # resolve_test_db_address() takes the PROJECT ROOT (it looks for
+        # this project's own skills_config.json under it), not the sandbox
+        # install subdirectory. Raises DbConnectionTestNotConfiguredError,
+        # naming testing_context.db_connection_test, when the setting is
+        # unset -- let it propagate; never catch it to skip the test, and
+        # never substitute a fallback address.
+        address = resolve_test_db_address(Path.cwd())
+        self.conn = psycopg2.connect(address)
+        self.conn.autocommit = False
+        self.cur = self.conn.cursor()
+
+        # DDL is transactional in Postgres, so this table (and its rows) is
+        # undone by tearDown()'s rollback -- the test never commits, so it
+        # never pollutes a real `totals` table that may already exist with
+        # this same name.
+        self.cur.execute(
+            "CREATE TABLE IF NOT EXISTS totals (id SERIAL PRIMARY KEY, "
+            "label TEXT NOT NULL, amount NUMERIC NOT NULL)"
+        )
+        self.cur.execute("DELETE FROM totals")
+
+    def tearDown(self):
+        self.conn.rollback()
+        self.cur.close()
+        self.conn.close()
+
+    def test_refresh_totals_returns_rows_of_totals_table(self):
+        # covers: TQ-9402
+        # angle: criterion
+        # Seed two known, distinct rows in `totals`. Distinct values (not
+        # just distinct ids) mean a procedure that returns the right ROW
+        # COUNT but the wrong DATA (e.g. stale cached totals, or rows from
+        # a different table) still fails this assertion.
+        self.cur.execute(
+            "INSERT INTO totals (label, amount) VALUES (%s, %s), (%s, %s) "
+            "RETURNING id, label, amount",
+            ("alpha", 10.50, "beta", 42.00),
+        )
+        seeded_rows = set(self.cur.fetchall())
+        self.assertEqual(
+            len(seeded_rows), 2, "fixture setup did not seed 2 distinct rows"
+        )
+
+        self.cur.execute("SELECT * FROM refresh_totals()")
+        returned_rows = set(self.cur.fetchall())
+
+        # Exact-set equality (not a subset/superset or one-sided count
+        # check): catches a procedure that drops a row, duplicates a row,
+        # fabricates an extra row, or substitutes data from elsewhere --
+        # not just one that returns an empty or partial result.
+        self.assertEqual(
+            returned_rows,
+            seeded_rows,
+            "refresh_totals() must return exactly the current rows of the "
+            "totals table",
+        )
+
+        # Negative control: a row never inserted into `totals` must never
+        # appear in the result, which would indicate refresh_totals() is
+        # reading from the wrong source or fabricating data.
+        self.assertNotIn(
+            (999, "not-a-real-row", 0),
+            returned_rows,
+            "refresh_totals() returned a row that was never inserted into totals",
+        )

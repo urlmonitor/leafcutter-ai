@@ -1,0 +1,181 @@
+id: GE-123e-5
+components:
+  - commit_guardian
+title: "The commit-guardian reference describes the feedback-id check, its refusal and its merge relief, and says no message switches it off"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the commit-guardian component reference a reader consults to learn what
+    each commit check does,
+  When a reader looks up the feedback-id check,
+  Then one section of the reference says which ticket changes the check judges,
+    namely a sign-off heading that the commit adds to a ticket file,
+  And it says what the check requires: a feedback-id line beneath that heading,
+  And it says that a commit made by a person and a commit made through the shared
+    commit step get the same verdict,
+  And it says how a real id is obtained by pointing at the sign-off skill's
+    section §2a, without restating a second procedure,
+  And for an entry that signs nothing off it points at the sign-off skill's one
+    documented value, "feedback-id: (not-a-signoff)", and gives no other,
+  And it says that nothing in a commit message, the current one or any earlier
+    one, switches the check off,
+  And it describes the merge relief: while a merge, revert or cherry-pick is being
+    concluded, a heading identical to its copy on either side of that operation is
+    not judged, a heading added or changed during the resolution is judged, and
+    when the incoming side cannot be read the check announces that it could not
+    verify the sign-offs.
+
+  Given the agent templates, skills and command prompts the project ships to
+    consumers,
+  When they are searched for the token "[NO-FEEDBACK-CHECK]",
+  Then none of them tells a reader to put it in a commit message,
+  Because a reference or prompt that still offers the dead escape hatch sends its
+    reader down the same dead end the refusal no longer offers.
+depends_on:
+  - GE-123e
+  - GE-123e-1
+  - GE-123e-2
+  - GE-123e-3
+  - GE-123e-4
+  - BO-2000g-2
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The component reference GE-123e's notes name: it does not describe this check, its refusal or a merge relief today."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: related
+    status: exists
+    relevance: "§2a is the route the reference points at for obtaining a real id. Cross-reference it; do not copy it."
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20260901-feedback-id-escape-hatch-reads-the-previous-commit-message.md
+    relationship: related
+    status: exists
+    relevance: "Today the only written description of the bypass, together with a retrospective. Closing the KI is housekeeping for the implementing change, not part of this documentation criterion."
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20261116-removing-a-feedback-id-line-is-not-caught.md
+    relationship: related
+    status: exists
+    relevance: "FENCE (gate decision 3). The reference must not claim that removing a feedback-id line is caught. It may name this KI as a known limitation."
+  - path: docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
+    relationship: related
+    status: exists
+    relevance: "Decision §4 scopes the shared source to the incoming side only. The reference records check-feedback-id's 'either side' heading comparison as a check-local exception to it."
+  - path: docs/architecture/adrs/amendments/ADR-038/amendment-3-feedback-id-either-side-heading-relief.md
+    relationship: related
+    status: planned
+    relevance: "Created under GE-123e-4 by adr-author. The reference links it from the merge-aware section and does not restate it."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000g-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Defines feedback-id: (not-a-signoff) in the signoff skill. The reference points at that definition and does not restate it."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  - ac_id: GE-123e-3
+    contract: "The final refusal content: what it names and which remedy it gives."
+  - ac_id: GE-123e-4
+    contract: "The settled relief rule: a heading identical to its copy on either side (HEAD or the incoming state) is not judged, and a heading added or changed during the resolution is judged. The same rule applies to a conflicted merge, revert and cherry-pick through the shared operation-record predicate. It is a check-local exception to the incoming-side-only shared derivation of ADR-038 §4, recorded in ADR-038 Amendment 3."
+  - ac_id: GE-123e-4-i
+    contract: "The could-not-check disposition. When the incoming side cannot be read while an operation is concluded, the check exits 0, prints a stderr WARNING naming each affected ticket file (its sign-offs were not verified, and the incoming side could not be read), and emits 'RESULT: could_not_check' on stdout. Ordinary commits are never opened by this path."
+  - ac_id: BO-2000g-2
+    contract: "The single definition of `feedback-id: (not-a-signoff)` in templates/skills/signoff/SKILL.md, which the reference points at by section and does not restate."
+declared_files:
+  - path: docs/architecture/components/commit-guardian.md
+    state: existing
+it_requirements:
+  - "Edit docs/architecture/components/commit-guardian.md in place by adding one section on check-feedback-id. Write it from the shipped behaviour of GE-123e-1 to GE-123e-4-i, not from the criteria (ordering note)."
+  - "The merge-relief description also states two things. First, a conflicted revert and a conflicted cherry-pick get the same relief as a merge (gate decision 2). Second, the 'either side' rule is a check-local exception to the incoming-side-only shared derivation (ADR-038 §4). That exception is stated in, or cross-referenced from, the 'Merge-Aware Checks' section, with a relative link to ADR-038 Amendment 3 (docs/architecture/adrs/amendments/ADR-038/amendment-3-feedback-id-either-side-heading-relief.md, written under GE-123e-4). Without it, that section contradicts its own statement that the author's own content is always inspected."
+  - "The 'Recorded Change-Set Source Per Entry' section must stay true after check-feedback-id becomes self_derived (GE-123e-4). Correct any statement there of which, or how many, entries are self-deriving."
+  - "Point at templates/skills/signoff/SKILL.md §2a for obtaining an id, and at that skill's definition of `feedback-id: (not-a-signoff)` (BO-2000g-2). Restate neither procedure. Quote the refusal's remedy only as GE-123e-3 ships it."
+  - "FENCE (gate decision 3): the section must not claim that removing a feedback-id line from an existing heading is caught. It may name KI-CG-20261116-removing-a-feedback-id-line-is-not-caught as a known limitation. It must not describe or reword the [NO-ARCH-UPDATE] token on other checks (GE-113b-2; KI-CG-20261116-arch-bypass-token-reads-the-previous-commit-message)."
+  - "Update the frontmatter last_updated, keep the document inside the project's doc-length gate, and keep any links relative and resolvable."
+  - "SEARCH ARM SCOPE: shipped instruction surfaces only, meaning templates/agents/, templates/skills/ and the command and workflow prompt templates. Dated history (retrospectives, known issues, changelogs, AC records) is excluded. At enrichment time no shipped prompt names the token; only check_feedback_id.py does, and GE-123e-2 cleans it. So no prompt edit is expected. If one is found, editing that prompt is llm-expert work and needs its own record."
+  - "Any test reads the real reference and the real shipped prompt files on disk, never a fixture copy."
+test_intent:
+  - clause: one section of the reference says which ticket changes the check judges, namely a sign-off heading that the commit adds to a ticket file
+    needs_test: false
+    reason: This is reference prose, checked at review against the shipped behaviour, and a string test would pin wording rather than meaning.
+  - clause: 'it says what the check requires: a feedback-id line beneath that heading'
+    needs_test: false
+    reason: This is reference prose, checked at review against the shipped check, with no executable behaviour of its own.
+  - clause: it says that a commit made by a person and a commit made through the shared commit step get the same verdict
+    needs_test: false
+    reason: The behaviour itself is proven by GE-123e-1's real-commit tests, and this clause only requires the reference to say so.
+  - clause: it says how a real id is obtained by pointing at the sign-off skill's section §2a, without restating a second procedure
+    needs_test: false
+    reason: Whether the text points rather than restates is a review judgement on prose, not executable behaviour.
+  - clause: 'for an entry that signs nothing off it points at the sign-off skill''s one documented value, "feedback-id: (not-a-signoff)", and gives no other'
+    needs_test: false
+    reason: The value's single definition is owned and tested by BO-2000g-2, and this clause only requires the reference to point at it.
+  - clause: it says that nothing in a commit message, the current one or any earlier one, switches the check off
+    needs_test: false
+    reason: The behaviour is proven by GE-123e-2 and GE-123e-2-i, and this clause is reference prose checked at review.
+  - clause: 'it describes the merge relief: while a merge, revert or cherry-pick is being concluded, a heading identical to its copy on either side of that operation is not judged, a heading added or changed during the resolution is judged, and when the incoming side cannot be read the check announces that it could not verify the sign-offs'
+    needs_test: false
+    reason: The relief and its could-not-check path are proven by GE-123e-4 and GE-123e-4-i, and this clause is prose checked at review.
+  - clause: none of them tells a reader to put it in a commit message, Because a reference or prompt that still offers the dead escape hatch sends its reader down the same dead end the refusal no longer offers
+    needs_test: true
+    reason: A search over the real shipped prompt files is a cheap executable guard against the dead bypass being reintroduced, or surviving in a copy no one has read.
+test_spec:
+  - name: test_ge_123e_5_no_shipped_prompt_tells_reader_to_use_no_feedback_check
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Walk the real files on disk under templates/agents/, templates/skills/ (including templates/skills/signoff/SKILL.md) and the command and workflow prompt templates, never a fixture copy. Assert none contains NO-FEEDBACK-CHECK in an instruction to put it in a commit message. Assert the walk visited a non-empty set that includes the sign-off skill so the test cannot pass vacuously. Dated history (retrospectives, known issues, changelogs, AC records) and check_feedback_id.py itself are out of scope."
+    proves_clause: 'none of them tells a reader to put it in a commit message, Because a reference or prompt that still offers the dead escape hatch sends its reader down the same dead end the refusal no longer offers'
+    code_file: templates/skills/signoff/SKILL.md
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/skills/signoff/SKILL.md
+file_findings:
+  - file: docs/architecture/components/commit-guardian.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the component reference whose Merge-Aware Checks section and frontmatter this documentation criterion extends.
+    decision: null
+file_findings_opened_files:
+  - docs/architecture/components/commit-guardian.md
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  DISCHARGES GE-123e's documentation_triggers: [reference-doc]. GE-123e's reason:
+  once the bypass is gone, the rule must be written where a reader of the guardrails
+  looks, not only in the known-issues register and a retrospective.
+
+  ORDERING. Write this after GE-123e-1 to -4 (and -4-i) have settled. A reference
+  written from the criteria and not from the shipped behaviour records an intention.
+
+  SCOPE OF THE SEARCH ARM. Shipped instruction surfaces only: agent templates,
+  skills and command prompts. Retrospectives, known-issue records, changelogs and
+  AC records are dated history and legitimately quote the token. At authoring time
+  the commit agent template names the check but does not advertise the token. The
+  arm is a guard against reintroduction and against copies the BA could not see
+  (source was not read).
+
+  HOUSEKEEPING, NOT A TRIGGER: the implementing change must also move
+  KI-CG-20260901 to resolved. Neither KI-CG-20261116 (the structural-change token's
+  own stale-message defect) nor the structural-change token's description on other
+  checks is touched. Both are FENCED by GE-123e.
+
+  TEST-EVIDENCE NOTE (for the IT PO). Any test here reads the real reference and the
+  real shipped prompt files on disk. A test against a fixture copy proves nothing
+  about what a reader finds.

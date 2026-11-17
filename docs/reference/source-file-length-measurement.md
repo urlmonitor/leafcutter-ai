@@ -4,7 +4,7 @@ description: "Lookup for how the file-size standard measures a source file's len
 type: reference
 status: active
 created: 2026-10-21
-last_updated: 2026-10-23
+last_updated: 2026-10-25
 components:
   - commit_guardian
   - documentation_system
@@ -27,7 +27,7 @@ Lets an author who is about to change a `.py`, `.sql`, `.js`, `.mjs`, `.ts`, `.t
 
 A line counts only if it holds a code token. The size standard publishes its measurement rule on the `Measures:` line of every refusal, and `describe_measurement_rule()` in `_file_size_ratchet.py` generates that sentence (through `_file_size_measure/rule_statement.py`) from what the measure actually does with probe content. Verbatim:
 
-> does not count comments of every style (line and block comments in every language measured), standalone strings (Python strings standing alone as statements: docstrings, bare strings and trailing blocks) and blank lines; counts every line of a used string (a Python string that is assigned, passed, returned or part of a larger expression), every line of an f-string and every other line of code; a line holding several statements counts once per statement (Python, JavaScript and TypeScript), so joining statements onto one line shortens nothing.
+> does not count comments of every style (line and block comments in every language measured), standalone strings (Python strings standing alone as statements: docstrings, bare strings and trailing blocks) and blank lines; counts every line of a used string (a Python string that is assigned, passed, returned or part of a larger expression), every line of an f-string and every other line of code; a line holding several statements counts once per statement (Python, JavaScript, TypeScript, SQL and shell), so joining statements onto one line shortens nothing.
 
 If the function's output and this quotation ever differ, the function is right: it is the rule in force. The same sentence follows `MEASUREMENT RULE:` in the `check_file_size.py` row of the [commit_guardian README](../../templates/scripts/commit_guardian/README.md).
 
@@ -45,7 +45,7 @@ Measurement is per language, by a tokenizer (`templates/scripts/commit_guardian/
 | Standalone f-string | Yes | Every line counts. |
 | Blank line | No | Anywhere, including inside a used string. |
 | Comment marker inside a string, glob, regex literal or here-document | Yes | It is code, not a comment. |
-| Several statements on one line | Once per statement | Python: after a top-level `;`, and a compound header with its body on the same line (`if x: y`). JavaScript and TypeScript: after a `;` that is not inside a parenthesis opened since the innermost brace, so a `for (;;)` header is one statement and a callback body written on one line is not. SQL and shell lines count once. |
+| Several statements on one line | Once per statement | Python: after a top-level `;`, and a compound header with its body on the same line (`if x: y`). JavaScript and TypeScript: after a `;` that is not inside a parenthesis opened since the innermost brace, so a `for (;;)` header is one statement and a callback body written on one line is not; a brace pair holding such a statement is a block, so `if (x) { a(); b(); }` measures 4, like its expanded form, while `{ a: 1, b: 2 }` stays one line. SQL: after a `;` outside strings and comments, inside function bodies too. Shell: after `;` or `;;`, and after `then`/`do`/`else` in command position; `&&` and `\|\|` lists stay one statement. |
 | Any other code line | Yes | |
 
 A DECISION HISTORY block is not special: in a line-comment form it is comments, and in a Python string form it is a standalone string, so it is uncounted either way. A file whose whole content is uncounted measures `0`.
@@ -136,7 +136,7 @@ echo "a # b"   # trailing # counted (code before comment)
 
 A decision-history block costs no measured lines. Moving a file's decision history into another file or document therefore removes nothing from its measured length, and it cannot bring an over-limit file under its limit or make room to add code.
 
-The same holds for restyling and for every other uncounted form. No comment style and no standalone string counts, so converting `//` runs to `/* */`, adding or deleting docstrings, or moving a DECISION HISTORY block elsewhere changes nothing in the measured length. Only code-token lines move it. Deleting blank lines does not either: they never count. Nor does joining statements: `a(); b();` measures 2, exactly like the same two statements on two lines.
+The same holds for restyling and for every other uncounted form. No comment style and no standalone string counts, so converting `//` runs to `/* */`, adding or deleting docstrings, or moving a DECISION HISTORY block elsewhere changes nothing in the measured length. Only code-token lines move it. Deleting blank lines does not either: they never count. Nor does joining statements: `a(); b();` measures 2 and `if (x) { a(); }` measures 3, exactly like the expanded forms, and the joined and expanded forms key the same, so joining or splitting them adds 0 to the two-for-one repayment.
 
 ## Over-limit files: the backstop
 

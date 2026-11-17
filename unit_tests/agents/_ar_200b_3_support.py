@@ -35,6 +35,8 @@ import importlib.util
 import re
 import shutil
 import sys
+from importlib.abc import Loader
+from importlib.machinery import ModuleSpec
 from pathlib import Path
 from typing import Any
 
@@ -45,6 +47,8 @@ if "_ar_200b_2_support" in sys.modules:
     S2: Any = sys.modules["_ar_200b_2_support"]
 else:
     _spec = importlib.util.spec_from_file_location("_ar_200b_2_support", _HELPER)
+    assert isinstance(_spec, ModuleSpec)
+    assert isinstance(_spec.loader, Loader)
     S2 = importlib.util.module_from_spec(_spec)
     sys.modules["_ar_200b_2_support"] = S2
     _spec.loader.exec_module(S2)

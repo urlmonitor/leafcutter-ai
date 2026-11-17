@@ -52,7 +52,8 @@ def _section_blocks(text: str, heading: str) -> list[str]:
     start = next((i for i, line in enumerate(lines) if line.strip() == f"## {heading}"), None)
     assert start is not None, f"the harvester prompt no longer has a '## {heading}' section"
     blocks: list[str] = []
-    fence, current = False, []
+    fence = False
+    current: list[str] = []
     for line in lines[start + 1:]:
         if not fence and line.startswith("## "):
             break

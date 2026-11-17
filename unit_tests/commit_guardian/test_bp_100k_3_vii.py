@@ -142,6 +142,7 @@ class TestOutputDriftIgnoredScan(_Base):
         self.assertEqual(0, proc.returncode, msg=out)
         match = _RESULT_RE.search(out)
         self.assertIsNotNone(match, msg=out)
+        assert isinstance(match, re.Match)
         self.assertEqual("0", match.group("gaps"), msg=out)
 
     def test_bp_100k_3_vii_nested_worktree_skipped_without_git(self) -> None:
@@ -196,6 +197,7 @@ class TestOutputDriftIgnoredScan(_Base):
         out2 = proc2.stdout + proc2.stderr
         match = _RESULT_RE.search(out2)
         self.assertIsNotNone(match, msg=out2)
+        assert isinstance(match, re.Match)
         self.assertEqual("1", match.group("drifted"), msg=out2)
         self.assertIn(key, out2)
         self.assertNotEqual(0, proc2.returncode, msg=out2)

@@ -71,17 +71,7 @@ it_requirements:
   - "Do not use an environment-file name as a generic example — the per-file scan short-circuits those and never reads their content, so the example would be unreachable."
   - "Documentation check for this AC: (1) for each of the three parts of an entry the document names what makes that part unusable, and states that such an entry is reported and ignored rather than silently loaded; (2) it states that an entry which cannot match anything is reported while an entry that merely matched nothing during a run is not, and gives the reason; (3) PARITY, BOTH DIRECTIONS — every rejected form listed is one the check rejects, and every accepted form presented is one the check accepts, checked against the shipped implementation rather than against the sibling ACs."
   - "Verification is by review against the shipped behaviour, not by an automated test. Do not author code tests for this AC."
-test_required: false
-test_rationale: |
-  This AC changes prose only, so it carries no executable behaviour and
-  test_required is false rather than test_spec being left empty. Its verification
-  is the three-part documentation check recorded in it_requirements, the third part
-  of which is a two-directional parity review against the shipped check: a
-  reference that under-lists rejections leaves the reader to discover them, and one
-  that over-lists them makes a working form look forbidden. Both produce the same
-  outcome as the defect this L1 removes. That parity is currently a review
-  obligation; mechanising it would need a code AC of its own, which is out of this
-  AC's scope and is raised as a recommended follow-up.
+test_required: true
 delivers_to: null
 expects_from:
   ac_id: GE-123c-3
@@ -128,6 +118,10 @@ amended_by:
       2026-08-25. GE-125b-4''s enrichment note had cited "the precedent set on GE-123d-4-ii" for
       documentation-expert, so the two trees would otherwise have named different owners for one
       file. Both sides now agree.'
+  - action: amended
+    agent: it-po
+    date: '2026-11-03'
+    reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -160,4 +154,9 @@ notes: |
   two-directional parity arm is a review obligation here; a mechanical parity check
   would be a python-coder AC and is raised as a recommended follow-up rather than
   smuggled into a documentation AC.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.
 target_epic: EPIC-SuppressionNarrowsNeverDisables

@@ -9,6 +9,8 @@ from __future__ import annotations
 import importlib.util
 import sys
 import types
+from importlib.abc import Loader
+from importlib.machinery import ModuleSpec
 from pathlib import Path
 
 import pytest
@@ -18,6 +20,8 @@ MODULE_PATH = Path(__file__).resolve().parents[2] / "scripts" / "knowledge" / "c
 
 def _load_fresh(name: str):
     spec = importlib.util.spec_from_file_location(name, MODULE_PATH)
+    assert isinstance(spec, ModuleSpec)
+    assert isinstance(spec.loader, Loader)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -25,18 +29,22 @@ def _load_fresh(name: str):
 
 def _msvcrt_stub(calls: list):
     stub = types.ModuleType("msvcrt")
-    stub.LK_LOCK = 1
-    stub.LK_UNLCK = 0
-    stub.LK_NBLCK = 2
-    stub.locking = lambda fd, mode, nbytes: calls.append(("locking", mode, nbytes))
+    stub.__dict__.update(
+        LK_LOCK=1,
+        LK_UNLCK=0,
+        LK_NBLCK=2,
+        locking=lambda fd, mode, nbytes: calls.append(("locking", mode, nbytes)),
+    )
     return stub
 
 
 def _fcntl_stub(calls: list):
     stub = types.ModuleType("fcntl")
-    stub.LOCK_EX = 2
-    stub.LOCK_UN = 8
-    stub.flock = lambda fd, op: calls.append(("flock", op))
+    stub.__dict__.update(
+        LOCK_EX=2,
+        LOCK_UN=8,
+        flock=lambda fd, op: calls.append(("flock", op)),
+    )
     return stub
 
 

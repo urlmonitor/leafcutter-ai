@@ -1,0 +1,268 @@
+id: BO-2400f-7-xi
+components:
+  - build_orchestration
+title: "The lane's claim tests give the lane the reply the real claim command produces, never a shape it cannot emit"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the lane's tests for the claim step's held, ran-and-failed and usable-claim
+    outcomes,
+  When each test gives the lane a claim reply,
+  Then that reply's exit status, standard output and standard error are the ones the claim
+    command produced when it was run against a fixture store in the matching state — the
+    target already in_progress for held, an id the store does not contain for
+    ran-and-failed, and every member todo for a usable claim,
+  And no test gives the lane a held outcome together with a success exit status, the shape
+    the 2026-09-23 claim-refusal test gave and the real command never emits.
+
+  Given the lane as it stood on 2026-11-16, which reads every non-success claim reply as
+    never attempted,
+  When the held test runs against it,
+  Then the held test fails.
+
+  Given the claim command's held output changes shape,
+  When the lane's held test runs,
+  Then the test fails, because its reply comes from the command and not from a copy written
+    into the test.
+depends_on: [BO-2400f-7, BO-2400f-7-viii, BO-2400f-7-ix]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-7-iii.yaml
+    relationship: related
+    status: exists
+    relevance: "Its covering test proves contention reporting with a reply whose exit status is 0 and target_refused true, a shape the real command never emits. The command's own test requires a non-zero exit on the same refusal. Each half is tested; they disagree; nothing tests them together."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "The real claim command the tests run against a fixture store."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "The lane the replies are given to, under the workflow engine harness."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+declared_files:
+  - path: unit_tests/workflows/test_bo2400f_7_iii_claim_refusal_workflow.py
+    state: existing
+  - path: unit_tests/workflows/_fast_lane_claim_fixtures.py
+    state: existing
+it_requirements:
+  config_schema_fragment:
+    captured_claim_reply:
+      type: object
+      required: [exit_status, stdout, stderr]
+      description: >-
+        The reply the lane's claim tests give the lane: the exit status, standard output and
+        standard error that `fast_lane.py claim` itself produced against a fixture store in
+        the matching state, captured in the same test run, never written by hand.
+      properties:
+        exit_status:
+          type: integer
+        stdout:
+          type: string
+        stderr:
+          type: string
+  reference_file_path: unit_tests/workflows/_bo2400f5iii_fixtures.py
+  n_location_rule: "all claim tests that give the lane a held, ran-and-failed or usable-claim reply"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - >-
+      The claim reply given to the lane in the held, ran-and-failed and usable-claim tests is
+      captured from the real claim command run against a fixture store in the matching state,
+      in the same test run. No test carries a hand-written copy of the command's output, exit
+      status or streams for these three outcomes.
+    - >-
+      The fixture helper that builds a claim reply with a default exit status of 0 is changed
+      so that a held outcome cannot be paired with a success status by default. The exit-0
+      contention fixture is replaced, not kept beside the real reply.
+    - >-
+      The existing assertions of BO-2400f-7-iii's covering test (contention names its members;
+      never-attempted is not contention) are kept and re-pointed at the real reply. None is
+      weakened or removed, and the covers tag of BO-2400f-7-iii stays on the test that proves
+      it.
+    - >-
+      The fixture stores are created per test in a temporary directory, never the
+      repository's own store, and the claim command is invoked the way the lane invokes it
+      (the same subcommand and arguments). A held fixture must leave the fixture store
+      unchanged after the command runs.
+    - >-
+      The tests run through the workflow engine harness the existing claim tests already use;
+      no test spawns its own build.
+    - >-
+      The relayed-on-standard-error reply belongs to BO-2400f-7-x's own test and is not
+      duplicated here.
+    - >-
+      Assigned to python-coder, not test-writer, by the IT PO: the files this record changes
+      are Python test modules, which the surface map gives to python-coder. The fast lane's
+      own test-writer phase still runs before any coder phase, so TDD order is unchanged.
+test_intent:
+  - clause: that reply's exit status, standard output and standard error are the ones the claim command produced when it was run against a fixture store in the matching state — the target already in_progress for held, an id the store does not contain for ran-and-failed, and every member todo for a usable claim
+    needs_test: true
+    reason: The seam between command and lane went untested because each half used its own invented reply, so the replies must come from the command.
+  - clause: no test gives the lane a held outcome together with a success exit status, the shape the 2026-09-23 claim-refusal test gave and the real command never emits
+    needs_test: true
+    reason: The impossible exit-0 shape is what made the held halt look reachable while it was not.
+  - clause: the held test fails
+    needs_test: true
+    reason: A held test that also passes on the 2026-11-16 lane would not constrain the fix, so its red baseline must be shown.
+  - clause: the test fails, because its reply comes from the command and not from a copy written into the test
+    needs_test: true
+    reason: A copied reply hides a later change to the command's held output, which is the drift this record closes.
+test_spec:
+  - name: test_claim_replies_given_to_the_lane_are_captured_from_the_real_claim_command
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The helper in _fast_lane_claim_fixtures.py creates a fixture store in a temp directory (never the repository's
+      own store) in each state, target in_progress for held, an id the store does not contain for ran-and-failed and
+      every member todo for a usable claim. It runs python fast_lane.py claim as a subprocess with the same
+      subcommand and arguments the lane uses and returns the exit status, standard output and standard error it
+      captured. The test runs the command a second time itself and asserts the helper's reply equals that reply
+      exactly, then reads the held store back and asserts no file changed. The wrong version it catches is a helper
+      that returns a hand-written dict.
+    proves_clause: that reply's exit status, standard output and standard error are the ones the claim command produced when it was run against a fixture store in the matching state — the target already in_progress for held, an id the store does not contain for ran-and-failed, and every member todo for a usable claim
+    code_file: unit_tests/workflows/_fast_lane_claim_fixtures.py
+  - name: test_no_claim_fixture_pairs_a_held_outcome_with_a_success_exit_status
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Asks the fixture helper for a held outcome (target_refused true with excluded ids) without an exit status and
+      asserts it neither defaults to 0 nor returns exit 0, and asserts that every claim reply the claim test module
+      hands to the lane through the harness, read from the recorded dispatches' stubs, has a non-zero exit status
+      whenever its standard output holds a held outcome. The exit-0 contention fixture is gone, not kept beside the
+      real one.
+    proves_clause: no test gives the lane a held outcome together with a success exit status, the shape the 2026-09-23 claim-refusal test gave and the real command never emits
+    code_file: unit_tests/workflows/_fast_lane_claim_fixtures.py
+    must_catch:
+      - claim_ran still defaulting exit_status to 0 for a held outcome
+      - the old exit 0 contention fixture left in the claim refusal test
+  - name: test_the_held_lane_test_fails_against_the_lane_as_it_stood_on_2026_11_16
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      The held test in test_bo2400f_7_iii_claim_refusal_workflow.py gives the lane the reply captured from the real
+      command with the target in_progress and asserts a held halt naming the target and no never attempted wording.
+      It is run before BO-2400f-7-ix lands as the red baseline, and must fail then, because the lane reads every
+      non-success claim reply as never attempted.
+    proves_clause: the held test fails
+    code_file: unit_tests/workflows/test_bo2400f_7_iii_claim_refusal_workflow.py
+    must_catch:
+      - a held test that also passes on the 2026-11-16 lane because it feeds an exit 0 shape
+      - a held test whose assertions are loosened until the never attempted halt satisfies them
+  - name: test_the_held_lane_test_fails_when_the_command_changes_its_held_output
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Copies scripts/build_orchestration into a temp directory, edits the copy so its held outcome uses a different
+      field name, points the capture helper at the copy and runs the held lane scenario. The scenario must fail,
+      because the reply comes from the command and not from a copy written into the test. The repository's own
+      command is never edited.
+    proves_clause: the test fails, because its reply comes from the command and not from a copy written into the test
+    code_file: unit_tests/workflows/_fast_lane_claim_fixtures.py
+    must_catch:
+      - a held test that carries its own literal copy of the outcome and so stays green when the command drifts
+  - name: test_the_existing_7_iii_assertions_are_kept_and_pointed_at_the_real_reply
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The contention test of BO-2400f-7-iii still asserts that the held member is named, that contention wording is
+      present and that never attempted wording is absent, now with the reply captured from the real command, and
+      keeps its covers tag for BO-2400f-7-iii.
+    proves_clause: that reply's exit status, standard output and standard error are the ones the claim command produced when it was run against a fixture store in the matching state — the target already in_progress for held, an id the store does not contain for ran-and-failed, and every member todo for a usable claim
+    code_file: unit_tests/workflows/test_bo2400f_7_iii_claim_refusal_workflow.py
+  - name: test_a_usable_claim_reply_from_the_real_command_lets_the_lane_proceed_through_the_harness
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: >-
+      Captures the claim reply from the real command with every member todo, gives it to fast-lane-ship.js through
+      run_workflow_under_e2 with args ac, and asserts the lane dispatches the context bundle step after the claim.
+      This shows the captured reply is accepted by the real production control flow and the helper is wired into it.
+    proves_clause: that reply's exit status, standard output and standard error are the ones the claim command produced when it was run against a fixture store in the matching state — the target already in_progress for held, an id the store does not contain for ran-and-failed, and every member todo for a usable claim
+    code_file: unit_tests/workflows/_fast_lane_claim_fixtures.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - unit_tests/workflows/_fast_lane_claim_fixtures.py
+  - unit_tests/workflows/test_bo2400f_7_iii_claim_refusal_workflow.py
+  - unit_tests/workflows/_bo2400f5iii_fixtures.py
+  - unit_tests/_workflow_engine_harness.py
+  - scripts/build_orchestration/fast_lane.py
+  - templates/workflows-js/fast-lane-ship.js
+file_findings:
+  - file: unit_tests/workflows/test_bo2400f_7_iii_claim_refusal_workflow.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the contention test that feeds the lane a held outcome with claim_ran's default exit status 0, the exact shape this record replaces.
+    decision: null
+  - file: unit_tests/workflows/_fast_lane_claim_fixtures.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It defines claim_ran with exit_status defaulting to 0 and no way to capture the real command's reply, so it is the fixture helper this record changes.
+    decision: null
+  - file: unit_tests/workflows/_bo2400f5iii_fixtures.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Chosen as the reference file because it is a sibling shared-fixture module in the same directory that already builds claim replies through the one helper and drives the lane under the harness.
+    decision: null
+file_findings_opened_files:
+  - unit_tests/workflows/test_bo2400f_7_iii_claim_refusal_workflow.py
+  - unit_tests/workflows/_fast_lane_claim_fixtures.py
+  - unit_tests/workflows/_bo2400f5iii_fixtures.py
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-7-viii
+  contract: "The claim command's held exit status (3) and held outcome {claimed: [], excluded_claimed: [<held ids>], target_refused: true} on standard output, which the tests capture by running the command rather than by restating it."
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Evidence (2026-11-16 analysis): the claim-refusal workflow test builds its contention reply
+  with a fixture helper whose exit status defaults to 0, while the command's lifecycle test
+  pins a non-zero exit for the same refusal. So the contention halt was proved reachable by a
+  reply that cannot occur, and the halt the real command reaches was never tested.
+
+  This record makes the two halves meet: the test runs the real command and gives its exact
+  reply to the lane. The existing exit-0 contention fixture is replaced, not kept beside the
+  real one. Its assertions (contention names its members; never-attempted is not contention)
+  are kept and re-pointed at the real reply; they are not weakened.
+
+  The relayed-on-standard-error variant is BO-2400f-7-x's own test and uses the reply copied
+  from the 2026-11-16 journal.
+
+  Assigned to test-writer because the deliverable is the tests themselves. The IT PO may
+  re-assign if the store prefers these as test_spec entries on BO-2400f-7-ix.

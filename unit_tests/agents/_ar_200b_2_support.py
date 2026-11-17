@@ -139,6 +139,13 @@ def _tools_block(text: str) -> tuple[int, int, list[str]]:
     return start.start(), start.start() + len("\n".join(block)), block
 
 
+def _tools_prefix(line: str) -> str:
+    """The ``tools:`` key and the blanks after it, from the first line of the tools block."""
+    start = _TOOLS_START.match(line)
+    assert isinstance(start, re.Match), f"not a tools: line: {line!r}"
+    return start.group(0)
+
+
 def _rewrite_tools(path: Path, want_skill: bool) -> None:
     """Add or remove the exact token Skill, preserving comments, folds, layout.
 
@@ -152,7 +159,7 @@ def _rewrite_tools(path: Path, want_skill: bool) -> None:
     new_block: list[str] = []
     for i, raw in enumerate(block):
         content, comment = _split_comment(raw)
-        prefix = _TOOLS_START.match(content).group(0) if i == 0 else content[: len(content) - len(content.lstrip())]
+        prefix = _tools_prefix(content) if i == 0 else content[: len(content) - len(content.lstrip())]
         body = content[len(prefix):]
         trailing_comma = body.rstrip().endswith(",")
         kept = [p.strip() for p in body.split(",") if p.strip() and p.strip() != INVOKING_TOOL]

@@ -36,7 +36,7 @@ it_requirements:
   - "The diagram MUST depict the route-render-specific interaction: PR changes leafcutter-web/ -> CI starts the route-render check -> the headless browser loads each route -> the check observes HTTP status and console/render output per route -> pass/fail reported on the PR -> merge gate decision. Name the actors: the pull request, the CI system, the headless browser loading each route, and the merge gate."
   - "Check/actor naming MUST match BP-1400c-1: the route-render check's label must be the same stable ci.yml job name that BP-1400a-4 wires into the required-status-checks list — no divergent labels."
   - "Diagram is documentation only — it must not assert behavior beyond BP-1400c-1 (no invented retry/notification steps). Distinct from BP-1400a-3, which depicts the shared build/type-check PR flow; this diagram depicts the per-route headless-load interaction (status + console/render observation)."
-test_required: false
+test_required: true
 delivers_to: null
 expects_from:
   ac_id: BP-1400c-1
@@ -47,6 +47,10 @@ amended_by:
   - reason: "it-po-technical-enrichment"
     entry: "Confirmed assigned_agent architecture-diagram-author (correct docs/diagram surface, kept per direction). Added it_requirements (Mermaid sequenceDiagram via write-c4-diagram; route-render-specific per-route headless-load flow with the four named actors incl the headless browser; check-name/actor parity with BP-1400c-1 and the BP-1400a-4 required-check name; docs-only, no invented steps; distinct from BP-1400a-3). Set test_required: false (documentation AC, change_target docs — no executable behavior). Criteria, contracts, doc_links, readiness, and components unchanged."
     by: it-po
+  - action: amended
+    agent: it-po
+    date: '2026-11-02'
+    reason: "BO-2500a-8-iv backfill batch B, user decision of 2026-11-02: a label, name or value must match something built, so test_required false changed to true. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by:

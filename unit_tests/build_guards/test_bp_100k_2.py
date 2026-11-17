@@ -74,6 +74,8 @@ import sys
 import tempfile
 import types
 import unittest
+from importlib.abc import Loader
+from importlib.machinery import ModuleSpec
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -431,9 +433,11 @@ def _load_fresh_module(module_path: Path) -> types.ModuleType:
     _UNIQUE_COUNTER[0] += 1
     unique_name = f"_bp100k2_{module_path.stem}_{_UNIQUE_COUNTER[0]}"
     spec = importlib.util.spec_from_file_location(unique_name, module_path)
+    assert isinstance(spec, ModuleSpec)
+    assert isinstance(spec.loader, Loader)
     module = importlib.util.module_from_spec(spec)
     sys.modules[unique_name] = module
-    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    spec.loader.exec_module(module)
     return module
 
 

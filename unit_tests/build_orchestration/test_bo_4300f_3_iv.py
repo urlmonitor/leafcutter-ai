@@ -49,6 +49,7 @@ class TestRetireReportsIgnored(MigrateCase):
     def retired_entry(self, answer: dict[str, Any], legacy: Path) -> dict[str, Any]:
         entry = next((e for e in answer["retired"] if norm(e["path"]) == norm(legacy)), None)
         self.assertIsNotNone(entry, msg=f"{legacy} was not retired: {answer}")
+        assert isinstance(entry, dict)
         return entry
 
     def test_retiring_reports_the_ignored_files_it_deletes(self):

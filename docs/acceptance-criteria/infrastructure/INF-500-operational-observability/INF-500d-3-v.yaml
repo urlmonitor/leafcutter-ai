@@ -1,0 +1,495 @@
+id: INF-500d-3-v
+components:
+  - infrastructure
+  - feedback_collector
+title: "Every other instruction that records a failed submission records the reasoned marker from the run's own failure line, never a bare (submit-failed)"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the agent instructions that say what to record when a feedback submission
+    fails, other than the signoff skill and live-surface-tester (INF-500d-3-iv):
+      - the shared sign-off block;
+      - python-coder's sign-off steps;
+      - documentation-verifier's and user-surface-smoker's sign-off submission steps;
+      - ticket-supervisor's four event submissions (mechanical retry, cross-agent
+        rework, brainstorm escalation, halt) and the feedback_id field of the payload
+        it returns;
+      - epic-supervisor's cross-ticket pattern submission,
+  And a submission run from any one of them prints nothing on standard output, exits
+    non-zero, and leaves exactly one `submit-failed:` line,
+    `submit-failed:writer-not-allowed:subagent-quality`, in that run's own error file,
+    alongside any human-readable ERROR lines the script also writes there,
+  When the agent follows that instruction to record the outcome,
+  Then it records `feedback-id: (submit-failed:writer-not-allowed:subagent-quality)`,
+    and in ticket-supervisor's returned payload the feedback_id field carries
+    `(submit-failed:writer-not-allowed:subagent-quality)`,
+  And the reason and the category in the recorded marker are exactly those on the
+    run's own failure line, never a reason the agent chose by judgement, inferred from
+    the exit status alone, or took from a fixed default,
+  And none of these instructions still tells the agent to record a bare
+    `(submit-failed)` in any case.
+
+  Given a run from one of those instructions that printed nothing on standard output,
+    and whose own error file holds a `sidecar:` line naming a recovery file,
+  When the agent follows the instruction,
+  Then, if that recovery file holds `fb_2026-11-16_1a2b3c4d`, it records
+    `fb_2026-11-16_1a2b3c4d` and no failure marker,
+  And, if that recovery file is missing or empty, it records
+    `(submit-failed:written-uncited:<category>)` with the category it submitted under.
+
+  Given a run from one of those instructions with --category complete, whose own error
+    file holds no `submit-failed:`, `sidecar:` or `[submit_feedback] sink:` line
+    (the submission entry point is absent or could not start),
+  When the agent follows the instruction,
+  Then it records `(submit-failed:facility-unavailable:complete)`.
+
+  Given a failed submission recorded by any of those instructions, in any of the cases
+    above,
+  When the agent finishes recording the marker,
+  Then it continues its sign-off, or in a supervisor its adjudication routing, exactly
+    as it would after a successful submission, and the verdict, the sign-off status and
+    the route taken are unchanged by the failure.
+
+  Given ticket-supervisor's instructions, whose emit contract today also describes a
+    secondary `--category tooling-issue` submission with no command for it,
+  When an agent reads every place those instructions describe a feedback submission,
+  Then each described submission is given with its command,
+  And the secondary tooling-issue submission is no longer described anywhere in them.
+depends_on:
+  - INF-500d-3
+  - INF-500d-3-ii
+  - INF-500d-3-vi
+doc_links:
+  - path: templates/agents/_signoff_block.md
+    relationship: implements
+    status: exists
+  - path: templates/agents/python-coder.md
+    relationship: implements
+    status: exists
+  - path: templates/agents/documentation-verifier.md
+    relationship: implements
+    status: exists
+  - path: templates/agents/user-surface-smoker.md
+    relationship: implements
+    status: exists
+  - path: templates/agents/ticket-supervisor.md
+    relationship: implements
+    status: exists
+  - path: templates/agents/epic-supervisor.md
+    relationship: implements
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the reason vocabulary (templates/scripts/feedback/submit_failure_reasons.json), the stderr line 'submit-failed:<reason>:<category>', the marker form and the capture precedence this record applies. This record must land in the same PR as INF-500d-3 or after it."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-3-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "Done. Owns the per-run error-file naming rule and the check in unit_tests/feedback/test_inf_500d_3_ii.py. It did not reach the shared sign-off block or python-coder, which this record must bring under that rule."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-3-vi.yaml
+    relationship: related
+    status: exists
+    relevance: "Makes epic-supervisor keep its error stream, without which this record's epic-supervisor case falls through to facility-unavailable on every failure. Land it with or before this record."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-3-iv.yaml
+    relationship: related
+    status: exists
+    relevance: "BOUNDARY. Sibling that covers the signoff skill and live-surface-tester, for the missing-recovery-file case only. This record covers every other instruction surface and the full capture precedence."
+assigned_agent: llm-expert
+estimated_complexity: M
+declared_files:
+  - path: templates/agents/_signoff_block.md
+    state: existing
+  - path: templates/agents/python-coder.md
+    state: existing
+  - path: templates/agents/documentation-verifier.md
+    state: existing
+  - path: templates/agents/user-surface-smoker.md
+    state: existing
+  - path: templates/agents/ticket-supervisor.md
+    state: existing
+  - path: templates/agents/epic-supervisor.md
+    state: existing
+it_requirements:
+  - "LANDING ORDER (IT PO, 2026-11-16). This record lands in the same PR as INF-500d-3 or after it. The vocabulary file templates/scripts/feedback/submit_failure_reasons.json does not exist in this checkout yet, and submit_feedback.py does not yet write the 'submit-failed:<reason>:<category>' line. Until both exist, the instructions have no line to read and the tests cannot pass. The epic-supervisor case also needs INF-500d-3-vi, so INF-500d-3-vi lands with this record or before it."
+  - "ERROR STREAM MUST BE SAVED (shared sign-off block and python-coder). templates/agents/_signoff_block.md and templates/agents/python-coder.md do not save the submission's error stream anywhere today. INF-500d-3-ii (done) was meant to cover every submit instruction but did not reach these two. Every submit instruction in both must send the error stream to the per-run file named exactly as INF-500d-3-ii specifies: /tmp/feedback_err_<ticket_basename>_<agent_name>.txt, where <ticket_basename> is the ticket file's name (for example 03-add-parser.md) and <agent_name> is the phase submitted as. python-coder's own section may write the literal phase python-coder in place of <agent_name>. A surface with an event kind adds _<event-kind> before .txt, as ticket-supervisor does."
+  - "The per-run name must use placeholders that the INF-500d-3-ii check (unit_tests/feedback/_inf_500d_3_ii_check.py) fills: underscore spellings only. The ticket part must be a basename-type placeholder, never <ticket_path>, which carries path separators. The phase part is <agent_name> or <phase>, or the literal phase. The shared block's existing <your-name> is hyphenated and the check does not fill it, so it must not appear in the file name. Once discovered, every new redirect must pass test_inf_500d_3_ii.py unchanged. INF-500d-3-ii's YAML and tests are neither edited nor weakened."
+  - "SHARED BLOCK REACH. The build appends the shared sign-off block to the body of every agent that takes it. In the reference install that is about 24 deployed agents, including python-coder, ticket-supervisor, documentation-verifier, user-surface-smoker and live-surface-tester. Every deployed copy must therefore conform. python-coder then carries two sign-off sections, its own and the appended block, and both must conform. The appended block inside live-surface-tester belongs to this record; live-surface-tester's own capture block stays with INF-500d-3-iv. This record does not edit the template source templates/agents/live-surface-tester.md, which INF-500d-3-iv (capture block) and BO-2000g-1 (one heading line, ~:323) edit; it reaches the deployed copy only through _signoff_block.md."
+  - "CAPTURE PRECEDENCE IS REFERENCED, NOT REDEFINED (INF-500d-3). Every instruction applies, in order: (1) the id printed on standard output; (2) the id in the recovery file named by the run's own 'sidecar:' line; (3) the run's own 'submit-failed:<reason>:<category>' line, with reason and category copied verbatim into '(submit-failed:<reason>:<category>)'; (4) written-uncited with the submitted category when a 'sidecar:' or '[submit_feedback] sink:' line exists but no id was recovered; (5) facility-unavailable with the submitted category when none of those three lines exists. No instruction carries its own list of reasons. Every reason identifier an instruction names must be a member of the vocabulary file."
+  - "THE READ-BACK MUST BE EXECUTABLE. Today documentation-verifier, user-surface-smoker and ticket-supervisor read standard output only. The shared block and python-coder read nothing at all. Each of these surfaces must prescribe its recovery search and its failure-line read as shell commands. Those commands read only that run's own per-run error file and use the same placeholders as the redirect, so the INF-500d-3-ii check's search-and-redirect agreement covers them. Each prescribed command stays a single simple shell command (shell convention: no chaining, pipes or subshells)."
+  - "The read-back finds the 'submit-failed:' line by its prefix. It never assumes the error file holds only one line, because INF-500d-3 keeps the human-readable ERROR lines beside it."
+  - "No step may list, glob, sort or search the shared temporary directory, or take 'the newest' or 'the first' recovery file. This is the same rule as INF-500d-3-iv, applied to every surface this record touches."
+  - "TICKET-SUPERVISOR. These all carry the reasoned marker form: the four event blocks (mechanical-retry, cross-agent-rework, brainstorm-escalation, halt), the CFCS emit contract paragraph that names the fallback, and the documented value of the payload's feedback_id field. The payload value is either a real id matching ^fb_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9a-f]{8}$ or the marker without its 'feedback-id: ' prefix, matching ^\\(submit-failed:([a-z][a-z0-9-]*):([^\\s:()]+)\\)$. The bare '(submit-failed)' is never documented as a value. The four event-kind file names keep the shape INF-500d-3-ii gave them."
+  - "TICKET-SUPERVISOR SECONDARY SUBMISSION (fifth scenario). The secondary '--category tooling-issue' submission that the CFCS emit contract describes (about :597) without a command is removed from every place ticket-supervisor describes it. No command is added for it, and no other submission is removed or merged. After the change, every feedback submission ticket-supervisor describes is one of the four event submissions, each with its runnable command, per-run error file and read-back. If removing the sentence leaves the emit contract paragraph inconsistent, the paragraph is reworded only as far as needed to stay true."
+  - "FAIL-OPEN IS UNCHANGED. Recording a marker never aborts or downgrades a sign-off and never changes an adjudication route or a surfaced payload. This holds for BO-2000a-3's continue-anyway rule, ticket-supervisor's CFCS emit contract and epic-supervisor's non-blocking contract. Every lifted recipe ends with exit status 0 when the submission fails."
+  - "epic-supervisor is marked DEPRECATED (ADR-006) but still ships and can still be dispatched, so its instruction must be correct. Retiring it is a separate decision and not this record's. This record covers only epic-supervisor's marker; keeping the error stream is INF-500d-3-vi."
+  - "Edits are made in the template sources only. Deployed copies are refreshed by the build (ADR-001)."
+  - "Test home: unit_tests/feedback/test_inf_500d_3_v.py, created by the test phase. It is not in declared_files because this record's own change is prompt-only, and test files belong to test-writer and python-coder per the surface map, as on INF-500d-3-ii and INF-500d-3-iv. The tests reuse the INF-500d-3-ii harness: _inf_500d_3_helpers.make_layout, plus redirects, searches and fill from _inf_500d_3_ii_check, plus prepare, run_shell and error_file from _inf_500d_3_ii_run. For each deployed surface they lift the recipe from the shared reference layout (marker shared_layout_reader, never their own build.py). They run it with bash in a copied layout with a confined TMPDIR, against a submit entry point that fails with each reason. The vocabulary is read from the copied layout. A grep alone is not sufficient (CLAUDE.md 'Gate / Workflow ACs'). Any scan for the bare form carries positive controls. The deployed copies of the shared block are discovered at test time, never taken from a hard-coded list."
+  - "SAME-DELIVERY TEST IMPACT. Once the shared block and python-coder redirect to files, test_inf_500d_3_ii.py discovers them as well. Its reachability test runs every discovered command twice, so roughly 24 copies of the block add about 48 real submissions to its runtime. That file must stay green. Report any slowdown; never cut it by narrowing INF-500d-3-ii's discovery."
+test_intent:
+  - clause: "it records `feedback-id: (submit-failed:writer-not-allowed:subagent-quality)`, and in ticket-supervisor's returned payload the feedback_id field carries `(submit-failed:writer-not-allowed:subagent-quality)`"
+    needs_test: true
+    reason: The recorded value comes from running each surface's read-back against its own error file, and ticket-supervisor's payload field is a second place where the bare form can survive.
+  - clause: "the reason and the category in the recorded marker are exactly those on the run's own failure line, never a reason the agent chose by judgement, inferred from the exit status alone, or took from a fixed default"
+    needs_test: true
+    reason: A recipe that hard-codes one reason or rebuilds the category from its own arguments passes on one example, so only runs with different failure lines catch it.
+  - clause: "none of these instructions still tells the agent to record a bare `(submit-failed)` in any case"
+    needs_test: true
+    reason: A single leftover fallback sentence in any deployed copy brings the bare form back, and only a scan of every copy finds it.
+  - clause: "if that recovery file holds `fb_2026-11-16_1a2b3c4d`, it records `fb_2026-11-16_1a2b3c4d` and no failure marker"
+    needs_test: true
+    reason: Recording a marker over a recovered id re-files a written record, and running the recipe with a planted recovery file shows which value wins.
+  - clause: "if that recovery file is missing or empty, it records `(submit-failed:written-uncited:<category>)` with the category it submitted under"
+    needs_test: true
+    reason: The written-uncited choice decides whether a report is later re-filed, so the missing and empty recovery-file runs must each yield it.
+  - clause: "it records `(submit-failed:facility-unavailable:complete)`"
+    needs_test: true
+    reason: The last step of the precedence is reached only when the error file holds none of the three lines, which an absent entry point produces.
+  - clause: "it continues its sign-off, or in a supervisor its adjudication routing, exactly as it would after a successful submission, and the verdict, the sign-off status and the route taken are unchanged by the failure"
+    needs_test: true
+    reason: A read-back step that exits non-zero, or a rule that routes on the marker, makes a failed write fatal, and the lifted recipe's exit status shows it.
+  - clause: "each described submission is given with its command"
+    needs_test: true
+    reason: A submission described in prose with no command has no per-run error file and no read-back, so only a pass over every place ticket-supervisor describes a submission, matched against its lifted commands, shows none is left without one.
+  - clause: "the secondary tooling-issue submission is no longer described anywhere in them"
+    needs_test: true
+    reason: The tooling-issue sentence sits in the emit contract paragraph and can survive an edit of the four event blocks, so a scan of the deployed ticket-supervisor, with a positive control, is needed to show it is gone.
+test_spec:
+  - name: test_shared_signoff_block_and_every_deployed_copy_record_the_reasoned_marker
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Lifts the submit command and the read-back commands of the shared sign-off block from the deployed shared reference layout (shared_layout_reader), discovering at test time every deployed instruction that carries the block (about 24 agents, never a hard-coded list). Each lifted submit command runs with bash in a copied layout (confined TMPDIR, placeholders filled by the INF-500d-3-ii fill) against a submit entry point that prints nothing on stdout, exits non-zero and writes submit-failed:writer-not-allowed:subagent-quality plus a human ERROR line to the run's per-run error file; the lifted failure-line read returns that line and the marker built from it is feedback-id: (submit-failed:writer-not-allowed:subagent-quality). Every copy agrees."
+    proves_clause: "it records `feedback-id: (submit-failed:writer-not-allowed:subagent-quality)`, and in ticket-supervisor's returned payload the feedback_id field carries `(submit-failed:writer-not-allowed:subagent-quality)`"
+    code_file: templates/agents/_signoff_block.md
+  - name: test_python_coder_own_signoff_step_records_the_reasoned_marker
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Same executed recipe for python-coder's own sign-off submit step (the deployed python-coder carries two sections, its own and the appended block, and both are lifted): the redirect names /tmp/feedback_err_<ticket_basename>_<agent_name>.txt or the literal python-coder phase, the read-back returns the run's own line and the marker is the writer-not-allowed one."
+    proves_clause: "it records `feedback-id: (submit-failed:writer-not-allowed:subagent-quality)`, and in ticket-supervisor's returned payload the feedback_id field carries `(submit-failed:writer-not-allowed:subagent-quality)`"
+    code_file: templates/agents/python-coder.md
+  - name: test_documentation_verifier_records_the_reasoned_marker
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Executes documentation-verifier's lifted submit command (its own category and the fixed phase documentation-verifier) and read-back against the failing entry point; the marker equals the run's own submit-failed line wrapped in parentheses."
+    proves_clause: "it records `feedback-id: (submit-failed:writer-not-allowed:subagent-quality)`, and in ticket-supervisor's returned payload the feedback_id field carries `(submit-failed:writer-not-allowed:subagent-quality)`"
+    code_file: templates/agents/documentation-verifier.md
+  - name: test_user_surface_smoker_records_the_reasoned_marker
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Executes user-surface-smoker's lifted submit command and read-back against the failing entry point; the marker equals the run's own submit-failed line wrapped in parentheses."
+    proves_clause: "it records `feedback-id: (submit-failed:writer-not-allowed:subagent-quality)`, and in ticket-supervisor's returned payload the feedback_id field carries `(submit-failed:writer-not-allowed:subagent-quality)`"
+    code_file: templates/agents/user-surface-smoker.md
+  - name: test_ticket_supervisor_four_events_record_the_reasoned_marker_and_the_payload_field_documents_no_bare_form
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Runs each of the four event commands (mechanical-retry, cross-agent-rework, brainstorm-escalation, halt) with its own per-run error file against the failing entry point and applies the lifted read-back: four markers, each the run's own line. The feedback_id field documentation in the blocked payload block is read from the deployed text: it names a real-id form and the reasoned marker form without its prefix, never the bare (submit-failed); the Include feedback_id sentences of the retry and halt events and the CFCS emit contract paragraph carry the reasoned form."
+    proves_clause: "it records `feedback-id: (submit-failed:writer-not-allowed:subagent-quality)`, and in ticket-supervisor's returned payload the feedback_id field carries `(submit-failed:writer-not-allowed:subagent-quality)`"
+    code_file: templates/agents/ticket-supervisor.md
+    must_catch:
+      - the four event blocks updated while the payload feedback_id field is still documented as a real id or bare (submit-failed)
+      - one of the four events keeping its old read-stdout-only wording
+      - an event kind dropped from the per-run file name so two events share one file
+  - name: test_epic_supervisor_cross_ticket_recipe_records_the_reasoned_marker
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Executes epic-supervisor's lifted cross-ticket pattern command and read-back against the failing entry point (needs INF-500d-3-vi); the marker is the run's own writer-not-allowed line wrapped in parentheses, not a facility-unavailable default."
+    proves_clause: "it records `feedback-id: (submit-failed:writer-not-allowed:subagent-quality)`, and in ticket-supervisor's returned payload the feedback_id field carries `(submit-failed:writer-not-allowed:subagent-quality)`"
+    code_file: templates/agents/epic-supervisor.md
+  - name: test_marker_reason_and_category_are_copied_from_the_runs_own_failure_line_for_every_reason
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "For each surface and each of the five reasons from the vocabulary in the copied layout, runs the lifted recipe with a failing entry point whose line carries a category different from the command's own --category (for example the command submits under complete and the line says malformed-submission:blocker) and with distinct exit statuses 1, 2 and 3. The error file holds the human ERROR lines both before and after the one submit-failed: line, and one run has an ERROR line that mentions submit-failed mid-line. The marker equals the line exactly in every case."
+    proves_clause: "the reason and the category in the recorded marker are exactly those on the run's own failure line, never a reason the agent chose by judgement, inferred from the exit status alone, or took from a fixed default"
+    code_file: templates/agents/_signoff_block.md
+    must_catch:
+      - reason read off the exit status
+      - one fixed reasoned value such as always facility-unavailable
+      - category rebuilt from the command's own --category instead of the line
+      - a read-back that takes the first line of the error file whatever it says
+      - a read-back that matches submit-failed anywhere in a line instead of by prefix
+      - a read-back that assumes the error file holds only one line
+  - name: test_every_reason_identifier_named_in_a_deployed_instruction_is_a_vocabulary_member
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Scans every deployed copy of the six surfaces for submit-failed:<reason>:<category> tokens and for named identifiers (facility-unavailable, written-uncited), and asserts each is a member of the vocabulary read from the copied layout. Positive controls: a planted submit-failed:made-up-reason:complete line and an instruction that carries its own list of reasons are both flagged by the same predicate."
+    proves_clause: "the reason and the category in the recorded marker are exactly those on the run's own failure line, never a reason the agent chose by judgement, inferred from the exit status alone, or took from a fixed default"
+    code_file: templates/agents/ticket-supervisor.md
+    must_catch:
+      - an instruction naming an invented reason identifier
+      - an instruction that defines its own list of reasons
+      - a renamed identifier such as written-but-not-captured
+  - name: test_no_deployed_copy_of_the_six_surfaces_still_tells_the_agent_to_record_a_bare_submit_failed
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Scans every deployed copy of the shared block, python-coder, documentation-verifier, user-surface-smoker, ticket-supervisor (event blocks, CFCS emit contract, payload field) and epic-supervisor for the bare form: a (submit-failed) not followed by a colon, in prose, fenced text and a payload placeholder. Positive controls: each of the six sentences as they read today is flagged by the same scan, while the reasoned form is not. This scan only pairs with the executed recipe tests and never stands alone; the legacy-pattern mention in the signoff skill and the live-surface-tester capture block belong to INF-500d-3-iv and are not scanned."
+    proves_clause: "none of these instructions still tells the agent to record a bare `(submit-failed)` in any case"
+    code_file: templates/agents/documentation-verifier.md
+    must_catch:
+      - a single leftover use (submit-failed) fallback sentence in one deployed copy
+      - the ticket-supervisor payload placeholder still reading fb_YYYY-MM-DD_XXXXXXXX or (submit-failed)
+      - the epic-supervisor commented fallback FB_ID=(submit-failed) left in the pseudo-code block
+  - name: test_a_recovery_file_holding_an_id_wins_over_any_failure_marker
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Per surface, the run prints nothing on stdout and its own error file holds a sidecar: line naming a recovery file in the confined TMPDIR that holds fb_2026-11-16_1a2b3c4d (the entry point also writes a submit-failed: line in one variant). The lifted recovery search finds that path, the recovery file read returns the id, and the recorded value is that id and no marker. Decoy recovery files holding other ids sit in the TMPDIR and are never recorded."
+    proves_clause: "if that recovery file holds `fb_2026-11-16_1a2b3c4d`, it records `fb_2026-11-16_1a2b3c4d` and no failure marker"
+    code_file: templates/agents/documentation-verifier.md
+    must_catch:
+      - recording the failure marker over a recovered id so a written record is re-filed
+      - taking an id from a decoy recovery file in the shared temporary directory
+      - recording both the id and a marker
+  - name: test_a_missing_or_empty_named_recovery_file_records_written_uncited_with_the_submitted_category
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Per surface and per category it submits under (complete, blocker, subagent-quality), runs with an error file whose sidecar: line names a recovery file that is missing, then empty, then (a third run) an error file holding only a [submit_feedback] sink: line. Each records (submit-failed:written-uncited:<category>) with the category of the command, never a dash, never facility-unavailable and never a recovered foreign id from a decoy."
+    proves_clause: "if that recovery file is missing or empty, it records `(submit-failed:written-uncited:<category>)` with the category it submitted under"
+    code_file: templates/agents/user-surface-smoker.md
+    must_catch:
+      - facility-unavailable recorded when a sidecar line proves the write happened
+      - the category dropped or replaced by a dash
+      - the missing case handled but the empty case recorded as an id
+      - an empty recovery file read as a valid id
+  - name: test_an_absent_submit_entry_point_records_facility_unavailable_with_the_submitted_category
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "In a copied layout whose scripts/feedback/submit_feedback.py is removed, each surface's lifted submit command (category complete) fails with the interpreter's own message, so the per-run error file holds none of submit-failed:, sidecar: or [submit_feedback] sink:. The lifted read-back records (submit-failed:facility-unavailable:complete); the same recipe against a failure line that exists never yields facility-unavailable."
+    proves_clause: "it records `(submit-failed:facility-unavailable:complete)`"
+    code_file: templates/agents/_signoff_block.md
+    must_catch:
+      - written-uncited recorded as the default when no line exists
+      - the bare form recorded when the file holds nothing
+      - facility-unavailable recorded as a default even when a submit-failed line exists
+      - the reason chosen from the interpreter's exit status 2
+  - name: test_failed_submission_recipes_leave_the_signoff_and_the_route_untouched
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "For every surface and every failure case, each read-back command after the submit command exits 0 (a sed-style prefix print, not a grep that exits 1 on no match), the submit command's own non-zero status is not masked, and no prescribed command chains, pipes or subshells. A scan of the instructions finds no step that routes on the marker (no halt, no retry and no changed adjudication outcome keyed on a submit-failed value), with a positive control of an instruction that says to stop sign-off when the marker is written."
+    proves_clause: "it continues its sign-off, or in a supervisor its adjudication routing, exactly as it would after a successful submission, and the verdict, the sign-off status and the route taken are unchanged by the failure"
+    code_file: templates/agents/ticket-supervisor.md
+    must_catch:
+      - a read-back that is a bare grep and so exits 1 when the file holds no failure line
+      - an instruction that aborts sign-off when the marker is recorded
+      - an adjudication route that changes when the submission fails
+      - a read-back that pipes or chains and so triggers a permission prompt
+  - name: test_every_feedback_submission_ticket_supervisor_describes_is_given_with_its_command
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "In the deployed ticket-supervisor, enumerates every place a feedback submission is described (the four event blocks, the CFCS emit contract, the payload field note) and matches each against the lifted commands: exactly four submit commands exist, each with its own per-run error file and read-back, and no prose describes a submission that has none. Positive control: the sentence about a secondary tooling-issue call, as it reads today, is flagged as a described submission without a command by the same enumeration."
+    proves_clause: each described submission is given with its command
+    code_file: templates/agents/ticket-supervisor.md
+    must_catch:
+      - a prose-only submission description with no command left in the emit contract
+      - a fifth submission described with no per-run error file
+      - one of the four event commands deleted to satisfy the enumeration
+  - name: test_the_secondary_tooling_issue_submission_is_gone_and_the_emit_contract_still_reads_true
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Scans the deployed ticket-supervisor for any description of a secondary tooling-issue submission (the word tooling-issue near a submission, a secondary call, loaded but rejected the category) and finds none, with a positive control on the current sentence. The four event commands and their per-run files remain, no command for tooling-issue was added, and the emit contract paragraph still says the calls are non-blocking and routing is unchanged."
+    proves_clause: the secondary tooling-issue submission is no longer described anywhere in them
+    code_file: templates/agents/ticket-supervisor.md
+    must_catch:
+      - the sentence removed from the emit contract but a tooling-issue submission still described elsewhere
+      - a command added for the secondary submission instead of removing it
+      - one of the four event submissions removed along with the sentence
+      - the paragraph left with a dangling sentence about the secondary call
+  - name: test_lifted_recipes_run_against_the_real_submit_script_and_read_back_its_own_failure_line
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "Reachability: for every surface, runs the deployed lifted submit command with bash against the real submit_feedback.py of a copied layout that has no sink declaration (needs INF-500d-3), so the script itself writes submit-failed:destination-unwritable:<category> to the per-run error file; the lifted read-back returns that line and the marker built from it carries the category the command submitted under. A control run with a declared sink returns an id on stdout and no failure line."
+    proves_clause: "it records `feedback-id: (submit-failed:writer-not-allowed:subagent-quality)`, and in ticket-supervisor's returned payload the feedback_id field carries `(submit-failed:writer-not-allowed:subagent-quality)`"
+    code_file: templates/agents/_signoff_block.md
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/agents/_signoff_block.md
+  - templates/agents/python-coder.md
+  - templates/agents/documentation-verifier.md
+  - templates/agents/user-surface-smoker.md
+  - templates/agents/ticket-supervisor.md
+  - templates/agents/epic-supervisor.md
+  - unit_tests/feedback/_inf_500d_3_helpers.py
+  - unit_tests/feedback/_inf_500d_3_ii_check.py
+  - unit_tests/feedback/_inf_500d_3_ii_run.py
+  - unit_tests/feedback/_inf_500d_4_vi_helpers.py
+file_findings:
+  - file: templates/agents/_signoff_block.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Step 4 (lines 21-25) holds the submit instruction with the bare (submit-failed) fallback and no error-stream redirect, which is the behaviour the criteria change.
+    decision: null
+  - file: templates/agents/python-coder.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its sign-off step 3 (lines 632-634) holds the bare fallback and no redirect that the criteria change.
+    decision: null
+  - file: templates/agents/documentation-verifier.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its Feedback Submission section (lines 685-704) holds the redirect and the stdout-only bare fallback the criteria change.
+    decision: null
+  - file: templates/agents/user-surface-smoker.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its submission step (lines 295-312) holds the redirect and the stdout-only bare fallback the criteria change.
+    decision: null
+  - file: templates/agents/ticket-supervisor.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the four event submissions (lines 552-592), the CFCS emit contract with the secondary tooling-issue sentence (lines 594-599) and the feedback_id payload field (line 667).
+    decision: null
+  - file: templates/agents/epic-supervisor.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the cross-ticket pattern submission at line 373 with the 2>/dev/null redirect and the bare fallback the criteria change.
+    decision: null
+file_findings_opened_files:
+  - templates/agents/_signoff_block.md
+  - templates/agents/python-coder.md
+  - templates/agents/documentation-verifier.md
+  - templates/agents/user-surface-smoker.md
+  - templates/agents/ticket-supervisor.md
+  - templates/agents/epic-supervisor.md
+delivers_to: null
+expects_from:
+  - ac_id: INF-500d-3
+    contract: "The vocabulary file templates/scripts/feedback/submit_failure_reasons.json (deployed to <output root>/scripts/feedback/submit_failure_reasons.json): five objects {id: string, meaning: string, record_written: boolean, detected_by: 'script' | 'caller'} with ids writer-not-allowed, malformed-submission, facility-unavailable, destination-unwritable, written-uncited. On every failure exit the script controls, the error stream carries one line 'submit-failed:<reason>:<category>', standard output stays empty and the exit status is non-zero. A successful run carries no such line. The marker form is 'feedback-id: (submit-failed:<reason>:<category>)', with <category> the --category value or '-'. Capture precedence: stdout id; id in the recovery file named by the run's own 'sidecar:' line; the run's 'submit-failed:' line; written-uncited when a 'sidecar:' or '[submit_feedback] sink:' line exists but no id was recovered; otherwise facility-unavailable. Must land in the same PR as this record or before it."
+  - ac_id: INF-500d-3-ii
+    contract: "Per-run error-file naming rule: /tmp/feedback_err_<ticket_basename>_<agent_name>.txt, with <ticket_basename> the ticket file's name (for example 03-add-parser.md). A fixed-phase surface writes its phase as a literal, and an event-kind surface adds _<event-kind> (for example /tmp/feedback_err_<ticket_basename>_ticket-supervisor_halt.txt). The name is one path component and is checked by unit_tests/feedback/_inf_500d_3_ii_check.py. Each recovery search reads that same per-run file and nothing else. Done; the shared sign-off block and python-coder are not yet under the rule."
+  - ac_id: INF-500d-3-vi
+    contract: "epic-supervisor's cross-ticket pattern submission is a runnable shell command whose error stream goes to /tmp/feedback_err_<ticket basename placeholder>_epic-supervisor_cross-ticket-pattern.txt, where the ticket is the same affected ticket the --ticket argument names. No epic-supervisor step sends a submission's error stream to /dev/null."
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS RECORD EXISTS. INF-500d-3's IT PO enrichment (2026-11-16) flagged the
+  cross-surface gap: the CALLER records the marker, the caller is an instruction
+  surface, and INF-500d-3-iv updates only two of them. Until this record lands, the
+  first scenario of INF-500d-3 holds only at the script and vocabulary level. Agents
+  following these six instructions would still write the bare form.
+
+  Locations verified 2026-11-16 in this checkout (line numbers drift; re-locate by text):
+  _signoff_block.md:21-25; python-coder.md:632-634; documentation-verifier.md:697-705;
+  user-surface-smoker.md:306-312; ticket-supervisor.md:554-558, :567-569, :579-581,
+  :589-592, the non-blocking rule at :595-598, and the payload field at :667
+  ("<fb_YYYY-MM-DD_XXXXXXXX or (submit-failed)>"); epic-supervisor.md:373.
+
+  The shared sign-off block and python-coder name no error-stream redirect at all
+  today. They cannot follow the precedence without first saving the run's error
+  stream to its own per-run file (INF-500d-3-ii). The specific case of epic-supervisor,
+  which actively discards the stream, is its own record: INF-500d-3-vi.
+
+  Wrong versions this record catches:
+  (1) Replacing `(submit-failed)` with one fixed reasoned value, for example always
+  facility-unavailable. That is an invented reason, and the first scenario's
+  writer-not-allowed line turns it red.
+  (2) Reading the reason off the exit status. Several reasons share exit status 1.
+  (3) Recording the failure marker when the recovery file holds an id. That
+  re-files a written record and breaks INF-500d-5's exactly-once guarantee.
+  (4) Updating the Comments-line instructions but leaving ticket-supervisor's payload
+  field documented as bare `(submit-failed)`.
+
+  BOUNDARY. INF-500d-3 owns the vocabulary, the marker form and the precedence. This
+  record references them and redefines nothing. BO-2000a-3 (approved, done) keeps its
+  undifferentiated wording, and this record does not amend it. The check-feedback-id
+  hook's value-shape check is a separate change. Priority medium is inherited from
+  INF-500d-3. Siblings -i..-iv carry high; the user sets final priority at the gate.
+
+  IT PO ENRICHMENT (2026-11-16). The criteria are unchanged. Points for the reviewer:
+
+  - CRITERIA VERSUS TEMPLATES. (a) Scenario 1's example line carries the category
+    subagent-quality, but the shared block, python-coder, documentation-verifier and
+    user-surface-smoker submit under complete, blocker or tooling-issue. Scenario 3
+    fixes complete, but ticket-supervisor and epic-supervisor submit only under
+    subagent-quality. Both examples still hold because the marker copies whatever the
+    line carries. Tests should run each surface under its own category, plus at least
+    one run whose line carries a category different from the command's. (b) "leaves
+    the single line" means one 'submit-failed:' line, not an error file of one line:
+    INF-500d-3 keeps the ERROR lines beside it. [RESOLVED 2026-11-16: the BA reworded
+    scenario 1 to "exactly one `submit-failed:` line ... alongside any human-readable
+    ERROR lines".] (c) documentation-verifier,
+    user-surface-smoker and ticket-supervisor have no recovery (sidecar) search today,
+    and the shared block and python-coder have neither a redirect nor a search, so
+    scenario 2 means adding a search to five surfaces, not changing one. (d) The build
+    appends the shared block to live-surface-tester as well, so that one file holds
+    text owned by INF-500d-3-iv (its capture block) and by this record (the appended
+    block). (e) depends_on lists INF-500d-3 and INF-500d-3-ii but not INF-500d-3-vi,
+    although this record's epic-supervisor case cannot hold without it. It is recorded
+    in expects_from; depends_on was left to the BA. [RESOLVED 2026-11-16: the BA added
+    INF-500d-3-vi to depends_on.]
+  - NOT COVERED BY THE CRITERIA. ticket-supervisor's CFCS emit contract (about :597)
+    describes a secondary '--category tooling-issue' submission but prescribes no
+    command for it. The criteria name four event submissions, so that fifth path has
+    no marker rule. Decide whether it is in scope or removed. [RESOLVED 2026-11-16: the
+    BA added a fifth scenario that removes it and requires every described submission
+    to carry its command. It has an it_requirement and two test_intent entries.]
+  - INF-500d-4-i STDERR LINE COUNT (read-only check, IT PO). The conflict flagged on
+    INF-500d-3 is real. In unit_tests/feedback/test_inf_500d_4_i.py, _assert_refusal
+    asserts len(h.stderr_lines(proc)) == 1, where h.stderr_lines is every non-blank
+    stderr line. It is called for the absent declaration and for every bad-declaration
+    variant (malformed JSON, zero-byte file, directory, not an object, missing keys,
+    non-absolute value, stale root). INF-500d-3's exit-path map files those paths
+    (_prepare_sink returning None) under destination-unwritable and adds a second
+    stderr line, so those tests turn red. This is a contract conflict between
+    INF-500d-3 and INF-500d-4-i, not a matter for this record. It must be escalated and
+    settled in INF-500d-3's delivery. Neither test may be weakened in silence. The
+    sink-line tests (:221, :256) filter by prefix and are not affected. [RESOLVED
+    2026-11-16, person's gate decision: INF-500d-3's change updates INF-500d-4-i's test
+    helper to count refusal lines excluding the one 'submit-failed:' line. The same
+    assertion also sits in test_inf_500d_4_i_feedback_sink_rule.py; both are in
+    INF-500d-3's declared_files.]

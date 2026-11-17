@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from knowledge.contracts import ProjectionSnapshot
 
 import asyncio
+import os
 from contextvars import ContextVar
 from pathlib import Path
 import subprocess
@@ -208,7 +209,12 @@ async def sync(
         snapshot, expected_generation=active.generation_id if active else None, **extra
     )
     counts = getattr(backend, "publication_counts", None)
+    from knowledge.merge_correlation import merge_job_correlation
+
     return {
+        "correlation": merge_job_correlation(
+            os.environ, repository_id, snapshot.source_sha, snapshot.generation_id
+        ),
         "status": "ok" if published else "stale",
         "published": published,
         "counts": counts,

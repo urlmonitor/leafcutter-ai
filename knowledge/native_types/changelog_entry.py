@@ -8,6 +8,7 @@ An entry with no frontmatter, or an empty one, fails with its source and reason.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 import re
 from typing import Any
@@ -102,7 +103,7 @@ def _recover(raw: str, error: yaml.YAMLError, source: str) -> tuple[dict[str, An
     mark = getattr(error, "problem_mark", None)
     problem = getattr(error, "problem", "") or ""
     context = getattr(error, "context", "") or ""
-    candidate = None
+    candidate: tuple[str, str, Callable[[str], str | list[str] | None]] | None = None
     if "unknown escape character" in problem and "double-quoted scalar" in context:
         candidate = ("description", "emitter_literal_description", _literal_description)
     elif problem == "mapping values are not allowed here":

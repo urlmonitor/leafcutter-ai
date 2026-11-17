@@ -1,0 +1,405 @@
+id: BO-4300g-2
+title: "Workflow steps that only read or run one command go to an agent that cannot remove anything"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+declares_side_effect: true
+criteria: |
+  Given the requirements-authoring workflow (/plan-feature) is run end to end on a
+    behavioral request, with one pause and resume at a confirmation gate,
+  When its dispatches are recorded,
+  Then the pause-store read, the gate-answer step, the pause-persist step and every
+    stage-end script step are each dispatched to an agent whose registered abilities
+    include neither removing a workspace nor deleting a branch,
+  And the run contains no dispatch at all to a removal-capable agent.
+
+  Given the finalize workflow is run end to end on a merged branch,
+  When its dispatches are recorded,
+  Then exactly one dispatch goes to a removal-capable agent -- the step-7 workspace
+    removal,
+  And every other step that reads state or runs one command goes to an agent that
+    cannot remove a workspace or delete a branch.
+depends_on: [BO-4300g, BO-4300e, BO-4300c-3]
+doc_links:
+- path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md
+  relationship: describes
+  status: exists
+  relevance: Defect 2 -- a create-only or read-only step dispatched to an agent that can remove.
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: constrains
+  status: exists
+  relevance: Workflow bodies reach the system only through agent() dispatches.
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-070-shell-runner-runs-workflow-shell-commands.md
+  relationship: constrains
+  status: exists
+  relevance: >-
+    Section 2.3 already requires every workflow step that gives an agent a command line to go to
+    shell-runner; section 1.3 requires one plain command per dispatch; section 5 is the reply check.
+- path: tickets/00_inbox/TICKET-20261021-PlanFeatureScriptStepsToShellRunner.md
+  relationship: related
+  status: exists
+  relevance: >-
+    Open ticket for the stage-end script steps (scriptStepAgentId). This record's first scenario
+    covers the same move; see the coordination it_requirement.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declared_files:
+  - path: templates/workflows-js/plan-feature.js
+    state: existing
+  - path: config/agent_registry.json
+    state: existing
+  - path: config/agent_registry.schema.json
+    state: existing
+  - path: unit_tests/test_workflow_dual_engine.py
+    state: existing
+  - path: unit_tests/ac_driven_dev/rule_check/test_acd_2500a_1.py
+    state: existing
+it_requirements:
+  - >-
+    "REMOVAL-CAPABLE" IS DECLARED DATA, IN ONE PLACE. Whether an agent type can remove a workspace
+    or delete a branch is the boolean property removal_capable of its config/agent_registry.json
+    entry, described in config/agent_registry.schema.json (whose agent object is
+    additionalProperties: false). Every
+    check in this family (this record, BO-4300g-2-i) reads it from the registry at test time; none
+    keeps a list of agent names. worktree-agent is declared removal-capable. Every entry with
+    permits_shell: true declares the property explicitly, and a shell-permitted entry without it
+    counts as removal-capable (fail closed). The registry gate validates the new property.
+  - >-
+    The plan-feature pause-store read, gate-answer step, pause-persist step and stage-end script
+    steps go to the ADR-070 single shell executor (shell-runner), each as one plain command with
+    absolute paths, and each reply passes the ADR-070 section 5 reply check before use. A decline
+    ends the run with status error. A step is never re-routed to a broader agent to get past a
+    decline.
+  - >-
+    COORDINATION WITH TICKET-20261021-PlanFeatureScriptStepsToShellRunner (no silent duplicate).
+    That ticket's scope items 1 and 2 (single plain commands, dispatch to shell-runner, remove
+    scriptStepAgentId) are part of this record's first scenario. The ticket generated from this
+    record takes them over and the inbox ticket is closed as superseded by it, so the behaviour
+    has one owner. The ticket's named tests (test_workflow_dual_engine.py dispatch order for
+    plan-feature, the ACD-2500a-1 rule-check tests, the BO-4300a-1-ia shell-step permission lint)
+    stay green. Supersession confirmed by the user (decision C, 2026-10-25).
+  - >-
+    EXISTING TESTS THAT PIN THE OLD ROUTING ARE UPDATED IN THE SAME CHANGE. Two are known:
+    unit_tests/test_workflow_dual_engine.py (test_dispatch_order_plan_feature expects
+    worktree-agent for rule-check-itpo, design-prepass, approval-holds and pause-persist) and
+    unit_tests/ac_driven_dev/rule_check/test_acd_2500a_1.py (one assertion that the rule-check
+    dispatch goes to worktree-agent). Each is changed to expect the non-removal-capable agent, and
+    no other assertion in them is weakened. Any other plan-feature test that asserts worktree-agent
+    for a moved step is found by a failing run of the suite and updated in the same change, never
+    skipped or marked expected-failure.
+  - >-
+    The stage-end steps keep their observable results: the rule check, test design, approval
+    holds and hand-back findings report the same outcome and exit status after the move as
+    before it.
+  - >-
+    Finalize's step-7 removal remains its only dispatch to a removal-capable agent; finalize's
+    other read and single-command steps follow the same ADR-070 routing, including the new
+    step-7 maker locate that BO-4300g-3 adds (shell-runner, user decision F).
+  - >-
+    PROOF RUNS THE DEPLOYED WORKFLOWS, NEVER GREPS THEM (user request; CLAUDE.md "Gate / Workflow
+    ACs -- Verify Behaviorally, Not by Grep"). The proof runs the deployed plan-feature (behavioral
+    request, one pause and resume at a confirmation gate) and the deployed finalize (merged branch)
+    under the workflow engine harness, records every dispatch, and judges each dispatched agent
+    type by its registry declaration. A static lint may be added alongside but never replaces the
+    executed run.
+delivers_to:
+- agent: python-coder
+  contract: >-
+    Registry declaration of removal capability: the boolean property removal_capable on each
+    config/agent_registry.json agent entry, described in config/agent_registry.schema.json
+    (worktree-agent true; shell-runner and command-step-runner false), true when the agent's charter can
+    remove a workspace or delete a branch. Required on every permits_shell: true entry; when it is
+    absent on such an entry the agent counts as removal-capable. Consumed by BO-4300g-2-i to derive
+    the set of removal-capable agents.
+expects_from:
+  ac_id: BO-4300c-3
+  contract: >-
+    The single-command dispatch helper to an agent that runs one exact command unchanged and
+    relays stdout verbatim; the workflow engine harness that records every dispatch.
+test_required: true
+test_intent:
+  - clause: the pause-store read, the gate-answer step, the pause-persist step and every stage-end script step are each dispatched to an agent whose registered abilities include neither removing a workspace nor deleting a branch
+    needs_test: true
+    reason: These four step kinds are the live defect-2 dispatches in plan-feature, and only an executed run with a pause and resume reaches all of them.
+  - clause: the run contains no dispatch at all to a removal-capable agent
+    needs_test: true
+    reason: A step added later or missed in the move would leave the removal action reachable from plan-feature again.
+  - clause: exactly one dispatch goes to a removal-capable agent -- the step-7 workspace removal
+    needs_test: true
+    reason: Finalize must keep its one removal and gain no others, and a count on the recorded run is the only way to see both.
+  - clause: every other step that reads state or runs one command goes to an agent that cannot remove a workspace or delete a branch
+    needs_test: true
+    reason: Finalize's other read and command steps are the same defect-2 shape and would otherwise go unchecked.
+origin_agent: business-analyst
+test_spec:
+  - name: test_plan_feature_pause_gate_answer_persist_and_stage_end_steps_go_to_non_removal_agents
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Runs the real plan-feature.js under run_workflow_under_e2 twice (a headless invocation that pauses at the
+      confirmation gate, then a resume with a person-channel answer and the durable pause record scripted from the
+      real pause store). From the recorded dispatches it takes the pause-store read (read-pause-record and its
+      retries), the gate-answer step, pause-persist and every stage-end script step (rule-check-*, design-prepass,
+      approval-holds, hand-back and approval apply steps), asserts each of those labels was actually dispatched
+      (no vacuous pass) and that each agent type is not removal-capable according to the removal_capable property
+      read from config/agent_registry.json at test time.
+    proves_clause: the pause-store read, the gate-answer step, the pause-persist step and every stage-end script step are each dispatched to an agent whose registered abilities include neither removing a workspace nor deleting a branch
+    code_file: templates/workflows-js/plan-feature.js
+  - name: test_plan_feature_run_with_one_pause_and_resume_has_no_removal_capable_dispatch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Drives the deployed plan-feature workflow end to end on a behavioral request through the engine harness
+      (pause and resume at a confirmation gate) and asserts that no recorded dispatch of the whole run, any label,
+      goes to an agent whose registry entry declares removal capability, and that the run reached the pause-persist,
+      resume and stage-end steps so the empty set is not a short run.
+    proves_clause: the run contains no dispatch at all to a removal-capable agent
+    code_file: templates/workflows-js/plan-feature.js
+  - name: test_removal_capability_is_judged_by_the_registry_declaration_and_fails_closed
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Runs the same plan-feature run against a temporary copy of the registry in which shell-runner is declared
+      removal-capable, in which a shell-permitted entry omits the property, and in which the dispatched agent type
+      is not in the registry: the judging helper (shared with BO-4300g-2-i) must report the run each time, and
+      must report none for the real registry. It proves the check reads declared data and counts an undeclared
+      shell-permitted agent as removal-capable.
+    proves_clause: the run contains no dispatch at all to a removal-capable agent
+    code_file: config/agent_registry.json
+    must_catch:
+      - a check that keeps its own hand-written list of removal-capable agent names
+      - a check that treats a shell-permitted entry without the property as safe
+      - a check that treats an agent type missing from the registry as safe
+  - name: test_a_decline_from_shell_runner_ends_the_plan_feature_run_with_status_error_and_no_rerouting
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: >-
+      Scripts shell-runner's reply to the rule-check, pause-persist and pause-store read steps as a decline
+      (declined true) and asserts the run ends with status error quoting the decline, makes no later dispatch to
+      worktree-agent or any removal-capable agent, and re-sends none of those steps to a broader agent.
+    proves_clause: the pause-store read, the gate-answer step, the pause-persist step and every stage-end script step are each dispatched to an agent whose registered abilities include neither removing a workspace nor deleting a branch
+    code_file: templates/workflows-js/plan-feature.js
+    must_catch:
+      - a step that falls back to worktree-agent after a shell-runner decline
+      - a decline treated as a successful step and the run carried on
+  - name: test_finalize_merged_branch_run_makes_exactly_one_dispatch_to_a_removal_capable_agent_at_step_7
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Runs the deployed finalize-feature workflow through the engine harness on a merged-branch fixture driven to
+      its end (a finalize-to-step-7 driver built on base_responses of unit_tests/workflows/_bo400e3_finalize_harness.py,
+      asserting step 7 was completed so the run is not short), counts the recorded dispatches whose agent type is
+      removal-capable by the registry declaration, and asserts exactly one, labelled step-7-remove-worktree.
+    proves_clause: exactly one dispatch goes to a removal-capable agent -- the step-7 workspace removal
+    code_file: config/agent_registry.json
+    must_catch:
+      - a second removal-capable dispatch added to finalize, for example the baseline cleanup sent to worktree-agent
+      - a finalize run whose step 7 is never reached, so the count is zero
+  - name: test_finalize_every_other_dispatch_goes_to_an_agent_that_cannot_remove
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: >-
+      On the same finalize run, every dispatch other than step-7-remove-worktree (pre-flight probes, baseline run,
+      merge, closure, learnings probe, worktree probe, cleanup) is dispatched to an agent type that is not
+      removal-capable by the registry declaration, including shell-runner and command-step-runner, which must
+      declare the property explicitly as false.
+    proves_clause: every other step that reads state or runs one command goes to an agent that cannot remove a workspace or delete a branch
+    code_file: config/agent_registry.json
+  - name: test_registry_declares_removal_capability_on_every_shell_permitted_agent
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: >-
+      Reads the real config/agent_registry.json: worktree-agent declares removal_capable true, every entry with
+      permits_shell true carries the property as a boolean (shell-runner and command-step-runner false), and the
+      shared helper that derives the removal-capable set returns exactly worktree-agent for the real registry and
+      counts a permits_shell true entry without the property as removal-capable.
+    proves_clause: the run contains no dispatch at all to a removal-capable agent
+    code_file: config/agent_registry.json
+  - name: test_registry_schema_describes_and_validates_the_removal_capability_property
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: >-
+      Validates the real registry against config/agent_registry.schema.json with jsonschema (it passes), then
+      validates copies in which removal_capable is a string, null or an unknown sibling key on an agent entry (the
+      agent object is additionalProperties false): each must be rejected, so the property exists in the schema as a
+      described boolean.
+    proves_clause: the run contains no dispatch at all to a removal-capable agent
+    code_file: config/agent_registry.schema.json
+  - name: test_dispatch_order_plan_feature
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: >-
+      Existing regression (unit_tests/test_workflow_dual_engine.py, named by the superseded ticket
+      TICKET-20261021-PlanFeatureScriptStepsToShellRunner). It must stay green AFTER being updated: its
+      expected_sequence still lists worktree-agent for rule-check-itpo, design-prepass, approval-holds and
+      pause-persist, which BO-4300g-2 moves to shell-runner, so the sequence is changed to shell-runner and the
+      test then fails if any of them goes back to worktree-agent.
+    proves_clause: the pause-store read, the gate-answer step, the pause-persist step and every stage-end script step are each dispatched to an agent whose registered abilities include neither removing a workspace nor deleting a branch
+    code_file: templates/workflows-js/plan-feature.js
+  - name: test_stage_not_reported_complete_while_check_failed
+    target_dir: unit_tests/ac_driven_dev/rule_check/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: >-
+      Existing regression (the ACD-2500a-1 rule-check workflow tests). Line 130 asserts the rule-check dispatch
+      goes to worktree-agent, which this record moves, so that one assertion is updated to a non-removal-capable
+      shell-permitted agent (shell-runner) and the prompt assertions (requirement_rule_check.py, --stage ba,
+      --changed-since HEAD) and the blocked-stage assertions stay as written; its sibling tests stay green.
+    proves_clause: the pause-store read, the gate-answer step, the pause-persist step and every stage-end script step are each dispatched to an agent whose registered abilities include neither removing a workspace nor deleting a branch
+    code_file: templates/workflows-js/plan-feature.js
+  - name: test_every_shell_running_dispatch_in_every_workflow_targets_a_shell_permitted_agent
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: >-
+      Existing regression (BO-4300a-1-ia shell-step permission lint, unit_tests/build_orchestration/
+      test_bo_4300a_1_ia_lint.py): after the move every plan-feature shell step still goes to an agent whose entry
+      declares permits_shell true (shell-runner), so this lint stays green unchanged.
+    proves_clause: every other step that reads state or runs one command goes to an agent that cannot remove a workspace or delete a branch
+    code_file: config/agent_registry.json
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - templates/workflows-js/finalize-feature.js
+  - templates/workflows-js/_shared/workspace-answer.js
+  - config/agent_registry.json
+  - config/agent_registry.schema.json
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_workflow_engine_workspace.py
+  - unit_tests/_plan_feature_e2_runner.py
+  - unit_tests/test_workflow_dual_engine.py
+  - unit_tests/ac_driven_dev/rule_check/test_acd_2500a_1.py
+  - unit_tests/ac_store/test_acd_2500a_1.py
+  - unit_tests/build_orchestration/test_bo_4300a_1_ia.py
+  - unit_tests/build_orchestration/test_bo_4300a_1_ia_lint.py
+  - unit_tests/build_orchestration/_bo_4300c_3_fixtures.py
+  - unit_tests/workflows/_bo400e3_finalize_harness.py
+  - unit_tests/workflows/test_inf_700a_5_i_finalize_teardown.py
+  - pytest.ini
+file_findings:
+  - file: templates/workflows-js/plan-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the dispatches the criteria move (the pause-store read at line 1570, pause-persist and the gate answer through the local worktree-agent constants at lines 1645 and 1749, and the stage-end script steps through scriptStepAgentId at line 2198), while finalize-feature.js, which is not declared, already has exactly one worktree-agent dispatch (step 7, line 1777) and needs no edit under this record.
+    decision:
+      choice: assignment stands
+      reason: The moved dispatches are workflow JavaScript owned by python-coder per the routing used for templates/workflows-js, and finalize-feature.js is changed under BO-4300g-3, not here.
+      by: it-po
+  - file: config/agent_registry.json
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its worktree-agent entry (line 1336) declares permits_shell true and no removal-capability property, so it is the right surface for the declaration, which must also be added on shell-runner and command-step-runner.
+    decision:
+      choice: assignment stands
+      reason: The removal_capable declaration is a registry data change in the same build, so it stays with python-coder.
+      by: it-po
+  - file: config/agent_registry.schema.json
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It describes permits_shell (line 262) in the agent object, which is the place the new boolean removal-capability property must be added and described.
+    decision:
+      choice: assignment stands
+      reason: Describing removal_capable beside permits_shell is a schema edit in the same change as the registry, so it stays with python-coder.
+      by: it-po
+  - file: unit_tests/test_workflow_dual_engine.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its test_dispatch_order_plan_feature (expected_sequence at lines 627-632) pins worktree-agent for rule-check-itpo, design-prepass, approval-holds and pause-persist, which is exactly the old routing this record changes, so it is the right file to update.
+    decision: null
+  - file: unit_tests/ac_driven_dev/rule_check/test_acd_2500a_1.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Line 130 of test_stage_not_reported_complete_while_check_failed asserts that the rule-check dispatch goes to worktree-agent, the one assertion this record's move changes.
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - config/agent_registry.json
+  - config/agent_registry.schema.json
+  - unit_tests/test_workflow_dual_engine.py
+  - unit_tests/ac_driven_dev/rule_check/test_acd_2500a_1.py
+created: 2026-10-23
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300g-2-i]
+implemented_by: []
+notes: |
+  ORIGIN: user request via /plan-feature, 2026-10-23. At the user's reference point, plan-feature
+  still sends these steps to the workspace agent: its pause-store read (line 1570), its gate-answer
+  and pause-persist shell steps (lines 1645 and 1749), and its stage-end script steps (line 2198,
+  tracked by TICKET-20261021-PlanFeatureScriptStepsToShellRunner). Line numbers are hints; verify
+  them against HEAD.
+
+  OVERLAP CHECK: BO-4300c-3 already requires the WORKSPACE step to go through one single-command
+  agent. This record covers the non-workspace steps, which BO-4300c-3 does not reach. The
+  stage-end script ticket should be generated from, or reconciled with, this record so the same
+  behaviour does not have two owners.
+
+  Proof runs the deployed workflows under the workflow engine harness and asserts on the
+  recorded dispatch list and the registered abilities of each dispatched agent type. It never
+  greps the workflow source (user request; CLAUDE.md "Gate / Workflow ACs -- Verify Behaviorally,
+  Not by Grep").
+
+  USER DECISIONS 2026-10-25 (recorded by IT PO): C -- TICKET-20261021-PlanFeatureScriptStepsToShellRunner
+  is superseded by the ticket generated from this record. F -- finalize's new step-7 locate is a
+  single maker command through shell-runner, so it is one more non-removal dispatch this record's
+  finalize scenario counts.
+
+  must_catch ON THIS RECORD'S test_spec: kept. This record is the fix for KI-BO-20260921 defect 2
+  and a routing guard (no removal-capable dispatch outside finalize step 7), which is the bug-fix /
+  gate-or-guard case the test-designer rule allows must_catch for. Even read narrowly, the entries
+  stay as test-quality guidance; none is deleted.
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-10-23 [business-analyst/plan-feature/caller-authorized-workspace-removal]:
+#   Authored from the user's request, second part.
+# - 2026-10-24 [business-analyst/ac-tree-split/caller-authorized-workspace-removal]:
+#   Pattern C split (user decision): BO-4300e exceeded its 5-L2 cap, so this record was
+#   renumbered under the new sibling L1 BO-4300g. Criteria unchanged.
+# ====================================================================

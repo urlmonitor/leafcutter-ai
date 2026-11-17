@@ -72,6 +72,8 @@ _JOINED_PROBES = (
     _Probe("Python", ".py", "x = 1; y = 2\n"),
     _Probe("JavaScript", ".js", "a(); b();\n"),
     _Probe("TypeScript", ".ts", "a(); b();\n"),
+    _Probe("SQL", ".sql", "SELECT 1; SELECT 2;\n"),
+    _Probe("shell", ".sh", "a; b\n"),
 )
 
 
@@ -158,4 +160,6 @@ DECISION HISTORY
 - 2026-10-23 [GE-127d-3-v]: A joined-statements probe per language adds the clause that a line
   holding several statements counts once per statement, naming only the languages where the
   measure actually does so. (#EPIC-FilesStayWorkable/GE-127d-3)
+- 2026-10-25 [GE-127d-3-vi]: SQL and shell joined-statement probes added, so the clause names
+  them once their lexers split joined lines. (#EPIC-FilesStayWorkable/GE-127d-3)
 """

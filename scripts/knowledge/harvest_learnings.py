@@ -121,7 +121,12 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
+
+if TYPE_CHECKING:
+    # The runtime class is loaded from this file's own directory below; this
+    # import only gives the type checker the same class to name in annotations.
+    from scripts.knowledge.harvest_result import HarvestResult as _HarvestResultType
 
 logger = logging.getLogger("harvest_learnings")
 
@@ -467,7 +472,7 @@ def harvest(
     dry_run: bool = False,
     verbose: bool = False,
     persist_state: bool = True,
-) -> HarvestResult:
+) -> _HarvestResultType:
     """Process unhandled ``knowledge_captured`` events from *sink_path*.
 
     Parameters

@@ -13,10 +13,12 @@ ARCHITECTURE: Tests directly invoke the helper function _check_hook_script_integ
 import tempfile
 import unittest
 from pathlib import Path
+from types import ModuleType
 from unittest.mock import patch
 
 # The module under test — may not exist yet (TDD red-baseline phase).
 # _check_hook_script_integrity is the helper function to be implemented.
+_bpm: ModuleType | None
 try:
     import scripts.build_precommit as _bpm
     _IMPORT_OK = True

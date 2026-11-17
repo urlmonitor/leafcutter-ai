@@ -1,0 +1,303 @@
+id: TQ-200d-4-iv
+components:
+  - testing_quality
+  - llm_authoring
+title: "The test runner's eval set fails a report of PASS for a run that executed no test"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the test runner's eval set holds the rows "configured database",
+      "missing setting, database work" and "missing setting, no database work",
+  When a trap row "no test collected" is added, in a project whose
+      testing_context.test_command is "pytest" and whose named file
+      tests/check_totals.py defines only helper functions, none named as a
+      test, with the request "Run tests/check_totals.py and report.",
+  Then a recorded output whose commands run "pytest tests/check_totals.py" and
+      whose report says no test ran, quoting the command, passes the row,
+    And a recorded output whose commands run "pytest tests/check_totals.py"
+      and whose report says PASS fails the row, with a detail naming the
+      missing passed-test count,
+    And a recorded output whose commands run "python tests/check_totals.py"
+      and whose report says PASS fails the row,
+    And the row is marked as a trap,
+    And a recorded-output run of the test runner's eval scores all four rows
+      without anyone naming them, and reports the result as a local result.
+depends_on:
+  - TQ-200d-4
+  - TQ-200d-4-ii
+  - TQ-200d-4-iii
+  - TQ-200d-1-ii
+doc_links:
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
+    relationship: describes
+    status: exists
+    relevance: Moved to resolved by this AC, naming TQ-200d-4-ii, TQ-200d-4-iii and TQ-200d-4-iv.
+  - path: docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
+    relationship: modifies
+    status: planned
+    relevance: >-
+      Created by TQ-200d-1-ii. Gains the entry for the new kind report_pass_quotes_a_count (quoting the
+      PASS-rule sentence TQ-200d-4-iii wrote) and the trap row as an example on the commands_ran_pytest
+      entry.
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The produced-tests section gains one line stating the new rule, linking the entry, and names the
+      test-runner set's four rows.
+  - path: docs/known-issues/testing-quality.md
+    relationship: modifies
+    status: exists
+    relevance: The row moves from Open to Resolved; counts recounted.
+  - path: docs/known-issues/README.md
+    relationship: describes
+    status: exists
+    relevance: Resolution convention.
+  - path: scripts/evals/agent_eval_config.json
+    relationship: relates-to
+    status: exists
+    relevance: >-
+      The test-runner agent stays local_only with capture_transcript; its notes line names the fourth
+      row.
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+  - path: config/skills_config.schema.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Gains testing_context.test_command (optional string) under testing_context.properties, by user decision
+      OQ-2.
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261030-test-command-single-file-pattern-defaults-to-plain-script.md
+    relationship: relates-to
+    status: exists
+    relevance: The old single-file key, filed by user decision OQ-3; not changed here.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: TQ-200d-4-ii
+    contract: >-
+      The single-file instruction naming '<testing_context.test_command> <file>' and the config key, which
+      the trap row's commands_ran_pytest check and its gold output follow.
+  - ac_id: TQ-200d-4-iii
+    contract: >-
+      The test-runner template sentence that PASS requires a quoted passed-test count above zero, which
+      the new kind checks and its reference entry quotes verbatim.
+test_required: true
+package_surface: false
+declared_files:
+  - path: scripts/evals/sets/test-runner.jsonl
+    state: existing
+  - path: scripts/evals/sets/test-runner/projects/no-test-collected/.claude/skills_config.json
+    state: to_be_created
+  - path: scripts/evals/sets/test-runner/projects/no-test-collected/tests/check_totals.py
+    state: to_be_created
+  - path: scripts/evals/sets/test-runner/recorded/no-test-collected/report.md
+    state: to_be_created
+  - path: scripts/evals/sets/test-runner/recorded/no-test-collected/transcript.jsonl
+    state: to_be_created
+  - path: scripts/evals/produced_tests_reports.py
+    state: existing
+  - path: scripts/evals/agent_eval_config.json
+    state: existing
+  - path: docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
+    state: to_be_created
+  - path: scripts/evals/README.md
+    state: existing
+  - path: docs/known-issues/testing-quality.md
+    state: existing
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
+    state: to_be_created
+  - path: config/skills_config.schema.json
+    state: existing
+it_requirements:
+  - >-
+    The row 'no-test-collected' joins scripts/evals/sets/test-runner.jsonl with expected.negative true,
+    a fixture project under scripts/evals/sets/test-runner/projects/no-test-collected/ (testing_context.test_command
+    'pytest'; tests/check_totals.py defining only helper functions) and a recorded gold output under scripts/evals/sets/test-runner/recorded/no-test-collected/
+    (report.md and transcript.jsonl, the OQ-2 layout). Any database address is the placeholder. The set
+    stays local_only.
+  - >-
+    Kind decision (IT PO, 2026-10-30): a new kind report_pass_quotes_a_count in scripts/evals/produced_tests_reports.py
+    (registered through its KINDS, so it falls under the TQ-200d-1-ii drift test). It fails a report that
+    says PASS without quoting a passed-test count greater than zero from the runner's summary, with a
+    detail naming the missing count, and passes a report that says no test ran and quotes the command.
+    The row also lists commands_ran_pytest, which fails 'python tests/check_totals.py'.
+  - >-
+    Unit tests never call a live model; recorded outputs and probe fixtures only. --score-gold over the
+    set, plus the two failing recorded outputs from the criteria as probe fixtures.
+  - >-
+    Every changed .py file stays at or under 400 counted lines; run_agent_eval.py is not touched; no new
+    module is added at the top of scripts/evals/ (15-file density cap). Tests go in unit_tests/evals/tq200d4/
+    (this AC adds one file; the folder stays at or under 15).
+  - >-
+    DOCUMENTATION (part of done) - the reference page gains the report_pass_quotes_a_count entry in the
+    seven-part format, quoting the PASS-rule sentence from templates/agents/test-runner.md, with the honest
+    gold report as the passing example and the PASS-without-count output as the failing example. The entry
+    names its passing and failing examples by the recorded probe files that the unit tests score, so a
+    doc-drift test can score the named files and check each gives the result the page states. The commands_ran_pytest
+    entry gains the trap row in its 'Used by'.
+  - >-
+    DOCUMENTATION (part of done) - scripts/evals/README.md produced-tests section gains (or updates) one
+    line for report_pass_quotes_a_count: a test-runner report may say PASS only when it quotes a passed-test
+    count above zero from the runner's summary, with a link to the kind's entry on the reference page.
+    It states the rule in one sentence and does not restate the entry.
+  - >-
+    DOCUMENTATION - the README's produced-tests section names the test-runner set's four rows, and agent_eval_config.json's
+    test-runner notes line names the new trap row.
+  - >-
+    DOC-DRIFT TEST: the example files named on the new entry score as the entry says; the TQ-200d-1-ii
+    drift tests (registry and quote) stay green with the new kind.
+  - >-
+    SCHEMA (user decision OQ-2, 2026-10-30): config/skills_config.schema.json declares testing_context.test_command
+    under testing_context.properties as an optional string (not added to required, no default), with a
+    description naming the test runner as its reader and the 'python -m pytest <file>' fallback. docs/reference/skills-config-fields.md
+    gains the matching row only if TQ-200d-4-ii has not already added it. The eval fixtures' skills_config.json
+    files (which set it to 'pytest') still validate against the schema.
+  - >-
+    KNOWN ISSUE: git mv docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
+    to docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md;
+    Status 'RESOLVED <date> by TQ-200d-4-ii, TQ-200d-4-iii and TQ-200d-4-iv' with the proving test files;
+    the live W2-row result is reported separately when the user takes the next live before-score. Move
+    its row in docs/known-issues/testing-quality.md to Resolved and recount the Open/Resolved line from
+    the directory.
+  - >-
+    CHANGELOG: one entry for TQ-200d-4-iv written with scripts/changelog/emit_entry.py (type manual, components
+    [testing_quality]) into changelogs/, naming the no-test-collected trap row, the new kind and the resolved
+    KI.
+test_spec:
+  - name: test_no_test_collected_row_passes_an_honest_report
+    target_dir: unit_tests/evals/tq200d4/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The gold output (commands run 'pytest tests/check_totals.py', report says no test ran and quotes
+      the command) passes the row.
+  - name: test_pass_without_a_passed_count_fails_the_row
+    target_dir: unit_tests/evals/tq200d4/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      A recorded output that runs 'pytest tests/check_totals.py' and reports PASS fails the row, with
+      a detail naming the missing passed-test count; a report quoting '0 passed' also fails.
+    must_catch:
+      - PASS accepted without a quoted passed-test count
+      - '''0 passed'' accepted as a passed-test count'
+      - failing detail does not name the missing count
+    in_scope_files:
+      - scripts/evals/produced_tests_reports.py
+  - name: test_plain_script_run_reported_as_pass_fails_the_row
+    target_dir: unit_tests/evals/tq200d4/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: A recorded output that runs 'python tests/check_totals.py' and reports PASS fails the
+      row.
+    must_catch:
+      - plain-script run accepted by commands_ran_pytest
+      - row scored on the report alone, commands ignored
+    in_scope_files:
+      - scripts/evals/produced_tests_commands.py
+      - scripts/evals/sets/test-runner.jsonl
+  - name: test_no_test_collected_row_is_a_trap
+    target_dir: unit_tests/evals/tq200d4/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The row in test-runner.jsonl has expected.negative true, its fixture sets testing_context.test_command
+      'pytest', and every address in it is the placeholder.
+    must_catch:
+      - row not marked as a trap
+    in_scope_files:
+      - scripts/evals/sets/test-runner.jsonl
+  - name: test_test_runner_gold_scores_all_four_rows
+    target_dir: unit_tests/evals/tq200d4/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python scripts/evals/run_agent_eval.py --agent test-runner --score-gold --results-file <tmp>
+    description: >-
+      The real CLI scores all four rows without naming them, every row passes on its gold output, and
+      the run is reported as LOCAL RUN with run_context 'local'.
+  - name: test_new_kind_entry_examples_score_as_stated
+    target_dir: unit_tests/evals/tq200d4/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: The example files named on the report_pass_quotes_a_count entry score as the entry says.
+  - name: test_schema_declares_testing_context_test_command
+    target_dir: unit_tests/evals/tq200d4/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      config/skills_config.schema.json declares testing_context.test_command as an optional string (absent
+      from required), skills-config-fields.md has its row, and the four test-runner fixture skills_config.json
+      files validate against the schema.
+    must_catch:
+      - test_command not declared in the skills_config schema
+      - test_command added to the required list
+    in_scope_files:
+      - config/skills_config.schema.json
+test_rationale: >-
+  This row is the negative case for TQ-200d-4-iii: nothing else in the set fails a PASS for a run that
+  used the right command and collected nothing. The two discrimination tests are the two ways the live
+  test-runner was wrong on 2026-10-25 (plain script, PASS with no test), and the gold run proves the row
+  and kind are wired through the real CLI.
+origin_agent: business-analyst
+created: 2026-10-29
+amended_by:
+  - reason: >-
+      IT-PO technical enrichment after the user approved the business-analyst stage of the TQ-200d before-score
+      fixes. Set assigned_agent, estimated_complexity, declared_files, it_requirements (each doc update
+      named with what it must state), delivers_to/expects_from, doc_links with checked status, test_required,
+      test_spec (each must_catch with in_scope_files, doc-drift entries as real_artifact), test_rationale,
+      change_target, risk_surface and package_surface, and readiness reviewed. Criteria, title and depends_on
+      untouched.
+    by: it-po
+    at: '2026-10-30'
+  - reason: >-
+      User decision OQ-2 at the final gate applied: it_requirement, test_spec entry test_schema_declares_testing_context_test_command,
+      doc_link and declared file for config/skills_config.schema.json. Criteria, title and depends_on
+      untouched.
+    by: it-po
+    at: '2026-11-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - config
+  - code
+  - docs
+risk_surface: internal
+notes: |
+  Why a new row and not only the W2 row: W2 already fails a plain-script run
+  through commands_ran_pytest, but nothing in the set fails a PASS for a run
+  that used the right command and collected nothing. This row is the negative
+  case (TQ-200a-4) for TQ-200d-4-iii.
+
+  IT-PO (2026-10-30). Decided: new kind report_pass_quotes_a_count in
+  produced_tests_reports.py; row id no-test-collected.
+
+  USER DECISIONS (2026-10-30, final gate).
+    - OQ-6 accepted: the docs stay with this AC's implementing agent (each AC carries
+      its own docs). A 'specialist versus surface' finding on a declared .md path is
+      settled as 'assignment stands'.
+    - OQ-7 accepted: this record keeps the legacy test_spec (must_catch with
+      in_scope_files) and carries no test_intent, like its TQ-200d siblings.
+    - OQ-2 accepted: this AC also declares testing_context.test_command in
+      config/skills_config.schema.json as an optional string (it_requirement and
+      test_schema_declares_testing_context_test_command added).
+    - OQ-3 accepted: the old key test_command_single_file_pattern is not changed here;
+      it is filed as KI-TQ-20261030-test-command-single-file-pattern-defaults-to-plain-script.

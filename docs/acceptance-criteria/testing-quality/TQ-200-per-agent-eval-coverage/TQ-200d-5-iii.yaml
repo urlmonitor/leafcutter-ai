@@ -1,0 +1,276 @@
+id: TQ-200d-5-iii
+components:
+  - testing_quality
+title: "A live run whose agent cannot be started stops as a harness failure instead of reporting a 0% score"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a live eval run of an agent with 8 rows on a machine where the agent
+      CLI cannot be started (no claude is found, or the operating system
+      refuses to start it),
+  When the first row's launch fails,
+  Then the run scores no further row and stops with one message that names
+      the launch failure and its operating-system reason,
+    And the run ends with an exit status different from the one a run that
+      scored below its threshold ends with,
+    And the results file marks the run as a harness failure and carries no
+      accuracy or pass-rate figure, so nothing in it reads as a 0% score,
+    And a run in which the agent started and then failed on a row (a timeout,
+      a non-zero exit after start, a reply that cannot be read) still scores
+      every row as before, with that row counted as failed.
+depends_on:
+  - TQ-200d-5
+  - TQ-200d-5-i
+doc_links:
+  - path: docs/known-issues/testing-quality/open-high-ki-tq-20260908-0900.md
+    relationship: relates-to
+    status: exists
+    relevance: >-
+      'The CLI could not be launched' reported as a quality score. This AC fixes the launch-failure case;
+      the entry's pre-commit-gate half stays open.
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
+    relationship: relates-to
+    status: exists
+    relevance: Suggested fix 'Fail fast'.
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-eval-harness-system-prompt-exceeds-windows-command-line.md
+    relationship: relates-to
+    status: exists
+    relevance: Suggested fix 'Fail fast'.
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The sentence 'Classifier invocation or malformed-response failures stay in the accuracy denominator'
+      is rewritten: a failure to start the CLI stops the run as a harness failure with exit status 3;
+      failures after start stay in the denominator.
+  - path: docs/how-to/run-a-live-agent-eval.md
+    relationship: modifies
+    status: planned
+    relevance: >-
+      Created by TQ-200d-5. 'A run that stops as a harness failure' states what such a run prints, its
+      exit status and that it is not a score.
+  - path: .github/workflows/agent-evals.yml
+    relationship: relates-to
+    status: exists
+    relevance: >-
+      Not changed: the CI step treats any non-zero exit of run_agent_eval.py as a failure, so exit status
+      3 is reported as a failure, never a pass.
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+  - path: docs/glossary.md
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: TQ-200d-5-i
+  contract: >-
+    A launch failure distinguishable from every post-start failure by its error class, with the message
+    'agent CLI could not be launched: <ExceptionType>: <str(exc)>', which the stop message repeats.
+test_required: true
+package_surface: false
+declared_files:
+  - path: scripts/evals/run_agent_eval.py
+    state: existing
+  - path: scripts/evals/produced_tests_mode.py
+    state: existing
+  - path: scripts/evals/agent_launch/command.py
+    state: to_be_created
+  - path: scripts/evals/README.md
+    state: existing
+  - path: docs/how-to/run-a-live-agent-eval.md
+    state: to_be_created
+  - path: docs/known-issues/testing-quality/open-high-ki-tq-20260908-0900.md
+    state: existing
+it_requirements:
+  - >-
+    Applies to label, artifact and produced-tests runs: every row loop (run_agent_eval.py label and artifact
+    loops, produced_tests_mode.py) stops at the first launch failure, scores no further row and prints
+    one message naming the launch failure and its operating-system reason. A timeout, a non-zero exit
+    after start or an unreadable reply still counts as a failed row and the run continues, as before.
+  - >-
+    Exit-status decision (IT PO, 2026-10-30): a harness-failure run exits with status 3. The existing
+    values keep their meaning: 0 passed, 1 below threshold, 2 usage or configuration error.
+  - >-
+    Results-file decision: a harness-failure run writes a results file with a top-level 'harness_failure'
+    object {cause: 'agent_launch_failed', row: <row id>, detail: <launch-failure text>} and the existing
+    agent, run_context and timestamp keys, and it carries no accuracy, pass-rate, per-assertion or score
+    key at all (absent, not 0 or null).
+  - >-
+    A harness-failure results file is never accepted as a fresh eval receipt: eval_selector.py --check
+    and anything else that reads results files for freshness treat it as no result. If eval_selector.py
+    must change it must not grow (it is over 400 lines).
+  - >-
+    Code that the stop logic needs goes in scripts/evals/agent_launch/ or produced_tests_mode.py; run_agent_eval.py
+    must not grow; every changed file stays at or under 400 counted lines.
+  - >-
+    Unit tests never call a live model; they use a fake claude program on PATH (or a patched process start)
+    that records its argv, its stdin and any prompt file it is given. Tests cover label, artifact and
+    produced-tests runs.
+  - >-
+    DOCUMENTATION (part of done) - scripts/evals/README.md rewrites the 'invocation failures stay in the
+    accuracy denominator' sentence and must state: a failure to start the agent CLI stops the run as a
+    harness failure, exit status 3, results file marked 'harness_failure' with no accuracy figure; failures
+    after start (timeout, non-zero exit, unreadable reply) stay in the denominator. It also lists the
+    four exit statuses.
+  - >-
+    DOCUMENTATION (part of done) - docs/how-to/run-a-live-agent-eval.md 'A run that stops as a harness
+    failure' must state what the run prints, its exit status 3, that the results file carries no score,
+    and to fix the launch before re-running (link 'Reading a launch failure').
+  - >-
+    DOC-DRIFT TEST: the exit status the README and the how-to name is the status a launch-failure run
+    returns, and the results-file marker the README names is the key written.
+  - >-
+    KNOWN ISSUES: in docs/known-issues/testing-quality/open-high-ki-tq-20260908-0900.md add to the Status
+    line 'launch-failure-as-score case fixed by TQ-200d-5-iii'; the entry stays open while its pre-commit-gate
+    case remains. If the WinError 2 and 206 entries are already resolved, append 'fail fast: TQ-200d-5-iii'
+    to their resolved Status lines.
+  - >-
+    CHANGELOG: one entry for TQ-200d-5-iii written with scripts/changelog/emit_entry.py (type manual,
+    components [testing_quality]) into changelogs/, naming the harness-failure stop, exit status 3 and
+    the README/how-to changes. The entry is written in the same change as the code.
+  - >-
+    GLOSSARY: new terms used in the docs this AC writes ('harness failure') reach docs/glossary.md only
+    through the check-glossary-coverage hook and the glossary-triage flow. No entry is added by hand (CLAUDE.md).
+test_spec:
+  - name: test_first_launch_failure_stops_the_run
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      For a label, an artifact and a produced-tests run of 8 rows whose launch fails, exactly one launch
+      is attempted, no row is scored, and one printed message names the launch failure and its operating-system
+      reason.
+    must_catch:
+      - run keeps scoring rows after a launch failure
+      - stop message drops the operating-system reason
+      - produced-tests row loop not stopped
+    in_scope_files:
+      - scripts/evals/run_agent_eval.py
+      - scripts/evals/produced_tests_mode.py
+      - scripts/evals/agent_launch/command.py
+  - name: test_harness_failure_exit_status_differs_from_below_threshold
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: main() returns 3 for a launch-failure run and 1 for a run that scored below its threshold.
+    must_catch:
+      - harness failure returns the below-threshold status 1
+      - harness failure returns 0
+    in_scope_files:
+      - scripts/evals/run_agent_eval.py
+  - name: test_harness_failure_results_file_carries_no_score
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      The results file of a launch-failure run has a harness_failure object with cause, row and detail,
+      and no accuracy, pass-rate, per-assertion or score key.
+    must_catch:
+      - accuracy 0.0 written for a harness failure
+      - pass-rate written for a harness failure
+      - harness_failure marker missing from the results file
+    in_scope_files:
+      - scripts/evals/run_agent_eval.py
+      - scripts/evals/produced_tests_mode.py
+  - name: test_failure_after_start_still_scores_every_row
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: >-
+      A run where one row times out, one exits non-zero after start and one replies unreadably scores
+      all rows, counts those three as failed, and exits 0 or 1 by its threshold.
+    must_catch:
+      - timeout treated as a launch failure and stops the run
+      - non-zero exit after start treated as a harness failure
+    in_scope_files:
+      - scripts/evals/run_agent_eval.py
+      - scripts/evals/produced_tests_mode.py
+      - scripts/evals/agent_launch/command.py
+  - name: test_harness_failure_file_is_not_a_fresh_receipt
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: >-
+      eval_selector --check, given a harness-failure results file as the latest result for an affected
+      agent, reports the agent as not freshly evaluated.
+    must_catch:
+      - harness-failure results file accepted as a fresh eval receipt
+    in_scope_files:
+      - scripts/evals/eval_selector.py
+  - name: test_cli_run_with_no_claude_exits_as_harness_failure
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: python scripts/evals/run_agent_eval.py --agent pt-classifier --results-file <tmp>
+    description: >-
+      The real CLI with a PATH holding no claude (and LEAFCUTTER_EVAL_USE_API unset) exits 3 after one
+      launch attempt and writes a harness_failure results file.
+  - name: test_docs_name_the_harness_failure_exit_status_and_marker
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The exit status and the results-file marker named in scripts/evals/README.md and the how-to equal
+      the values the code uses, and the README no longer says invocation failures stay in the denominator
+      without the launch exception.
+test_rationale: >-
+  The defect is a launch failure read as a 0% score, so the tests pin the three things that would let
+  it read as a score again: a continued loop, a shared exit status, and a score key in the file. The boundary
+  test protects the opposite direction, post-start failures that must still score. The receipt test closes
+  the path by which a harness-failure file could satisfy the freshness check.
+origin_agent: business-analyst
+created: 2026-10-29
+amended_by:
+  - reason: >-
+      IT-PO technical enrichment after the user approved the business-analyst stage of the TQ-200d before-score
+      fixes. Set assigned_agent, estimated_complexity, declared_files, it_requirements (each doc update
+      named with what it must state), delivers_to/expects_from, doc_links with checked status, test_required,
+      test_spec (each must_catch with in_scope_files, doc-drift entries as real_artifact), test_rationale,
+      change_target, risk_surface and package_surface, and readiness reviewed. Criteria, title and depends_on
+      untouched.
+    by: it-po
+    at: '2026-10-30'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+notes: |
+  Not asked for in the request text directly; it is the "Fail fast" direction
+  in all three Windows-launch known issues, included because the user said to
+  do all of the suggestions. It changes a stated README rule (invocation
+  failures stay in the denominator) for the launch case only; flagged to the
+  orchestrator for confirmation at the gate.
+
+  IT-PO (2026-10-30). Decided: exit status 3 for a harness failure (0 pass, 1 below
+  threshold, 2 usage/config unchanged); results file carries a top-level
+  harness_failure object and no score keys; a harness-failure file is never a fresh
+  receipt. Changing the README's denominator rule is user-visible; flagged as an OQ.
+
+  USER DECISIONS (2026-10-30, final gate).
+    - OQ-6 accepted: the docs stay with this AC's implementing agent (each AC carries
+      its own docs). A 'specialist versus surface' finding on a declared .md path is
+      settled as 'assignment stands'.
+    - OQ-7 accepted: this record keeps the legacy test_spec (must_catch with
+      in_scope_files) and carries no test_intent, like its TQ-200d siblings.
+    - OQ-4 accepted: a launch failure stops the run as a harness failure (exit
+      status 3, harness_failure marker, no score); the README's denominator rule
+      changes for the launch case only.

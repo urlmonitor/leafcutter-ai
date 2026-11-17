@@ -7,7 +7,7 @@ component: testing-quality
 level: L2
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -158,10 +158,12 @@ test_spec:
     the fix" fails, and so does one spelling it "the fix undone". A design naming no wrong version passes.
   must_catch:
   - new-behaviour trap passes a design that names 'revert the fix'
-  - alias spelling 'the fix undone' not matched
   in_scope_files:
   - scripts/evals/produced_tests_scoring.py
   - scripts/evals/sets/test-designer.jsonl
+  - scripts/evals/designer_eval/__init__.py
+  - scripts/evals/designer_eval/kinds.py
+  - scripts/evals/designer_eval/dispatch.py
 - name: test_gate_row_requires_one_wrong_version_per_condition
   target_dir: unit_tests/evals/
   framework: pytest
@@ -174,6 +176,10 @@ test_spec:
   - gate row passes without 'the gate always allows'
   in_scope_files:
   - scripts/evals/produced_tests_scoring.py
+  - scripts/evals/designer_eval/__init__.py
+  - scripts/evals/designer_eval/kinds.py
+  - scripts/evals/designer_eval/dispatch.py
+  - scripts/evals/sets/test-designer.jsonl
 - name: test_bug_fix_row_requires_revert_and_a_condition_naming_version
   target_dir: unit_tests/evals/
   framework: pytest
@@ -183,8 +189,13 @@ test_spec:
     the retry_due condition". The gold design carrying both passes.
   must_catch:
   - bug-fix row passes with 'revert the fix' alone
+  - alias spelling 'the fix undone' not matched
   in_scope_files:
   - scripts/evals/produced_tests_scoring.py
+  - scripts/evals/designer_eval/__init__.py
+  - scripts/evals/designer_eval/kinds.py
+  - scripts/evals/designer_eval/dispatch.py
+  - scripts/evals/sets/test-designer.jsonl
 - name: test_stated_judgement_read_from_record_fields
   target_dir: unit_tests/evals/
   framework: pytest
@@ -198,6 +209,10 @@ test_spec:
   - schema-invalid record accepted
   in_scope_files:
   - scripts/evals/produced_tests_scoring.py
+  - scripts/evals/designer_eval/__init__.py
+  - scripts/evals/designer_eval/kinds.py
+  - scripts/evals/designer_eval/dispatch.py
+  - scripts/evals/sets/test-designer.jsonl
 - name: test_designer_row_input_carries_the_real_prepass_report
   target_dir: unit_tests/evals/
   framework: pytest
@@ -213,6 +228,10 @@ test_spec:
   - dispatch asks for the file-findings group too
   in_scope_files:
   - scripts/evals/produced_tests_mode.py
+  - scripts/evals/designer_eval/__init__.py
+  - scripts/evals/designer_eval/kinds.py
+  - scripts/evals/designer_eval/dispatch.py
+  - scripts/evals/sets/test-designer.jsonl
 - name: test_test_designer_local_result_never_presented_as_ci
   target_dir: unit_tests/evals/
   framework: pytest
@@ -240,6 +259,15 @@ amended_by:
     by: business-analyst
     at: 2026-10-23
     note: "Criteria wording only: the clause 'the design states, in its own words, whether the requirement is a bug fix, a gate or neither' now says the judgement is shown by the test entries' fields (must_catch or angle: discrimination present for bug fix and gate; absent for neither). Every other scenario, example and Then-clause is unchanged; readiness stays approved."
+  - reason: "Fast-lane prep: in_scope_files of the entries naming produced_tests_scoring.py / produced_tests_mode.py gain the scripts/evals/designer_eval/ sub-package (scripts/evals/ is at its folder-density limit) and sets/test-designer.jsonl, so each named wrong version can be prepared where the behaviour is. must_catch names, criteria and tests unchanged."
+    by: orchestrator
+    at: 2026-10-25
+  - reason: "User decisions 2026-10-25 (fast-lane review of TQ-200d-3). OQ-14 superseded: the new-behaviour trap enforces the criteria clause 'for neither, no entry carries must_catch or angle: discrimination' - any non-blank must_catch or a discrimination angle fails the row, not only a revert alias. OQ-15 amended: each condition token also matches a short fixed list of word-sequence variants (retry due / retry is due / retry_due; window open / window is open / open window / window closed / window is closed; position limit / limit reached / limit is reached); still one distinct name per condition, in one entry; the exact names are unchanged. Also: the trap row requires a written design (non-empty test_spec, test_design_authorship step test-designer, non-empty test_design_opened_files), so a run that leaves the record untouched fails."
+    by: orchestrator
+    at: 2026-10-25
+  - reason: "Wrong-version gate: must_catch 'alias spelling the fix undone not matched' moved from test_new_behaviour_trap_fails_invented_wrong_versions to test_bug_fix_row_requires_revert_and_a_condition_naming_version. Since the 2026-10-25 trap decision any must_catch fails the trap, so alias matching no longer affects it; it still decides whether 'the fix undone' counts as 'revert the fix' on the bug-fix row, whose alias_alone case catches the wrong version."
+    by: orchestrator
+    at: 2026-10-25
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -337,7 +365,9 @@ notes: |
           plan-feature.js dispatchTestDesign (ids, verbatim design_prepass.py
           report, ac_store_path, test-design group only) and accepts wording
           drift; the seam test pins the ingredients.
-    OQ-14 Only a revert alias fails the new-behaviour trap; other wrong
+    OQ-14 (SUPERSEDED 2026-10-25: the trap enforces 'for neither, no
+          entry carries must_catch or angle: discrimination'; see amended_by.)
+          Was: only a revert alias fails the new-behaviour trap; other wrong
           versions on that record are reported, not failed.
     OQ-15 "revert the fix" and "the gate always allows" match exactly after
           trimming and case-folding (runner alias rule); a condition-naming

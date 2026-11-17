@@ -58,7 +58,7 @@ doc_links:
     relevance: "The nearest existing sequence diagram in this component; the shape, front-matter and numbering convention the new c3-NNN diagram should follow."
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
-test_required: false
+test_required: true
 it_requirements:
   config_schema_fragment:
     type: object
@@ -116,6 +116,10 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-31'
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

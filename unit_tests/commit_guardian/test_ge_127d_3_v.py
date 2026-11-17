@@ -60,7 +60,7 @@ _JOINS = (
     (".js", "a(); b(); c();\n", "a();\nb();\nc();\n"),
     (".js", "function f() {\n  const x = 1; const y = 2; return x + y;\n}\n",
      "function f() {\n  const x = 1;\n  const y = 2;\n  return x + y;\n}\n"),
-    (".js", "xs.forEach((x) => { a(x); b(x); });\n", "xs.forEach((x) => { a(x);\nb(x); });\n"),
+    (".js", "xs.forEach((x) => { a(x); b(x); });\n", "xs.forEach((x) => {\n  a(x);\n  b(x);\n});\n"),
     (".ts", "let a = 1; let b = 2;\n", "let a = 1;\nlet b = 2;\n"),
     (".tsx", "const a = 1; const b = 2;\n", "const a = 1;\nconst b = 2;\n"),
 )
@@ -79,8 +79,8 @@ _NOT_SPLIT = (
     (".js", "a(); // x; y\n", 1),
     (".js", "const t = `a; ${b}; c`;\n", 1),
     (".js", "x = 1;\n", 1),
-    (".sql", "SELECT 1; SELECT 2;\n", 1),
-    (".sh", "a; b\n", 1),
+    (".sql", "SELECT ';' FROM t;\n", 1),
+    (".sh", "echo 'a; b'\n", 1),
 )
 
 
@@ -107,8 +107,9 @@ class TestJoinedStatementsMeasureAsIfOnTheirOwnLines(unittest.TestCase):
         # covers: GE-127d-3-v
         # angle: boundary
         """A ``for (;;)`` header, a ``;`` in a string, template literal or comment, a
-        lambda's or annotation's ``:``, a docstring on its header line, and SQL and
-        shell lines each measure exactly their code lines."""
+        lambda's or annotation's ``:``, a docstring on its header line, and a ``;``
+        inside a SQL or shell string each measure exactly their code lines (SQL and
+        shell splitting itself is GE-127d-3-vi's)."""
         measured = fx.measure_texts([(ext, text) for ext, text, _ in _NOT_SPLIT])
         for (ext, text, expected), got in zip(_NOT_SPLIT, measured, strict=True):
             self.assertEqual(expected, got, msg=f"{ext}: {text!r}")
@@ -171,7 +172,8 @@ class TestPublishedRuleNamesThePerStatementCount(unittest.TestCase):
         the measure applies it, and drops the clause under a measure that counts
         physical lines (so the published rule cannot outlive the behaviour)."""
         rules = _fresh([])
-        self.assertIn("once per statement (Python, JavaScript and TypeScript)", rules["rule"])
+        # The language list grows as lexers learn to split (GE-127d-3-vi added SQL and shell).
+        self.assertIn("once per statement (Python, JavaScript, TypeScript", rules["rule"])
         self.assertNotIn("once per statement", rules["per_line_rule"])
 
 

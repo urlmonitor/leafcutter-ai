@@ -53,6 +53,7 @@ class TestD1ImplStatus(unittest.TestCase):
         base, extra = h.baseline(), sc.d1_extra_step()["proc"]
         before, after = h.examined(base).get("impl-status"), h.examined(extra).get("impl-status")
         self.assertIsNotNone(before, "impl-status must state a count")
+        assert isinstance(before, int)
         self.assertEqual(after, before + 1, "one added step must raise the recomputed count by exactly one")
 
 

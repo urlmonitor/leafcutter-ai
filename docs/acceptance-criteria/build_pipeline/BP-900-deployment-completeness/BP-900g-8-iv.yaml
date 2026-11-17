@@ -1,0 +1,136 @@
+id: BP-900g-8-iv
+components:
+  - build_pipeline
+title: "The closure guard walks each file's syntax tree once and builds each scope's names once, with unchanged verdicts"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: done
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+criteria: |
+  Given the deploy-completeness closure guard of BP-900g-8, which analyses every
+    deployed Python file once per build (BP-900g-8-i's pass-level cache),
+  And a deployed file with module-level and function-level assignments, several
+    path constructions, data-file reads and a sys.path push,
+  When one guard pass analyses that file,
+  Then the file's module syntax tree is traversed by ast.walk exactly once, and every
+    detector that needs the tree's nodes reuses that one traversal,
+  And the name-to-value map of each scope in the file (the module, and each function)
+    is collected from that scope's own body exactly once, however many path
+    expressions inside the scope are evaluated against it,
+  And for every real deployed root of the package the closure, the
+    deploy-root-relative subset and the namespaced findings are identical to those
+    computed with both reuses switched off,
+  And the unresolvable-reference WARNING lines the guard logs are identical, in
+    number and in text, to those logged with both reuses switched off,
+  Because after the per-build cache landed, a fresh-consumer build still spent about
+    a third of its time in this guard: each file was walked six times and every path
+    expression rebuilt its scope's assignments, including a full rescan of the module
+    body, so files with many path expressions paid that rescan again for each one.
+depends_on:
+  - BP-900g-8
+  - BP-900g-8-i
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8-i.yaml"
+    relationship: related
+    status: exists
+    relevance: "Owns the per-build cache (one analysis per file per pass). This record removes the repeated work left INSIDE one file's analysis and must not weaken any of g-8-i's verdicts."
+  - path: scripts/build_referential_integrity_closure_eval.py
+    relationship: modifies
+    status: exists
+    relevance: "Home of _annotate_parents and _build_local_assignments; the two memoising wrappers sit next to them."
+  - path: scripts/build_referential_integrity_closure.py
+    relationship: modifies
+    status: exists
+    relevance: "The three data-file detectors walk the tree and evaluate path expressions against scope assignments."
+  - path: scripts/build_referential_integrity_closure_resolvers.py
+    relationship: modifies
+    status: exists
+    relevance: "The three module-resolution detectors (sys.path, dynamic loader, static import) do the same."
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: false
+package_surface: false
+it_requirements:
+  - "Pure performance change: no detector may change what it recognises, the order it visits nodes in, or the text of any WARNING it logs. The reused node list must be ast.walk's own breadth-first order, so warning order is unchanged too."
+  - "Each reuse sits behind one small wrapper (_tree_nodes for the traversal, _scope_assignments for the per-scope map). The unmemoised functions (ast.walk, _build_local_assignments) stay as they are, so a test can swap the wrappers back for them and get the pre-change computation as its reference."
+  - "Memo state lives on the parsed tree's own nodes, like the existing _closure_parents_annotated marker. It depends only on the tree's content, so it is safe to share across the roots that BP-900g-8-i's cache shares a tree between. No module-level state."
+  - "The per-scope map returned by _scope_assignments is shared between callers and must never be mutated by them. The evaluator only reads it."
+  - "A function scope's map is the module map overlaid with the function's own assignments, the same result _build_local_assignments(scope, tree) gives, built from the memoised module map rather than a fresh module rescan."
+  - "Tests must not spawn build.py (repo rule). Run the guard in-process over a temporary package, and over the real package's deployable roots the way unit_tests/test_bp_900g_8_closure_cache.py does."
+test_spec:
+  - name: test_each_module_tree_is_walked_once_per_pass
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    surface_invoked: "build._check_intra_package_closure_guard over a temporary package (Set B and the root resolver patched to it), counting ast.walk calls whose argument is a module tree"
+    description: "One guard pass over a two-file package in which each file has a sys.path push, several path divisions and data-file reads. Every module tree is passed to ast.walk exactly once, and the guard still exits 0 with no findings."
+    must_catch:
+      - "Each detector calls ast.walk(tree) itself again, so a module tree is walked six times per analysis."
+      - "The node list is cached per detector call rather than per tree, so it is rebuilt each time."
+  - name: test_each_scope_assignment_map_is_built_once_per_pass
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    surface_invoked: "same temporary-package guard pass, counting _build_local_assignments calls per scope node"
+    description: "In the same pass, _build_local_assignments is called at most once for each scope node (module or function), although several path expressions in each scope are evaluated."
+    must_catch:
+      - "Every path expression rebuilds its scope's map (and the module map under it) instead of reusing the memoised one."
+      - "A function scope's map is built by calling _build_local_assignments(scope, tree), which rescans the module body once per function."
+  - name: test_closures_and_warnings_match_the_unmemoised_path_on_real_roots
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "compute_intra_package_closure_with_deploy_root_relative over a spread of the real deployable roots, once with the wrappers and once with them patched back to ast.walk / _build_local_assignments, each with a fresh closure_cache"
+    description: "For each sampled real root the closure, the deploy-root-relative subset and the namespaced findings are identical, and so is the list of WARNING messages logged under the build_referential_integrity logger."
+    must_catch:
+      - "A per-scope memo keyed so coarsely (for example on the tree only) that a function scope reuses the module map and loses its own local assignments, changing a resolved path."
+      - "A reused node list in a different order from ast.walk, reordering the warnings."
+test_rationale: |
+  The two discrimination entries are what make this a performance AC rather than a
+  claim: each counts the repeated work directly, so it is red on the code before the
+  change (six walks per tree, one map per path expression) and green after. The
+  criterion entry is the safety net. A memo that returns the wrong scope's names
+  changes what a path expression resolves to, and only a comparison against the
+  unmemoised computation on the real package shows that. Warnings are compared as
+  well as closures because the disclosure warnings are part of the guard's output
+  (BP-900g-8's "report the unresolvable reference" constraint), and a memo bug can
+  change them while leaving every closure intact.
+delivers_to: null
+expects_from:
+  ac_id: BP-900g-8-i
+  contract: "The per-build closure_cache that parses and analyses each file once per guard pass and shares the parsed tree across roots. This record relies on that sharing being content-only, and adds memo state on the tree that is equally content-only."
+origin_agent: BrainCandy
+created: 2026-10-25
+created_by_ticket: null
+amended_by:
+  - reason: implementation
+    by: python-coder
+    at: 2026-10-25
+    note: "Added _tree_nodes and _scope_assignments to build_referential_integrity_closure_eval.py and pointed the six detectors at them. unit_tests/test_bp_900g_8_iv.py was red before the change (7 ast.walk calls per module tree; 6 and 9 map builds per scope; wrappers absent) and is green after. A mutant keying the scope memo on the tree was caught by the comparison and per-scope tests. A full pass over all 407 real roots gave byte-identical closures and the same 226 WARNING lines before and after. work_status flipped by mark_ac_done.py --test-root. criteria untouched."
+superseded_by: null
+covered_by:
+  - unit_tests/test_bp_900g_8_iv.py
+implemented_by:
+  - scripts/build_referential_integrity_closure_eval.py
+  - scripts/build_referential_integrity_closure.py
+  - scripts/build_referential_integrity_closure_resolvers.py
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Measured on origin/main 14ca070a6 (2026-10-25), fixture repo holding only docs/ and
+  project.txt: a fresh-consumer build took 50.3 s wall on this host. Running the guard
+  in-process alone took 12-19 s over 407 roots. A profile showed the per-build
+  cache working (409 analyses, one per file), with the remaining guard time in the
+  repeated ast.walk passes and in _build_local_assignments / _iter_same_scope rebuilding
+  scope maps for every Call and BinOp node.

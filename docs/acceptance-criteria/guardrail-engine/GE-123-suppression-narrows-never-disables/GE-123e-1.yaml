@@ -1,0 +1,219 @@
+id: GE-123e-1
+components:
+  - commit_guardian
+title: "A new sign-off heading with no feedback id is refused the same way whether a person or an agent makes the commit"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a scratch repository with the commit checks installed, holding a ticket
+    file under its tickets folder whose Comments section already contains one
+    sign-off heading with a feedback-id line beneath it,
+  And a staged change that appends the sign-off heading
+    "### 2026-11-16 10:00 — python-coder (status: ok)" followed by the line
+    "Implemented the parser." and no feedback-id line,
+  When that change is committed three times from the same starting state — once
+    with the inline message "Add python-coder sign-off", once with that message
+    in a file handed to the commit by file, and once through the shared commit
+    step agents use, given that same message file,
+  Then each of the three commits is refused and the branch tip is unchanged
+    after each attempt,
+  And the three refusals name the same ticket file and the same heading text.
+
+  Given the same starting state,
+  And a staged change that appends the same heading followed, on the next line,
+    by "feedback-id: fb_2026-11-16_a1b2c3d4",
+  When that change is committed by each of the same three routes,
+  Then each of the three commits succeeds and the branch tip advances by exactly
+    one commit,
+  Because every refusal scenario in this feature is also satisfied by a check
+    that refuses all sign-offs, and this arm is the one that rules it out.
+
+  Given the ticket file already holds, from an earlier commit, the heading
+    "### 2026-05-01 09:00 — test-writer (status: ok)" with no feedback-id line,
+  And a staged change that edits only the ticket's title line and leaves that
+    heading untouched,
+  When that change is committed by each of the same three routes,
+  Then each of the three commits succeeds,
+  Because the check judges the sign-off headings a commit adds; a heading written
+    before feedback ids existed, and not touched now, is not new work.
+depends_on:
+  - GE-123e
+doc_links:
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20260901-feedback-id-escape-hatch-reads-the-previous-commit-message.md
+    relationship: related
+    status: exists
+    relevance: "Records that the person path (inline message) and the agent path (message file) reached the check through different, equally broken routes. This criterion makes the three routes reach one verdict."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the sign-off heading schema (### YYYY-MM-DD HH:MM — <agent> (status: ...)) and the feedback-id line that must be the first line of the body (§3, §2a). This criterion consumes that grammar and does not change it."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/testing/test-angles-failure-catalogue.md
+    relationship: describes
+    status: exists
+    relevance: "FP-7 row: the existing tests for this check reproduced a state real commits never produce. The evidence rule in this AC's notes exists because of it."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: related
+    status: exists
+    relevance: "The check is edited in templates/scripts/commit_guardian/; the copies under scripts/ and the consumer layout are build outputs."
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20261116-removing-a-feedback-id-line-is-not-caught.md
+    relationship: related
+    status: exists
+    relevance: "FENCE (gate decision 3, 2026-11-16). Deleting the feedback-id line under an existing heading is out of scope here and tracked by this KI."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "One verdict on a ticket change, identical across the inline-message, message-file and shared-commit-step routes, that refuses a newly added sign-off heading without a feedback-id line and passes one with it. GE-123e-2, GE-123e-3 and GE-123e-4 build on this verdict."
+expects_from: null
+declared_files:
+  - path: templates/scripts/commit_guardian/check_feedback_id.py
+    state: existing
+it_requirements:
+  - "CANONICAL SOURCE: templates/scripts/commit_guardian/check_feedback_id.py (ADR-001). The copies under scripts/commit_guardian/ and in the consumer .leafcutter/ layout are build outputs and are never edited by hand. Show source-to-deployed parity with a build.py round-trip before sign-off."
+  - "ONE VERDICT, THREE ROUTES: the verdict depends only on the staged change the commit is built from. That is whatever index git uses for that commit, including the private index the shared commit step sets through GIT_INDEX_FILE. It never depends on how the message travelled. No commit-message source is consulted for the verdict on any route. GE-123e-2 removes the existing ones, and this record must not add one."
+  - "UNIT JUDGED: a sign-off heading that the commit ADDS to a markdown file under tickets/. The heading grammar of templates/skills/signoff/SKILL.md §3 is used unchanged. A heading that is already present and not touched is never judged (third arm). The accepted feedback-id placement and the any-non-blank-value rule stay as they are today. The value-shape check (INF-500d-3) is out of scope."
+  - "FENCE (gate decision 3, 2026-11-16): deleting the feedback-id line from an EXISTING heading is out of scope, and this change must not start catching it. It is tracked as KI-CG-20261116-removing-a-feedback-id-line-is-not-caught. An implementation that widens the judged unit to deletions exceeds this record."
+  - "REFUSAL OUTPUT: the refusal names the ticket path repo-root-relative with forward slashes and quotes the heading line verbatim. It is identical on every route, so the three refusals can be compared as text. On the shared-commit-step route the refusal is asserted as it reaches the caller: the check's output carried verbatim in the step's one JSON answer."
+  - "INHERITED: the check may fail open on an internal error only with a visible stderr WARNING and the could-not-check outcome from the check_outcome vocabulary (GE-120a-1). An internal error never produces a silent pass or a silent skip."
+  - "LATENCY: one change-set derivation per commit, and no git call per heading on the ordinary-commit path."
+  - "TEST EVIDENCE (binding, from this record's notes): verified only through real git commit calls in a scratch repository with the hook installed from the deployed layout. The three routes are an inline -m commit, a commit by file with the git arguments the shared commit step uses (templates/scripts/commit_changes.py: commit -q --cleanup=verbatim -F <file>), and the shared commit step itself driven as an agent drives it. None of these is evidence: hand-writing COMMIT_EDITMSG, setting GIT_COMMIT_MSG or COMMIT_EDITMSG in place of a commit, or calling main() or private helpers directly (FP-7). Every arm asserts whether the branch tip moved as well as the output. Expected test home: unit_tests/commit_guardian/, with one real-commit scratch-repo harness that GE-123e-2, -2-i, -3, -4 and -4-i reuse."
+  - "RED-BASELINE HONESTY: with no token in any message, all three routes already refuse an added id-less heading today, and the third arm already passes. Most of this record is therefore expected GREEN on arrival. Its value is the three-route harness and the verdict contract that the siblings build on. The test plan must say which assertions are red today and must not cite a green-on-arrival assertion as proof of a fix."
+test_intent:
+  - clause: each of the three commits is refused and the branch tip is unchanged after each attempt
+    needs_test: true
+    reason: Refusing an added id-less sign-off on every route is the check's core behaviour, and only real commits on all three routes, not a hand-written message file, show that the routes reach one verdict.
+  - clause: the three refusals name the same ticket file and the same heading text
+    needs_test: true
+    reason: The refusal text is built from the staged diff the check reads, so a route that hands the check a different change would name a different file or heading.
+  - clause: each of the three commits succeeds and the branch tip advances by exactly one commit, Because every refusal scenario in this feature is also satisfied by a check that refuses all sign-offs, and this arm is the one that rules it out
+    needs_test: true
+    reason: This negative control is the only clause that fails an implementation which refuses every sign-off.
+  - clause: each of the three commits succeeds, Because the check judges the sign-off headings a commit adds; a heading written before feedback ids existed, and not touched now, is not new work
+    needs_test: true
+    reason: Judging only added headings is computed from the diff, and a wider scan would block every edit to a pre-epoch ticket.
+test_spec:
+  - name: test_ge_123e_1_idless_heading_refused_on_all_three_routes
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "In a scratch repo with the hook installed from the deployed layout (pre-check ticket committed first), the same id-less added heading is committed three times from the same starting state by real git commit: inline -m, commit -q --cleanup=verbatim -F file, and commit_changes.py given that message file. Each attempt exits non-zero and HEAD is unchanged. GREEN on arrival per the record's red-baseline note, so this is the three-route harness contract, not proof of a fix."
+    proves_clause: 'each of the three commits is refused and the branch tip is unchanged after each attempt'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+  - name: test_ge_123e_1_three_refusals_name_same_ticket_and_heading
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "From the three real refusals of the first arm, extract the ticket path and the quoted heading line (shared-step route read from the hook_output of its one JSON answer, not the truncated reason). Assert all three name tickets/00_inbox ticket file and the heading text verbatim, with forward slashes and identical text."
+    proves_clause: 'the three refusals name the same ticket file and the same heading text'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+  - name: test_ge_123e_1_heading_with_feedback_id_commits_on_all_three_routes
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Same starting state, staged change appends the heading plus a feedback-id line on the next line. Each of the three real commit routes succeeds and HEAD advances by exactly one commit (rev-list count asserted, not just the exit code). This negative control rules out a check that refuses every sign-off."
+    proves_clause: 'each of the three commits succeeds and the branch tip advances by exactly one commit, Because every refusal scenario in this feature is also satisfied by a check that refuses all sign-offs, and this arm is the one that rules it out'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - a check that refuses every sign-off heading whether or not a feedback-id line follows
+      - a check that refuses only on the route whose message travels in a file
+      - a check that accepts the id line only when the commit message carries it
+  - name: test_ge_123e_1_untouched_preepoch_heading_not_judged
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "The id-less 2026-05-01 test-writer heading is committed BEFORE the hook is installed. A staged change that edits only the ticket title line is then committed by each of the three real routes; each succeeds. Fails a check that scans every heading of a touched ticket file instead of the headings the commit adds."
+    proves_clause: 'each of the three commits succeeds, Because the check judges the sign-off headings a commit adds; a heading written before feedback ids existed, and not touched now, is not new work'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - a check that judges every sign-off heading in a touched ticket file, not only the added ones
+      - a check that judges the whole staged file when the diff has no added heading
+  - name: test_ge_123e_1_shared_commit_step_is_reachable_as_a_subprocess
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "Run templates/scripts/commit_changes.py as a subprocess (deployed copy with its sibling modules and config, no build.py spawn) with --message-file and the ticket path, in the scratch repo whose hook is the deployed check. Assert the exit code is 1, the single JSON answer has status hook_failed, hook_output carries the heading, and HEAD is unchanged; then the id-bearing variant answers committed. The shared step builds a private GIT_INDEX_FILE, so this proves the check reads the index git hands the commit."
+    proves_clause: 'each of the three commits is refused and the branch tip is unchanged after each attempt'
+    code_file: templates/scripts/commit_changes.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+  - templates/scripts/commit_changes.py
+  - unit_tests/commit_guardian/_ge_133a_harness.py
+  - unit_tests/commit_guardian/test_folder_density_merge_commit.py
+file_findings:
+  - file: templates/scripts/commit_guardian/check_feedback_id.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the heading detection and the staged-diff scan that decide the verdict this criterion pins across routes.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PROMISE 1 OF GE-123e (refusal on every route, same verdict for people and agents).
+
+  THE THREE ROUTES ARE THE CRITERION, not three examples of it. Today the person
+  path (an inline message) and the agent path (a message file passed the way the
+  shared commit step passes it, which is a verbatim-cleanup commit by file) reach
+  the check by different routes. They only agree by accident. A test that drives
+  one route proves nothing about the other two.
+
+  THE THIRD ARM IS UNASKED-FOR AND LOAD-BEARING. Without it, "refuse every id-less
+  heading in the touched ticket file" satisfies the first two arms. That would
+  refuse every edit to a ticket written before the feedback-id epoch (the sign-off
+  skill's backward-compatibility paragraph says those tickets legitimately carry
+  none). The unit judged is a heading the commit ADDS. Whether deleting a
+  feedback-id line from an existing heading should be refused is NOT decided here
+  and is flagged to the person. It is a widening the L1 did not ask for.
+
+  CONSUMED, NOT CHANGED: the sign-off heading grammar and the rule for where the
+  feedback-id line must sit relative to its heading. The examples put the id on the
+  line directly under the heading, which satisfies every placement the check
+  accepts today. The value-shape check on the id (INF-500d-3) is out of scope. Any
+  non-blank value passes here.
+
+  TEST-EVIDENCE RULE (for the IT PO; non-negotiable). Every scenario is verified
+  through REAL git commit calls in a scratch repository with the hook installed.
+  Use both an inline -m message and a message file passed the way the shared commit
+  step passes it, and drive the shared commit step itself for the agent route. A
+  test that writes the repository's last-commit-message file by hand, or sets the
+  environment variables the check reads in place of making a commit, is NOT
+  evidence. That is the exact mistake the existing tests for this check make
+  (test-angles failure catalogue, EPIC-ComputedQualityGates FP-7). Assert the
+  outcome on the branch (did the tip move) as well as the refusal text.
+
+  INHERITED: the component's fail-open-on-internal-error convention and GE-120's
+  "a check that cannot run says so" both apply. Neither licenses a quiet pass.
+
+  IT PO RESOLUTION (2026-11-16, gate decision 3). The open question above is now
+  settled: deleting a feedback-id line from an existing heading is OUT of scope for
+  GE-123e. It is tracked as KI-CG-20261116-removing-a-feedback-id-line-is-not-caught
+  and recorded as a fence in it_requirements. The unit judged stays "a heading the
+  commit adds".

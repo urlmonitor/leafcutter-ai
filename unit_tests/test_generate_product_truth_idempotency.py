@@ -173,7 +173,7 @@ def _make_store(tmp: Path, ac_work_status: str = "not_started") -> None:
 
     # Write the AC's product_truth block (what the generator would write)
     ac_path = ac_dir / "ACD-001.yaml"
-    ac_with_pt = dict(ac_yaml)
+    ac_with_pt: dict[str, object] = dict(ac_yaml)
     ac_with_pt["product_truth"] = [
         {
             "flow": "leafcutter/test-flow",

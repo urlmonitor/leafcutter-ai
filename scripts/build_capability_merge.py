@@ -150,8 +150,8 @@ def report_capability_collision(name: str, winner: str) -> None:
     print(f"collision: {name} -- resolves to {winner}")
 
 
-def _sibling_capability_dir(output_root: Path, output_rel: str) -> Path | None:
-    """The antigravity-mirrored physical directory for *output_rel*, if any.
+def _sibling_capability_dir(output_root: Path, output_rel: str, name: str) -> Path | None:
+    """The antigravity-mirrored physical directory holding *name*, if any.
 
     BP-1500g-2-i defect 3: the merge path only ever touched the
     ``.claude``-side container, leaving the antigravity mirror holding the
@@ -168,18 +168,29 @@ def _sibling_capability_dir(output_root: Path, output_rel: str) -> Path | None:
     (the ``.gemini`` shim_map entry): mirroring ``gemini`` under
     ``gemini/gemini`` would be nonsense, not a second surface.
 
+    BP-1500g-2-ii: a directory of the same NAME is not proof of the same
+    FAMILY. ``gemini/workflows`` is antigravity's copy of the commands-family
+    workflow markdown, while ``workflows`` holds the Claude Code JS workflow
+    scripts, which have no antigravity mirror. So the sibling is returned only
+    when the package's own output there already holds *name*. That is the only
+    case in which there is a package version on that surface for the adopter's
+    version to win over. Carrying a name the package never wrote there lands
+    it, via the ``.gemini`` copy shim, in ``.gemini/workflows/`` as a
+    check-output-drift GAP that no rebuild clears.
+
     Args:
         output_root: The consolidated output directory.
         output_rel: The output-root-relative family being merged (e.g.
             ``"skills"``, ``"agents"``).
+        name: The contested item name.
 
     Returns:
-        The sibling directory if it exists on disk, else None.
+        The sibling directory if it exists and already holds *name*, else None.
     """
     if output_rel == "gemini" or output_rel.startswith("gemini/"):
         return None
     sibling = output_root / "gemini" / output_rel
-    return sibling if sibling.is_dir() else None
+    return sibling if (sibling / name).exists() else None
 
 
 def _propagate_winner_to_siblings(
@@ -205,7 +216,7 @@ def _propagate_winner_to_siblings(
     """
     if output_root is None or dry_run:
         return
-    sibling_dir = _sibling_capability_dir(output_root, output_rel)
+    sibling_dir = _sibling_capability_dir(output_root, output_rel, name)
     if sibling_dir is None:
         return
     _copy_item(canonical_path / name, sibling_dir / name)
@@ -434,6 +445,21 @@ def propagate_capability_winner(
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-25 [BrainCandy/BP-1500g-2-ii]: `_sibling_capability_dir` now
+#   takes the contested name and returns the sibling only when
+#   `<output_root>/gemini/<output_rel>/<name>` already exists. The defect-3
+#   carry below treated `gemini/<output_rel>` as the mirror whenever that
+#   directory existed. For `workflows` it is a different family:
+#   antigravity's commands-family markdown, while the JS workflow scripts
+#   have no mirror. A plain build over a copy-strategy maker workspace kept
+#   all nine `.claude/workflows/*.js` as collisions and copied them into
+#   `gemini/workflows`. The next copy build put them in `.gemini/workflows`,
+#   which check-output-drift refused as 9 GAPs on every commit
+#   (KI-CG-20261023-output-drift-gaps-on-gemini-workflow-scripts).
+#   Rejected: an exemption entry. The files come from the build, and the
+#   entry would hide every real foreign file there. Also rejected: a
+#   hardcoded {agents, skills, hooks} family list. That is a second table
+#   to keep in step with the build phases' own platform_dirs. (#BP-1500g-2-ii)
 # - 2026-09-23 [python-coder/BP-1500g-2-i design-review defect fixes]:
 #   Fixed three confirmed defects against BP-1500g-2-i's own failing tests.
 #   DEFECT 1 (duplicate declarations): `build_skills()`'s per-deploy-file,

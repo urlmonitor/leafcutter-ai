@@ -187,11 +187,12 @@ class TestCheckSecretsSkillProseExemptBehavior(unittest.TestCase):
     def setUp(self) -> None:
         """Load _PROSE_FILE_PREFIXES and skip if unavailable."""
         # covers: BP-812
-        self.prefixes = _load_prose_prefixes()
-        if self.prefixes is None:
+        prefixes = _load_prose_prefixes()
+        if prefixes is None:
             self.skipTest(
                 "_PROSE_FILE_PREFIXES not parseable from check_secrets.py"
             )
+        self.prefixes = prefixes
 
     def test_top_level_skill_file_is_exempt(self) -> None:
         # covers: BP-812

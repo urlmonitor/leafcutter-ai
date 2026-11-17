@@ -37,10 +37,14 @@ expects_from:
 it_requirements:
   - "Canonical source: docs/reference/ac-schema.md. Must document schema_version (1 = legacy default, 2 = new), enumerate each new optional field (deliverable_checklist, per-deliverable sign-offs), and state that additionalProperties is not enforced until the store is 100% backfilled."
   - "Must include one runnable v1 sample and one v2 sample a reader can validate against scripts/ac_store/validate_ac_schema.py and observe both pass; the documented field shapes must match config/ac_store_schema.json exactly."
-test_required: false
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-12
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

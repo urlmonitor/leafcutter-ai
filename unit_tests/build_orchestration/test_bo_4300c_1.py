@@ -203,8 +203,8 @@ def build_project(
         .replace("__REWRITE__", repr(json.dumps(rewrite)))
         .replace("__EXTRA__\n", textwrap.indent(_EXTRA.get(extra, ""), "    "))
     )
-    fx = make_project(Path(tmp), stub_build=src)
-    project = fx["project"]
+    made = make_project(Path(tmp), stub_build=src)
+    project = made["project"]
     cfg = {"repos": [{"repo": "local", "hooks": [
         {"id": f"stub-{st}", "name": f"stub {st}", "entry": "stub", "language": "system", "stages": [st]}
         for st in declared]}]}
@@ -219,7 +219,7 @@ def build_project(
         _run_git(["add", "-A"], project)
         _run_git(["commit", "-q", "-m", "tip only"], project)
     _run_git(["push", "-q", "origin", "main"], project)
-    fx["rewritten"] = rewrite
+    fx: dict[str, Path | list[str]] = {**made, "rewritten": rewrite}
     return fx
 
 

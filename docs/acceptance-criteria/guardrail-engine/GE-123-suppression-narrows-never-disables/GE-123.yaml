@@ -1,5 +1,5 @@
 id: GE-123
-title: "Trust that the last check between you and a leaked credential is still on"
+title: "Trust that every check is still on, whatever was written to quiet it"
 component: guardrail-engine
 components:
   - commit_guardian
@@ -12,17 +12,20 @@ readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 criteria: |
-  Narrowing a security check never switches it off.
+  Narrowing a check never switches it off.
 
-  Some checks are the last thing standing between an ordinary mistake and a
-  credential written into the project's permanent history. Today a single line
-  written to quiet one noisy result can leave a whole file unexamined, and
-  nobody is told; a line that does nothing at all looks exactly like a line
-  that works; and describing a security problem in writing is treated as
-  causing one. After this goal, narrowing what a check reports only ever
-  narrows it — no file quietly loses its protection, an instruction that
-  cannot do what it says announces itself while you are still writing it, and
-  writing about a risk is no longer confused with taking one.
+  Checks are what stand between an ordinary mistake and the project's
+  permanent history, whether the mistake is a credential written into it or a
+  sign-off nobody can trace back to its feedback. Today a single line written
+  to quiet one noisy result can leave a whole file unexamined, and nobody is
+  told; a line that does nothing at all looks exactly like a line that works;
+  a word in one commit's message can switch a check off for the next commit;
+  and describing a security problem in writing is treated as causing one.
+  After this goal, narrowing what a check reports only ever narrows it — no
+  file quietly loses its protection, no message switches a check off, an
+  instruction that cannot do what it says announces itself while you are
+  still writing it, and writing about a risk is no longer confused with
+  taking one.
 depends_on: []
 doc_links:
   - path: templates/skills/security-scanner/SKILL.md
@@ -42,13 +45,18 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: 2026-08-18
-amended_by: []
+amended_by:
+- action: reworded
+  agent: product-owner
+  date: '2026-11-16'
+  reason: "L0 title, tagline and benefit text widened from security checks to ANY check, approved by the person at the GE-123e gate. The rule 'suppression narrows, never disables' already applied to every check; the wording now matches. Before: title 'Trust that the last check between you and a leaked credential is still on', tagline 'Narrowing a security check never switches it off.' The benefit text gained the GE-123e instance (a word in one commit's message switching a check off for the next). The meaning of GE-123a..d is unchanged and their criteria were not touched. The notes' L1 cut list gained a GE-123e entry."
 superseded_by: null
 covered_by:
   - GE-123a
   - GE-123b
   - GE-123c
   - GE-123d
+  - GE-123e
 implemented_by: []
 change_target: code
 risk_surface: safety
@@ -85,6 +93,11 @@ notes: |
         false positive is a reason to write another line, and every line
         written is a chance to disable something. Fixing only the suppression
         side while leaving the noise in place treats the symptom.
+      - GE-123e (added 2026-11-16) — the WHOLE-CHECK SWITCH: a word in a
+        commit's message, or one left over from an earlier commit's message,
+        can no longer turn the feedback-id check off. It is the first L1 here
+        whose check is not a credential check, and it is why the L0 wording
+        was widened from security checks to any check on the same date.
 
   EVIDENCE, WITH CONFIDENCE LABELS (carry them through; do not upgrade them).
     DIRECTLY MEASURED: five files whose names mark them as configuration, each

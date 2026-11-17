@@ -607,7 +607,30 @@ the answer, because the answer was perfectly well formed.
 
 ### §RS.2 — How to resume
 
-Re-invoke the workflow, passing the person's decision as `args.resume_answer`:
+Re-invoke the same workflow with `resumeFromRunId` set to the paused payload's
+`run_id`, and pass two arguments: the person's decision as `args.resume_answer`
+and the paused run's own workspace answer as `args.workspace`. Add nothing
+else: no startup verdict and no other argument.
+
+**The workspace answer.** The resume must work in the SAME workspace the run
+paused in, because only that workspace holds the run's pause record and drafts.
+Get its answer by running the workspace maker's (`scripts/worktree.py`, see
+`docs/how-to/get-a-workspace.md`) `locate` verb ONCE for that workspace's
+kind and slug (the same `--kind ac` and `<slug>` that §WS.1 used), as ONE
+command by the absolute path of the deployed `worktree.py`; or reuse the maker
+answer this session already holds for that run:
+
+```bash
+python "<absolute-install-root>/scripts/worktree.py" locate --kind ac --slug "<slug>" --repo-root "<absolute-project-root>"
+```
+Pass its stdout JSON VERBATIM as `args.workspace`, exactly as §WS.2 requires --
+never re-typed, trimmed or re-shaped. `locate` never makes a workspace (the maker's
+verbs are in `docs/how-to/get-a-workspace.md`). If the
+maker refuses (for example `NOT_FOUND`), stop, report the maker's answer
+verbatim and do NOT resume. Never run `ensure` for a resume: a fresh workspace
+holds neither the paused run's record nor its drafts.
+
+The decision:
 
 ```json
 {
@@ -678,6 +701,12 @@ owed.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-11-04 [ACD-2100d-5-iii/llm-expert]:
+  §RS.2 now shows the full resume re-invocation: resumeFromRunId, args.resume_answer
+  and args.workspace (the paused run's own workspace answer, from one maker `locate`
+  call for its kind and slug, passed verbatim per §WS.2), with no startup verdict
+  and no other argument. A maker refusal stops the resume; `ensure` is never used
+  to resume. §RS.3 (provenance) unchanged.
 - 2026-10-10 [TICKET-20260928-BO-4300-entry-skills/llm-expert]:
   Replaced §WSP (workspace-setup permission pre-flight) with §WS: the skill
   runs the one workspace maker once and passes its answer as args.workspace.

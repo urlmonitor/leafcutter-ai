@@ -1,0 +1,75 @@
+id: BP-1300f-1-vii
+components:
+  - build_pipeline
+title: "CI runs the type check as 'mypy ratchet (new errors only)' on every pull request, and its red fails the job instead of being hidden"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Scenario: The job fails when the ratchet fails
+    Given the CI workflow's type-check job,
+    Then it is named "mypy ratchet (new errors only)",
+    And it carries no continue-on-error, so a non-zero exit of the ratchet makes the job red,
+    And its pull-request step runs scripts/ci/mypy_ratchet.py against the pull request's
+      base branch, after fetching that branch without a depth limit,
+    And the checkout has the full history, so the merge base can be computed.
+
+  Scenario: The scope is unchanged
+    Given the pathspecs the old job type-checked,
+    Then the ratchet is given the same pathspecs, in both the "dir/*.py" and the
+      "dir/**/*.py" form for scripts, tests, unit_tests, knowledge, integrations and
+      kernel.
+
+  Scenario: The job is not made required by this change
+    Then this change adds the job to no required-status-check list; the user promotes
+      it once the job runs clean on main.
+depends_on:
+  - BP-1300f-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300f-1.yaml
+    relationship: parent
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: modifies
+    status: exists
+    relevance: "Job typecheck."
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - "Edit job typecheck in .github/workflows/ci.yml in place (same job id, so nothing that refers to it breaks): new name, continue-on-error removed, the step's run replaced by the fetch plus one call `python scripts/ci/mypy_ratchet.py --base \"origin/${{ github.base_ref }}\" -- <the twelve pathspecs>`. The KI-BP-20260831-0620 and PR #985 comments stay with the lines they explain. The header comment for the job states the ratchet rule and that the job is not yet required."
+  - "Do not touch GitHub rulesets or branch protection."
+test_spec:
+  - name: test_bp_1300f_1_vii_ci_job_runs_the_ratchet_and_can_fail
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: seam
+    must_catch:
+      - "leaves continue-on-error: true on the job"
+      - "runs plain mypy over whole files instead of the ratchet"
+      - "drops the top-level 'dir/*.py' pathspec forms (KI-BP-20260831-0620)"
+    description: "Parse the REAL .github/workflows/ci.yml with a YAML parser: job typecheck is named 'mypy ratchet (new errors only)', has no continue-on-error, checks out with fetch-depth 0, and its pull-request step fetches the base branch and calls scripts/ci/mypy_ratchet.py with --base origin/${{ github.base_ref }} and all twelve pathspecs."
+test_rationale: >-
+  The unit layer cannot run a GitHub workflow, so the binding test parses the real
+  workflow file with a YAML parser and asserts the job's control flow consumes the
+  ratchet's exit code (no continue-on-error) and calls it with the right scope. The
+  live proof is the pull request's own CI run of this job, which must appear on the
+  pull request that introduces it.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-11-16
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_guards/test_bp_1300f_1_ignores_and_verdict.py
+implemented_by:
+  - .github/workflows/ci.yml
+change_target:
+  - pipeline
+risk_surface: contract_boundary

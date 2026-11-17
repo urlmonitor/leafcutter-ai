@@ -22,7 +22,8 @@ criteria: |
   And a `;` that separates no statements does not split a line: a
     `for (;;)` header, a `;` inside a string, template literal or comment, a
     lambda's or an annotation's `:`, and a docstring on its own header line,
-  And SQL and shell lines are measured as before, one per line,
+  And a `;` inside a SQL or shell string does not split a line either (how SQL
+    and shell lines split is GE-127d-3-vi's),
   And given a tracked file already over its limit and a staged change whose
     only effect is joining statements with `;`, or splitting such a joined line
     back into one statement per line,
@@ -151,7 +152,17 @@ expects_from:
     The shared measure and its counted-line keys, produced in one pass per language.
 origin_agent: BrainCandy
 created: 2026-10-23
-amended_by: []
+amended_by:
+- reason: residue-closed-by-ge-127d-3-vi
+  by: BrainCandy
+  at: '2026-10-25'
+  note: >-
+    BrainCandy asked 2026-10-25 to close the three accepted residues. The criteria arm "SQL and
+    shell lines are measured as before, one per line" becomes "a `;` inside a SQL or shell
+    string does not split a line either"; SQL and shell splitting, the brace-block rule and the
+    indent-aware keys are specified by the new sibling GE-127d-3-vi. The boundary test now
+    probes a `;` inside a SQL and a shell string instead of a joined SQL/shell line. Title,
+    depends_on and work_status unchanged.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -172,4 +183,5 @@ notes: |
   (`if (x) { a(); b(); }`) counts once per statement, not the four lines its expanded form
   measures: brace lines are not statements. (3) SQL and shell are not split; their
   statement separators would need string-aware breaks the comment lexers do not track.
+  ALL THREE CLOSED 2026-10-25 BY GE-127d-3-vi.
 

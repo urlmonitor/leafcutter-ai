@@ -48,15 +48,21 @@ def declared(stage: str) -> dict:
     return cfg["stage_canaries"][stage]
 
 
-def run_canary(args: list[str], cwd: Path, env: dict | None = None, script: Path | None = None):
+class CanaryRun(subprocess.CompletedProcess[bytes]):
+    """A finished canary process, plus its stdout and stderr decoded as text (`out`, `err`)."""
+
+    def __init__(self, done: subprocess.CompletedProcess[bytes]) -> None:
+        super().__init__(done.args, done.returncode, done.stdout, done.stderr)
+        self.out: str = done.stdout.decode("utf-8", "replace")
+        self.err: str = done.stderr.decode("utf-8", "replace")
+
+
+def run_canary(args: list[str], cwd: Path, env: dict | None = None, script: Path | None = None) -> CanaryRun:
     """Run the canary as its own program (sys.executable + absolute path), bytes-safe."""
-    done = subprocess.run(
+    return CanaryRun(subprocess.run(
         [sys.executable, str(script or deployed_canary()), *args],
         cwd=str(cwd), env=env or clean_env(), capture_output=True,
-    )
-    done.out = done.stdout.decode("utf-8", "replace")
-    done.err = done.stderr.decode("utf-8", "replace")
-    return done
+    ))
 
 
 def git(args: list[str], cwd: Path, env: dict | None = None) -> subprocess.CompletedProcess:
@@ -148,7 +154,7 @@ def observe(script: Path, argmap: dict[str, list[str]], tmp: Path) -> dict:
         raise AssertionError(f"precondition: staged list {staged!r}")
     msg = Path(tmp) / "ORDINARY_MSG"
     msg.write_bytes(b"chore: ordinary message\n")
-    out = {
+    out: dict[str, CanaryRun | Path] = {
         "pre-commit": run_canary(argmap["pre-commit"], repo, script=script),
         "commit-msg": run_canary([*argmap["commit-msg"], str(msg)], repo, script=script),
     }

@@ -53,7 +53,7 @@ delivers_to: null
 expects_from:
   ac_id: ACS-1300a-2
   contract: "The tool's real invocation surface and its real report format. The guide documents what shipped; a guide written against a planned interface is a second source of truth for the interface."
-test_required: false
+test_required: true
 origin_agent: business-analyst
 created: 2026-09-01
 amended_by:
@@ -73,6 +73,10 @@ amended_by:
     existing clause about the finished state never changing covers the MECHANISM;
     this covers the operator's EXPECTATION, and the two fail in different ways: an
     operator who expects movement concludes the tool is broken when nothing moves.
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

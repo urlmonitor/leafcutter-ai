@@ -145,10 +145,10 @@ depends_on: []                     # epics are top-level
 | `priority` | optional | `critical` / `high` / `medium` / `low` |
 | `phase`, `tags`, `last_updated` | optional | Free-form helpers |
 | `files_touched` | optional | List of relative paths this ticket edits; used by `epic-supervisor` to detect file-touch overlap when scheduling parallel tickets. Populated by `business-analyst` / `refinement`; omit until those agents run. |
-| `agents` | optional | Map of `<agent-name>: <status>` where status ∈ `not_needed \| needed \| signed_off \| failed`. Populated by `business-analyst` / `refinement`. The hook validates every value against the enum; invalid values block the write. Valid agent names come from `leafcutter/config/agent_registry.json` (entries with `is_ticket_phase: true`); fall back to the hardcoded table in `.claude/agents/business-analyst.md` §"Default agents map by ticket archetype" when the registry is absent. See `.claude/skills/signoff/SKILL.md` for the full status lifecycle. **Canonical ordering**: architect-review (4) → test-writer (5) → python-coder (6) → sql-coder (7) → test-runner (9) → documentation-expert (10) → pr-reviewer (11) → documentation-verifier (11.9) → commit (12) → pull-request (13). Set `test-writer: not_needed` when `## Test Requirements` → `tests: []` (docs-only / config-only tickets). The `ticket-supervisor` will also auto-skip based on the `tests:` array, but setting `not_needed` in the map avoids the unnecessary spawn check. |
+| `agents` | optional | Map of `<agent-name>: <status>` where status ∈ `not_needed \| needed \| signed_off \| failed`. Populated by `business-analyst` / `refinement`. The hook validates every value against the enum; invalid values block the write. Valid agent names come from `{{config.output_root}}/config/agent_registry.json` (entries with `is_ticket_phase: true`); fall back to the hardcoded table in `.claude/agents/business-analyst.md` §"Default agents map by ticket archetype" when the registry is absent. See `.claude/skills/signoff/SKILL.md` for the full status lifecycle. **Canonical ordering**: architect-review (4) → test-writer (5) → python-coder (6) → sql-coder (7) → test-runner (9) → documentation-expert (10) → pr-reviewer (11) → documentation-verifier (11.9) → commit (12) → pull-request (13). Set `test-writer: not_needed` when `## Test Requirements` → `tests: []` (docs-only / config-only tickets). The `ticket-supervisor` will also auto-skip based on the `tests:` array, but setting `not_needed` in the map avoids the unnecessary spawn check. |
 | `requires_diagram` | **required** | Tri-state: `true` (diagram needed), `false` (considered, not needed), `null` (not applicable — pre-existing coverage). **Absent key is a hook failure** per ADR-026. |
 | `requires_adr` | **required** | Tri-state: `true` (ADR needed), `false` (considered, not needed), `null` (not applicable — pre-existing coverage). **Absent key is a hook failure** per ADR-026. |
-| `requires_documentation` | optional | List of doc type strings that must be produced for this ticket. Valid values come from `leafcutter/config/doc_types.json` (e.g. `[how_to, reference]`). When present, ticket-wiring flips the corresponding writer agents to `needed`. Omit when no doc deliverable is required. |
+| `requires_documentation` | optional | List of doc type strings that must be produced for this ticket. Valid values come from `{{config.output_root}}/config/doc_types.json` (e.g. `[how_to, reference]`). When present, ticket-wiring flips the corresponding writer agents to `needed`. Omit when no doc deliverable is required. |
 | `user_facing_surface` | optional | `slash_command \| pre_commit_hook \| agent_orchestrated \| cron \| null`. Identifies the production entrypoint this ticket introduces or modifies. Set by `business-analyst`. When non-null: (a) `actuation_contract` is required; (b) `user-surface-smoker: needed` must appear in `agents`. Absent or `null` = ticket is internal; no smoker dispatch. |
 | `actuation_contract` | optional (required when `user_facing_surface` != null) | One sentence describing the observable side effect when the surface is invoked in production with no parameter overrides. Example: `"Writes N entries to docs/glossary.md and exits 0 on success."`. Used by `user-surface-smoker` to build the `assertion:` regex for the Smoke Fixture. |
 | `roadmap_phase` | optional | Phase ID from `docs/roadmap.json` that this ticket belongs to (e.g. `phase_1`). The hook prints a **warning** (not a block) when the value is not a known phase ID. Omit on tickets predating the roadmap or when the phase is unclear. |
@@ -555,7 +555,7 @@ source of truth:
 
 When a ticket being authored includes an `## Architecture Plan` section with one or more
 `diagram_type:` values, the authoring agent MUST validate each value against
-`leafcutter/config/diagram_types.json` **before writing the ticket file**.
+`{{config.output_root}}/config/diagram_types.json` **before writing the ticket file**.
 
 **Why:** The pre-commit hook (`check_doc_frontmatter.py`) validates architecture doc
 frontmatter against the same JSON source. Catching a bad `diagram_type` at authoring
@@ -564,7 +564,7 @@ time prevents the doc-author → rejection → re-author round-trip.
 **Validation procedure:**
 
 1. Extract all `diagram_type:` values from `## Architecture Plan` bullets in the draft.
-2. Read `leafcutter/config/diagram_types.json` and extract the set of valid keys.
+2. Read `{{config.output_root}}/config/diagram_types.json` and extract the set of valid keys.
 3. For each extracted value:
    - If NOT in the JSON key set: **ABORT** with:
      ```

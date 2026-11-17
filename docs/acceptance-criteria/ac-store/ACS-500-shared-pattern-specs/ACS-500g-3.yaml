@@ -72,13 +72,17 @@ expects_from:
   contract: "templates/skills/authoring-patterns/SKILL.md as the single statement of the four pattern-worthiness rules, with the recurrence threshold declared once as 3 and a named failure label per rule."
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class prompt: test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: [ACS-500g-3-i]
 implemented_by: []
 change_target: prompt
 risk_surface: contract_boundary
-test_required: false
+test_required: true
 notes: |
   The load-bearing constraint of this L1. If the producer's definition of "what is
   a pattern" and the consumer's (business-analyst pattern-first check, ACS-500c-1)

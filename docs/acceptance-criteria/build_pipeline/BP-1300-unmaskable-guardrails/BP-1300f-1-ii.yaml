@@ -1,0 +1,92 @@
+id: BP-1300f-1-ii
+components:
+  - build_pipeline
+title: "Type errors a file already had are not charged to the pull request that touches it, and errors it removes are counted in its favour, never against it"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Background:
+    Given at the merge base the file scripts/svc.py has two type errors,
+    And the file scripts/other.py has one type error and is not changed by the pull request.
+
+  Scenario: Existing errors in a touched file do not block
+    When the pull request changes a comment in scripts/svc.py and nothing else,
+    Then the check passes,
+    And it reports 1 file inspected, 0 new errors and 2 existing errors left untouched,
+    And it does not mention scripts/other.py at all, because only changed files are
+      inspected.
+
+  Scenario: A removed error is reported as a positive count
+    When the pull request fixes one of the two errors in scripts/svc.py,
+    Then the check passes,
+    And it reports 0 new errors, 1 existing error left untouched and 1 error removed.
+
+  Scenario: A removal does not pay for an addition
+    When the pull request fixes one error in scripts/svc.py and adds a different one,
+    Then the check fails, naming the added error,
+    And it still reports the removed error as removed.
+depends_on:
+  - BP-1300f-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300f-1.yaml
+    relationship: parent
+    status: exists
+  - path: scripts/ci/mypy_ratchet.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "SCOPE OF INSPECTION: only the files the pull request changed (git diff of merge base..HEAD, diff-filter ACMR, rename detection on, limited to the job's pathspecs) are type-checked and counted. Errors mypy reports for other modules it follows are dropped."
+  - "NO NETTING: the comparison is per error key, never a net total. A removed key never offsets an added key, so 'fixed one, added one' fails."
+  - "REMOVED COUNT: removed = sum over keys of max(0, base count - head count); printed in the summary as '<n> removed'. It never changes the exit code."
+test_spec:
+  - name: test_bp_1300f_1_ii_existing_errors_in_a_touched_file_are_not_charged
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "type-checks the whole changed file and fails on every error in it"
+      - "reports errors from an unchanged file"
+    description: "Base: svc.py with 2 errors, other.py with 1. Head edits a comment in svc.py. Exit 0; summary says 1 file, 0 new errors, 2 existing errors untouched; other.py is not named."
+  - name: test_bp_1300f_1_ii_removed_error_passes_and_is_counted
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "treats a changed error count in either direction as a failure"
+    description: "Head fixes one of svc.py's two errors; exit 0; summary says 0 new errors, 1 existing error untouched, 1 removed."
+  - name: test_bp_1300f_1_ii_removal_does_not_pay_for_an_addition
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "compares only the total error count per file, so one fixed and one added nets to zero"
+    description: "Head fixes one error and adds a different one; exit 1 naming the added error; the summary still counts 1 removed."
+test_rationale: >-
+  Each arm is a verdict over two real mypy runs on two real revisions, so each test
+  builds a temporary git repository and runs the real module as a subprocess. The
+  netting arm exists because a per-file total passes the first two arms and is the
+  cheapest wrong implementation.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-11-16
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_guards/test_bp_1300f_1_mypy_ratchet.py
+implemented_by:
+  - scripts/ci/mypy_ratchet.py
+change_target:
+  - code
+risk_surface: contract_boundary

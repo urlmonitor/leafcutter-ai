@@ -44,6 +44,7 @@ import json
 import os
 import re
 import sys
+from types import FrameType
 
 _COUNTER = itertools.count(1)
 _NOARG = object()
@@ -83,7 +84,7 @@ def _body(text: str) -> str:
 
 
 def _from_plugin() -> bool:
-    frame = sys._getframe(1)
+    frame: FrameType | None = sys._getframe(1)
     while frame is not None:
         if os.path.basename(frame.f_code.co_filename).startswith("_wvr_db"):
             return True

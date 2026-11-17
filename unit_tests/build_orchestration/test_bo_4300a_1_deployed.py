@@ -69,6 +69,10 @@ class TestBO4300a1DeployedMaker(unittest.TestCase):
     docstring (and test_bo_4300a_1.py's module docstring) for why setUpClass
     builds the deployed layout exactly once."""
 
+    deployed: DeployedMakerBuild
+    _tmp: tempfile.TemporaryDirectory[str]
+    tmp_path: Path
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.deployed = DeployedMakerBuild.build()

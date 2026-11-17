@@ -26,7 +26,7 @@ from typing import NoReturn
 
 from .errors import UnmeasurableContentError
 from .jsx_lines import scan_jsx_element
-from .spans import Range
+from .spans import Break, Range
 
 _IDENT = re.compile(r"[A-Za-z_$\u0080-\U0010ffff][\w$\u0080-\U0010ffff]*")
 _NUMBER = re.compile(r"\.?\d(?:[eE][+-]|[\w.])*")
@@ -41,19 +41,35 @@ _EXPRESSION_START = frozenset({"start", "op", "open", "kw", "ctrl", "block"})
 _EXPRESSION_END = frozenset({"ident", "num", "close", "str", "tmpl", "regex", "jsx"})
 
 
+class _Frame:
+    """One open brace: the parens open at it, where code follows it on its line, and
+    whether a ``;`` separates statements directly inside it (which makes it a block)."""
+
+    __slots__ = ("after_open", "parens", "separated")
+
+    def __init__(self, parens: int, after_open: int | None) -> None:
+        self.parens = parens
+        self.after_open = after_open
+        self.separated = False
+
+
 class _State:
     """Per-``scan_code`` context: previous token kind, last word, braces, parens."""
 
-    __slots__ = ("brace_marks", "depth", "kind", "parens", "word")
+    __slots__ = ("depth", "frames", "kind", "parens", "word")
 
     def __init__(self) -> None:
         self.kind = "start"
         self.word = ""
         self.depth = 0
         self.parens: list[bool] = []
-        # len(parens) at each open brace: a ';' is a statement separator only when no
-        # parenthesis opened since the innermost brace is still open.
-        self.brace_marks: list[int] = []
+        # A ';' separates statements only when no parenthesis opened since the
+        # innermost brace is still open.
+        self.frames: list[_Frame] = []
+
+    def at_statement_level(self) -> bool:
+        """True when every parenthesis opened since the innermost brace is closed."""
+        return len(self.parens) == (self.frames[-1].parens if self.frames else 0)
 
 
 class JsScanner:
@@ -65,7 +81,7 @@ class JsScanner:
         self.jsx = jsx
         self.language = language
         self.ranges: list[Range] = []
-        self.breaks: list[int] = []
+        self.breaks: list[Break] = []
         self._dispatch: dict[str, Callable[[int, _State], int]] = {
             ";": self._semicolon,
             "/": self._slash,
@@ -111,8 +127,8 @@ class JsScanner:
                 if state.depth == 0 and until_brace:
                     return index + 1
                 state.depth = max(0, state.depth - 1)
-                if state.brace_marks:
-                    state.brace_marks.pop()
+                if state.frames:
+                    self._close_block(index, state.frames.pop())
                 state.kind = "block"
                 index += 1
                 continue
@@ -219,17 +235,38 @@ class JsScanner:
                 position += 1
         return self.fail_unterminated("template literal", index)
 
+    def _code_after(self, index: int) -> int | None:
+        """Offset of the next statement-starting code on *index*'s line, or None."""
+        following = index
+        while following < self.size and self.text[following] in " \t":
+            following += 1
+        rest = self.text[following : following + 2]
+        if not rest or rest[0] in _NOT_A_STATEMENT or rest in ("//", "/*"):
+            return None
+        return following
+
     def _semicolon(self, index: int, state: _State) -> int:
         """A ``;`` outside parentheses followed, on its line, by another statement is a break."""
         state.kind = "op"
-        if len(state.parens) == (state.brace_marks[-1] if state.brace_marks else 0):
-            following = index + 1
-            while following < self.size and self.text[following] in " \t":
-                following += 1
-            rest = self.text[following : following + 2]
-            if rest and rest[0] not in _NOT_A_STATEMENT and rest not in ("//", "/*"):
-                self.breaks.append(following)
+        if state.at_statement_level():
+            if state.frames:
+                state.frames[-1].separated = True
+            following = self._code_after(index + 1)
+            if following is not None:
+                self.breaks.append((following, 0))
         return index + 1
+
+    def _close_block(self, index: int, frame: _Frame) -> None:
+        """At a ``}`` closing a block, split after its ``{`` and before this ``}`` on shared lines."""
+        if not frame.separated:
+            return
+        if frame.after_open is not None:
+            self.breaks.append((frame.after_open, 1))
+        before = index - 1
+        while before >= 0 and self.text[before] in " \t":
+            before -= 1
+        if before >= 0 and self.text[before] != "\n":
+            self.breaks.append((index, -1))
 
     def _open_paren(self, index: int, state: _State) -> int:
         state.parens.append(state.kind == "ident" and state.word in _CONTROL_HEADERS)
@@ -251,7 +288,7 @@ class JsScanner:
 
     def _open_brace(self, index: int, state: _State) -> int:
         state.depth += 1
-        state.brace_marks.append(len(state.parens))
+        state.frames.append(_Frame(len(state.parens), self._code_after(index + 1)))
         state.kind = "open"
         return index + 1
 
@@ -290,11 +327,15 @@ def js_ranges(text: str, *, jsx: bool, language: str) -> list[Range]:
     return js_lex(text, jsx=jsx, language=language)[0]
 
 
-def js_lex(text: str, *, jsx: bool, language: str) -> tuple[list[Range], list[int]]:
-    """Return the comment ranges and the statement breaks of JavaScript/TypeScript *text*.
+def js_lex(text: str, *, jsx: bool, language: str) -> tuple[list[Range], list[Break]]:
+    """Return the comment ranges and the ``(offset, indent step)`` statement breaks of *text*.
 
-    A break is the offset of a statement that follows a ``;`` (outside any
-    parentheses, so a ``for (;;)`` header is one statement) on the same line.
+    A break (step 0) is the offset of a statement that follows a ``;`` (outside
+    any parentheses, so a ``for (;;)`` header is one statement) on the same
+    line. A brace pair directly holding a ``;``-separated statement is a block:
+    code after its ``{`` on that line breaks one level deeper (step 1), and its
+    ``}`` with code before it on that line breaks one level shallower (step -1).
+    An object literal (commas, no ``;``) never splits.
 
     Raises:
         UnmeasurableContentError: an unterminated block comment or template literal.
@@ -316,5 +357,10 @@ DECISION HISTORY
   returns them with the comment ranges, so `a(); b();` counts two lines. "Outside parentheses"
   means outside any parenthesis opened since the innermost brace, so a callback body inside a call
   (`xs.forEach((x) => { a(x); b(x); })`) splits while a `for (;;)` header does not.
+  (#EPIC-FilesStayWorkable/GE-127d-3)
+- 2026-10-25 [GE-127d-3-vi]: Brace frames replace the paren marks. A brace pair that directly holds
+  a `;`-separated statement is a block, so `if (x) { a(); b(); }` measures 4, exactly like its
+  expanded form; `{ a: 1, b: 2 }` holds no `;` and stays one line. Type literals and interface
+  bodies whose members end in `;` are blocks too, matching their one-member-per-line form.
   (#EPIC-FilesStayWorkable/GE-127d-3)
 """

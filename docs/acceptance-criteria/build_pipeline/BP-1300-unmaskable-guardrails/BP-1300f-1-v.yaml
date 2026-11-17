@@ -1,0 +1,103 @@
+id: BP-1300f-1-v
+components:
+  - build_pipeline
+title: "A pull request that raises a changed file's count of type-ignore comments fails, naming the file and lines, and text that only looks like one inside a string is not counted"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Background:
+    Given at the merge base the file scripts/svc.py has exactly one comment
+      "# type: ignore[assignment]".
+
+  Scenario: An added type-ignore fails even when it hides the only new error
+    When the pull request adds a line with an assignment error at head line 9 and
+      silences it with "# type: ignore[assignment]",
+    Then mypy reports no new error,
+    But the check fails,
+    And it names scripts/svc.py, the count rising from 1 to 2, and line 9,
+    And it gives a one-line remedy: remove the ignore and fix the type.
+
+  Scenario: The words inside a string are not a comment
+    When the pull request adds the string literal "# type: ignore" and a docstring that
+      mentions "# type: ignore", and adds no comment,
+    Then the check passes,
+    And it reports 0 new type-ignores.
+
+  Scenario: Removing an ignore is not a failure
+    When the pull request removes the existing type-ignore comment and fixes the
+      error it silenced,
+    Then the check passes.
+depends_on:
+  - BP-1300f-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300f-1.yaml
+    relationship: parent
+    status: exists
+  - path: scripts/ci/mypy_ratchet.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "COUNT COMMENTS WITH THE TOKENIZER: tokenize.tokenize over the file's bytes; a COMMENT token counts once when it STARTS with '#\\s*type:\\s*ignore' not followed by a word character (so '# type: ignore', '#type:ignore' and '# type: ignore[code]  # why' count, '# type: ignored' does not). That is the only form mypy honours: measured with mypy 2.3.1 on 2026-11-16, '# noqa: E501  # type: ignore' and '# words # type: ignore[assignment]' silence nothing, so they are not counted either. STRING tokens (including docstrings and f-strings) are never inspected."
+  - "VERDICT PER FILE: fail when the head count exceeds the base count (base count 0 for a new file; the old path's count for a rename). Report base count, head count, and the head lines whose stripped source text has no matching ignore line at the base (multiset difference), with one remedy line."
+  - "A file the tokenizer cannot read (tokenize.TokenError, SyntaxError, UnicodeDecodeError, OSError) is could-not-check naming the file -- never counted as zero."
+test_spec:
+  - name: test_bp_1300f_1_v_added_type_ignore_fails_naming_file_and_line
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "only compares mypy errors, so an ignore that hides the new error passes"
+      - "names the file but not the added line"
+    description: "Base has one ignore; head adds an assignment error at line 9 silenced by an ignore; exit 1; output names scripts/svc.py, 1 -> 2 and line 9, plus the remedy."
+  - name: test_bp_1300f_1_v_type_ignore_text_inside_a_string_is_not_counted
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "counts the substring 'type: ignore' anywhere in the source instead of in comment tokens"
+    description: "Head adds a string literal and a docstring containing '# type: ignore' and no comment; exit 0; summary says 0 new type-ignores."
+  - name: test_bp_1300f_1_v_removed_type_ignore_passes
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Head removes the ignore and fixes the error it hid; exit 0."
+  - name: test_bp_1300f_1_v_comment_counter_table
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: unit
+    angle: boundary
+    must_catch:
+      - "requires exactly one space so '#type:ignore' is missed"
+      - "counts '# type: ignored'"
+    description: "Pure counter over a table of sources: comment forms with and without codes and spacing count; '# type: ignored', an ignore that is not at the start of its comment, and string, f-string or docstring text do not."
+test_rationale: >-
+  The integration arms run the real module on real revisions because the defect is a
+  pull request that silences its own new error, which only shows when mypy's verdict
+  and the comment count are compared together. The table is a pure function over
+  source bytes, tested directly.
+delivers_to:
+  - agent: python-coder
+    contract: "To BP-1300f-1-vi: the total of new and removed type-ignore comments that the summary line prints."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-11-16
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_guards/test_bp_1300f_1_ignores_and_verdict.py
+implemented_by:
+  - scripts/ci/mypy_ratchet.py
+change_target:
+  - code
+risk_surface: contract_boundary

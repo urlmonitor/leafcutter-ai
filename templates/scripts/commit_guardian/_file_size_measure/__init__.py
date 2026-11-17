@@ -30,9 +30,9 @@ from pathlib import Path
 from .c_family_lines import js_lex
 from .errors import UnmeasurableContentError
 from .python_lines import python_lex
-from .shell_lines import shell_ranges
-from .spans import Range, counted_keys, normalise, split_physical_lines
-from .sql_lines import sql_ranges
+from .shell_lines import shell_lex
+from .spans import Break, Range, counted_keys, normalise, split_physical_lines
+from .sql_lines import sql_lex
 
 __all__ = [
     "SUPPORTED_EXTENSIONS",
@@ -44,22 +44,17 @@ __all__ = [
     "total_physical_lines",
 ]
 
-_Lexer = Callable[[str], tuple[list[Range], list[int]]]
+_Lexer = Callable[[str], tuple[list[Range], list[Break]]]
 
-
-def _without_breaks(ranges: Callable[[str], list[Range]]) -> _Lexer:
-    """Adapt a comments-only lexer (SQL, shell) to the (ranges, breaks) shape."""
-    return lambda text: (ranges(text), [])
-
-
-_LEXERS: dict[str, tuple[str, _Lexer]] = {
-    ".py": ("Python", python_lex),
-    ".sql": ("SQL", _without_breaks(sql_ranges)),
-    ".sh": ("shell", _without_breaks(shell_ranges)),
-    ".js": ("JavaScript", partial(js_lex, jsx=True, language="JavaScript")),
-    ".mjs": ("JavaScript", partial(js_lex, jsx=True, language="JavaScript")),
-    ".ts": ("TypeScript", partial(js_lex, jsx=False, language="TypeScript")),
-    ".tsx": ("TypeScript", partial(js_lex, jsx=True, language="TypeScript")),
+# (language name, lexer, one indentation level used to key a split-off statement)
+_LEXERS: dict[str, tuple[str, _Lexer, str]] = {
+    ".py": ("Python", python_lex, "    "),
+    ".sql": ("SQL", sql_lex, "  "),
+    ".sh": ("shell", shell_lex, "  "),
+    ".js": ("JavaScript", partial(js_lex, jsx=True, language="JavaScript"), "  "),
+    ".mjs": ("JavaScript", partial(js_lex, jsx=True, language="JavaScript"), "  "),
+    ".ts": ("TypeScript", partial(js_lex, jsx=False, language="TypeScript"), "  "),
+    ".tsx": ("TypeScript", partial(js_lex, jsx=True, language="TypeScript"), "  "),
 }
 
 SUPPORTED_EXTENSIONS = tuple(_LEXERS)
@@ -97,8 +92,9 @@ def counted_line_keys(content: str, extension: str) -> list[str]:
         detail = "no tokenizer is registered for this kind"
         raise UnmeasurableContentError(extension or "(no extension)", detail)
     text = normalise(content)
-    ranges, breaks = entry[1](text)
-    return counted_keys(text, ranges, breaks)
+    _name, lexer, unit = entry
+    ranges, breaks = lexer(text)
+    return counted_keys(text, ranges, breaks, unit)
 
 
 def measure_lines(content: str, extension: str) -> int:
@@ -124,4 +120,8 @@ DECISION HISTORY
 - 2026-10-23 [GE-127d-3-v]: Each lexer returns (ranges, statement breaks); a line holding several
   statements counts once per statement (Python and the JavaScript family; SQL and shell have no
   breaks). (#EPIC-FilesStayWorkable/GE-127d-3)
+- 2026-10-25 [GE-127d-3-vi]: SQL and shell supply statement breaks too, every break carries an
+  indent step, and each language names its indentation unit (four spaces in Python, two
+  elsewhere) so a split-off statement is keyed as it would stand on its own line.
+  (#EPIC-FilesStayWorkable/GE-127d-3)
 """
