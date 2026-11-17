@@ -136,6 +136,21 @@ AGENT_SUPPORT_SCRIPT_FILES: tuple[str, ...] = (
     # anything. Its config_loader import is lazy and only reached when no config
     # is passed; the maker always passes one.
     "worktree/sweep_processes.py",
+    # BP-900b-5: documentation-verifier.md's step 6a placeholder scan imports
+    # build_placeholder_detection from the deployed scripts directory. No phase
+    # shipped it, so in every consumer install the verifier failed closed with
+    # ModuleNotFoundError (DIAGraph, INF-120c-3). It imports
+    # build_placeholder_table_context at module scope (stdlib-only otherwise),
+    # so the two deploy together.
+    "build_placeholder_detection.py",
+    "build_placeholder_table_context.py",
+    # BP-900b-5: commit.md's Step 2a calls classify_staged_files() from
+    # commit_classifier.py (its PRIMARY subject path) and maybe_propose_rule()
+    # from commit_pattern_learner.py. Neither was deployed. Both are stdlib-only
+    # and read config/commit_message_patterns.json beside the deployed scripts
+    # (deployed with the core config by build_ac_store).
+    "commit_classifier.py",
+    "commit_pattern_learner.py",
 )
 
 

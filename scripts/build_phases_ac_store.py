@@ -484,6 +484,16 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
         "skill_registry.json",
         "guardrail_gates.yaml",
         "paths.json", "surface_craft_map.yaml", "commit_step.json",
+        # BP-900b-5: read by the deployed commit_classifier.py and
+        # commit_pattern_learner.py (commit.md Step 2a), and by agent prompts
+        # (onboard.md and test-writer.md read the defaults; test-writer.md
+        # validates ## Test Requirements against the schema). None shipped.
+        # build.py's two Set-B tuples declare commit_message_patterns.json,
+        # which the closure guard resolves from both deployed scripts. The two
+        # skills_config/test_requirements files are read by prompts only, so
+        # no deployed script's closure demands them there.
+        "commit_message_patterns.json", "skills_config.default.json",
+        "test_requirements.schema.json",
     ):
         core_config_src = _bp.PACKAGE_ROOT / "config" / core_config_name
         if not core_config_src.is_file():

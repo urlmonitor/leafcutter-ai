@@ -524,8 +524,7 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         "agent_registry.json",
         "doc_types.json",
         "diagram_types.json",
-        "skill_registry.json",
-        "guardrail_gates.yaml",
+        "skill_registry.json", "guardrail_gates.yaml", "commit_message_patterns.json",  # BP-900b-5
         "paths.json", "surface_craft_map.yaml", "commit_step.json",
         # config/reachability_exemptions.yaml: read by both
         # scripts/commit_guardian/_reachability_inventory.py (the shared
@@ -803,8 +802,7 @@ def _guard_source_paths_core_config(package_root: Path) -> set[str]:
         "agent_registry.json",
         "doc_types.json",
         "diagram_types.json",
-        "skill_registry.json",
-        "guardrail_gates.yaml",
+        "skill_registry.json", "guardrail_gates.yaml", "commit_message_patterns.json",  # BP-900b-5
         "paths.json", "surface_craft_map.yaml", "commit_step.json",
         "reachability_exemptions.yaml",
         "entry_kind_vocabulary.json",

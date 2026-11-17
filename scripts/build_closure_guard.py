@@ -84,6 +84,9 @@ _CONFIG_FILE_PHASE_BY_NAME: dict[str, str] = {
     "guardrail_gates.yaml": "build_ac_store",
     "paths.json": "build_ac_store", "surface_craft_map.yaml": "build_ac_store",
     "commit_step.json": "build_ac_store",
+    "commit_message_patterns.json": "build_ac_store",  # BP-900b-5
+    "skills_config.default.json": "build_ac_store",  # BP-900b-5
+    "test_requirements.schema.json": "build_ac_store",  # BP-900b-5
     "phase_deferral.yaml": "build_ac_store",
     "feedback_categories.yaml": "build_feedback",
     "knowledge_sink.json": "build_knowledge_sink_declaration",

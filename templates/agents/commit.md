@@ -225,7 +225,7 @@ is already approved — skip calling `classify_staged_files()` and use the appro
 subject verbatim. Do NOT re-invoke the classifier when a later call of the step
 is made after an autofix and the subject has already been confirmed.
 
-Otherwise, `classify_staged_files()` from `scripts/commit_classifier.py` is the
+Otherwise, `classify_staged_files()` from `{{config.output_root}}/scripts/commit_classifier.py` is the
 **PRIMARY path** for determining the commit subject. Pass it the explicit file
 list. It groups the files by recognised type and selects the appropriate
 message pattern automatically.
@@ -238,7 +238,7 @@ continue past a mixed-set warning.
 
 **Unknown-group delegation (AC BO-1100a-3):** When `result.specific_pattern_matched`
 is `False` (the classifier fell back to the UNKNOWN group), call
-`maybe_propose_rule(staged_paths)` from `scripts/commit_pattern_learner.py` to
+`maybe_propose_rule(staged_paths)` from `{{config.output_root}}/scripts/commit_pattern_learner.py` to
 hand the unmatched shape to the pattern-learning specialist. Show the returned
 proposal (if any) to the user.
 

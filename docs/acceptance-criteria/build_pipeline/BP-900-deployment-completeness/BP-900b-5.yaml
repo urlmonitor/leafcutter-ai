@@ -1,0 +1,99 @@
+id: BP-900b-5
+components:
+  - build_pipeline
+title: "Every package script or config file a compiled prompt tells the agent to run, import or read is deployed into a consumer install"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: done
+criteria: |
+  Given a consumer install produced by build.py into a project that is not the
+    package repository (the adopter layout: package scripts are deployed to
+    <output_root>/scripts/, package config to <output_root>/config/, and there
+    is no package scripts/ or config/ directory at the project root),
+  When a compiled agent, skill, command or workflow prompt tells the agent to
+    run a package script (python <path>.py), import one (sys.path.insert(...)
+    followed by "from <module> import", or "call <function> from <path>.py"),
+    or read, load, open, fall back to or conform to a package config file,
+  Then the file that reference names is present in that install, under
+    <output_root>/, because the build deploys it,
+  And the documentation-verifier's placeholder scan (its step 6a) imports
+    build_placeholder_detection from the deployed scripts directory, written
+    through the {{config.output_root}} placeholder, and runs there without
+    ModuleNotFoundError,
+  And build_placeholder_detection.py is deployed together with the
+    build_placeholder_table_context.py module it imports,
+  And a reference to a file that is not a package deliverable at all (a
+    host-project script, or an optional helper the prompt already says to skip
+    when absent) is named explicitly, with its reason, rather than silently
+    ignored,
+  Because at leafcutter v21.0.93 (pin 67a7b443) the documentation-verifier told
+    the agent to run sys.path.insert(0, '<worktree_root>/scripts'); from
+    build_placeholder_detection import scan_for_placeholders, while the build
+    never deployed that module. In the DIAGraph adopter the verifier failed
+    closed with ModuleNotFoundError, so every ticket with a
+    documentation-verifier phase was blocked (INF-120c-3 halted exactly this
+    way). BP-900b-4 fixed the reads of config files the build does deploy and
+    left the reads of files it never deploys out of scope; this AC covers them.
+depends_on: [BP-900b]
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900b-4.yaml"
+    relationship: related
+    status: exists
+  - path: templates/agents/documentation-verifier.md
+    relationship: modifies
+    status: exists
+  - path: scripts/build_phases_script_deploy.py
+    relationship: modifies
+    status: exists
+    relevance: "AGENT_SUPPORT_SCRIPT_FILES is the single deploy declaration build_agent_support_scripts and build.py's manifest both read."
+assigned_agent: python-coder
+estimated_complexity: S
+# Derived from the Then clause: the build writes the referenced files into the
+# consumer install, a durable artifact outside the build's own exit code.
+declares_side_effect: true
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-11-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_guards/test_bp_900b_5_prompt_references_deployed.py
+implemented_by:
+  - scripts/build_phases_script_deploy.py
+  - scripts/build_phases_ac_store.py
+  - scripts/build.py
+  - scripts/build_closure_guard.py
+  - templates/agents/documentation-verifier.md
+  - templates/agents/commit.md
+  - templates/agents/onboard.md
+  - templates/agents/test-writer.md
+change_target: code
+risk_surface: contract_boundary
+test_spec:
+  - name: test_documentation_verifier_placeholder_scan_runs_from_consumer_install
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "In the shared directed (consumer-layout) build, the exact placeholder-scan command the compiled documentation-verifier prompt gives the agent runs in an isolated interpreter, imports build_placeholder_detection from the install, and reports a TODO marker in a scratch file."
+    must_catch:
+      - "build_placeholder_detection.py is not deployed"
+      - "build_placeholder_table_context.py is not deployed"
+      - "the template inserts <worktree_root>/scripts instead of the deployed scripts directory"
+  - name: test_every_script_or_config_reference_in_compiled_prompts_is_deployed
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Every package script or config file that a compiled agent/skill/command/workflow prompt tells the agent to run, import or read resolves to a file present in the consumer install; the scan fails on an empty population, must see the documentation-verifier import as a positive control, and names each explicitly exempted non-package reference with its reason."
+    must_catch:
+      - "a prompt tells the agent to run, import or read a package file the build never deploys"
