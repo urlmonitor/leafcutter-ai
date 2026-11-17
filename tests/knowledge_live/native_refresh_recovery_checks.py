@@ -1,8 +1,7 @@
-"""Real writer interruption and operator retry, KM-400a-3-i."""
+"""Real writer interruption, own-generation removal and retry, KM-400a-3-i."""
 
 import argparse
 import asyncio
-import json
 from pathlib import Path
 import uuid
 
@@ -14,7 +13,7 @@ from knowledge.contracts import Entity, ProjectionSnapshot, SourceReference
 from knowledge.errors import BackendUnavailable
 
 
-def test_native_refresh_resumes_a_committed_partial_batch_without_changing_history(
+def test_interrupted_publication_removes_its_partial_generation_and_retry_keeps_history(
     tmp_path, monkeypatch
 ):
     # covers: KM-400a-3-i
@@ -55,8 +54,8 @@ def test_native_refresh_resumes_a_committed_partial_batch_without_changing_histo
             )
             normal_run = db._run
 
-            async def interrupted(statement, parameters=None, write=False):
-                rows = await normal_run(statement, parameters, write)
+            async def interrupted(statement, parameters=None, write=False, **kwargs):
+                rows = await normal_run(statement, parameters, write, **kwargs)
                 if write and "UNWIND $rows AS row MERGE (n:" in statement:
                     raise BackendUnavailable()
                 return rows
@@ -65,33 +64,45 @@ def test_native_refresh_resumes_a_committed_partial_batch_without_changing_histo
             with pytest.raises(BackendUnavailable):
                 await db.publish(target, expected_generation="old")
             db._run = normal_run
-            partial = await db._run(
+            # KM-400b-5-i: the failed publication removes its own partial generation in the same operation.
+            stranded = await db._run(
                 "MATCH (n:AC {generation_key:$key}) RETURN count(n) AS count",
                 {"key": target_key},
             )
-            assert partial == [{"count": 250}]
+            assert stranded == [{"count": 0}]
+            stranded_links = await db._run(
+                "MATCH ()-[r {generation_key:$key}]->() RETURN count(r) AS count",
+                {"key": target_key},
+            )
+            assert stranded_links == [{"count": 0}]
+            records = await db._run(
+                "MATCH (g:Snapshot {key:$key}) RETURN g.status AS status", {"key": target_key}
+            )
+            assert all(row["status"] == "failed" for row in records)
             assert (await db.active(repo)).generation_id == "old"
+            assert (
+                await db._run(
+                    "MATCH (n:AC {generation_key:$key}) RETURN n.payload AS payload ORDER BY n.key",
+                    {"key": old_key},
+                )
+                == retained
+            )
 
+            # The operator retry goes through the native refresh tool, as before KM-400b-5-i.
             monkeypatch.setattr(native_refresh, "resolve_neo4j", lambda config: credentials)
             monkeypatch.setattr(native_refresh, "writer_backend", lambda root: db)
             monkeypatch.setattr(native_refresh, "load_snapshot", lambda *args: target)
-            backup = tmp_path / "private-backup.json"
             args = argparse.Namespace(
                 root=str(Path(__file__).resolve().parents[2]),
                 source_root="unused-by-fixture",
                 repository_id=repo,
                 expected_host="127.0.0.1",
                 apply=True,
-                backup=str(backup),
+                backup=str(tmp_path / "private-backup.json"),
             )
             result = await native_refresh.run(args)
             assert result["published"] is True
-            assert result["resuming_staged_generation"] is True
             assert result["retained_generations_verified"] == 1
-            saved = json.loads(backup.read_text(encoding="utf-8"))
-            assert len(saved["staged_generations"]) == 1
-            assert saved["staged_generations"][0]["metadata"]["status"] == "failed"
-            assert len(saved["staged_generations"][0]["nodes"]) == 250
             verify = Neo4jBackend(*credentials, query_timeout=30)
             try:
                 assert (await verify.active(repo)).generation_id == "new"

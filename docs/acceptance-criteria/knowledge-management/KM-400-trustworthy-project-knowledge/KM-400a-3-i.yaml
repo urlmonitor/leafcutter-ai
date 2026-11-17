@@ -477,7 +477,7 @@ covered_by:
 - tests/knowledge/test_native_ticket.py::test_ticket_absent_store_returns_no_records
 - tests/knowledge/test_native_ticket.py::test_ticket_real_store_preserves_every_frontmatter_field
 - tests/knowledge_live/native_metadata_checks.py::test_native_metadata_is_typed_queryable_and_round_trips_in_neo4j
-- tests/knowledge_live/native_refresh_recovery_checks.py::test_native_refresh_resumes_a_committed_partial_batch_without_changing_history
+- tests/knowledge_live/native_refresh_recovery_checks.py::test_interrupted_publication_removes_its_partial_generation_and_retry_keeps_history
 implemented_by:
 - tickets/00_inbox/TICKET-20261009-KM-400a-3-i-native-query-maintenance.md
 - knowledge/adapters/neo4j_inspection.py
@@ -932,13 +932,14 @@ test_spec:
   covers:
   - KM-400a-3-i
   requires_db: true
-- name: test_native_refresh_resumes_a_committed_partial_batch_without_changing_history
+- name: test_interrupted_publication_removes_its_partial_generation_and_retry_keeps_history
   target_dir: tests/knowledge_live/
   framework: pytest
   type: integration
   angle: failure
   description: In native_refresh_recovery_checks.py, interrupt a real Neo4j publication after 250 of 251 nodes,
-    retry through native refresh and verify full activation and preserved history.
+    verify the partial generation is removed (KM-400b-5-i) with the previous active generation unchanged,
+    then retry through native refresh and verify full activation and preserved retained history.
   covers:
   - KM-400a-3-i
   requires_db: true
