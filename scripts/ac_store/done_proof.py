@@ -1357,7 +1357,7 @@ def _run_pytest_and_parse(test_files: list[Path], linked_functions: tuple[str, .
     """
     if not test_files:
         return {}
-    cmd = [*resolve_for_files(test_files).argv, "-m", "pytest", "-v", "--tb=no", "--no-header"]
+    cmd = [*resolve_for_files(test_files).argv, "-m", "pytest", "-v", "--tb=long", "--no-header"]
     cmd.extend([*_manual_opt_in_args(linked_functions), *(str(f) for f in test_files)])
     child_env = {**os.environ, "AC_ENFORCE_STRICT": "1"}
     timeout_seconds = _resolve_pytest_timeout_seconds(test_files)
@@ -1383,6 +1383,12 @@ def _run_pytest_and_parse(test_files: list[Path], linked_functions: tuple[str, .
             file=sys.stderr,
         )
         return {}
+    if proc.returncode != 0:
+        print("PROBE-KM400 BEGIN STDOUT", file=sys.stderr)
+        print(proc.stdout, file=sys.stderr)
+        print("PROBE-KM400 BEGIN STDERR", file=sys.stderr)
+        print(proc.stderr, file=sys.stderr)
+        print("PROBE-KM400 END", file=sys.stderr)
     if proc.returncode not in (0, 1):
         message = f"pytest run unfinished: {len(test_files)} file(s), returncode {proc.returncode}"
         print(f"WARNING: done_proof: {message}", file=sys.stderr)
