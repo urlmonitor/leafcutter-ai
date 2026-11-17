@@ -27,6 +27,7 @@ _SCANNED_FILES = _FIXTURE_FILES + (
     "ge_120e_1/test_ge_120e_1_criterion.py",
     "ge_120e_1/test_ge_120e_1_boundary_and_seam.py",
     "ge_120e_1/test_ge_120e_1_failure_and_reachability.py",
+    "ge_120e_1/test_ge_120e_1_iii_test_d_isolation.py",
 )
 
 

@@ -1,0 +1,124 @@
+id: GE-120e-1-iii
+title: "The test that poisons the shared change-set source poisons a copy, so a killed run never leaves a broken check in the repository"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the test that proves both self-deriving checks take their change set from the one
+    shared source, by replacing that source with one that always fails and watching both
+    checks report that they could not check,
+  When that test runs,
+  Then it writes nothing into the repository's own files: the failing replacement is put
+    into a private copy of the checks outside the repository, and the checks it runs are
+    that copy,
+  And a run that is killed at the moment the failing replacement is in place leaves the
+    repository's own shared source byte-for-byte as it was, with the same modification time,
+    and leaves the repository's status unchanged,
+  And the test still proves what it proved before: both checks, run as processes against the
+    same merge repository, report a could-not-check outcome and do not widen their scan to
+    the carried-in content, so a copy the checks never load fails the test rather than
+    passing it.
+
+  Coverage note: cover this by running the test as a separate process and watching the real
+  shared source and the repository status before, during and after the run, including a run
+  killed while the failing replacement is in place. Reading the test's source for a copy
+  call does not cover it (CLAUDE.md, "Gate / Workflow ACs — Verify Behaviorally, Not by
+  Grep").
+depends_on:
+  - GE-120e-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e-1.yaml
+    relationship: parent
+    status: exists
+  - path: unit_tests/portability/ge_120e_1/test_ge_120e_1_boundary_and_seam.py
+    relationship: modifies
+    status: exists
+    relevance: "Test D (the seam test) wrote its failing stub into templates/scripts/commit_guardian/_authored_change.py and restored it in a finally block, which a killed worker never reaches."
+  - path: templates/scripts/commit_guardian/_authored_change.py
+    relationship: related
+    status: exists
+    relevance: "The real shared source the seam test must never write. check_contract_shrinking.py, check_doc_frontmatter.py and check_presence_only_assertions.py import it, so a poisoned copy left in the tree breaks every test that runs those hooks from templates/."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "SEAM: THE CHECKS' OWN MODULE SEARCH PATH. Each check imports _authored_change as a sibling module, and Python puts the running script's own directory first on sys.path. Copying the commit_guardian directory to a private temporary directory and running the copied check_contract_shrinking.py and check_doc_frontmatter.py makes them import the copied _authored_change.py. No production code changes and no new environment variable are needed."
+  - "COPY, DO NOT SYMLINK. Python resolves a symlinked script to its target before taking its directory, so a symlinked check would import the REAL shared source again and the poison would never reach it. The copy is real files, taken from the working tree (the code under test), not from the fixture checkout, which is a detached checkout of HEAD."
+  - "THE CHECKS STILL RUN AGAINST THE SAME FIXTURE. Their working directory stays the merge fixture, so the repository rules they read through git rev-parse --show-toplevel (docs/components.json and the frontmatter rules) are unchanged; their own configuration (commit_guardian.json) travels with the copy."
+  - "THE TEST'S EVIDENCE MUST STILL BE THE CHECKS' OWN OUTPUT. Both checks must report could-not-check and must not name the carried-in document. A copy the checks do not load leaves them unpoisoned, so they would not report could-not-check and the test fails, which is what keeps the copy honest."
+  - "CLEAN UP WHAT A KILLED RUN LEAVES. The kill test runs the seam test with a private TMPDIR, so the copy and the fixture checkout land there; afterwards it removes any linked checkout and fixture branches the killed run left registered against the repository and deletes the private directory."
+test_intent:
+  - clause: "it writes nothing into the repository's own files: the failing replacement is put into a private copy of the checks outside the repository, and the checks it runs are that copy"
+    needs_test: true
+    reason: "This is the defect: the stub was written into the real templates file, where other tests and a killed run could see it."
+  - clause: "a run that is killed at the moment the failing replacement is in place leaves the repository's own shared source byte-for-byte as it was, with the same modification time, and leaves the repository's status unchanged"
+    needs_test: true
+    reason: "A finally block cannot protect against SIGKILL or an OOM kill, so only a test that actually kills the run proves the tree is safe."
+  - clause: "the test still proves what it proved before: both checks, run as processes against the same merge repository, report a could-not-check outcome and do not widen their scan to the carried-in content, so a copy the checks never load fails the test rather than passing it"
+    needs_test: true
+    reason: "Moving the poison must not turn the seam test into one that passes without the checks ever seeing the poison."
+test_spec:
+  - name: test_ge120e1iii_seam_test_poisons_a_copy_and_never_the_real_shared_module
+    target_dir: unit_tests/portability/ge_120e_1/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Runs test D as a separate process to completion while polling. Asserts the process passes, the failing stub was seen in a private copy, the real _authored_change.py never held it, and its bytes, modification time and the git status of templates/ are the same before and after."
+    proves_clause: "it writes nothing into the repository's own files: the failing replacement is put into a private copy of the checks outside the repository, and the checks it runs are that copy"
+    code_file: unit_tests/portability/ge_120e_1/test_ge_120e_1_boundary_and_seam.py
+    must_catch:
+      - "the stub written into the real templates/scripts/commit_guardian/_authored_change.py and restored in a finally block"
+      - "the checks run from the repository while only an unused copy is poisoned, so test D no longer reaches its could-not-check assertions"
+  - name: test_ge120e1iii_killed_seam_test_leaves_the_repository_tree_unchanged
+    target_dir: unit_tests/portability/ge_120e_1/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Runs test D as a separate process, waits until the failing stub is in place (in the copy or in the real file), kills the process group with SIGKILL, and asserts the real _authored_change.py has the same bytes and modification time and the git status of templates/ is unchanged."
+    proves_clause: "a run that is killed at the moment the failing replacement is in place leaves the repository's own shared source byte-for-byte as it was, with the same modification time, and leaves the repository's status unchanged"
+    code_file: unit_tests/portability/ge_120e_1/test_ge_120e_1_boundary_and_seam.py
+    must_catch:
+      - "the stub written into the real templates/scripts/commit_guardian/_authored_change.py and restored in a finally block"
+  - name: test_ge120e1iii_unpoisoned_copy_behaves_exactly_like_the_repository_checks
+    target_dir: unit_tests/portability/ge_120e_1/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "On the same merge fixture test D uses, runs both checks from test D's private copy (unpoisoned) and from the repository. Asserts the copy is outside the repository and holds no symlinks, both runs give the same exit status and the same output once the copy's path is replaced by the real one, and neither reports could-not-check. Test D itself (test_ge120e1_both_self_deriving_checks_inspect_the_same_authored_set, covers GE-120e-1) keeps its name and assertions, so its could-not-check evidence can only come from the poison."
+    proves_clause: "the test still proves what it proved before: both checks, run as processes against the same merge repository, report a could-not-check outcome and do not widen their scan to the carried-in content, so a copy the checks never load fails the test rather than passing it"
+    code_file: unit_tests/portability/ge_120e_1/test_ge_120e_1_boundary_and_seam.py
+    must_catch:
+      - "a copy missing a file the checks need, so they report could-not-check for a reason other than the poison"
+      - "a symlinked copy, so the checks resolve back to the repository and import the real module"
+test_rationale: "The defect is a test that mutates the repository tree, and its harm only shows when the run dies between the write and the restore, so the cover runs the test as a real process and kills it at the moment the stub is in place, then compares the real file's bytes, modification time and git status. A full run is checked the same way, with polling during the run, so a write that is later restored is still caught. The third clause is held by test D's own assertions: the checks only report could-not-check when the module they import raises, so a copy they never load fails test D."
+delivers_to: null
+expects_from:
+  ac_id: GE-120e-1
+  contract: "The seam test of the one shared change-set source, which this AC requires to prove the same thing without writing into the repository."
+origin_agent: BrainCandy
+created: 2026-11-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/portability/ge_120e_1/test_ge_120e_1_iii_test_d_isolation.py
+implemented_by:
+  - unit_tests/portability/ge_120e_1/test_ge_120e_1_boundary_and_seam.py
+change_target: code
+risk_surface: internal
+notes: |
+  Found by a read-only review on origin/main 1b4a4b859 (2026-11-17). Test D replaced the real
+  templates/scripts/commit_guardian/_authored_change.py with a stub that always raises and put
+  the original back in a finally block. A SIGKILL, an OOM kill or a crashed pytest-xdist worker
+  skips the finally block, leaving the real hook broken in the working tree, and under local
+  pytest -n about 40 other test files run hooks from that directory and could load the stub
+  while it was in place. CI runs without -n, so it was a local flake and a tree-corruption risk
+  rather than a CI failure.
+
+  PLACEMENT. An L3 constraint on GE-120e-1 because it constrains how GE-120e-1's own seam test
+  proves its last clause; it adds no new behaviour to the checks.
