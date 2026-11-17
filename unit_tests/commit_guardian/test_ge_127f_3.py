@@ -67,7 +67,9 @@ class TestAnyAdditionEngagesTheRule(unittest.TestCase):
 class TestTheOutcomeStatesTheDemandAndWhoTakesItOut(unittest.TestCase):
     """One combined, verbose commit carries every named arm, refused side by side."""
 
-    output = ""
+    output: str = ""
+    returncode: int = 0
+    _tmp: tempfile.TemporaryDirectory[str]
 
     @classmethod
     def setUpClass(cls) -> None:
