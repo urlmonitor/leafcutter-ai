@@ -302,7 +302,8 @@ amended_by:
     at: "2026-11-17"
 superseded_by: null
 covered_by: [BO-4400g-1-i, BO-4400g-1-ii]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261117-BO-4400g-1.md
 notes: |
   User request item (1). Today the clearing request accepts only a location, while making
   and looking up accept the work's identity; a caller therefore has to look up, parse and
