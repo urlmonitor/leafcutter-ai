@@ -218,7 +218,8 @@ amended_by:
     at: "2026-11-17"
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261117-BO-4400g-1.md
 notes: |
   Wrong version this must catch: a request that applies one identity and silently ignores
   the other (for example, "the line-of-work name wins"), which clears "beta" when the caller

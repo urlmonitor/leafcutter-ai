@@ -213,7 +213,8 @@ amended_by:
     at: "2026-11-17"
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261117-BO-4400g-1.md
 notes: |
   A repeat clear must not be a failure: flows and the landed-work pass both clear, and the
   second caller arriving after the first is the normal case, not an error.
