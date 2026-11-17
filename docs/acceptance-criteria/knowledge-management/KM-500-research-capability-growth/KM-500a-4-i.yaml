@@ -1,0 +1,254 @@
+id: KM-500a-4-i
+title: Evaluation drives the research run itself, so needs interpretation and operation selection are measured
+component: knowledge-management
+components:
+- knowledge_management
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-500a-4
+criteria: |
+  Given a reviewed evaluation case whose question names no operation, for example "Which ACs under GE-118 are still todo?", with the reviewed expected outcome "select the descendant-status operation with root GE-118 bound"
+  And the evaluation is configured with a scripted host and a scripted Jev
+  When the kernel-path evaluation runs that case
+  Then the case starts a research run through the same public start entry point an agent uses, so host needs interpretation and Jev operation selection both execute for that case
+  And the case result names the outcome reached, one of clarification, selected_operation, missing_query, unsupported_data, field_gap, unavailable, denied, budget_exhausted, selection_uncertain or unresolved, together with the selected operation identity, its bound arguments and its selection confidence beside the selection gate value in force
+  And when the case carries a reviewed clarification reply, the same paused run is continued through the public resume entry point with that reply, and the clarification request and the resumed outcome are each scored against their own reviewed expectation
+  And each case result carries the source revision, the catalog version and descriptor digests, the host and Jev identities with their prompt and settings identifiers, the count of host calls and of Jev calls, and the end-to-end latency
+  And a case whose run neither finishes nor pauses within its case budget is reported unresolved with the stop reason and stays in the denominator
+  And the report states the total, executed, passed, failed, not-run, unresolved and selection_uncertain counts for the run
+  And an existing explicit-operation evaluation pack, evaluated again after this change, produces the same verdicts and denominators as before.
+depends_on:
+- KM-500a-4
+- KM-500a-1
+- KM-500a-2
+- KM-500a-3
+- KM-500e-1-i
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+  relationship: context
+  status: exists
+  relevance: Parent obligation; this record states the runner behaviour the parent's measurement needs.
+- path: docs/reference/knowledge-retrieval-answers.md
+  relationship: context
+  status: exists
+  relevance: Existing evaluation states, denominators and version identities that the kernel-path results reuse.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Current public evaluate surface, which runs explicit-operation retrieval only.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Kernel integration boundary the evaluation must call through, not around.
+- path: docs/product-truth/flows/leafcutter/retrieval-current-baseline.flow.json
+  relationship: context
+  status: exists
+  relevance: Outcome names map to the flow's select step and its direct, clarify, data-gap, build, unavailable and skip branches.
+- path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+  relationship: context
+  status: exists
+  relevance: Inherited standing rule; every reported figure states its denominator and method.
+assigned_agent: python-coder
+estimated_complexity: L
+declared_files:
+- path: integrations/kernel_path_evaluation.py
+  state: to_be_created
+- path: integrations/kernel_path_outcomes.py
+  state: to_be_created
+- path: integrations/knowledge_cli.py
+  state: existing
+it_requirements:
+- "Placement: the kernel-path runner lives in integrations/, not knowledge/. Neutral knowledge/ must not import kernel or integrations (ADR-062; knowledge/__main__.py is documented as 'no kernel initialization'; integrations/knowledge_cli.py exists to compose kernel pieces without importing the kernel from knowledge). The runner must not introduce an import cycle between kernel and integrations."
+- "Entry point: each case starts its run through KernelService.start_run (kernel/service.py:132, the RunService protocol every client uses) and continues a paused run through KernelService.resume_run (kernel/service.py:156). It must never call KnowledgeRetriever.retrieve with an explicit operation, which is what knowledge/evaluation.py:201 does today and why host needs interpretation and Jev selection are never measured."
+- "Surface: the runner is exposed as a sibling command of the application CLI in integrations/knowledge_cli.py. The existing python -m knowledge evaluate command and knowledge/evaluation.py stay byte-for-byte behaviour-compatible; the regression clause is proved by re-running an existing explicit-operation pack and comparing verdicts and denominators, not by inspection."
+- "Injection seam: the runner accepts a caller-composed kernel environment (registry snapshot, run store, knowledge retriever, host and Jev providers), so the required suite can run it over the in-process storage double plus real Git projection without a database (the pattern in tests/knowledge/public_retrieval_needs_support.py and tests/kernel/integration/scenario_support.py)."
+- "Outcome classification is derived only from the run's own durable artifacts (envelope status, pending interaction kind, capability gap kind, retrieval result status and the recorded selection observation) through one mapping. A state the mapping does not know is reported unresolved with the raw state named, never coerced into a passing outcome."
+- "Selection identity, probability, confidence and the gate values in force are read from the selection observation the run already records (integrations/graph_selection.py records selected_value, selected_probability, confidence, minimum_selected_probability and minimum_confidence before returning None below the gate). A below-gate pick is reported selection_uncertain with that candidate and its figures, not as a clarification. The runner never re-asks Jev to obtain these values."
+- "Call counts come from the envelope usage summary (kernel/contracts/run.py UsageSummary: jev_calls, host_operations). An unknown count (None) is reported unknown, never 0, and an unknown count cannot satisfy a zero-extra-calls threshold."
+- "Each case runs under its own case budget (wall clock and kernel step limits). A run that neither finishes nor pauses within it is stopped, reported unresolved with the stop reason, and kept in the denominator. One case's failure or timeout never aborts the remaining cases."
+- "Expected outcomes are read only after the case's actual result is recorded (the rule already stated in knowledge/evaluation.py), and no expected value is ever passed into the run as input or used to fill an actual field."
+- "Version identities per case: source revision, catalog version and descriptor digests, host instruction and prompt identifiers, Jev model and purpose/settings identifiers. Credentials and raw provider prompts never appear in the report."
+- "External I/O (run store, Git, providers) follows the project error-handling policy: specific exceptions, logged at WARNING or higher, and a provider failure becomes the case outcome unavailable rather than a crash of the run."
+test_required: true
+test_intent:
+- clause: "the case starts a research run through the same public start entry point an agent uses, so host needs interpretation and Jev operation selection both execute for that case"
+  needs_test: true
+  reason: The whole record exists because the current evaluator bypasses this path, so a test must show both actors actually ran.
+- clause: "the case result names the outcome reached, one of clarification, selected_operation, missing_query, unsupported_data, field_gap, unavailable, denied, budget_exhausted, selection_uncertain or unresolved, together with the selected operation identity, its bound arguments and its selection confidence beside the selection gate value in force"
+  needs_test: true
+  reason: Outcome mapping from run artifacts is computed and a wrong mapping would silently mis-score every case.
+- clause: "when the case carries a reviewed clarification reply, the same paused run is continued through the public resume entry point with that reply, and the clarification request and the resumed outcome are each scored against their own reviewed expectation"
+  needs_test: true
+  reason: Resuming the same run rather than starting a new one is behaviour a shortcut implementation would skip.
+- clause: "each case result carries the source revision, the catalog version and descriptor digests, the host and Jev identities with their prompt and settings identifiers, the count of host calls and of Jev calls, and the end-to-end latency"
+  needs_test: true
+  reason: Missing identities or a defaulted call count would make results incomparable without any visible error.
+- clause: "a case whose run neither finishes nor pauses within its case budget is reported unresolved with the stop reason and stays in the denominator"
+  needs_test: true
+  reason: Dropping stuck cases from the denominator is the silent inflation this clause forbids.
+- clause: "the report states the total, executed, passed, failed, not-run, unresolved and selection_uncertain counts for the run"
+  needs_test: true
+  reason: The denominators are computed and must reconcile with the per-case rows.
+- clause: "an existing explicit-operation evaluation pack, evaluated again after this change, produces the same verdicts and denominators as before"
+  needs_test: true
+  reason: Building the new path by changing the old evaluator would break existing explicit-operation results.
+test_spec:
+- name: test_case_starts_run_via_start_run_and_both_actors_execute
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Compose the real kernel over the in-process storage double with scripted host and scripted Jev (PublicNeedsHarness pattern), run a no-operation case, and assert KernelService.start_run was called once and both the host needs call and the Jev selection call counters are above 0 for that case.
+  proves_clause: the case starts a research run through the same public start entry point an agent uses, so host needs interpretation and Jev operation selection both execute for that case
+  code_file: integrations/kernel_path_evaluation.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - an evaluator that still calls retriever.retrieve with an explicit operation, showing 0 host calls and 0 Jev calls for the case
+    - a runner that calls KernelService internals instead of start_run
+- name: test_outcome_mapping_covers_every_named_outcome_with_selection_figures
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Drive scripted cases that end in each of clarification, selected_operation, missing_query, unsupported_data, field_gap, unavailable, denied, budget_exhausted and selection_uncertain, and assert the outcome, selected operation, bound arguments, selected probability, confidence and the gate values from the recorded selection observation. An unknown run state must give unresolved naming the raw state.
+  proves_clause: the case result names the outcome reached, one of clarification, selected_operation, missing_query, unsupported_data, field_gap, unavailable, denied, budget_exhausted, selection_uncertain or unresolved, together with the selected operation identity, its bound arguments and its selection confidence beside the selection gate value in force
+  code_file: integrations/kernel_path_outcomes.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+- name: test_below_gate_pick_is_selection_uncertain_not_clarification
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: A scripted Jev pick at probability 0.71 against a 0.80 gate (the A02 shape, via the observation graph_selection records) is reported selection_uncertain with that candidate and its figures, and the runner makes no extra Jev call to obtain them.
+  proves_clause: the case result names the outcome reached, one of clarification, selected_operation, missing_query, unsupported_data, field_gap, unavailable, denied, budget_exhausted, selection_uncertain or unresolved, together with the selected operation identity, its bound arguments and its selection confidence beside the selection gate value in force
+  code_file: integrations/kernel_path_outcomes.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a below-gate pick reported as clarification or as a passing selected_operation
+    - a runner that re-asks Jev to read the selection figures
+- name: test_clarification_case_resumes_same_run_via_resume_run
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: A case with a reviewed clarification reply pauses, is continued through KernelService.resume_run on the same run id (no second start_run), and the clarification request and the resumed outcome are scored against separate expectations.
+  proves_clause: when the case carries a reviewed clarification reply, the same paused run is continued through the public resume entry point with that reply, and the clarification request and the resumed outcome are each scored against their own reviewed expectation
+  code_file: integrations/kernel_path_evaluation.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+- name: test_case_result_carries_identities_counts_and_unknown_is_never_zero
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Each result carries source revision, catalog version and descriptor digests, host and Jev identity with prompt and settings ids, host and Jev call counts and end_to_end_ms. An envelope usage summary with jev_calls None gives jev_calls null in the result, and that null fails a zero-extra-calls check.
+  proves_clause: each case result carries the source revision, the catalog version and descriptor digests, the host and Jev identities with their prompt and settings identifiers, the count of host calls and of Jev calls, and the end-to-end latency
+  code_file: integrations/kernel_path_evaluation.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - an unknown jev_calls reported as 0 so it passes a zero-extra-calls threshold
+    - a result that omits the catalog descriptor digests or credentials leaking into the report
+- name: test_stuck_case_is_unresolved_with_stop_reason_and_stays_in_denominator
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: A scripted host that never answers exceeds a tiny case budget; the case is unresolved with a stop reason, counted in total, and the following cases still run.
+  proves_clause: a case whose run neither finishes nor pauses within its case budget is reported unresolved with the stop reason and stays in the denominator
+  code_file: integrations/kernel_path_evaluation.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a stuck case dropped from the total
+    - one timed-out case aborting the remaining cases
+- name: test_report_counts_reconcile_with_case_rows
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Run a mixed set of scripted cases and assert total, executed, passed, failed, not_run, unresolved and selection_uncertain equal the counts recomputed from the per-case rows.
+  proves_clause: the report states the total, executed, passed, failed, not-run, unresolved and selection_uncertain counts for the run
+  code_file: integrations/kernel_path_evaluation.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+- name: test_explicit_operation_pack_gives_same_verdicts_and_denominators
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Evaluate an existing explicit-operation version-2 pack through knowledge.evaluation.evaluate over the in-process storage double and assert verdicts and denominators equal a stored expectation captured from the pre-change evaluator; evaluate still calls retriever.retrieve once per runnable case.
+  proves_clause: an existing explicit-operation evaluation pack, evaluated again after this change, produces the same verdicts and denominators as before
+  code_file: knowledge/evaluation.py
+- name: test_kernel_path_command_is_reachable_from_knowledge_cli
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Run python -m integrations.knowledge_cli with the new sibling command as a subprocess over a scripted environment and a one-case pack with no credentials set, and assert exit 0 and a JSON report carrying the per-case outcome and the denominators.
+  proves_clause: the case starts a research run through the same public start entry point an agent uses, so host needs interpretation and Jev operation selection both execute for that case
+  code_file: integrations/knowledge_cli.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-17"
+test_design_opened_files:
+- knowledge/evaluation.py
+- kernel/service.py
+- integrations/knowledge_cli.py
+- integrations/graph_selection.py
+- tests/knowledge/test_query_answer_contract_acceptance.py
+- tests/knowledge/public_retrieval_needs_support.py
+file_findings:
+- file: integrations/knowledge_cli.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It is the application CLI that composes kernel pieces outside neutral knowledge/, so it is the right surface for the sibling kernel-path command.
+  decision: null
+file_findings_opened_files:
+- integrations/knowledge_cli.py
+delivers_to:
+- agent: python-coder
+  contract: 'Per-case kernel-path result (JSON object): case_id str, category str|null, outcome one of clarification|selected_operation|missing_query|unsupported_data|field_gap|unavailable|denied|budget_exhausted|selection_uncertain|unresolved,
+    selected_operation str|null, bound_arguments object|null, selected_probability float|null, selection_confidence float|null, gate {min_confidence float, min_selected_probability float},
+    clarification {request object, resumed_outcome str}|null, stop_reason str|null, source_sha str, catalog_version str|null, descriptor_digests object,
+    host {identity str, kind scripted|real, prompt_id str} , jev {identity str, kind scripted|real, settings_id str}, host_calls int|null, jev_calls int|null (null = unknown, never 0),
+    end_to_end_ms float. Run level: denominators {total, executed, passed, failed, not_run, unresolved, selection_uncertain} as ints.'
+- agent: python-coder
+  contract: Injectable runner entry point (caller-composed kernel environment, no database, no provider) returning the per-case result and run denominators above,
+    so the required suite can drive scripted S1 cases through KernelService.start_run/resume_run.
+- agent: documentation-expert
+  contract: The sibling command name and options in integrations/knowledge_cli.py and the per-case and run-level report fields above, for the how-to.
+expects_from:
+- ac_id: KM-500a-4
+  contract: Parent obligation, measure planning and selection through the public research entry point with recorded source revision, catalog version and provider settings, and explicit not-run prerequisites.
+- ac_id: KM-500a-2
+  contract: Registered query selection with recorded reason and confidence through the public research run.
+- ac_id: KM-500e-1-i
+  contract: Host needs interpretation carried through the public retrieval route.
+origin_agent: business-analyst
+created: '2026-11-16'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'Audit 2026-11-16 (km-500-audit.md, sections 1 and 3, build-order step 1): the supported evaluate command calls
+  retrieval with an explicit operation only, so it never runs host needs interpretation or Jev selection, which is
+  where the live A02 blocker sits (get_entities chosen at 0.71 against the 0.80 gate). The user named
+  KernelService.start_run/resume_run as the path to drive and allowed either extending knowledge evaluate or adding a
+  sibling command; the choice is the IT PO''s. The regression clause on the existing explicit-operation pack was not
+  asked for; it stops the new path from being built by replacing the old one. Out of scope: the issue-02 selector fix,
+  promoting the manual RQE runners into CI, eval sets S2-S8. Draft; no provider call was made while authoring.'

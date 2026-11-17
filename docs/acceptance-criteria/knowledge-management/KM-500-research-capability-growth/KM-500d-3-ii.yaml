@@ -1,0 +1,191 @@
+id: KM-500d-3-ii
+title: The coverage requirement is fixed with the set, so it cannot be absent or lowered to pass a comparison
+component: knowledge-management
+components:
+- knowledge_management
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-500d-3
+criteria: |
+  Given a case pack that has no coverage requirement fixed with its set
+  When a baseline report and a proposal report on it are compared
+  Then the comparison outcome is limited with the reason "no frozen coverage requirement", whatever the pack declares about itself
+
+  Given a baseline report measured on S1 under its fixed coverage requirement, in which one_suitable_query needs at least 15 cases
+  And that requirement is then lowered to 5 cases while the case file stays the same
+  When the baseline and a proposal measured under the lowered requirement are compared
+  Then the comparison outcome is invalidated, naming the coverage requirement as changed since the baseline
+  And no promotion verdict is given until the requirement is fixed again and the baseline is measured under it
+
+  Given a case set in which 7 cases have no category label or no target family
+  When its representativeness is worked out
+  Then those 7 cases count toward no category and no family, and the result states the count of unlabelled cases.
+depends_on:
+- KM-500d-3
+- KM-500d-3-i
+- KM-500a-4-v
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500d-3.yaml
+  relationship: context
+  status: exists
+  relevance: Parent invalidates prior comparisons when answer meaning, query behaviour or source mapping changes; this
+    adds the coverage requirement to that list.
+- path: docs/reference/knowledge-retrieval-answers.md
+  relationship: context
+  status: exists
+  relevance: Existing invalidated comparison outcome for incompatible reviewed scope.
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+- path: knowledge/evaluation_comparison.py
+  state: existing
+- path: knowledge/evaluation.py
+  state: existing
+- path: knowledge/__main__.py
+  state: existing
+it_requirements:
+- "The coverage requirement used by a comparison is the one in the frozen set's policy.json, verified against its sha256 in set.lock.json (KM-500a-4-v). A requirement read only from a report body, with no matching frozen hash, counts as absent."
+- "python -m knowledge compare accepts the frozen set identity as an optional input; compare with no frozen requirement gives limited with the exact reason 'no frozen coverage requirement', whatever the pack's coverage block says. Without that input the existing gates behaviour is otherwise unchanged."
+- "Each evaluation report (knowledge/evaluation.py and the kernel-path runner) records the coverage-requirement hash it was measured under. _compatibility in knowledge/evaluation_comparison.py treats a different hash between baseline and proposal as invalidated, naming the coverage requirement as changed since the baseline, alongside the existing review_fingerprint, source_sha and answer_semantics_version checks."
+- "No promotion verdict (eligible or limited-as-promotion) is emitted while the requirement differs; the outcome stays invalidated until a baseline is measured under the newly frozen requirement."
+- "Cases with no category label or no target family count toward no category and no family, and the result states the unlabelled count. They are never assigned a default category."
+- "Adding the report field must not change any existing verdict, denominator or review_fingerprint semantics of python -m knowledge evaluate for packs that carry no frozen set (the KM-500a-4-i regression clause)."
+test_required: true
+test_intent:
+- clause: "the comparison outcome is limited with the reason \"no frozen coverage requirement\", whatever the pack declares about itself"
+  needs_test: true
+  reason: The absent-requirement path must be shown to ignore a self-declared pack claim.
+- clause: "the comparison outcome is invalidated, naming the coverage requirement as changed since the baseline"
+  needs_test: true
+  reason: Lowering the requirement to pass is the bypass this record closes, and only a comparison test shows it is caught.
+- clause: "no promotion verdict is given until the requirement is fixed again and the baseline is measured under it"
+  needs_test: true
+  reason: A promotion verdict leaking through an invalidated comparison would defeat the invalidation.
+- clause: "those 7 cases count toward no category and no family, and the result states the count of unlabelled cases"
+  needs_test: true
+  reason: Defaulting unlabelled cases into a category would inflate coverage silently.
+test_spec:
+- name: test_no_frozen_requirement_gives_limited_whatever_the_pack_declares
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Compare two reports on a pack with no frozen coverage requirement, with other gates passing and the pack coverage block declaring representative true and carrying its own coverage_requirement body; promotion is limited with the exact reason "no frozen coverage requirement". A requirement present only in a report body with no matching frozen hash counts as absent.
+  proves_clause: the comparison outcome is limited with the reason "no frozen coverage requirement", whatever the pack declares about itself
+  code_file: knowledge/evaluation_comparison.py
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a requirement read from the report body with no frozen hash treated as present
+    - a self-declared pack claim turning the absent-requirement case eligible
+- name: test_lowered_requirement_invalidates_the_comparison_naming_the_change
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: A baseline measured under a requirement of 15 for one_suitable_query and a proposal measured under 5 on an unchanged case file; compare_reports returns status invalidated with a reason naming the coverage requirement as changed since the baseline, alongside the existing review_fingerprint and source_sha checks.
+  proves_clause: the comparison outcome is invalidated, naming the coverage requirement as changed since the baseline
+  code_file: knowledge/evaluation_comparison.py
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - lowering the requirement to 5 passing a comparison that failed at 15
+    - the compatibility check ignoring the coverage requirement hash
+- name: test_invalidated_comparison_leaks_no_promotion_verdict
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: In the invalidated comparison above the output has promotion blocked, neither eligible nor limited-as-promotion, and stays invalidated until a baseline is re-measured under the new hash, after which a comparison under equal hashes can reach a verdict.
+  proves_clause: no promotion verdict is given until the requirement is fixed again and the baseline is measured under it
+  code_file: knowledge/evaluation_comparison.py
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a promotion verdict of eligible leaking through an invalidated comparison
+- name: test_evaluate_report_records_the_coverage_requirement_hash
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Run knowledge.evaluation.evaluate over a version-2 pack with a frozen set identity through the in-process storage double and assert the report carries the coverage-requirement hash; for a pack with no frozen set the verdicts, denominators and review_fingerprint are unchanged from the same pack evaluated before the field existed.
+  proves_clause: the comparison outcome is invalidated, naming the coverage requirement as changed since the baseline
+  code_file: knowledge/evaluation.py
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - the new report field changing review_fingerprint for packs without a frozen set
+- name: test_seven_unlabelled_cases_count_toward_no_category_or_family
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: A case set with 7 cases missing a category label or a target family; the representativeness result counts those 7 toward no category and no family, states unlabelled 7, and the category counts equal those of the same set with the 7 rows removed.
+  proves_clause: those 7 cases count toward no category and no family, and the result states the count of unlabelled cases
+  code_file: knowledge/evaluation_comparison.py
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - unlabelled cases defaulted into a category inflating coverage
+    - the unlabelled count not stated
+- name: test_compare_command_with_frozen_set_input_and_without_it
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Run python -m knowledge compare as a subprocess with no frozen set input and assert the limited outcome with the reason "no frozen coverage requirement"; then with a frozen set input whose policy hash differs from the lock and assert it is treated as absent. Without the new input the existing gates behaviour is unchanged.
+  proves_clause: the comparison outcome is limited with the reason "no frozen coverage requirement", whatever the pack declares about itself
+  code_file: knowledge/__main__.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-17"
+test_design_opened_files:
+- knowledge/evaluation_comparison.py
+- knowledge/evaluation.py
+- knowledge/__main__.py
+- tests/knowledge/test_query_answer_contract_acceptance.py
+file_findings:
+- file: knowledge/evaluation_comparison.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds compare_reports and _compatibility, where the coverage requirement hash must join the invalidation checks.
+  decision: null
+- file: knowledge/evaluation.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It builds the version-2 evaluation report that must record the coverage requirement hash.
+  decision: null
+- file: knowledge/__main__.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It defines the compare command whose optional frozen set input the criteria add.
+  decision: null
+file_findings_opened_files:
+- knowledge/evaluation_comparison.py
+- knowledge/evaluation.py
+- knowledge/__main__.py
+delivers_to:
+- agent: documentation-expert
+  contract: The rule that the coverage requirement is fixed with the set, plus the limited reason 'no frozen coverage requirement' and the invalidated outcome when the requirement changes, for the how-to.
+expects_from:
+- ac_id: KM-500d-3-i
+  contract: Representativeness worked out from case labels.
+- ac_id: KM-500a-4-v
+  contract: Fixed set hashes and invalidation on change.
+origin_agent: business-analyst
+created: '2026-11-16'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500d-3.yaml
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'Not asked for by name. Once representativeness comes from the case set (KM-500d-3-i), the next way around it is
+  to lower the requirement the set is measured against. Fixing the requirement with the set closes that route, the
+  same way the case-file hash closes the route of editing cases. Draft.'

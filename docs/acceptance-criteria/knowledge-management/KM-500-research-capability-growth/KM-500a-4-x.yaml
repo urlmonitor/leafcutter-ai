@@ -1,0 +1,249 @@
+id: KM-500a-4-x
+title: The S1 data run is recorded per file and producer, and S1 is locked in a commit before any scored run
+component: knowledge-management
+components:
+- knowledge_management
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-500a-4
+criteria: |
+  Given the S1 data run has been carried out at one pinned Git revision
+  When S1 is checked before its first scored run
+  Then these exist at that revision, and each one records the dispatch or person that produced it: the case file and the holdout file, the reviewer A judgment file, the reviewer B judgment file, the adjudication record, the oracle and the set lock
+  And the case file and the holdout file were produced by one case-drafting dispatch, which records that it saw no run report, no system output, no expected outcome and no host or catalog prompt text being tuned
+  And the reviewer A and reviewer B judgment files were produced by two separate reviewer dispatches, each recording its own dispatch identity, the pinned revision and the Git bytes it read at that revision, and neither recording the other's judgment, a run report or system output among its inputs
+  And every case on which the two judgments disagree appears in the adjudication record either with the user named as adjudicator and the user's reason, or as dropped from S1, and the report states the adjudicated count and the dropped count
+  And the provenance check refuses the whole set, naming the file and the reason, when any of these holds: a file records no producer; the case file and a reviewer judgment file name the same dispatch; both reviewer judgment files name the same dispatch; a reviewer judgment names a revision other than the pinned one; an adjudication names anyone other than the user as adjudicator; a file names a ticket-phase build agent, such as the coder or the test writer, as its producer
+  And the set lock is committed in a commit that comes before the commit of any S1 run report, scripted or real
+  And a scored run attempted while no committed set lock exists is reported not_run with the unmet prerequisite "S1 not frozen" and contributes no figure to any S1 result.
+depends_on:
+- KM-500a-4
+- KM-500a-4-iv
+- KM-500a-4-v
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4-iv.yaml
+  relationship: context
+  status: exists
+  relevance: S1 composition and the case-drafting procedure; the data run must produce a set that passes or is
+    explicitly limited by this check.
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4-v.yaml
+  relationship: context
+  status: exists
+  relevance: Two independent reviewers at a pinned revision, the merge into the oracle and the set lock this record
+    requires to be produced and committed.
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+  relationship: context
+  status: exists
+  relevance: Parent requires independently reviewed cases and cases frozen before the proposed planner is scored.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Knowledge retrieval component whose evaluation set this data run produces; the checks run here belong to
+    its neutral knowledge/ code.
+assigned_agent: research-agent
+estimated_complexity: L
+declared_files:
+- path: tests/fixtures/kernel_path_evaluation/s1/cases.json
+  state: to_be_created
+- path: tests/fixtures/kernel_path_evaluation/s1/holdout.json
+  state: to_be_created
+- path: tests/fixtures/kernel_path_evaluation/s1/reviews/reviewer-a.json
+  state: to_be_created
+- path: tests/fixtures/kernel_path_evaluation/s1/reviews/reviewer-b.json
+  state: to_be_created
+- path: tests/fixtures/kernel_path_evaluation/s1/adjudication.json
+  state: to_be_created
+- path: tests/fixtures/kernel_path_evaluation/s1/oracle.json
+  state: to_be_created
+- path: tests/fixtures/kernel_path_evaluation/s1/set.lock.json
+  state: to_be_created
+it_requirements:
+- "Execution: this record is executed by the driving session as an explicit build step, not by a ticket-phase agent. It must not be routed through /build-ac, /build-feature or the fast lane to python-coder or test-writer: the coder and the test writer that build the runner and the checks are not independent of the data, and sub-agents run at depth 1. assigned_agent names the agent type the driving session dispatches for the case-drafting dispatch and the two reviewer dispatches (research-agent: read-only, not a ticket phase). The driving session writes each dispatch's returned output to its file verbatim and records that dispatch as the producer."
+- "Data, not code: every file this record produces (cases.json, holdout.json, reviews/reviewer-a.json, reviews/reviewer-b.json, adjudication.json, oracle.json and set.lock.json under tests/fixtures/kernel_path_evaluation/s1/) is eval-set data. No code is written or edited under this record. The case-file schema and composition check (KM-500a-4-iv) and the parse script, provenance check, merge, lock writer and lock-before-run check (KM-500a-4-v) are code owned by those records and are only run here; a defect found in one goes back to its owning record and is never patched during the data run."
+- "Dispatch separation: the case-drafting dispatch, the reviewer A dispatch and the reviewer B dispatch are three separate dispatches, each started from a fresh context with no shared transcript and each with its own dispatch identity. Each reviewer receives exactly the inputs KM-500a-4-v allows. The case-drafting dispatch sees no run report, no system output, no expected outcome and no host or catalog prompt text being tuned, and its producer record says so."
+- "Producer record on every produced file: the dispatch identity (agent type plus a dispatch id unique to that dispatch) or the user by name, the pinned SHA, and the inputs consulted as repo path plus Git blob sha256. A redone dispatch gets a new dispatch identity and replaces its whole file; no produced file is hand-edited after its producer wrote it."
+- "Adjudication is by the user only. Every case on which the two judgments disagree is put to the user, and the adjudication record holds either the user as adjudicator with the user's reason, or the case as dropped from S1. No agent dispatch adjudicates, including a third reviewer, and the merge never picks a side. The report states the adjudicated count and the dropped count."
+- "Order: drafting, then the two reviews, then user adjudication, then the deterministic merge that writes oracle.json, then the composition check and the provenance check pass or report limited, then set.lock.json is written. The lock is committed, through the commit agent, in a commit that precedes any commit adding an S1 run report (scripted or real) or changing host instructions, prompts or catalog descriptions meant to be evaluated on S1. The pinned SHA is an ancestor of origin/main when the lock is written."
+- "The lock fixes the hash of policy.json, so it must not be written while the open threshold question in KM-500a-4-vii notes (a ceiling on the selection_uncertain share) is unanswered. This record does not answer that question."
+- "Disclosure: the data run makes no call to the external Jev provider and sends no case text, repository content or holdout content to any external service; drafting and review read Git bytes locally."
+test_required: true
+test_intent:
+- clause: "these exist at that revision, and each one records the dispatch or person that produced it: the case file and the holdout file, the reviewer A judgment file, the reviewer B judgment file, the adjudication record, the oracle and the set lock"
+  needs_test: true
+  reason: A missing file or producer record in the committed set is exactly what makes the S1 data unauditable, and only a check over the real files shows it.
+- clause: "the case file and the holdout file were produced by one case-drafting dispatch, which records that it saw no run report, no system output, no expected outcome and no host or catalog prompt text being tuned"
+  needs_test: true
+  reason: The case-drafting producer record is the only evidence that the cases were written blind, and its absence must be caught on the real files.
+- clause: "the reviewer A and reviewer B judgment files were produced by two separate reviewer dispatches, each recording its own dispatch identity, the pinned revision and the Git bytes it read at that revision, and neither recording the other's judgment, a run report or system output among its inputs"
+  needs_test: true
+  reason: Reviewer independence is the property the oracle rests on, and only the recorded identities and inputs can show it held.
+- clause: "every case on which the two judgments disagree appears in the adjudication record either with the user named as adjudicator and the user's reason, or as dropped from S1, and the report states the adjudicated count and the dropped count"
+  needs_test: true
+  reason: A disagreement that silently became an oracle entry would hide a contested expectation, which only a per-case comparison of the two judgments reveals.
+- clause: "the provenance check refuses the whole set, naming the file and the reason, when any of these holds: a file records no producer; the case file and a reviewer judgment file name the same dispatch; both reviewer judgment files name the same dispatch; a reviewer judgment names a revision other than the pinned one; an adjudication names anyone other than the user as adjudicator; a file names a ticket-phase build agent, such as the coder or the test writer, as its producer"
+  needs_test: true
+  reason: Each refusal condition is computed behaviour, and a check missing one of them would let a non-independent set pass.
+- clause: "the set lock is committed in a commit that comes before the commit of any S1 run report, scripted or real"
+  needs_test: true
+  reason: The commit order is the only proof that the set was frozen before any result was seen, and it is computed from Git history.
+- clause: "a scored run attempted while no committed set lock exists is reported not_run with the unmet prerequisite \"S1 not frozen\" and contributes no figure to any S1 result"
+  needs_test: true
+  reason: Scoring against an unfrozen set would produce a figure that looks valid, so the not_run outcome must be shown to occur.
+test_spec:
+- name: test_real_s1_files_exist_at_the_pinned_revision_each_with_a_producer
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: Read tests/fixtures/kernel_path_evaluation/s1/ cases.json, holdout.json, reviews/reviewer-a.json, reviews/reviewer-b.json, adjudication.json, oracle.json and set.lock.json through git show at the lock pinned SHA, and run the -v provenance check; assert every file exists there and records a producer. Data tests, run over the real committed files. STAYS RED until the S1 data run is done and committed.
+  proves_clause: 'these exist at that revision, and each one records the dispatch or person that produced it: the case file and the holdout file, the reviewer A judgment file, the reviewer B judgment file, the adjudication record, the oracle and the set lock'
+  code_file: tests/fixtures/kernel_path_evaluation/s1/set.lock.json
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+- name: test_real_case_and_holdout_files_come_from_one_blind_drafting_dispatch
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: Over the real cases.json and holdout.json assert both name the same drafting dispatch id, an agent type that is not a ticket-phase agent, and an unseen list naming run reports, system output, expected outcomes and host or catalog prompt text; neither file contains an expected outcome field. STAYS RED until the S1 data run.
+  proves_clause: the case file and the holdout file were produced by one case-drafting dispatch, which records that it saw no run report, no system output, no expected outcome and no host or catalog prompt text being tuned
+  code_file: tests/fixtures/kernel_path_evaluation/s1/cases.json
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+- name: test_real_reviewer_files_are_two_separate_dispatches_with_clean_inputs
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: Over the real reviewer-a.json and reviewer-b.json assert distinct dispatch ids that also differ from the drafting dispatch, the pinned SHA equal to the lock, each input listed with a path and blob sha256 that matches git at that SHA, and no input under reports/, no run report or system output, no oracle.json and no other reviewer file. STAYS RED until the S1 data run.
+  proves_clause: 'the reviewer A and reviewer B judgment files were produced by two separate reviewer dispatches, each recording its own dispatch identity, the pinned revision and the Git bytes it read at that revision, and neither recording the other''s judgment, a run report or system output among its inputs'
+  code_file: tests/fixtures/kernel_path_evaluation/s1/reviews/reviewer-a.json
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a reviewer file that read a run report still being accepted
+    - both reviewer files recorded under one dispatch id
+- name: test_every_real_disagreement_is_adjudicated_by_the_user_or_dropped
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: Compare the real reviewer-a and reviewer-b judgments per case; every case with differing expected outcome, operation or bound arguments has an entry in adjudication.json, either adjudicated with the user named as adjudicator and a reason or dropped and absent from oracle.json, and the adjudicated and dropped counts equal the recomputed counts. STAYS RED until the S1 data run.
+  proves_clause: 'every case on which the two judgments disagree appears in the adjudication record either with the user named as adjudicator and the user''s reason, or as dropped from S1, and the report states the adjudicated count and the dropped count'
+  code_file: tests/fixtures/kernel_path_evaluation/s1/adjudication.json
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a disagreement that silently became an oracle entry
+    - an adjudication naming an agent dispatch as adjudicator
+- name: test_provenance_check_refuses_the_whole_set_for_each_named_condition
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Copy the real committed S1 files to tmp_path and apply one mutation at a time (a file with no producer; case file and a reviewer on the same dispatch; both reviewers on the same dispatch; a reviewer naming another revision; an adjudicator other than the user; a producer of python-coder or test-writer read from config/agent_registry.json is_ticket_phase); each makes the whole set refused naming the file and the reason, and the unmutated copy is accepted. STAYS RED until the S1 data run because the unmutated real files are the baseline.
+  proves_clause: 'the provenance check refuses the whole set, naming the file and the reason, when any of these holds: a file records no producer; the case file and a reviewer judgment file name the same dispatch; both reviewer judgment files name the same dispatch; a reviewer judgment names a revision other than the pinned one; an adjudication names anyone other than the user as adjudicator; a file names a ticket-phase build agent, such as the coder or the test writer, as its producer'
+  code_file: tests/fixtures/kernel_path_evaluation/s1/reviews/reviewer-b.json
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a check that skips the ticket-phase producer condition
+    - a check that skips the no-producer condition
+    - a check that names the set but not the file and reason
+    - a ticket-phase agent set hard-coded instead of read from the registry
+- name: test_lock_commit_precedes_any_run_report_commit_in_git_history
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: In a throwaway Git repository build two histories, lock commit before report commit and report commit before lock commit, and assert the lock-before-run check passes the first and fails the second using commit ancestry and not any timestamp in a file; then run the same check over the real repository history. The real-history part STAYS RED until the lock is committed.
+  proves_clause: the set lock is committed in a commit that comes before the commit of any S1 run report, scripted or real
+  code_file: tests/fixtures/kernel_path_evaluation/s1/set.lock.json
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - an order check that trusts frozen_at inside the lock file instead of Git history
+    - a run report committed in the same or an earlier commit than the lock still passing
+- name: test_scored_run_without_a_committed_lock_is_not_run_s1_not_frozen
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: In a throwaway Git repository with an uncommitted set.lock.json and again with none, a scored run request returns not_run with the unmet prerequisite "S1 not frozen" and contributes no figure to any S1 result.
+  proves_clause: a scored run attempted while no committed set lock exists is reported not_run with the unmet prerequisite "S1 not frozen" and contributes no figure to any S1 result
+  code_file: tests/fixtures/kernel_path_evaluation/s1/set.lock.json
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - an uncommitted lock file on disk accepted as frozen
+    - a scored figure produced against an unfrozen set
+- name: test_derive_oracle_script_runs_over_the_real_pinned_revision
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Run python scripts/derive_kernel_path_oracle.py as a subprocess with the lock pinned SHA and the real case targets and assert exit 0 and that the emitted source facts carry repo paths and blob sha256 values equal to those recorded in the reviewer inputs. STAYS RED until the S1 data run commits the case and lock files.
+  proves_clause: 'these exist at that revision, and each one records the dispatch or person that produced it: the case file and the holdout file, the reviewer A judgment file, the reviewer B judgment file, the adjudication record, the oracle and the set lock'
+  code_file: tests/fixtures/kernel_path_evaluation/s1/oracle.json
+  to_be_created: true
+  convention_test_file: unit_tests/scripts/test_bo4500b_2_identity_check.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-17"
+test_design_opened_files:
+- tests/knowledge/test_query_answer_contract_acceptance.py
+- unit_tests/scripts/test_bo4500b_2_identity_check.py
+delivers_to:
+- agent: python-coder
+  contract: 'Frozen S1 data at tests/fixtures/kernel_path_evaluation/s1/, committed with its lock before any scored run:
+    cases.json and holdout.json (KM-500a-4-iv case schema plus producer {dispatch_id str, agent str, pinned_sha str, unseen [str]});
+    reviews/reviewer-a.json and reviews/reviewer-b.json (producer {dispatch_id str, agent str, pinned_sha str, inputs [{path str, blob_sha256 str}]}
+    and per case {case_id str, expected_outcome str, expected_operation str|null, bound_arguments object|null, derivation str});
+    adjudication.json {entries [{case_id str, decision adjudicated|dropped, adjudicator str|null (the user, by name), reason str|null}], adjudicated int, dropped int};
+    oracle.json (merged expected outcome per kept case); set.lock.json (KM-500a-4-v shape {pinned_sha str, files {name: sha256 hex}, holdout_ids [str], frozen_at str}).
+    Read by the holdout runs (KM-500a-4-vi), the scorer (KM-500a-4-vii) and the required suite (KM-500a-4-viii).'
+expects_from:
+- ac_id: KM-500a-4-iv
+  contract: Case-file schema including the producer record, policy.json with the category minimums and frozen thresholds, and the
+    composition check run over the drafted cases with its result {per_category, short, status complete|limited}.
+- ac_id: KM-500a-4-v
+  contract: Parse script reading Git bytes at the pinned SHA, the provenance check (producer, independence, revision and user-only
+    adjudication refusals, each naming the file and the reason), the deterministic merge that writes oracle.json, the lock writer
+    for set.lock.json and the lock-before-run check.
+origin_agent: business-analyst
+created: '2026-11-17'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: config
+notes: 'EXECUTED BY THE DRIVING SESSION, NOT BY A TICKET-PHASE AGENT. The S1 data run is an explicit build step the
+  driving session performs itself: (1) one isolated case-drafting dispatch writes the case and holdout files with no
+  expected outcomes; (2) two independent reviewer dispatches, each started from a fresh context with no shared
+  transcript, read Git bytes at the pinned SHA and each write one judgment file; (3) a disagreement goes to the user as
+  adjudicator, or the case is dropped; (4) the deterministic merge writes the oracle; (5) after the composition check
+  (KM-500a-4-iv) and the provenance check (KM-500a-4-v) pass or are explicitly limited, the set lock is written and
+  committed before any scored run. No ticket-phase agent can do this: sub-agents run at depth 1, and the coder and
+  test writer that build the runner are not independent of it. Until this run is done, KM-500a-4-iv and KM-500a-4-v
+  cannot be marked done, because their tests must pass on the real S1 files, not on fixtures. That gating runs in the
+  opposite direction to depends_on (this record needs the check code from -iv and -v first), so it is stated here and
+  not as a depends_on edge, which would form a cycle. Adjudication is by the user only; KM-500a-4-v it_requirements
+  also allow a third separate dispatch as adjudicator, a difference the IT PO should reconcile. The file names in
+  KM-500a-4-iv and KM-500a-4-v declared_files (cases.json, holdout.json, reviews/reviewer-a.json,
+  reviews/reviewer-b.json, adjudication.json, oracle.json, set.lock.json) are the files meant here. assigned_agent and
+  technical fields are left to the IT PO. Draft. IT PO 2026-11-17: reconciled. Adjudication is by the user only, and
+  the third-dispatch option was removed from KM-500a-4-v it_requirements. The seven data files moved from the
+  declared_files of KM-500a-4-iv and KM-500a-4-v to this record, because those records only read them; policy.json stays
+  with KM-500a-4-iv, which transcribes the stated minimums and thresholds. assigned_agent research-agent names the
+  dispatched agent type, not a ticket phase; the driving session runs the step. KM-500a-4-vi, -vii and -viii now expect
+  the frozen files from this record (the BA adds the matching depends_on edges). The proof of this record''s clauses is
+  the KM-500a-4-iv and KM-500a-4-v check code run over the real committed files; the test design is left to the
+  test-designer. BA 2026-11-17: change_target is config, the closest enum value for committed non-executable data files read by the checks; code would route test-writer and test-runner onto a record that writes no code, and no other value names data.'

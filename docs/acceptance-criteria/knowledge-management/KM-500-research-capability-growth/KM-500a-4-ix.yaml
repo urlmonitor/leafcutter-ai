@@ -1,0 +1,101 @@
+id: KM-500a-4-ix
+title: How-to for running and reading the kernel-path planning and selection evaluation
+component: knowledge-management
+components:
+- knowledge_management
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-500a-4
+criteria: |
+  Given the kernel-path evaluation and the frozen set S1 exist
+  When an operator reads the knowledge retrieval how-to
+  Then it shows how to run the scripted variant, and how to authorize and run the real-model variant with 3 repetitions
+  And it explains that not_run means a missing prerequisite and is not a failed result, with a worked report excerpt for missing authorization that has no score fields
+  And it explains the scripted, mixed, real and synthetic labels, and states that only all-real results give a real-model figure
+  And it explains development runs versus holdout runs, and when a holdout result is marked exposed
+  And it lists the frozen S1 thresholds and the categories and denominator each one is computed over, including the separate selection_uncertain column
+  And it states that comparison representativeness is worked out from the case set and its frozen coverage requirement, not from a flag in the pack
+  And every worked example names the evidence label it was produced under and does not present a scripted example as real-model evidence.
+depends_on:
+- KM-500a-4
+- KM-500a-4-i
+- KM-500a-4-ii
+- KM-500a-4-iii
+- KM-500a-4-vi
+- KM-500a-4-vii
+- KM-500d-3-i
+- KM-500d-3-ii
+doc_links:
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: modifies
+  status: exists
+  relevance: Existing how-to; its evaluate section covers explicit-operation evaluation only.
+- path: docs/reference/knowledge-retrieval-answers.md
+  relationship: context
+  status: exists
+  relevance: Evaluation and comparison field reference the how-to links to rather than restates.
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a.yaml
+  relationship: context
+  status: exists
+  relevance: L1 documentation_triggers [how-to, sequence-diagram, reference-doc].
+assigned_agent: documentation-expert
+estimated_complexity: M
+declared_files:
+- path: docs/how-to/run-knowledge-retrieval.md
+  state: existing
+it_requirements:
+- "Edit the existing how-to; do not create a parallel page. Its current evaluate section covers explicit-operation evaluation only and must stay correct for that command."
+- "Link to docs/reference/knowledge-retrieval-answers.md for field meanings instead of restating them. New report fields that the reference does not yet define are a gap for the reference owner (KM-500e-5), recorded as a caveat, not written into the how-to as a substitute reference."
+- "Every worked excerpt (including the missing-authorization not_run excerpt) is captured from a real invocation of the shipped command at a stated revision and names its evidence label. No hand-written or edited output is presented as a run result, and no scripted excerpt is presented as real-model evidence."
+- "Commands are shown with their exact sibling-command name and options as shipped in integrations/knowledge_cli.py, and the authorization input is described without any secret value."
+- "Must pass the repository's documentation gates (frontmatter, doc length ratchet, link check) without exemptions."
+test_required: false
+test_rationale: This record changes only a how-to page; its correctness is checked by the documentation gates and by review against the shipped command, and it adds no executable behaviour a test could exercise.
+file_findings:
+- file: docs/how-to/run-knowledge-retrieval.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It is the existing how-to for running standalone knowledge retrieval and evaluation, so it is the right page to edit and no code is expected in it.
+  decision: null
+file_findings_opened_files:
+- docs/how-to/run-knowledge-retrieval.md
+delivers_to: null
+expects_from:
+- ac_id: KM-500a-4-i
+  contract: Kernel-path evaluation surface and report fields.
+- ac_id: KM-500a-4-ii
+  contract: Evidence label meanings and the 3-repetition rule.
+- ac_id: KM-500a-4-iii
+  contract: Authorization input, unmet-prerequisite strings and a real not_run excerpt.
+- ac_id: KM-500a-4-vi
+  contract: Development versus holdout modes and the exposed rule.
+- ac_id: KM-500a-4-vii
+  contract: Frozen thresholds with categories and denominators.
+- ac_id: KM-500d-3-i
+  contract: Derived representativeness rule.
+- ac_id: KM-500d-3-ii
+  contract: Coverage requirement fixed with the set and the comparison outcomes when it is absent or changed.
+origin_agent: business-analyst
+created: '2026-11-16'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: 'Placed as an L3 under KM-500a-4 because KM-500a holds 4 of its 5 L2 slots. KM-500a declares
+  [how-to, sequence-diagram, reference-doc]. Only the how-to is authored here. Sequence diagram: the research run
+  sequence itself does not change, because the evaluator is a new caller of the existing start and resume entry
+  points. Reference doc: the new report fields belong in the existing evaluation section of
+  knowledge-retrieval-answers.md, which KM-500e-5 owns. A separate reference AC would duplicate that owner. Draft.
+  BA 2026-11-17: KM-500d-3-ii added to depends_on so it matches the existing expects_from contract (coverage
+  requirement fixed with the set); no cycle, because no record depends on KM-500a-4-ix.'

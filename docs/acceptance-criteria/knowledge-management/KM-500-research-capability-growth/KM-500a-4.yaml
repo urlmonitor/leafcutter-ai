@@ -63,7 +63,17 @@ origin_agent: business-analyst
 created: '2026-10-01'
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- KM-500a-4-i
+- KM-500a-4-ii
+- KM-500a-4-iii
+- KM-500a-4-iv
+- KM-500a-4-v
+- KM-500a-4-vi
+- KM-500a-4-vii
+- KM-500a-4-viii
+- KM-500a-4-ix
+- KM-500a-4-x
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

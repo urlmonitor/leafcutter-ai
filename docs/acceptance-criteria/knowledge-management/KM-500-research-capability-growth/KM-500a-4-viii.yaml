@@ -1,0 +1,223 @@
+id: KM-500a-4-viii
+title: The deterministic part of S1 runs in the required automated suite with no database and no model provider
+component: knowledge-management
+components:
+- knowledge_management
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-500a-4
+criteria: |
+  Given the scripted-host, scripted-Jev variant of the S1 development cases
+  And the real Git projection of S1's pinned revision loaded into the in-process graph backend
+  When the required automated test suite runs with no database and no model provider configured
+  Then every scripted S1 development case runs through the kernel research run and is labelled scripted
+  And the explicit_known_operation, injected_provider_failure, injected_denied and injected_budget_exhausted categories are scored against their frozen thresholds, and any miss fails the suite
+  And the categories that depend on model judgment run with scripted judgments to prove the path end to end, and are reported scripted with no quality verdict
+  And the evaluation started without authorization returns not_run with no score in the same suite
+  And the real-model variant is reported not_run in that suite with its unmet prerequisite, and is never counted, passed or left out of the report
+  And no holdout case runs in the suite
+  And if the evaluation is changed to call retrieval with an explicit operation for a several_plausible_one_correct case, the suite fails because that case shows 0 Jev selection calls.
+depends_on:
+- KM-500a-4
+- KM-500a-4-i
+- KM-500a-4-ii
+- KM-500a-4-iii
+- KM-500a-4-vi
+- KM-500a-4-vii
+- KM-500a-4-x
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+  relationship: context
+  status: exists
+  relevance: Parent's planned deterministic public-contract proof.
+- path: docs/testing/test-angles.md
+  relationship: context
+  status: exists
+  relevance: Reachability and discrimination angles; the last clause is the named wrong version the suite must catch.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: In-process backend and Git projection ownership used by the existing answer-contract acceptance tests.
+assigned_agent: python-coder
+estimated_complexity: L
+declared_files:
+- path: tests/knowledge/kernel_path_evaluation_support.py
+  state: to_be_created
+- path: tests/knowledge/test_kernel_path_evaluation_s1.py
+  state: to_be_created
+- path: tests/fixtures/kernel_path_evaluation/s1/scripted_judgments.json
+  state: to_be_created
+it_requirements:
+- "Pattern: the S1 suite composes the real kernel (registry, scheduler, run store, KernelService) with only database storage, host answers and Jev answers controlled, following tests/knowledge/public_retrieval_needs_support.py (PublicNeedsHarness over tests/kernel/integration/scenario_support.ScenarioCase, scripted Jev via kernel/providers/fakes.py) and tests/knowledge/query_answer_contract_acceptance_support.py (storage double that holds real mapper output and never oracle values)."
+- "Projection: the in-process backend is loaded with the real Git projection of S1's pinned SHA (from set.lock.json), limited to the entities S1 targets, read with git show at that SHA as source_snapshot() does. It is built at most once per test session; each full-projection load took minutes in the audit (test_query_answer_contract_acceptance.py was killed at 15 min)."
+- "Cost: the suite must spawn no build.py and must add no more than 120 s to the required pytest job, measured on the CI runner rather than locally. It must run with no database, no network and no provider credentials, and must not be marked live, skipped or xfail in the required suite."
+- "Scripted judgments live in scripted_judgments.json, separate from the oracle and from the reviewed set. They are labelled scripted, are never copied from oracle.json, and never receive a quality verdict for model-judged categories. Only explicit_known_operation and the three injected_* categories are scored against their frozen thresholds; any miss fails the suite."
+- "The suite reads the frozen set through set.lock.json and fails, rather than skips, when the lock is absent or a hash no longer matches. It never opens holdout.json."
+- "Wrong-version proof: the suite must go red when the evaluation calls retrieval with an explicit operation for a several_plausible_one_correct case. The proof is the observed Jev selection call count of 0 for that case, not a grep of the runner source (CLAUDE.md: gate behaviour is verified behaviourally)."
+- "Tests carry '# covers: KM-500a-4-viii' tags and declare their shared-layout marker per the suite conventions in CLAUDE.md."
+test_required: true
+test_intent:
+- clause: "every scripted S1 development case runs through the kernel research run and is labelled scripted"
+  needs_test: true
+  reason: The suite must observe each development case actually starting a kernel run, not just being listed.
+- clause: "the explicit_known_operation, injected_provider_failure, injected_denied and injected_budget_exhausted categories are scored against their frozen thresholds, and any miss fails the suite"
+  needs_test: true
+  reason: The deterministic categories are the only ones whose regression the suite can guard, so a miss must turn it red.
+- clause: "the categories that depend on model judgment run with scripted judgments to prove the path end to end, and are reported scripted with no quality verdict"
+  needs_test: true
+  reason: Scoring scripted judgments against the selection threshold would measure the script, which the suite must refuse to report.
+- clause: "the evaluation started without authorization returns not_run with no score in the same suite"
+  needs_test: true
+  reason: The unauthorized path must be exercised on every required run so a regression to a scored result is caught.
+- clause: "the real-model variant is reported not_run in that suite with its unmet prerequisite, and is never counted, passed or left out of the report"
+  needs_test: true
+  reason: Silently omitting the real variant would make the report look complete without it.
+- clause: "no holdout case runs in the suite"
+  needs_test: true
+  reason: Executing holdout cases in CI would expose them, and only an observed case list shows it did not.
+- clause: "if the evaluation is changed to call retrieval with an explicit operation for a several_plausible_one_correct case, the suite fails because that case shows 0 Jev selection calls"
+  needs_test: true
+  reason: This is the named wrong version, and the suite must be shown able to fail on it.
+test_spec:
+- name: test_every_scripted_dev_case_runs_through_start_run_and_is_labelled_scripted
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: The suite (written as tests/knowledge/test_kernel_path_evaluation_s1.py with its support module) reads the frozen set through set.lock.json, loads the real Git projection of the pinned SHA into the in-memory backend once per session via a session-scoped fixture, runs every development case with scripted host and scripted Jev through the real KernelService, and asserts one start_run per case and every case labelled scripted. No database, no network, no provider credentials, no build.py spawn; it fails rather than skips when the lock is absent or a hash differs. STAYS RED until the S1 data run commits cases.json, oracle.json and set.lock.json.
+  proves_clause: every scripted S1 development case runs through the kernel research run and is labelled scripted
+  code_file: kernel/service.py
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+- name: test_deterministic_categories_are_scored_and_any_miss_fails
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Score the explicit_known_operation and three injected_* categories against the frozen thresholds from policy.json; the suite asserts pass on the committed scripted judgments and, in a paired run with one injected miss (an injected_denied case reported as missing_query), asserts the same scoring step fails. STAYS RED until the S1 data run.
+  proves_clause: the explicit_known_operation, injected_provider_failure, injected_denied and injected_budget_exhausted categories are scored against their frozen thresholds, and any miss fails the suite
+  code_file: tests/knowledge/kernel_path_evaluation_support.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a miss in a deterministic category tolerated by the suite
+    - one extra Jev call on an explicit_known_operation case ignored
+- name: test_model_judged_categories_run_scripted_with_no_quality_verdict
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: The model-judged categories run end to end on scripted_judgments.json, are labelled scripted, and carry no threshold verdict; scripted_judgments.json is asserted not equal to any oracle.json entry set. STAYS RED until the S1 data run.
+  proves_clause: the categories that depend on model judgment run with scripted judgments to prove the path end to end, and are reported scripted with no quality verdict
+  code_file: tests/knowledge/kernel_path_evaluation_support.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - scripted judgments scored against the 90 percent selection threshold
+    - scripted judgments copied from oracle.json
+- name: test_unauthorized_evaluation_returns_not_run_with_no_score
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Start the evaluation in the same suite with no authorization and assert the report is not_run with no score fields and a provider call counter of 0.
+  proves_clause: the evaluation started without authorization returns not_run with no score in the same suite
+  code_file: tests/knowledge/test_kernel_path_evaluation_s1.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a missing authorization producing a score
+- name: test_real_model_variant_is_reported_not_run_and_stays_in_the_report
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: The suite report contains a real-model section whose cases are all not_run with the unmet prerequisite named, counted in its own denominator, and neither passed, scored nor omitted.
+  proves_clause: the real-model variant is reported not_run in that suite with its unmet prerequisite, and is never counted, passed or left out of the report
+  code_file: tests/knowledge/test_kernel_path_evaluation_s1.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - the real-model section silently omitted from the report
+    - real-model cases counted as passed
+- name: test_no_holdout_case_runs_in_the_suite
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Record the case ids actually started on the kernel during the suite and assert the set is disjoint from the lock holdout_ids and that holdout.json is never opened. STAYS RED until the S1 data run commits the lock.
+  proves_clause: no holdout case runs in the suite
+  code_file: kernel/service.py
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a holdout id used in a development run still counting as clean
+    - the suite starting holdout cases on the kernel
+- name: test_explicit_operation_for_several_plausible_case_shows_zero_jev_selection_calls
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Run a several_plausible_one_correct case through a deliberately wrong runner variant that calls retriever.retrieve with an explicit operation; assert the observed Jev selection call count is 0 and the suite scoring step goes red, while the real runner shows at least 1 selection call. The proof is the observed counter, never a grep of the runner source.
+  proves_clause: if the evaluation is changed to call retrieval with an explicit operation for a several_plausible_one_correct case, the suite fails because that case shows 0 Jev selection calls
+  code_file: tests/knowledge/kernel_path_evaluation_support.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - the evaluator still calling retriever.retrieve directly with an explicit operation
+    - a Jev call counter that is never incremented so 0 looks valid
+- name: test_s1_suite_is_reachable_from_the_knowledge_cli_with_scripted_providers
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Run the sibling kernel-path command of integrations/knowledge_cli.py as a subprocess with the scripted variant over the in-memory backend and assert exit 0 and a scripted-labelled JSON report with no database or provider environment set.
+  proves_clause: every scripted S1 development case runs through the kernel research run and is labelled scripted
+  code_file: integrations/knowledge_cli.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-17"
+test_design_opened_files:
+- kernel/service.py
+- integrations/knowledge_cli.py
+- tests/knowledge/test_query_answer_contract_acceptance.py
+- tests/knowledge/query_answer_contract_acceptance_support.py
+- tests/knowledge/public_retrieval_needs_support.py
+delivers_to: null
+expects_from:
+- ac_id: KM-500a-4-i
+  contract: Injectable runner entry point and per-case results with Jev call counts.
+- ac_id: KM-500a-4-ii
+  contract: Scripted labels per case and per run.
+- ac_id: KM-500a-4-iii
+  contract: not_run outcome without authorization and for the real-model variant, with the unmet prerequisite and no score fields.
+- ac_id: KM-500a-4-vi
+  contract: Development run mode that never opens or executes holdout cases.
+- ac_id: KM-500a-4-vii
+  contract: Frozen thresholds and per-category scoring.
+- ac_id: KM-500a-4-x
+  contract: Committed S1 development cases (cases.json), oracle.json and set.lock.json (pinned SHA for the projection and the file hashes)
+    from the S1 data run; the suite fails, rather than skips, when they are absent or a hash no longer matches.
+origin_agent: business-analyst
+created: '2026-11-16'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'Audit 2026-11-16 sections 3.2 and 3.4: no existing eval set guards against regression, because the RQE runner
+  needs a localhost Neo4j and the interpretation and live sets run from report-local scripts. The in-process backend
+  plus real Git projection is the pattern the existing answer-contract acceptance tests already use. Only the
+  deterministic categories get a threshold verdict here: scoring scripted judgments against the 90% selection threshold
+  would measure the script, not the selector. Promoting the manual RQE runners into CI is out of scope (build-order
+  step 3). Draft. BA 2026-11-17: KM-500a-4-ii added to depends_on so it matches the existing expects_from contract
+  (scripted labels per case and per run); no cycle. IT PO 2026-11-17: expects_from KM-500a-4-x added, because the
+  required suite reads the frozen S1 files through the committed lock. The BA should add the matching depends_on
+  KM-500a-4-x. No cycle: KM-500a-4-x depends only on KM-500a-4, KM-500a-4-iv and KM-500a-4-v.'

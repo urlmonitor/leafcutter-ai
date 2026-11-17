@@ -1,0 +1,222 @@
+id: KM-500a-4-iii
+title: Missing authorization or credentials gives not run with no score, before any provider is set up
+component: knowledge-management
+components:
+- knowledge_management
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-500a-4
+criteria: |
+  Given a kernel-path evaluation is asked to run 40 real-model cases
+  And use of the external judgment provider has not been authorized for the disclosed context
+  When the evaluation starts
+  Then every real-model case is reported not_run with the unmet prerequisite "provider authorization missing"
+  And no provider client is set up and zero provider calls are made
+  And the real-model portion of the report has no quality figure, pass rate or threshold verdict: those fields are absent, never 0% and never 100%
+  And the run-level verdict is not_run, which a reader of the report cannot confuse with failed
+
+  Given the same request where authorization exists but the Jev provider credentials are absent
+  When the evaluation starts
+  Then every real-model case that needs Jev is reported not_run with the unmet prerequisite "Jev credentials missing", naming the actor
+  And no case is retried with a scripted Jev in place of the real one
+
+  Given one invocation that asks for 12 scripted cases and 40 real-model cases without authorization
+  When the evaluation runs
+  Then the 12 scripted cases execute and are labelled scripted, the 40 real-model cases are not_run, and the two groups have separate denominators.
+depends_on:
+- KM-500a-4
+- KM-500a-4-i
+- KM-500a-4-ii
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+  relationship: context
+  status: exists
+  relevance: Parent requires absent authorization or credentials to produce not-run with the unmet prerequisite.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Optional provider use and standalone ownership; disabled or unauthorized is not an error state.
+- path: docs/reference/knowledge-retrieval-answers.md
+  relationship: context
+  status: exists
+  relevance: Existing not_run state, which does not execute or pass.
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+- path: integrations/kernel_path_prerequisites.py
+  state: to_be_created
+- path: integrations/kernel_path_evaluation.py
+  state: to_be_created
+- path: integrations/knowledge_cli.py
+  state: existing
+it_requirements:
+- "Authorization is an explicit per-invocation input naming the provider and the disclosed context it covers. It is never inferred from the presence of credentials, environment variables, a configuration default or an earlier run. No mechanism exists today (no authorization concept in kernel/config.py or the existing evaluation scripts), so this record defines it; the input itself must not contain secrets."
+- "The prerequisite check runs before any provider client, secret loader or kernel environment with a Jev factory is composed. Credential presence is checked without constructing a client and without reading the secret value into the report or logs."
+- "KernelService.start_run raises ProviderUnavailable when no Jev credential is configured (kernel/service.py _require_jev). The runner must decide not_run before reaching that call, and must also map a ProviderUnavailable that escapes to not_run with the named actor, never to failed or to a crash."
+- "Unmet prerequisites are reported with stable strings per actor ('provider authorization missing', 'Jev credentials missing'), at case level and at run level. Score fields (quality figure, pass rate, threshold verdict) are absent from the real-model portion, not null-as-zero and not 0%."
+- "No fallback: a real-model case whose provider is unavailable is never executed with a scripted provider in its place. Scripted cases in the same invocation run normally under the scripted label with their own denominators."
+- "Disclosure: an unauthorized invocation sends no case text, repository content or holdout content to any external service. A missing-authorization not_run must leave zero provider calls observable to the test (call counter on the provider seam), not merely zero calls reported."
+test_required: true
+test_intent:
+- clause: "every real-model case is reported not_run with the unmet prerequisite \"provider authorization missing\""
+  needs_test: true
+  reason: The prerequisite outcome is computed per case and a wrong check would score unauthorized cases.
+- clause: "no provider client is set up and zero provider calls are made"
+  needs_test: true
+  reason: Setting up the client before the check would disclose context without authorization, which only an observed call count can catch.
+- clause: "the real-model portion of the report has no quality figure, pass rate or threshold verdict: those fields are absent, never 0% and never 100%"
+  needs_test: true
+  reason: A defaulted 0% or 100% would read as a measured result, and only a serialization check catches it.
+- clause: "the run-level verdict is not_run, which a reader of the report cannot confuse with failed"
+  needs_test: true
+  reason: The run-level verdict is derived from the case outcomes and could collapse into failed.
+- clause: "every real-model case that needs Jev is reported not_run with the unmet prerequisite \"Jev credentials missing\", naming the actor"
+  needs_test: true
+  reason: The credentials path differs from the authorization path and today surfaces as ProviderUnavailable from start_run.
+- clause: "no case is retried with a scripted Jev in place of the real one"
+  needs_test: true
+  reason: A silent scripted fallback would turn a credentials gap into an apparent real-model pass.
+- clause: "the 12 scripted cases execute and are labelled scripted, the 40 real-model cases are not_run, and the two groups have separate denominators"
+  needs_test: true
+  reason: Mixed invocations split into two denominators, which is computed behaviour a merge bug would change.
+test_spec:
+- name: test_missing_authorization_reports_every_real_case_not_run_with_prerequisite
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Ask for 40 real-model cases with no authorization input and with real credentials present in the environment; every case is not_run with the unmet prerequisite "provider authorization missing", so presence of credentials is never read as authorization.
+  proves_clause: every real-model case is reported not_run with the unmet prerequisite "provider authorization missing"
+  code_file: integrations/kernel_path_prerequisites.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a missing authorization producing a score
+    - authorization inferred from the presence of credentials or an environment variable
+- name: test_unauthorized_run_makes_zero_provider_calls_and_builds_no_client
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Count calls on the provider seam and on the client and secret-loader factories; with no authorization all counters stay 0 before any kernel environment with a Jev factory is composed, and KernelService.start_run is never reached.
+  proves_clause: no provider client is set up and zero provider calls are made
+  code_file: integrations/kernel_path_prerequisites.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - the Jev client constructed before the authorization check, disclosing context
+    - a case text sent to the provider before the check
+- name: test_not_run_real_portion_serializes_without_score_fields
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Serialize the not_run report to JSON and assert the real-model portion has no quality_figure, pass_rate or threshold_verdict key, and no 0 or 100 percent value stands in for one.
+  proves_clause: 'the real-model portion of the report has no quality figure, pass rate or threshold verdict: those fields are absent, never 0% and never 100%'
+  code_file: integrations/kernel_path_evaluation.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - pass_rate defaulted to 0 or null-as-zero in a not_run report
+    - a vacuous 100 percent pass rate over an empty executed set
+- name: test_run_verdict_is_not_run_not_failed
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: The run-level verdict of an unauthorized real-model run is exactly not_run and differs from failed; the exit status and report text cannot be read as failed.
+  proves_clause: the run-level verdict is not_run, which a reader of the report cannot confuse with failed
+  code_file: integrations/kernel_path_evaluation.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+- name: test_missing_jev_credentials_names_actor_and_maps_provider_unavailable
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: With authorization granted but no Jev credential, every Jev-needing real case is not_run with "Jev credentials missing" naming actor jev. A ProviderUnavailable raised by KernelService.start_run, which _require_jev raises, is also mapped to not_run and never to failed or a crash.
+  proves_clause: every real-model case that needs Jev is reported not_run with the unmet prerequisite "Jev credentials missing", naming the actor
+  code_file: integrations/kernel_path_prerequisites.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+- name: test_no_scripted_jev_fallback_for_a_real_case
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: With Jev credentials missing, a scripted Jev double bound in the same invocation records zero calls from real-model cases; those cases stay not_run.
+  proves_clause: no case is retried with a scripted Jev in place of the real one
+  code_file: integrations/kernel_path_evaluation.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a real-model case silently retried with a scripted Jev and reported as a pass
+- name: test_mixed_invocation_runs_scripted_cases_and_splits_denominators
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: One invocation asks for 12 scripted and 40 real-model cases without authorization; the 12 execute under the scripted label, the 40 are not_run, and the two groups have separate denominators that are not summed.
+  proves_clause: the 12 scripted cases execute and are labelled scripted, the 40 real-model cases are not_run, and the two groups have separate denominators
+  code_file: integrations/kernel_path_evaluation.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - the 12 scripted and 40 real cases merged into one denominator of 52
+    - scripted cases skipped because real cases are not_run
+- name: test_unauthorized_run_is_reachable_from_knowledge_cli_with_no_credentials
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Run the sibling kernel-path command of integrations/knowledge_cli.py as a subprocess with real-model cases, no authorization argument and a cleared environment, and assert a not_run JSON report with the unmet prerequisite string and no score fields.
+  proves_clause: every real-model case is reported not_run with the unmet prerequisite "provider authorization missing"
+  code_file: integrations/knowledge_cli.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-17"
+test_design_opened_files:
+- integrations/knowledge_cli.py
+- kernel/service.py
+- tests/knowledge/test_query_answer_contract_acceptance.py
+file_findings:
+- file: integrations/knowledge_cli.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It is the application CLI that composes kernel pieces and would hold the sibling command whose prerequisite check runs before any provider is set up.
+  decision: null
+file_findings_opened_files:
+- integrations/knowledge_cli.py
+delivers_to:
+- agent: python-coder
+  contract: 'Prerequisite outcome per real-model case {outcome: not_run, unmet_prerequisite: str, actor: host|jev|provider}; run {verdict: not_run, real_model: {denominators}
+    with quality_figure, pass_rate and threshold_verdict keys absent}; observable provider-call count 0; scripted group with its own denominators.'
+- agent: documentation-expert
+  contract: The authorization input, the unmet-prerequisite strings and a real not_run report excerpt without score fields, for the how-to.
+expects_from:
+- ac_id: KM-500a-4-i
+  contract: Kernel-path case execution that can be withheld per case before provider setup.
+- ac_id: KM-500a-4-ii
+  contract: Scripted label per case and per-group denominators for the scripted cases in a mixed invocation.
+origin_agent: business-analyst
+created: '2026-11-16'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: privacy
+notes: 'The "no silent fallback to a scripted Jev" clause was not asked for by name; it is the failure that would make a
+  credentials gap look like a real-model pass. Absent score fields (not 0%) keep a not-run report from being read as a
+  failed one. Draft; no provider call was made while authoring. BA 2026-11-17: KM-500a-4-ii added to depends_on so
+  it matches the existing expects_from contract (scripted label and per-group denominators); no cycle, because
+  KM-500a-4-ii depends only on KM-500a-4 and KM-500a-4-i.'
