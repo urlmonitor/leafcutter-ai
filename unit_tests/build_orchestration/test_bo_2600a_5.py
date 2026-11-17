@@ -501,10 +501,8 @@ class TestBuildEpicFromIds(unittest.TestCase):
             callable(build_epic_from_ids),
             "build_epic_from_ids must be callable in goal_to_epic. (BO-2600a-5 AC-1)"
         )
-        self.assertIsNotNone(
-            _gte,
-            "goal_to_epic module must be importable."
-        )
+        # goal_to_epic's importability is proven by _require_impl() above (the import
+        # either bound _gte or recorded an ImportError); a module object is never None.
         self.assertTrue(
             callable(getattr(_gte, "run", None)),
             "run() must still be callable in goal_to_epic after adding build_epic_from_ids. "

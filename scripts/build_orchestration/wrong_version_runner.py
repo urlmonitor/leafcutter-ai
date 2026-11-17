@@ -238,6 +238,18 @@ def _db_put_back(ctx: Context, db: db_mod.Session) -> list[str]:
     return []
 
 
+def _db_findings(ctx: Context) -> tuple[db_mod.Session, dict]:
+    """The database session and findings the last put-back recorded (``_apply_run_restore`` sets them or raises).
+
+    Raises:
+        PutBackFailed: When none were recorded, so the run cannot be judged and the work stops.
+    """
+    if ctx.db_seen is None:
+        message = "the database put-back recorded no session or findings; the run cannot be judged"
+        raise PutBackFailed(message)
+    return ctx.db_seen
+
+
 def _baseline_session(ctx: Context, versions: list[WrongVersion], tests: list[ScopedTest]) -> db_mod.Session:
     """The database session of the baseline: the as-written SQL of every file a wrong version alters is installed."""
     rels = sorted({rel for wv in versions if ctx.db_names for rel in _prepare(wv, ctx)[0]})
@@ -266,12 +278,13 @@ def _drive(ctx: Context, versions: list[WrongVersion], runnable: list[ScopedTest
             continue
         try:
             run = _apply_run_restore(ctx, wv, files, runnable if wv.is_undone else wv.holders)
+            session, findings = _db_findings(ctx)
         except PutBackFailed as exc:
             rows += [row(t.label, wv.name, "not_run", str(exc)) for t in wv.holders] or [row("", wv.name, "not_run", str(exc))]
             return _stopped(str(exc), rows)
         ran = runnable if wv.is_undone else wv.holders
         new = classify_run(ran, wv.holders, run, wv.name, wv.is_undone)
-        rows += demote(db_mod.judge(new, *ctx.db_seen, ran, ctx.db_names, wv.name), wv.extra_labels)
+        rows += demote(db_mod.judge(new, session, findings, ran, ctx.db_names, wv.name), wv.extra_labels)
         if ctx.interrupted:
             break
     return assemble(rows)

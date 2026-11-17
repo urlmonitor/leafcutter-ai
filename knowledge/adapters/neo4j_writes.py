@@ -1,6 +1,7 @@
 """MODULE: neo4j_writes
 GOAL: Bound publication write batches by rows and payload bytes, retry time-limit failures, report the slow batch.
-BUSINESS CONTEXT: KM-400b-5-iii..vi; one batch of large records must not outrun the writer's time limit.
+BUSINESS CONTEXT: KM-400b-5-iii..vii; one batch of large records must not outrun the writer's time limit,
+    and planning or writing before begin_writes is refused by name (vii).
 ARCHITECTURE: Used by neo4j_domain_build for node and relationship batches and by neo4j_projection for activation.
 """
 
@@ -113,6 +114,26 @@ def _refuse(message: str) -> NoReturn:
     raise ValueError(message)
 
 
+def _begun(report: dict | None, name: str, caller: str) -> dict:
+    """Return a write report ``begin_writes`` sets; refuse when this publication never began (KM-400b-5-vii).
+
+    Args:
+        report: ``db.publication_writes`` or ``db.publication_progress``.
+        name: The report's attribute name, for the message.
+        caller: The function that needs it, for the message.
+
+    Returns:
+        The report.
+
+    Raises:
+        RuntimeError: ``report`` is None because ``begin_writes`` has not run for this publication.
+    """
+    if report is None:
+        message = f"{caller} needs db.{name}, which is unset: call begin_writes(db, snapshot) first"
+        raise RuntimeError(message)
+    return report
+
+
 def begin_writes(db: Neo4jBackend, snapshot: ProjectionSnapshot) -> dict:
     """Declare the settings in force and reset this publication's write report.
 
@@ -157,14 +178,18 @@ def make_plan(db: Neo4jBackend, phase: str, label: str, statement: str, rows: li
 
     Returns:
         The plan holding the bounded batches.
+
+    Raises:
+        RuntimeError: ``begin_writes`` has not run for this publication.
     """
+    report = _begun(db.publication_writes, "publication_writes", "make_plan")
     settings = db._write_settings
     batches = partition(rows, settings["row_cap"], settings["payload_budget_bytes"])
     if phase == "nodes":
         for batch, size in batches:
             if len(batch) == 1 and size > settings["payload_budget_bytes"]:
                 record = {"id": batch[0]["canonical_id"], "label": label, "payload_bytes": size}
-                db.publication_writes["oversized_records"].append(record)
+                report["oversized_records"].append(record)
                 logger.warning(
                     "record %s (%s) is %d bytes, larger than the payload budget; written alone",
                     record["id"],
@@ -189,7 +214,11 @@ async def write_batches(
         plans: Batches per label, in write order.
         key: Repository and generation scope key.
         verify: Check of a batch's rows against what the store returned.
+
+    Raises:
+        RuntimeError: ``begin_writes`` has not run for this publication; nothing is written.
     """
+    progress = _begun(db.publication_progress, "publication_progress", "write_batches")
     total = sum(len(plan.batches) for plan in plans)
     ordinal = 0
     for plan in plans:
@@ -217,7 +246,7 @@ async def write_batches(
                     *error.args[1:],
                 )
                 raise
-            db.publication_progress[phase]["written"] += len(rows)
+            progress[phase]["written"] += len(rows)
 
 
 async def with_retry(
@@ -236,6 +265,7 @@ async def with_retry(
 
     Raises:
         BackendUnavailable: The failure, with phase, batch and attempts stated in its message.
+        RuntimeError: A retried batch succeeded but ``begin_writes`` has not run, so its retry cannot be recorded.
     """
     settings = getattr(db, "_write_settings", None) or begin_defaults(db)
     causes: list[str] = []
@@ -253,7 +283,9 @@ async def with_retry(
             report_failure(db, error, phase, descriptor, causes)
             raise
         if causes and descriptor is not None:
-            db.publication_writes["retried_batches"].append(
+            # only a retried batch needs the write report; a failure or activation never began a build
+            report = _begun(db.publication_writes, "publication_writes", "with_retry")
+            report["retried_batches"].append(
                 {
                     "batch": descriptor,
                     "attempts": len(causes) + 1,

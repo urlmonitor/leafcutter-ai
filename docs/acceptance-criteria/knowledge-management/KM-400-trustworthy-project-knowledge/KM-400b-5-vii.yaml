@@ -1,0 +1,168 @@
+id: KM-400b-5-vii
+title: "Planning or writing publication batches before begin_writes is refused with an error that names begin_writes, before anything reaches the store"
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: low
+work_status: done
+parent: KM-400b-5
+criteria: |
+  Given a writer whose publication write report and progress were reset when a publication started
+  And begin_writes has not yet been called for that publication
+  When batches are planned for a label
+  Then the planning is refused with an error that names begin_writes
+  And the refusal happens whether or not any record is larger than the payload budget
+
+  Given the same writer
+  When planned batches are written
+  Then the write is refused with an error that names begin_writes
+  And no batch is sent to the store
+
+  Given the same writer
+  When a single batch write is retried after a time-limit failure and then succeeds
+  Then recording the retried batch is refused with an error that names begin_writes
+
+  Given the same writer
+  When a single batch write fails without succeeding, or the activation step runs, which writes no batch
+  Then the store failure is reported as before, or the activation runs, and neither is refused
+depends_on: [KM-400b-5, KM-400b-5-iii, KM-400b-5-v]
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5-iii.yaml
+    relationship: context
+    status: exists
+    relevance: Defines the write report (row cap, payload budget, oversized records) that begin_writes sets.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5-v.yaml
+    relationship: context
+    status: exists
+    relevance: Defines the retried-batch record that with_retry appends to the same report.
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
+    relevance: Component architecture for the projection writer.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: KM-400b-5-iii
+  contract: "begin_writes(db, snapshot) sets db.publication_writes {row_cap, payload_budget_bytes, oversized_records, retried_batches} and db.publication_progress {nodes: {written, total}, relationships: {written, total}} before make_plan or write_batches runs."
+origin_agent: BrainCandy
+created: '2026-11-17'
+amended_by: []
+superseded_by: null
+covered_by:
+  - tests/knowledge/test_km_400b_5_vii.py
+implemented_by:
+  - knowledge/adapters/neo4j_writes.py
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "The refusal must be a RuntimeError raised by an explicit check, not an assert, so it survives python -O."
+  - "The message must name begin_writes and the report that is missing (publication_writes or publication_progress)."
+  - "make_plan and write_batches must check before reading settings or sending any batch."
+  - "with_retry must check only where it records a retried batch: its failure classification on a backend that never began writes is relied on by KM-400b-5-vi, and the activation path (no batch descriptor) never begins a build."
+  - "No # type: ignore, cast or Any: the check is the narrowing the type checker sees."
+test_intent:
+  - clause: "the planning is refused with an error that names begin_writes"
+    needs_test: true
+    reason: Without the check, planning reaches the unset report and fails with a TypeError that does not name the missing step.
+  - clause: "the refusal happens whether or not any record is larger than the payload budget"
+    needs_test: true
+    reason: The report is only touched for an oversized record, so a check placed there would let ordinary rows pass silently.
+  - clause: "the write is refused with an error that names begin_writes"
+    needs_test: true
+    reason: Without the check, writing fails only after the batch was written, on the progress update.
+  - clause: "no batch is sent to the store"
+    needs_test: true
+    reason: A check placed after the batch write would refuse too late, with rows already stored.
+  - clause: "recording the retried batch is refused with an error that names begin_writes"
+    needs_test: true
+    reason: Without the check, recording the retry fails with a TypeError on None that does not name the missing step.
+  - clause: "the store failure is reported as before, or the activation runs, and neither is refused"
+    needs_test: true
+    reason: A check made unconditional in with_retry would hide the store failure behind the refusal and break activation of a ready generation.
+test_spec:
+  - name: test_make_plan_before_begin_writes_raises_naming_begin_writes
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: On a writer reset but never begun, plan one oversized row and one ordinary row and assert each raises RuntimeError naming begin_writes and publication_writes.
+    proves_clause: "the refusal happens whether or not any record is larger than the payload budget"
+    code_file: knowledge/adapters/neo4j_writes.py
+    covers: [KM-400b-5-vii]
+    requires_db: false
+    must_catch:
+      - "a check placed only around the oversized-record append, so an ordinary row plans silently"
+      - "no check at all, so the oversized row fails with a TypeError on None"
+  - name: test_make_plan_on_a_fresh_backend_raises_naming_begin_writes
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: On a real Neo4jBackend that never declared settings, assert make_plan raises RuntimeError naming begin_writes rather than an AttributeError on the settings.
+    proves_clause: "the planning is refused with an error that names begin_writes"
+    code_file: knowledge/adapters/neo4j_writes.py
+    covers: [KM-400b-5-vii]
+    requires_db: false
+    must_catch:
+      - "a check placed after the settings are read, so a fresh backend fails with an AttributeError"
+  - name: test_write_batches_before_begin_writes_raises_and_sends_nothing_to_the_store
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: Write one planned batch on a writer reset but never begun and assert RuntimeError naming begin_writes and publication_progress, with no statement sent to the store.
+    proves_clause: "no batch is sent to the store"
+    code_file: knowledge/adapters/neo4j_writes.py
+    covers: [KM-400b-5-vii]
+    requires_db: false
+    must_catch:
+      - "a check placed after the batch write, so the batch reaches the store before the refusal"
+      - "no check at all, so the progress update fails with a TypeError on None"
+  - name: test_with_retry_recording_a_retried_batch_before_begin_writes_raises_naming_begin_writes
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: Call with_retry with a batch descriptor on a writer never begun and a call that times out once and then succeeds, and assert both attempts ran and recording the retry raises RuntimeError naming begin_writes and publication_writes.
+    proves_clause: "recording the retried batch is refused with an error that names begin_writes"
+    code_file: knowledge/adapters/neo4j_writes.py
+    covers: [KM-400b-5-vii]
+    requires_db: false
+    must_catch:
+      - "no check at the retried-batch record, so it fails with a TypeError on None"
+  - name: test_with_retry_failure_of_a_batch_before_begin_writes_still_reports_the_store_failure
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: Call with_retry with a batch descriptor on a writer never begun and a call that fails as unavailable, and assert the BackendUnavailable with its cause class and one recorded attempt propagates rather than a refusal.
+    proves_clause: "the store failure is reported as before, or the activation runs, and neither is refused"
+    code_file: knowledge/adapters/neo4j_writes.py
+    covers: [KM-400b-5-vii]
+    requires_db: false
+    must_catch:
+      - "a check made at the top of with_retry whenever a batch descriptor is given"
+  - name: test_activation_without_begin_writes_still_runs
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: Call with_retry for the activation phase with no batch descriptor on a writer never begun and assert it returns the call's result.
+    proves_clause: "the store failure is reported as before, or the activation runs, and neither is refused"
+    code_file: knowledge/adapters/neo4j_writes.py
+    covers: [KM-400b-5-vii]
+    requires_db: false
+    must_catch:
+      - "a check made unconditional at the top of with_retry"
+notes: |
+  Authored 2026-11-17 while removing the last mypy errors in neo4j_writes.py. The writer's
+  report fields are typed dict | None (neo4j_backend.py) and reset to None when a publication
+  starts (neo4j_projection.py); begin_writes (called by neo4j_domain_build.build) sets them.
+  Before this AC, planning or writing out of order failed with a TypeError on None, or with
+  nothing at all when no record was oversized. The production path always calls begin_writes
+  first, so this guards the contract rather than fixing an observed failure.
