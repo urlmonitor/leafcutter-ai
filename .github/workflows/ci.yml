@@ -125,9 +125,11 @@
 #                FAILS THE JOB only for errors
 #                the PR adds or for `# type: ignore` comments it adds. Errors a
 #                touched file already had are reported as untouched, never
-#                charged. No continue-on-error: its red is visible. NOT YET a
-#                required check -- the user promotes it once it runs clean on
-#                main. On direct pushes there is no diff base, so it is a no-op.
+#                charged. No continue-on-error: its red is visible. A REQUIRED
+#                check (main-branch ruleset). On direct pushes there is no diff
+#                base, so it is a no-op. scripts/run_ci_local.py runs the same
+#                ratchet call, read from this job, as a blocking local gate
+#                (BP-1300f-1-viii): the pathspecs below are the only copy.
 #
 #   consumer-install-sim — empirical consumer-install simulation (AC BP-900h-1).
 #                Checks the package out into a leafcutter-ai/ subdirectory (so
@@ -975,7 +977,7 @@ jobs:
     name: mypy ratchet (new errors only)
     runs-on: ubuntu-latest
     # BP-1300f-1 -- see header. NO continue-on-error: a PR that adds a mypy
-    # error or a `# type: ignore` turns this job red. Not yet a required check.
+    # error or a `# type: ignore` turns this job red. A required check.
     steps:
       - uses: actions/checkout@v4
         with:

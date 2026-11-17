@@ -1,0 +1,234 @@
+id: BP-1300f-1-viii
+components:
+  - build_pipeline
+title: "The local CI run type-checks exactly as the required 'mypy ratchet (new errors only)' check does, with CI's own arguments, and its red fails the local run"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Background:
+    Given scripts/run_ci_local.py, the local mirror of .github/workflows/ci.yml,
+    And the required CI check "mypy ratchet (new errors only)", whose pull-request step
+      runs scripts/ci/mypy_ratchet.py with --base and a list of pathspecs.
+
+  Scenario: The local run uses the ratchet with CI's arguments
+    When the local run's typecheck step runs,
+    Then it runs scripts/ci/mypy_ratchet.py with exactly the arguments ci.yml gives it, with origin/main as the base
+    And the step is blocking and runs without any opt-in flag
+
+  Scenario: The pathspecs come from ci.yml only
+    Given ci.yml's ratchet call names a different set of pathspecs,
+    When the local run's typecheck step runs,
+    Then it type-checks that set, with no edit of its own
+
+  Scenario: A new type error fails the local run, naming it
+    Given a branch whose head commit adds a type error to a Python file in scope,
+    When the local run's typecheck step runs,
+    Then the local run exits non-zero and marks the typecheck step FAIL, naming the file, the head line and the error code
+
+  Scenario: A new silencing comment fails the local run
+    Given a branch whose head commit adds a "# type: ignore" comment to a file in scope,
+    When the local run's typecheck step runs,
+    Then the local run exits non-zero and marks the typecheck step FAIL, naming the file whose type-ignore count rose
+
+  Scenario: A clean change passes
+    Given a branch whose head commit changes a file in scope and adds no error,
+    When the local run's typecheck step runs,
+    Then the local run exits 0 and marks the typecheck step PASS
+
+  Scenario: Could-not-check fails the local run
+    Given the ratchet exits 2 because origin/main does not resolve,
+    When the local run's typecheck step runs,
+    Then the local run exits non-zero and marks the typecheck step FAIL, saying it could not check
+    And when ci.yml holds no ratchet call, the local run fails the same way, naming ci.yml
+
+  Scenario: Nothing in scope is not shown as a pass
+    Given a branch that changes no Python file in scope,
+    When the local run's typecheck step runs,
+    Then the typecheck step is marked NOTHING INSPECTED, never PASS
+    And the local run exits 0, as CI's check does, its final line saying a step inspected nothing
+depends_on:
+  - BP-1300f-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300f-1.yaml
+    relationship: parent
+    status: exists
+  - path: scripts/run_ci_local.py
+    relationship: modifies
+    status: exists
+    relevance: "Its typecheck gate: was informational `mypy ... scripts`, which aborts at once on 'Duplicate module named window_total' and checks nothing; becomes the ratchet call read from ci.yml, blocking."
+  - path: .github/workflows/ci.yml
+    relationship: related
+    status: exists
+    relevance: "Job typecheck: the one place the ratchet's pathspecs are written. Its stale 'Not yet a required check' comments are corrected."
+  - path: scripts/ci/mypy_ratchet.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "ONE SOURCE FOR THE ARGUMENTS: run_ci_local.py reads the ratchet call from <repo-root>/.github/workflows/ci.yml (job typecheck, the step whose run calls scripts/ci/mypy_ratchet.py), joins its backslash-newline continuations, splits it with shlex, and runs it with sys.executable in place of 'python' and '${{ github.base_ref }}' replaced by the local base branch (default main, so --base origin/main). It holds no pathspec list of its own."
+  - "BLOCKING AND ALWAYS ON: the typecheck gate is in the default gate list, blocking; --include-informational still adds only pytest. A --only <gate> selector runs a subset (lint, component-vocab, typecheck, tests)."
+  - "VERDICTS: ratchet exit 0 = PASS; exit 0 with 'NOTHING INSPECTED' in its output = NOTHING INSPECTED (not a failure, as in CI, never printed as PASS); exit 1 = FAIL (new error or new type-ignore); exit 2 or any other non-zero = FAIL, could not check. A ci.yml that is missing, unparsable or has no ratchet call is FAIL, could not check, naming the file."
+  - "The gate's output is still streamed as it runs; it is also kept so the verdict can be read from it."
+  - "No network side effect: the local run does not fetch. Its header states that CI fetches the base branch first, so a stale origin/main gives an older merge base."
+  - "ci.yml: the typecheck header and job comments that still say 'NOT YET a required check' are corrected; the job's steps are not changed."
+  - "ERROR-HANDLING POLICY (CLAUDE.md Rules 1-4): reading ci.yml catches OSError and yaml.YAMLError, logs at WARNING and becomes could-not-check; the subprocess call catches OSError; pure parsing carries no try/except."
+test_intent:
+  - clause: "it runs scripts/ci/mypy_ratchet.py with exactly the arguments ci.yml gives it, with origin/main as the base"
+    needs_test: true
+    reason: "The defect being fixed is a local mirror that ran a different command; only comparing the built command with ci.yml shows they agree."
+  - clause: "the step is blocking and runs without any opt-in flag"
+    needs_test: true
+    reason: "The old step existed but sat behind --include-informational and could not change the exit code."
+  - clause: "it type-checks that set, with no edit of its own"
+    needs_test: true
+    reason: "A second copy of the pathspec list would drift; a temp ci.yml with a different scope proves the local step follows it."
+  - clause: "the local run exits non-zero and marks the typecheck step FAIL, naming the file, the head line and the error code"
+    needs_test: true
+    reason: "The point of the change: the local run must go red where CI goes red."
+  - clause: "the local run exits non-zero and marks the typecheck step FAIL, naming the file whose type-ignore count rose"
+    needs_test: true
+    reason: "The second way the required check fails."
+  - clause: "the local run exits 0 and marks the typecheck step PASS"
+    needs_test: true
+    reason: "Guards against a step that always fails."
+  - clause: "the local run exits non-zero and marks the typecheck step FAIL, saying it could not check"
+    needs_test: true
+    reason: "A could-not-check that reads as a pass is the fail-open this repo guards against."
+  - clause: "when ci.yml holds no ratchet call, the local run fails the same way, naming ci.yml"
+    needs_test: true
+    reason: "A reader that falls back to a built-in list when ci.yml changes shape would reintroduce the drift silently."
+  - clause: "the typecheck step is marked NOTHING INSPECTED, never PASS"
+    needs_test: true
+    reason: "A check that examined nothing must not look like a check that found nothing."
+  - clause: "the local run exits 0, as CI's check does, its final line saying a step inspected nothing"
+    needs_test: true
+    reason: "CI's check is green on a pull request with no Python change, so the mirror must not be red there either."
+test_spec:
+  - name: test_bp_1300f_1_viii_local_typecheck_is_the_ci_ratchet_call
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: seam
+    must_catch:
+      - "runs plain mypy over scripts instead of the ratchet"
+      - "keeps its own pathspec list that differs from ci.yml's"
+      - "leaves the typecheck gate informational or behind --include-informational"
+    description: "The command run_ci_local builds for the REAL repository equals the ratchet call extracted independently from the REAL ci.yml (regex in the test, not the module's parser), with python -> sys.executable and the base branch -> main; the typecheck gate is in the default gate list and blocking."
+    proves_clause: "it runs scripts/ci/mypy_ratchet.py with exactly the arguments ci.yml gives it, with origin/main as the base"
+    code_file: scripts/run_ci_local.py
+  - name: test_bp_1300f_1_viii_local_typecheck_is_the_ci_ratchet_call
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Same test: the default gate list (no flags) holds the typecheck gate, marked blocking."
+    proves_clause: "the step is blocking and runs without any opt-in flag"
+    code_file: scripts/run_ci_local.py
+  - name: test_bp_1300f_1_viii_local_typecheck_follows_a_changed_ci_scope
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: reachability
+    must_catch:
+      - "keeps its own pathspec list that differs from ci.yml's"
+    description: "Temp git repo whose ci.yml is the real file with its pathspecs replaced by 'tools/*.py'; the head adds a type error to tools/x.py (outside the real scope); run_ci_local --only typecheck fails naming tools/x.py."
+    proves_clause: "it type-checks that set, with no edit of its own"
+    code_file: scripts/run_ci_local.py
+  - name: test_bp_1300f_1_viii_new_error_fails_the_local_run_naming_it
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "treats the ratchet's exit 1 as informational and exits 0"
+    description: "Temp git repo with the real ci.yml and ratchet, origin/main at the base; head adds a return-value error to scripts/svc.py; exit 1, [FAIL] typecheck, output names scripts/svc.py, the line and [return-value]."
+    proves_clause: "the local run exits non-zero and marks the typecheck step FAIL, naming the file, the head line and the error code"
+    code_file: scripts/run_ci_local.py
+  - name: test_bp_1300f_1_viii_new_type_ignore_fails_the_local_run
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Head adds a '# type: ignore' comment to scripts/svc.py; exit 1, [FAIL] typecheck, output says the type-ignore count of scripts/svc.py rose."
+    proves_clause: "the local run exits non-zero and marks the typecheck step FAIL, naming the file whose type-ignore count rose"
+    code_file: scripts/run_ci_local.py
+  - name: test_bp_1300f_1_viii_clean_change_passes
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "fails the typecheck step on every run"
+    description: "Head changes scripts/svc.py without a new error; exit 0, [PASS] typecheck."
+    proves_clause: "the local run exits 0 and marks the typecheck step PASS"
+    code_file: scripts/run_ci_local.py
+  - name: test_bp_1300f_1_viii_could_not_check_fails_the_local_run
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: failure
+    must_catch:
+      - "reports the ratchet's exit 2 (could not check) as a pass"
+    description: "No origin/main ref in the temp repo; the ratchet exits 2; run_ci_local exits 1, [FAIL] typecheck, output says could not check."
+    proves_clause: "the local run exits non-zero and marks the typecheck step FAIL, saying it could not check"
+    code_file: scripts/run_ci_local.py
+  - name: test_bp_1300f_1_viii_missing_ratchet_call_in_ci_fails_the_local_run
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: failure
+    must_catch:
+      - "falls back to a built-in pathspec list or to plain mypy when ci.yml has no ratchet call"
+    description: "Temp repo whose ci.yml has no typecheck job; exit 1, [FAIL] typecheck, output says could not check and names ci.yml."
+    proves_clause: "when ci.yml holds no ratchet call, the local run fails the same way, naming ci.yml"
+    code_file: scripts/run_ci_local.py
+  - name: test_bp_1300f_1_viii_nothing_in_scope_is_not_shown_as_a_pass
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: failure
+    must_catch:
+      - "prints [PASS] typecheck when the ratchet inspected nothing"
+    description: "Head changes only docs/notes.md; [NOTHING INSPECTED] typecheck and no [PASS] typecheck."
+    proves_clause: "the typecheck step is marked NOTHING INSPECTED, never PASS"
+    code_file: scripts/run_ci_local.py
+  - name: test_bp_1300f_1_viii_nothing_in_scope_is_not_shown_as_a_pass
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Same test: exit 0 (CI's verdict) and the final line says a step inspected nothing."
+    proves_clause: "the local run exits 0, as CI's check does, its final line saying a step inspected nothing"
+    code_file: scripts/run_ci_local.py
+test_rationale: >-
+  The AC is about what a local runner does, so every arm runs the real
+  scripts/run_ci_local.py as a subprocess against a real temporary git repository
+  holding the real ci.yml and the real scripts/ci/mypy_ratchet.py, with the real mypy.
+  The parity arm compares against an extraction of the real ci.yml written in the test,
+  not the module's own parser, so a parser that drops a pathspec is caught.
+delivers_to: null
+expects_from:
+  - ac_id: BP-1300f-1-vi
+    contract: "Ratchet exit codes 0 / 1 / 2 and the NOTHING INSPECTED and COULD NOT CHECK texts."
+  - ac_id: BP-1300f-1-vii
+    contract: "The ratchet call and its twelve pathspecs in ci.yml job typecheck."
+origin_agent: BrainCandy
+created: 2026-11-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_guards/test_bp_1300f_1_viii_run_ci_local.py
+implemented_by:
+  - scripts/run_ci_local.py
+  - .github/workflows/ci.yml
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary

@@ -72,6 +72,7 @@ covered_by:
   - BP-1300f-1-v
   - BP-1300f-1-vi
   - BP-1300f-1-vii
+  - BP-1300f-1-viii
 implemented_by:
   - scripts/ci/mypy_ratchet.py
   - .github/workflows/ci.yml
@@ -93,7 +94,9 @@ notes: |
   SHAPE. One L2 holding the rule, seven L3 arms: line-insensitive matching (-i),
   existing errors not charged and removals reported (-ii), renames (-iii), new files
   (-iv), type-ignore increase (-v), the honest summary and the never-silent empty or
-  broken run (-vi), and the CI job wiring (-vii). Tests build real git repositories
+  broken run (-vi), and the CI job wiring (-vii). An eighth arm, added 2026-11-17
+  (-viii), makes scripts/run_ci_local.py run the same ratchet call, read from ci.yml,
+  as a blocking local step. Tests build real git repositories
   with a base and a head commit and run the real module and the real mypy.
 
   BUILD EVIDENCE 2026-11-16. Red before the module existed: 20 tests, 18 failed and
