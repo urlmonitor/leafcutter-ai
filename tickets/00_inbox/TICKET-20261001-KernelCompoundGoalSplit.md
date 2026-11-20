@@ -1,6 +1,6 @@
 ---
 title: "Kernel: split compound goals into sub-decisions"
-status: todo
+status: deferred
 components:
   - decision_kernel
 created: 2026-10-01
@@ -15,12 +15,23 @@ tags:
   - decision-kernel
   - decision
   - later-stage
-last_updated: 2026-10-01
+  - superseded
+last_updated: 2026-10-05
 agents:
   commit: needed
 ---
 
 # Kernel: split compound goals into sub-decisions
+
+> **Superseded on 2026-10-05: do not build from this ticket.** The DK-400 AC tree
+> (`docs/acceptance-criteria/decision-kernel/DK-400-split-compound-requests/`, merged in PR #1012)
+> replaces it.
+> - DK-400a covers this ticket's case: a bundled goal the kernel would accept as one choice
+>   (`bundled_accepted`, run-5d246775f5e54f11).
+> - DK-400e covers its "one decision record per sub-decision, linked to the goal".
+>
+> Build from those ACs with `/build-ac`. The ticket is retired with status `deferred` and moves to
+> `tickets/99_rejected/` on main (move-on-main-only). Update the DK-400 `doc_links` path at that time.
 
 ## Actor / Goal
 In order to get decisions that are real alternatives, we need the decision capability to split a goal that bundles several questions into sub-decisions, so that a human is not asked to pick one of N composite specifications.
