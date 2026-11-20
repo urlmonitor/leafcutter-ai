@@ -103,7 +103,7 @@ def table(prepass: dict, ids: list[str], dry: dict | None = None, apply: dict | 
         "stage-0-triage": {"route": "technical", "existing_acs": [], "parent_l1_id": None, "rationale": "forced"},
         "stage-itpo-author": {"status": "ok", "acs_written": list(ids), "message": "done"},
         "branch-check": {"output": "ac-authoring/final-gate-approval", "exit_code": 0},
-        "commit-stage-output": {"status": "ok", "message": "committed successfully"},
+        "commit-stage-output": {"status": "committed", "commit_answer": {"status": "committed", "reason_code": None, "reason": None, "sha": "abc1234"}},
         "peek-pause-record": pause(ids), "read-pause-record": pause(ids), "pause-persist-verify": pause(ids),
         "clear-pause-record": {"ok": True}, "clear-pause-record-verify": {"exists": False},
         "design-prepass": prepass,

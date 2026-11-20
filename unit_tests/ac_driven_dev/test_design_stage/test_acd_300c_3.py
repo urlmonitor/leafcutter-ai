@@ -170,9 +170,12 @@ def test_final_gate_reports_approved_and_held_counts(tmp_path, monkeypatch, prep
 # held records, priority fallback, dispatch order, edit/cancel/defer, closing report, failures
 # --------------------------------------------------------------------------
 TRIO = ["ACD-9990a-1", "ACD-9990a-2", "ACD-9990a-3"]
-_HOOK_FAILURE = {
-    "status": "error", "message": "pre-commit hook rejected staged files", "hook_name": "check-ac-schema",
-    "failing_files": ["docs/acceptance-criteria/x/ACD-9990a-1.yaml"], "is_conflict": False,
+_HOOK_FAILURE = {  # BO-4500a-5-ii: the commit agent relays the shared step's failed answer
+    "status": "hook_failed",
+    "commit_answer": {
+        "status": "hook_failed", "reason_code": "check_failed", "reason": "pre-commit hook rejected staged files",
+        "hook_name": "check-ac-schema", "failing_files": ["docs/acceptance-criteria/x/ACD-9990a-1.yaml"], "sha": None,
+    },
 }
 
 
@@ -390,7 +393,7 @@ def test_final_commit_failure_ends_in_error_without_delivery(tmp_path, monkeypat
     sequenced(monkeypatch)
     route_approval_step(monkeypatch)
     dry, applied = step_replies(tmp_path)
-    commits = {"__sequence__": [{"status": "ok", "message": "committed successfully"}, _HOOK_FAILURE]}
+    commits = {"__sequence__": [{"status": "committed", "commit_answer": {"status": "committed", "reason_code": None, "reason": None, "sha": "abc1234"}}, _HOOK_FAILURE]}
 
     result = run(table(prepass, BATCH, dry, applied, **{"commit-stage-output": commits}), resume("approve", "high"))
 

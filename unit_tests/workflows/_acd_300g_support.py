@@ -22,7 +22,7 @@ from _acd_300a_support import RUN_ID, calls, committed_stages, fresh_table, name
 from _plan_feature_e2_runner import run_isolated_e2  # noqa: E402
 
 __all__ = [
-    "BA_IDS", "PO_IDS", "UNDO", "after_gate", "build_cancel_message", "calls", "commit_failure", "committed_stages",
+    "BA_IDS", "PO_IDS", "UNDO", "after_gate", "build_cancel_message", "calls", "commit_failure", "commit_reply", "committed_stages",
     "format_commit_error", "gate_run", "names", "terminal",
 ]
 
@@ -40,6 +40,20 @@ def commit_failure(hook_name: str | None = "check-ac-schema", conflict: bool = F
                 "failing_files": ["docs/acceptance-criteria/x/ACD-9301.yaml"], "is_conflict": True}
     return {"status": "error", "message": "pre-commit hook rejected staged files", "hook_name": hook_name,
             "failing_files": ["docs/acceptance-criteria/x/ACD-9301.yaml"], "is_conflict": False}
+
+
+def commit_reply(hook_name: str | None = "check-ac-schema", conflict: bool = False,
+                 reason: str = "pre-commit hook rejected staged files") -> dict:
+    """A commit-stage-output reply carrying the shared commit step's failed answer (BO-4500a-5-ii envelope)."""
+    path = "docs/acceptance-criteria/x/ACD-9301.yaml"
+    answer: dict[str, object]
+    if conflict:
+        answer = {"status": "refused", "reason_code": "step_vcs_error", "sha": None,
+                  "reason": f"git commit failed: CONFLICT (content): merge conflict in {path}"}
+    else:
+        answer = {"status": "hook_failed", "reason_code": "check_failed", "sha": None, "reason": reason,
+                  "hook_name": hook_name, "failing_files": [path]}
+    return {"status": answer["status"], "commit_answer": answer}
 
 
 def gate_run(route: str, gate: str, action: str, ids: list[str], **labels):

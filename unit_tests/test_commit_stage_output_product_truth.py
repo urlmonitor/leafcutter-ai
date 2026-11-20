@@ -45,7 +45,7 @@ def _drive_pt_commit(
             }}
             if (label === 'commit-stage-output-product-truth') {{
                 commitPrompts.push(prompt);
-                return {{ status: 'ok', message: 'committed successfully' }};
+                return {{ status: 'committed', commit_answer: {{ status: 'committed', reason_code: null, reason: null, sha: 'abc1234' }} }};
             }}
             return {{ status: 'ok' }};
         }};
@@ -62,6 +62,13 @@ def _drive_pt_commit(
     """)
     stdout = run_isolated_e2(["commitStageOutputProductTruth", "stageDisplayName"], driver)
     return json.loads(stdout)
+
+
+def _step_paths(prompt: str) -> list[str]:
+    """Return the exact path list the workflow passes to the shared commit step."""
+    marker = " --supervised --run run-xyz "
+    line = next(ln for ln in prompt.splitlines() if "commit_changes.py" in ln)
+    return line.split(marker, 1)[1].split()
 
 
 def _drive_ac_commit(branch_output: str = "ac-authoring/x") -> dict:
@@ -115,6 +122,7 @@ class TestPtCommitSurgicalStaging(unittest.TestCase):
     """PT commits stage only the reported paths + index.json, never wholesale."""
 
     def test_reported_paths_and_index_are_staged(self) -> None:
+        # covers: BO-4500a-5-ii
         paths = [
             "docs/product-truth/mock-data/plant.mock.json",
             "docs/product-truth/flows/x/y.flow.json",
@@ -122,28 +130,39 @@ class TestPtCommitSurgicalStaging(unittest.TestCase):
         out = _drive_pt_commit(paths, "flow", "ux-prototyping", "ac-authoring/x")
         self.assertEqual(out["res"]["status"], "ok")
         self.assertEqual(len(out["commitPrompts"]), 1)
-        prompt = out["commitPrompts"][0]
-        for p in paths:
-            self.assertIn(p, prompt)
-        self.assertIn("docs/product-truth/index.json", prompt)
+        self.assertEqual(
+            _step_paths(out["commitPrompts"][0]), [*paths, "docs/product-truth/index.json"]
+        )
 
     def test_wholesale_add_is_forbidden(self) -> None:
+        # covers: BO-4500a-5-ii
         out = _drive_pt_commit(
             ["docs/product-truth/flows/x/y.flow.json"], "flow", "ux-prototyping", "ac-authoring/x"
         )
-        prompt = out["commitPrompts"][0]
-        # The instructions must forbid a blanket add of the store.
-        self.assertIn("NEVER run", prompt)
-        self.assertIn("git", prompt)
-        self.assertIn("add docs/product-truth", prompt)
+        tokens = _step_paths(out["commitPrompts"][0])
+        # Exact-name list only: never the store directory, a glob or '.'.
+        self.assertEqual(
+            tokens, ["docs/product-truth/flows/x/y.flow.json", "docs/product-truth/index.json"]
+        )
+        for forbidden in ("docs/product-truth", "docs/product-truth/", ".", "-A", "--all"):
+            self.assertNotIn(forbidden, tokens)
 
     def test_ac_store_excluded_from_pt_commit(self) -> None:
+        # covers: BO-4500a-5-ii
         out = _drive_pt_commit(
-            ["docs/product-truth/flows/x/y.flow.json"], "flow", "ux-prototyping", "ac-authoring/x"
+            [
+                "docs/product-truth/flows/x/y.flow.json",
+                "docs/acceptance-criteria/ACD-1/ACD-1.yaml",
+            ],
+            "flow",
+            "ux-prototyping",
+            "ac-authoring/x",
         )
-        prompt = out["commitPrompts"][0]
-        self.assertIn("docs/acceptance-criteria/", prompt)
-        self.assertIn("SEPARATE commit surface", prompt)
+        tokens = _step_paths(out["commitPrompts"][0])
+        self.assertEqual(
+            tokens, ["docs/product-truth/flows/x/y.flow.json", "docs/product-truth/index.json"]
+        )
+        self.assertFalse([t for t in tokens if t.startswith("docs/acceptance-criteria")])
 
     def test_subject_uses_pt_display_name(self) -> None:
         for stage, subject in (

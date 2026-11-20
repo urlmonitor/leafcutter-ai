@@ -33,9 +33,12 @@ from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
 
 _TEST_DESIGN = re.compile(r"test[- ]design", re.IGNORECASE)
 _RESOLVE_GATE_SIGNATURE = "async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId) {"
-_HOOK_FAILURE = {
-    "status": "error", "message": "pre-commit hook rejected staged files", "hook_name": "check-ac-schema",
-    "failing_files": ["docs/acceptance-criteria/x/ACD-9990a-1.yaml"], "is_conflict": False,
+_HOOK_FAILURE = {  # BO-4500a-5-ii: the commit agent relays the shared step's failed answer
+    "status": "hook_failed",
+    "commit_answer": {
+        "status": "hook_failed", "reason_code": "check_failed", "reason": "pre-commit hook rejected staged files",
+        "hook_name": "check-ac-schema", "failing_files": ["docs/acceptance-criteria/x/ACD-9990a-1.yaml"], "sha": None,
+    },
 }
 _WT = "/tmp/harness-default-ac-worktree"
 _STORE = f"{_WT}/docs/acceptance-criteria"
@@ -139,7 +142,7 @@ def test_final_commit_failure_names_the_test_design_stage(tmp_path, monkeypatch,
     sequenced(monkeypatch)
     route_approval_step(monkeypatch)
     dry, applied = step_replies(tmp_path)
-    commits = {"__sequence__": [{"status": "ok", "message": "committed successfully"}, _HOOK_FAILURE]}
+    commits = {"__sequence__": [{"status": "committed", "commit_answer": {"status": "committed", "reason_code": None, "reason": None, "sha": "abc1234"}}, _HOOK_FAILURE]}
 
     result = run(table(prepass, BATCH, dry, applied, **{"commit-stage-output": commits}), resume("approve", "high"))
 

@@ -91,7 +91,7 @@ def labels(prepass: dict, holds: dict, **overrides) -> dict:
         "stage-0-triage": {"route": "technical", "existing_acs": [], "parent_l1_id": None, "rationale": "forced"},
         "stage-itpo-author": {"status": "ok", "acs_written": IDS, "message": "done"},
         "branch-check": {"output": "ac-authoring/file-findings", "exit_code": 0},
-        "commit-stage-output": {"status": "ok", "message": "committed successfully"},
+        "commit-stage-output": {"status": "committed", "commit_answer": {"status": "committed", "reason_code": None, "reason": None, "sha": "abc1234"}},
         "peek-pause-record": NO_RECORD, "read-pause-record": NO_RECORD, "pause-persist-verify": PAUSE,
         "clear-pause-record": {"ok": True}, "clear-pause-record-verify": {"exists": False},
         "design-prepass": prepass,

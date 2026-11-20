@@ -285,8 +285,6 @@ function stageDisplayName(stageKey) {
  */
 async function commitStageOutput(written, stageName, component, isFinal, runId, acStorePath, authoringWorktreePath, extraPaths) {
   acStorePath = acStorePath || "docs/acceptance-criteria";
-  // Build the git -C anchor for all git operations in this function. (AC BO-1500a-2)
-  const gitC = authoringWorktreePath ? `-C ${makerQuote(authoringWorktreePath)}` : "";
   const stageLabel = stageDisplayName(stageName);
 
   // Why the no-main-commit guard: docs/reference/plan-feature-workflow-rationale-helpers.md
@@ -363,121 +361,28 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
   const commitMessage =
     `plan-feature(${displayStage}): ${componentLabel}\n\nAC IDs: ${acIdList}\nrun-id: ${runId}\n${commitKind}`;
 
-  // Build a JSON-safe representation of the AC IDs so the agent can filter on them.
-  const writtenJson = JSON.stringify(written);
-  // records_to_commit is untrusted: keep only .yaml paths under the store (relative to the worktree), never `..`.
+  // BO-4500a-5-ii: the exact paths (the rule check's records_to_commit, repaired parents included) go to the
+  // shared commit step. records_to_commit is untrusted: keep only .yaml paths under the store, never `..`;
+  // a path the scan reported absolute is made relative to the worktree first.
   const _wt = (authoringWorktreePath || "").split("\\").join("/"), _st = acStorePath.split("\\").join("/");
   const _storeRel = (_wt && _st.startsWith(_wt + "/")) ? _st.slice(_wt.length + 1) : _st;
-  const keepPaths = (extraPaths || []).filter((p) => typeof p === "string" && p.endsWith(".yaml") && p.startsWith(_storeRel + "/") && !p.split("/").includes(".."));
-  const extra = keepPaths.length ? `EXTRA PATHS: also stage these exact repo-relative paths in Step 3 (they count as stage-specific files even though their stem is not an AC ID above): ${JSON.stringify(keepPaths)}\n` : "";
+  // With no rule-check list, name the flat <store>/<id>.yaml of each written id (legacy); a record that is
+  // not there makes the step refuse loudly rather than skip silently.
+  const keepPaths = (extraPaths && extraPaths.length ? extraPaths : written.map((id) => `${_storeRel}/${id}.yaml`))
+    .map((p) => (typeof p === "string" && _wt && p.split("\\").join("/").startsWith(_wt + "/")) ? p.split("\\").join("/").slice(_wt.length + 1) : p)
+    .filter((p) => typeof p === "string" && p.endsWith(".yaml") && p.startsWith(_storeRel + "/") && !p.split("/").includes(".."));
+  if (keepPaths.length === 0) {
+    return { status: "ok", message: "no new AC files to commit — skipped" };
+  }
 
   let commitResult;
   try {
     commitResult = await agent(
-      `Stage and commit the AC YAML files produced by the ${stageName} stage.\n` +
-      "\n" +
-      `The AC IDs written by this stage are: ${writtenJson}\n` +
-      `The commit message to use is: ${commitMessage}\n` +
-      extra + "\n" +
-      (authoringWorktreePath
-        ? `ISOLATION RULE (AC BO-1500a-2): ALL git commands in this task MUST use the\n` +
-          `'-C "${authoringWorktreePath}"' flag so they operate inside the dedicated authoring\n` +
-          `worktree and NEVER in the original checkout or any other worktree.\n\n`
-        : "") +
-      `IMPORTANT STAGING RULE: You MUST stage ONLY the files that correspond to the\n` +
-      `AC IDs listed above. Never add the whole store (${acStorePath}) or '.' to the index —\n` +
-      `those would include files from previous stages or\n` +
-      `unrelated working-tree changes, which is a correctness violation.\n` +
-      `\n` +
-      `Step 1 — Discover which AC files from this stage exist on disk:\n` +
-      `  Run: git ${gitC} status --porcelain --untracked-files=all -- ${acStorePath}/\n` +
-      "  (The --untracked-files=all flag is required so that files inside a\n" +
-      "  previously-untracked subfolder are emitted individually rather than\n" +
-      "  collapsed to a single directory-level '?? <dir>/' line. Without it,\n" +
-      "  a fresh AC store is silently skipped.)\n" +
-      "  Parse the output. Each line has the format: XY <path>\n" +
-      "  where XY is a two-character status code. For rename lines the format is:\n" +
-      "  R  old-path -> new-path — extract the NEW path (the part after '-> ').\n" +
-      "  Collect ALL lines where the path ends in '.yaml' and the status is not\n" +
-      "  '  ' (i.e. it is modified or untracked — status codes: M, A, R, ??, etc.).\n" +
-      "  From those paths, keep only the ones whose filename stem (the portion\n" +
-      "  after the last '/' and before '.yaml') is exactly equal to one of the\n" +
-      "  AC IDs above. The stem must match exactly — not merely share a prefix.\n" +
-      "  For example, ACD-300g.yaml must NOT match ACD-300 (stems must be\n" +
-      "  identical, not merely prefix-equal; ACD-300g !== ACD-300).\n" +
-      "  These are the stage-specific files to stage.\n" +
-      "  PARENT RULE: in addition, if a parent AC's YAML file (an ancestor of a written\n" +
-      "  AC, e.g. BO-2600a for BO-2600a-6) was modified on disk by this stage -- typically its\n" +
-      "  covered_by list gained the written child -- include that parent file too. A parent\n" +
-      "  that is clean (unmodified) must never be staged, and neither must an unmodified sibling AC or an AC file committed by an earlier stage.\n" +
-      `  Only paths under the AC store (${acStorePath}/) are ever eligible; any path\n` +
-      "  outside the AC store is excluded, whatever its status.\n" +
-      "\n" +
-      "Step 2 — If no matching files are found:\n" +
-      "  Return: { \"status\": \"ok\", \"message\": \"no new AC files to commit — skipped\" }\n" +
-      "\n" +
-      "Step 3 — Stage each matching file individually:\n" +
-      "  Stage each file path found in Step 1 with its own explicit-path add (one add per file).\n" +
-      `  Do NOT add the whole directory or '.' ('git ${gitC} add .' or 'git ${gitC} add ${acStorePath}/') — only individual explicit paths.\n` +
-      "  If staging any single path exits non-zero:\n" +
-      "    Return: { \"status\": \"error\", \"message\": \"git add failed for <path>\", \"hook_name\": null, \"failing_files\": [\"<path>\"], \"is_conflict\": false }\n" +
-      "\n" +
-      "Step 4 — Verify only the expected files are staged:\n" +
-      `  Run: git ${gitC} diff --cached --name-only\n` +
-      "  If the output is empty (nothing staged despite Step 3 succeeding):\n" +
-      "    Return: { \"status\": \"ok\", \"message\": \"no new AC files to commit — skipped\" }\n" +
-      "\n" +
-      "  Compare the output with the expected set (the files staged in Step 3). Files the user had\n" +
-      "  already staged (pre-staged) outside the AC store, or AC files from an earlier stage, may be\n" +
-      "  in the index. If the index holds any unexpected extra path (not in the expected set):\n" +
-      `    unstage it with 'git ${gitC} reset -q -- <extra path>'; if that fails, return an error\n` +
-      "    { \"status\": \"error\", \"message\": \"unexpected staged path <path> - aborted\", \"hook_name\": null, \"failing_files\": [\"<path>\"], \"is_conflict\": false } and do not commit.\n" +
-      "\n" +
-      "Step 5 — Commit the staged files using the commit agent's standard flow.\n" +
-      "  Limit the commit to the expected set via pathspec (-- <expected paths>) so that unrelated already staged changes are never swept in.\n" +
-      "  The commit message has already been provided above. Use it exactly.\n" +
-      "  After committing, capture the exit code and output.\n" +
-      "  If exit code is 0:\n" +
-      "    Return: { \"status\": \"ok\", \"message\": \"committed successfully\" }\n" +
-      "  If exit code is non-zero:\n" +
-      "    Analyse the combined output to build a structured error:\n" +
-      "\n" +
-      "    a) Conflict detection:\n" +
-      "       If the output contains the word 'conflict' (case-insensitive),\n" +
-      "       extract any file paths mentioned (lines matching docs/ or .yaml/.yml\n" +
-      "       patterns, or lines after 'CONFLICT (' markers).\n" +
-      "       Return: {\n" +
-      "         \"status\": \"error\",\n" +
-      "         \"message\": \"index conflict detected\",\n" +
-      "         \"hook_name\": null,\n" +
-      "         \"failing_files\": [<extracted conflict file paths>],\n" +
-      "         \"is_conflict\": true\n" +
-      "       }\n" +
-      "\n" +
-      "    b) Pre-commit hook failure:\n" +
-      "       Look for lines containing 'hook' (e.g. 'hook: ...' or '- hook-name').\n" +
-      "       Extract the first hook name you can identify, or null if none found.\n" +
-      "       Collect file paths from the output: any token matching\n" +
-      "         docs/acceptance-criteria/**.yaml or similar path patterns.\n" +
-      "       Return: {\n" +
-      "         \"status\": \"error\",\n" +
-      "         \"message\": \"pre-commit hook rejected staged files\",\n" +
-      "         \"hook_name\": \"<hook name or null>\",\n" +
-      "         \"failing_files\": [<file paths from error output>],\n" +
-      "         \"is_conflict\": false\n" +
-      "       }\n" +
-      "\n" +
-      "    c) Generic failure (no hook or conflict pattern found):\n" +
-      "       Return: {\n" +
-      "         \"status\": \"error\",\n" +
-      "         \"message\": \"git commit failed\",\n" +
-      "         \"hook_name\": null,\n" +
-      "         \"failing_files\": [],\n" +
-      "         \"is_conflict\": false\n" +
-      "       }\n" +
-      "\n" +
-      "  IMPORTANT: Do NOT retry the commit. Do NOT run git commit --no-verify.\n" +
-      "  Do NOT run git add again. Leave all AC files as uncommitted changes on disk.",
+      `Commit the AC records produced by the ${stageName} stage through the shared commit step, once, in supervised mode. Use no other way of committing.\n` +
+      "1. Write the message between the BEGIN-MESSAGE and END-MESSAGE lines (the markers excluded) to a new temporary message file.\n" +
+      "BEGIN-MESSAGE\n" + commitMessage + "\nEND-MESSAGE\n" +
+      `2. With the working directory set to ${makerQuote(authoringWorktreePath || ".")}, run: python3 {{config.output_root}}/scripts/commit_changes.py --message-file <that file> --supervised --run ${runId} ${keepPaths.join(" ")}\n` +
+      "3. Return { \"status\": \"<the answer's status>\", \"commit_answer\": <the step's JSON answer exactly as printed> }",
       { agentType: "commit", label: "commit-stage-output" }
     );
   } catch (err) {
@@ -490,16 +395,24 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
     };
   }
 
-  let result;
+  // Only a committed answer is a commit; anything else (or an unreadable reply) fails closed.
+  let answer = null;
   try {
-    result = parseAgentJson(commitResult, { stage: "commit-stage-output", agent: "commit" });
+    answer = (parseAgentJson(commitResult, { stage: "commit-stage-output", agent: "commit" }) || {}).commit_answer || null;
   } catch (_parseErr) {
-    // If the agent returned non-JSON, treat as failure — an unparseable result
-    // means we cannot confirm the commit succeeded (fail-closed per ACD-300g-1-i).
-    result = { status: "error", message: "commit result unparseable — cannot confirm success", hook_name: null, failing_files: [], is_conflict: false };
+    answer = null;
   }
-
-  return result || { status: "error", message: "no result returned by agent", hook_name: null, failing_files: [], is_conflict: false };
+  if (answer && answer.status === "committed") return { status: "ok", message: "committed successfully" };
+  return {
+    status: "error",
+    message: answer
+      ? `the commit step answered status ${answer.status}, reason_code ${answer.reason_code}: ${answer.reason}`
+      : "commit answer unreadable — cannot confirm success",
+    hook_name: (answer && answer.hook_name) || null,
+    failing_files: (answer && Array.isArray(answer.failing_files)) ? answer.failing_files : [],
+    // A refused answer that reports a conflict is an index conflict, never a hook rejection (never retried or forced).
+    is_conflict: !!(answer && answer.status === "refused" && /conflict/i.test(String(answer.reason || ""))),
+  };
 }
 
 /**
@@ -914,7 +827,8 @@ async function resolveOrphanedDrafts(orphans, acStoreDir, runId, authoringWorktr
       false,
       runId,
       acStoreDir,
-      authoringWorktreePath
+      authoringWorktreePath,
+      orphans.map((o) => o.filePath) // exactly the orphans' own records
     );
 
     if (commitOutcome.status === "error") {
@@ -1214,7 +1128,6 @@ async function emitPtTelemetry(event, detail, authoringWorktreePath) {
  */
 async function commitStageOutputProductTruth(reportedPaths, stageName, component, runId, ptStorePath, authoringWorktreePath) {
   ptStorePath = ptStorePath || "docs/product-truth";
-  const gitC = authoringWorktreePath ? `-C ${makerQuote(authoringWorktreePath)}` : "";
   const stageLabel = stageDisplayName(stageName);
 
   // Why the PT commit guard: docs/reference/plan-feature-workflow-rationale-helpers.md
@@ -1290,44 +1203,17 @@ async function commitStageOutputProductTruth(reportedPaths, stageName, component
   if (!pathsToStage.includes(indexPath)) {
     pathsToStage.push(indexPath);
   }
-  const pathsJson = JSON.stringify(pathsToStage);
+  // The product-truth commit never carries the AC store: that is a separate commit surface.
+  const ptPaths = pathsToStage.filter((p) => !p.startsWith("docs/acceptance-criteria/"));
 
   let commitResult;
   try {
     commitResult = await agent(
-      `Stage and commit the product-truth artifacts produced by the ${stageName} stage.\n` +
-      "\n" +
-      `The EXACT paths to stage (artifact + its regenerated derived files + the store index) are:\n` +
-      `  ${pathsJson}\n` +
-      `The commit message to use is: ${commitMessage}\n` +
-      "\n" +
-      (authoringWorktreePath
-        ? `ISOLATION RULE: ALL git commands in this task MUST use the '-C "${authoringWorktreePath}"'\n` +
-          `flag so they operate inside the dedicated authoring worktree and NEVER in another checkout.\n\n`
-        : "") +
-      `SURGICAL STAGING RULE (correctness-critical): stage ONLY the explicit paths listed above.\n` +
-      `  - NEVER run 'git ${gitC} add ${ptStorePath}' or 'git ${gitC} add ${ptStorePath}/' or 'git ${gitC} add .'\n` +
-      `    — a wholesale add would sweep unrelated derived churn into this commit.\n` +
-      `  - NEVER stage anything under docs/acceptance-criteria/ — the AC store is a SEPARATE commit surface.\n` +
-      "\n" +
-      "Step 1 — Stage each listed path individually (skip any that do not exist on disk):\n" +
-      `  For each path P in the list above, run: git ${gitC} add "P"\n` +
-      `  If a 'git ${gitC} add' for a path that DOES exist exits non-zero:\n` +
-      "    Return: { \"status\": \"error\", \"message\": \"git add failed for <path>\", \"hook_name\": null, \"failing_files\": [\"<path>\"], \"is_conflict\": false }\n" +
-      "\n" +
-      "Step 2 — Verify staging is surgical:\n" +
-      `  Run: git ${gitC} diff --cached --name-only\n` +
-      "  Confirm every staged path is one of the listed paths and NONE is under docs/acceptance-criteria/.\n" +
-      "  If nothing is staged: Return { \"status\": \"ok\", \"message\": \"no product-truth files to commit — skipped\" }\n" +
-      "\n" +
-      "Step 3 — Commit the staged files using the commit agent's standard flow with the message above.\n" +
-      "  If exit code is 0: Return { \"status\": \"ok\", \"message\": \"committed successfully\" }\n" +
-      "  If non-zero, analyse the output:\n" +
-      "    a) 'conflict' (case-insensitive) → { \"status\": \"error\", \"message\": \"index conflict detected\", \"hook_name\": null, \"failing_files\": [<paths>], \"is_conflict\": true }\n" +
-      "    b) hook failure → { \"status\": \"error\", \"message\": \"pre-commit hook rejected staged files\", \"hook_name\": \"<hook or null>\", \"failing_files\": [<paths>], \"is_conflict\": false }\n" +
-      "    c) generic → { \"status\": \"error\", \"message\": \"git commit failed\", \"hook_name\": null, \"failing_files\": [], \"is_conflict\": false }\n" +
-      "\n" +
-      "  IMPORTANT: Do NOT retry. Do NOT run git commit --no-verify. Leave files as uncommitted changes on disk.",
+      `Commit the product-truth artifacts produced by the ${stageName} stage through the shared commit step, once, in supervised mode. Use no other way of committing.\n` +
+      "1. Write the message between the BEGIN-MESSAGE and END-MESSAGE lines (the markers excluded) to a new temporary message file.\n" +
+      "BEGIN-MESSAGE\n" + commitMessage + "\nEND-MESSAGE\n" +
+      `2. With the working directory set to ${makerQuote(authoringWorktreePath || ".")}, run: python3 {{config.output_root}}/scripts/commit_changes.py --message-file <that file> --supervised --run ${runId} ${ptPaths.join(" ")}\n` +
+      "3. Return { \"status\": \"<the answer's status>\", \"commit_answer\": <the step's JSON answer exactly as printed> }",
       { agentType: "commit", label: "commit-stage-output-product-truth" }
     );
   } catch (err) {
@@ -1340,14 +1226,23 @@ async function commitStageOutputProductTruth(reportedPaths, stageName, component
     };
   }
 
-  let result;
+  // Only a committed answer is a commit; anything else (or an unreadable reply) fails closed.
+  let answer = null;
   try {
-    result = parseAgentJson(commitResult, { stage: "commit-stage-output-product-truth", agent: "commit" });
+    answer = (parseAgentJson(commitResult, { stage: "commit-stage-output-product-truth", agent: "commit" }) || {}).commit_answer || null;
   } catch (_parseErr) {
-    result = { status: "error", message: "product-truth commit result unparseable — cannot confirm success", hook_name: null, failing_files: [], is_conflict: false };
+    answer = null;
   }
-
-  return result || { status: "error", message: "no result returned by agent", hook_name: null, failing_files: [], is_conflict: false };
+  if (answer && answer.status === "committed") return { status: "ok", message: "committed successfully" };
+  return {
+    status: "error",
+    message: answer
+      ? `the commit step answered status ${answer.status}, reason_code ${answer.reason_code}: ${answer.reason}`
+      : "product-truth commit answer unreadable — cannot confirm success",
+    hook_name: (answer && answer.hook_name) || null,
+    failing_files: (answer && Array.isArray(answer.failing_files)) ? answer.failing_files : [],
+    is_conflict: !!(answer && answer.status === "refused" && /conflict/i.test(String(answer.reason || ""))),
+  };
 }
 
 /**
@@ -1406,13 +1301,14 @@ async function recoverFlowRefFromCommit(authoringWorktreePath) {
 /**
  * Reconciliation (Track 1.3): write the business-analyst's reported
  * `flow_backlinks` into the flow's `step.implements[]` and regenerate derived
- * data, then commit the flow + index + affected ACs as a DEDICATED
+ * data, then commit the flow + index + the rewritten ACs as a DEDICATED
  * reconciliation commit (it re-mutates already-committed files, so it cannot be
  * folded into a stage commit).
  *
  * Runs `docs/product-truth/scripts/apply_flow_backlinks.py` via a status-checker
- * dispatch, then commits via the commit agent (surgical: flow + index +
- * docs/acceptance-criteria — the ACs whose product_truth back-ref changed).
+ * dispatch, then commits through the shared commit step (commit_changes.py): the
+ * flow, the index, and exactly the AC records the script's `rewritten_acs` JSON
+ * report names (the ACs whose product_truth back-ref changed) -- no store glob.
  *
  * @param {string}      flowRef               - Store-relative path to the approved flow's `.flow.json`.
  * @param {object}      flowBacklinks         - Map step_id -> [AC ids] reported by the BA.
@@ -1461,8 +1357,22 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
     };
   }
 
-  // Step 2 — commit the reconciliation as its own commit (flow + index + affected ACs).
-  const gitC = authoringWorktreePath ? `-C ${makerQuote(authoringWorktreePath)}` : "";
+  // The script reports, as one JSON line on stdout, exactly the AC records it rewrote (its derived product_truth
+  // back-refs). Those, and only those, join the commit; a missing or unreadable report names none (never a glob).
+  const rewrittenAcs = [];
+  for (const line of String(runParsed.output || "").split("\n")) {
+    let rep = null;
+    try { rep = JSON.parse(line.trim()); } catch (_e) { rep = null; }
+    if (rep && Array.isArray(rep.rewritten_acs)) {
+      for (const p of rep.rewritten_acs) {
+        if (typeof p === "string" && p.endsWith(".yaml") && p.startsWith("docs/acceptance-criteria/") && !p.split("/").includes("..") && !rewrittenAcs.includes(p)) {
+          rewrittenAcs.push(p);
+        }
+      }
+    }
+  }
+
+  // Step 2 — commit the reconciliation as its own commit (flow + index + exactly the rewritten ACs).
   const commitMessage =
     `plan-feature(RECONCILE): ${component || "unknown-component"}\n\nrun-id: ${runId}\nflow step.implements back-links + regenerated derived data`;
   const indexPath = ptStorePath + "/index.json";
@@ -1471,32 +1381,30 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
 
   try {
     const commitOut = await agent(
-      `Commit the flow-backlink reconciliation as a DEDICATED commit.\n` +
-      `The reconciliation script already wrote step.implements into the flow and regenerated derived data.\n` +
-      `Commit message to use: ${commitMessage}\n\n` +
-      (authoringWorktreePath
-        ? `ISOLATION RULE: ALL git commands MUST use '-C "${authoringWorktreePath}"'.\n\n`
-        : "") +
-      `Step 1 — Stage the reconciled files:\n` +
-      `  Run: git ${gitC} add "${flowStorePath}"\n` +
-      `  Run: git ${gitC} add "${indexPath}"\n` +
-      `  Then stage ONLY the changed AC files under docs/acceptance-criteria/ whose product_truth back-ref\n` +
-      `  was regenerated by this reconciliation:\n` +
-      `    Run: git ${gitC} status --porcelain --untracked-files=all -- docs/acceptance-criteria/\n` +
-      `    For each modified '.yaml' line, run: git ${gitC} add "<path>"\n` +
-      `  Do NOT run 'git ${gitC} add .' or 'git ${gitC} add ${ptStorePath}' wholesale.\n\n` +
-      `Step 2 — Commit with the message above.\n` +
-      `  If exit 0: Return { "status": "ok", "message": "reconciliation committed" }\n` +
-      `  If non-zero: Return { "status": "error", "message": "<summary>" }`,
+      `Commit the flow-backlink reconciliation as a DEDICATED commit through the shared commit step, once, in supervised mode. Use no other way of committing.\n` +
+      "The reconciliation script already wrote step.implements into the flow and regenerated derived data.\n" +
+      "1. Write the message between the BEGIN-MESSAGE and END-MESSAGE lines (the markers excluded) to a new temporary message file.\n" +
+      "BEGIN-MESSAGE\n" + commitMessage + "\nEND-MESSAGE\n" +
+      `2. With the working directory set to ${makerQuote(authoringWorktreePath || ".")}, run: python3 {{config.output_root}}/scripts/commit_changes.py --message-file <that file> --supervised --run ${runId} ${[flowStorePath, indexPath, ...rewrittenAcs].join(" ")}\n` +
+      "3. Return { \"status\": \"<the answer's status>\", \"commit_answer\": <the step's JSON answer exactly as printed> }",
       { agentType: "commit", label: "commit-flow-reconciliation" }
     );
-    let commitParsed;
+    // Only a committed answer is a commit; anything else (or an unreadable reply) fails closed.
+    let answer = null;
     try {
-      commitParsed = parseAgentJson(commitOut, { stage: "commit-flow-reconciliation", agent: "commit" });
+      answer = (parseAgentJson(commitOut, { stage: "commit-flow-reconciliation", agent: "commit" }) || {}).commit_answer || null;
     } catch (_parseErr) {
-      commitParsed = null;
+      answer = null;
     }
-    return commitParsed || { status: "error", message: "no result from reconciliation commit agent" };
+    if (answer && answer.status === "committed") return { status: "ok", message: "reconciliation committed" };
+    return {
+      status: "error",
+      message: answer
+        ? `the commit step answered status ${answer.status}, reason_code ${answer.reason_code}: ${answer.reason}`
+        : "no commit answer from the reconciliation commit",
+      hook_name: (answer && answer.hook_name) || null,
+      failing_files: (answer && Array.isArray(answer.failing_files)) ? answer.failing_files : [],
+    };
   } catch (err) {
     return { status: "error", message: "reconciliation commit dispatch failed: " + err.message };
   }

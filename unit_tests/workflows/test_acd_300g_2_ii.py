@@ -15,35 +15,46 @@ import unittest
 from pathlib import Path
 
 from unit_tests.workflows._acd300g2_support import (
-    drive_commit_stage_output, make_parent_covered_by_repo, porcelain,
-    run_parent_hook_on_staged,
+    AC_STORE, drive_commit_stage_output, make_parent_covered_by_repo, porcelain,
+    run_parent_hook_on_staged, step_paths,
 )
 
-_PARENT_RULE = r"parent[^.]{0,200}(modified|changed|edited)"
+# BO-4500a-5-ii: the stage commit names the EXACT record paths (the rule check's records_to_commit, repaired
+# parents included) to the shared commit step instead of sending a prose "parent rule" recipe; the parent
+# protections are proved on that path list.
 
 
-def _prompt() -> str:
-    return drive_commit_stage_output(["BO-2600a-6"])["prompts"][0]
+def _stage_paths(repo: Path) -> list[str]:
+    """records_to_commit as the rule check reports it for the fixture: changed AC-store files."""
+    return sorted(p for p in porcelain(repo) if p.startswith(f"{AC_STORE}/"))
+
+
+def _paths(changed: list[str]) -> list[str]:
+    out = drive_commit_stage_output(["BO-2600a-6"], extra_paths=changed)
+    assert len(out["prompts"]) == 1, out
+    return step_paths(out["prompts"][0])
 
 
 class TestParentCoveredByStaging(unittest.TestCase):
     def test_stage_commit_includes_parent_whose_covered_by_was_updated(self):
         # covers: ACD-300g-2-ii
+        # covers: BO-4500a-5-ii
         # angle: discrimination
-        """Defect reproducer: agent reports only the child; the prompt must
-        still include the edited parent (fails against reported-files-only)."""
+        """Defect reproducer: the agent reports only the child; the parent edit is on disk and the rule check
+        reports it; the path list handed to the shared step includes the edited parent."""
         with tempfile.TemporaryDirectory() as tmp:
             fx = make_parent_covered_by_repo(Path(tmp))
             self.assertEqual(porcelain(fx["repo"]).get(fx["parent"]), " M")
-        prompt = _prompt()
-        self.assertRegex(prompt.lower(), _PARENT_RULE)
-        self.assertIn("covered_by", prompt)
+            changed = _stage_paths(fx["repo"])
+        self.assertIn(fx["parent"], _paths(changed))
+        self.assertIn(fx["child"], _paths(changed))
 
     def test_stage_commit_passes_parent_covered_by_hook(self):
         # covers: ACD-300g-2-ii
+        # covers: BO-4500a-5-ii
         # angle: real_artifact
-        """Real hook: child-only set is BLOCKED, child+parent passes; the prompt
-        must direct staging of the latter set (RED)."""
+        """Real hook: child-only set is BLOCKED, child+parent passes; the path list the workflow hands to the
+        shared step is the latter set."""
         with tempfile.TemporaryDirectory() as tmp:
             fx = make_parent_covered_by_repo(Path(tmp))
             only_child = run_parent_hook_on_staged(fx["repo"], [fx["child"]])
@@ -52,38 +63,37 @@ class TestParentCoveredByStaging(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             fx = make_parent_covered_by_repo(Path(tmp))
             both = run_parent_hook_on_staged(fx["repo"], [fx["child"], fx["parent"]])
+            changed = _stage_paths(fx["repo"])
         self.assertEqual(both.returncode, 0, both.stderr)
-        self.assertRegex(_prompt().lower(), _PARENT_RULE)
+        self.assertEqual(sorted(_paths(changed)), sorted([fx["child"], fx["parent"]]))
 
     def test_stage_commit_excludes_unmodified_sibling_ac(self):
         # covers: ACD-300g-2-ii
+        # covers: BO-4500a-5-ii
         # angle: failure
-        """Sibling BO-2600a-5 is clean on disk; the parent rule must be scoped
-        to MODIFIED parents only (not 'all siblings/ancestors')."""
+        """Sibling BO-2600a-5 is clean on disk, so the rule check does not report it and it is not among the
+        paths handed to the shared step (only MODIFIED parents ride along, not all siblings/ancestors)."""
         with tempfile.TemporaryDirectory() as tmp:
             fx = make_parent_covered_by_repo(Path(tmp))
             self.assertNotIn(fx["sibling"], porcelain(fx["repo"]))
-        low = _prompt().lower()
-        self.assertRegex(low, _PARENT_RULE)  # RED until the rule exists
-        self.assertRegex(
-            low,
-            r"(unmodified|clean|not modified)[^.\n]{0,160}(never|not|skip|exclude)|"
-            r"(never|not|skip|exclude)[^.\n]{0,160}(unmodified|clean|not modified)",
-        )
+            changed = _stage_paths(fx["repo"])
+        paths = _paths(changed)
+        self.assertNotIn(fx["sibling"], paths)
+        self.assertNotIn(fx["previous_stage"], paths)
 
     def test_stage_commit_excludes_files_outside_ac_store(self):
         # covers: ACD-300g-2-ii
+        # covers: BO-4500a-5-ii
         # angle: boundary
-        """config/commit_guardian.json is modified outside the store: not
-        staged, index state untouched; prompt scopes everything to the store."""
+        """config/commit_guardian.json is modified outside the store: even if it is handed in as a record
+        path it is dropped, so the shared step never names it; the parent is still named."""
         with tempfile.TemporaryDirectory() as tmp:
             fx = make_parent_covered_by_repo(Path(tmp))
             self.assertEqual(porcelain(fx["repo"]).get(fx["outside"]), " M")
-        prompt = _prompt()
-        self.assertNotIn("commit_guardian.json", prompt)
-        low = prompt.lower()
-        self.assertRegex(low, r"(outside|not under)[^.\n]{0,120}(ac store|acceptance-criteria)")
-        self.assertRegex(low, _PARENT_RULE)
+            changed = _stage_paths(fx["repo"]) + [fx["outside"]]
+        paths = _paths(changed)
+        self.assertNotIn(fx["outside"], paths)
+        self.assertIn(fx["parent"], paths)
 
 
 if __name__ == "__main__":

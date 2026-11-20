@@ -34,11 +34,12 @@ ARCHITECTURE: Pure Python test — uses the _workflow_engine_harness module to
 from __future__ import annotations
 
 import re
-import tempfile
 from pathlib import Path
 
 import pytest
 
+from _workflow_dual_engine_support import run_synthetic_workflow
+from _workflow_dual_engine_support import workflow_or_skip as _workflow_or_skip
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2, workspace_ensure_reply
 
 # ---------------------------------------------------------------------------
@@ -228,9 +229,7 @@ def test_harness_captures_agent_calls_from_e2_script() -> None:
     Satisfies AC-1: harness executes a workflow under the E2 contract and
     records every agent() call with its (prompt, opts) tuple.
     """
-    quick_fix = _WORKFLOWS_DIR / "quick-fix.js"
-    if not quick_fix.exists():
-        pytest.skip(f"quick-fix.js not found at {quick_fix}")
+    quick_fix = _workflow_or_skip("quick-fix.js")
 
     result = run_workflow_under_e2(quick_fix)
 
@@ -269,9 +268,7 @@ def test_zero_dispatch_script_fails_guard() -> None:
     dispatch >= 1 agent from their top-level bodies. create-ticket.js remains
     E1-only and serves as the zero-dispatch reference for this test.
     """
-    create_ticket = _WORKFLOWS_DIR / "create-ticket.js"
-    if not create_ticket.exists():
-        pytest.skip(f"create-ticket.js not found at {create_ticket}")
+    create_ticket = _workflow_or_skip("create-ticket.js")
 
     result = run_workflow_under_e2(create_ticket)
 
@@ -317,19 +314,7 @@ def test_parallel_contract_violation_recorded_for_spread_form() -> None:
         "const results = await parallel(...thunks);\n"
     )
 
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".js", prefix="harness_test_", delete=False, encoding="utf-8"
-    ) as tmp:
-        tmp.write(spread_form_script)
-        tmp_path = Path(tmp.name)
-
-    try:
-        result = run_workflow_under_e2(tmp_path)
-    finally:
-        try:
-            tmp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+    result = run_synthetic_workflow(spread_form_script)
 
     assert result.error == "", (
         f"Harness error during spread-form parallel test: {result.error}"
@@ -370,19 +355,7 @@ def test_parallel_array_form_runs_thunks() -> None:
         "]);\n"
     )
 
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".js", prefix="harness_test_", delete=False, encoding="utf-8"
-    ) as tmp:
-        tmp.write(array_form_script)
-        tmp_path = Path(tmp.name)
-
-    try:
-        result = run_workflow_under_e2(tmp_path)
-    finally:
-        try:
-            tmp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+    result = run_synthetic_workflow(array_form_script)
 
     assert result.error == "", (
         f"Harness error during array-form parallel test: {result.error}"
@@ -418,9 +391,7 @@ def test_build_epic_parallel_contract_baseline() -> None:
     become a test error) once ticket 10 fixes build-epic.js to use array-form
     parallel. At that point, remove this test's xfail marker.
     """
-    build_epic = _WORKFLOWS_DIR / "build-epic.js"
-    if not build_epic.exists():
-        pytest.skip(f"build-epic.js not found at {build_epic}")
+    build_epic = _workflow_or_skip("build-epic.js")
 
     # Provide fake planner output so the script reaches the parallel() dispatch.
     # Without this, the planner returns the default stub (no `batches` field)
@@ -487,9 +458,7 @@ def test_dispatch_order_build_epic() -> None:
     Args:
         None (uses the fixed workflow script path from module scope).
     """
-    build_epic = _WORKFLOWS_DIR / "build-epic.js"
-    if not build_epic.exists():
-        pytest.skip(f"build-epic.js not found at {build_epic}")
+    build_epic = _workflow_or_skip("build-epic.js")
 
     result = run_workflow_under_e2(build_epic)
 
@@ -596,14 +565,15 @@ def test_dispatch_order_plan_feature() -> None:
 
     A dropped, reordered, or mis-typed agent type FAILS this test (AC-2 / M-1).
     """
-    plan_feature = _WORKFLOWS_DIR / "plan-feature.js"
-    if not plan_feature.exists():
-        pytest.skip(f"plan-feature.js not found at {plan_feature}")
+    plan_feature = _workflow_or_skip("plan-feature.js")
 
     result = run_workflow_under_e2(
         plan_feature,
         label_responses={
             "workspace-ensure": workspace_ensure_reply("/tmp/fake-ac-worktree", ac_store_path="/tmp/fake-ac-worktree/docs/acceptance-criteria"),
+            # BO-4500a-5-ii: a stage that wrote no record has nothing to commit and the workflow skips the
+            # commit dispatch itself, so this run's it-po stage reports one written record to reach the commit.
+            "stage-itpo-author": {"status": "ok", "acs_written": ["ACD-9999a-1"], "message": "done"},
         },
     )
 
@@ -670,9 +640,7 @@ def test_dispatch_order_build_feature() -> None:
     This test's own regression-guard intent is preserved: the workspace dispatch must still appear, still
     before ticket-planner, and never be dropped (AC-3).
     """
-    build_feature = _WORKFLOWS_DIR / "build-feature.js"
-    if not build_feature.exists():
-        pytest.skip(f"build-feature.js not found at {build_feature}")
+    build_feature = _workflow_or_skip("build-feature.js")
 
     label_responses = {
         "resolve-target": {"target_type": "ticket", "ticket_path": "tickets/00_inbox/07_TICKET-x.md", "worktree_path": None},
@@ -741,19 +709,7 @@ def test_missing_worktree_dispatch_fails_build_feature_guard() -> None:
         ");\n"
     )
 
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".js", prefix="no_worktree_test_", delete=False, encoding="utf-8"
-    ) as tmp:
-        tmp.write(no_worktree_script)
-        tmp_path = Path(tmp.name)
-
-    try:
-        result = run_workflow_under_e2(tmp_path)
-    finally:
-        try:
-            tmp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+    result = run_synthetic_workflow(no_worktree_script)
 
     assert result.error == "", (
         f"Harness error during no-worktree test: {result.error}"
@@ -835,23 +791,7 @@ def test_build_feature_main_clone_path_dispatch_fails_guard() -> None:
         ");\n"
     )
 
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        suffix=".js",
-        prefix="ac4_meta_test_",
-        delete=False,
-        encoding="utf-8",
-    ) as tmp:
-        tmp.write(old_style_script)
-        tmp_path = Path(tmp.name)
-
-    try:
-        result = run_workflow_under_e2(tmp_path)
-    finally:
-        try:
-            tmp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+    result = run_synthetic_workflow(old_style_script)
 
     assert result.error == "", (
         f"Harness error during AC-4 meta-test: {result.error}"
@@ -1159,23 +1099,7 @@ def test_meta_guard_rejects_concatenated_description() -> None:
         "const result = await agent('stub prompt', {agentType: 'status-checker', label: 'stub'});\n"
     )
 
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        suffix=".js",
-        prefix="meta_guard_test_",
-        delete=False,
-        encoding="utf-8",
-    ) as tmp:
-        tmp.write(synthetic_source)
-        tmp_path = Path(tmp.name)
-
-    try:
-        violations = _check_meta_pure_literal_violations(tmp_path)
-    finally:
-        try:
-            tmp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+    violations = run_synthetic_workflow(synthetic_source, _check_meta_pure_literal_violations)
 
     assert len(violations) > 0, (
         "meta-pure-literal guard must detect concatenation in meta.description. "

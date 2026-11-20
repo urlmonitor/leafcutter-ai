@@ -69,7 +69,6 @@ import re
 import subprocess
 import textwrap
 import unittest
-from pathlib import Path
 
 from _plan_feature_e2_runner import (
     E2_PLAN_FEATURE_JS,
@@ -80,7 +79,6 @@ from _plan_feature_gate_harness import granted_workspace_setup_permission
 
 # Sole plan-feature.js consumer surface (E2); real verdict via _plan_feature_gate_harness.
 _PLAN_FEATURE_JS = str(E2_PLAN_FEATURE_JS)
-_WORKTREE_ROOT = Path(__file__).resolve().parent.parent
 _granted_workspace_setup_permission = granted_workspace_setup_permission
 
 
@@ -210,9 +208,8 @@ class TestFinalGateEditFallthrough(unittest.TestCase):
                     return { status: 'ok', acs_written: ['ACD-EDIT-EXHAUSTED'] };
                 }
                 if (agentType === 'commit') {
-                    const msg = (call.input && call.input.instructions) || '';
-                    globalThis.__capturedCommitCalls.push({ instructions: msg });
-                    return { status: 'ok', message: 'mock commit ok' };
+                    globalThis.__capturedCommitCalls.push({ instructions });
+                    return { status: 'committed', commit_answer: { status: 'committed', sha: 'abc1234' } };
                 }
 
                 // resolveGate() consults the durable pause record before
@@ -346,16 +343,13 @@ class TestCommitMessageShape(unittest.TestCase):
         """
         Extract the commit message value from the commit agent instructions.
 
-        The instructions contain:
-            "The commit message to use is: <message>\n\nIMPORTANT STAGING RULE:"
+        BO-4500a-5-ii: the shared commit step takes the message from a file the
+        commit agent writes, so the prompt carries it between marker lines:
+            "BEGIN-MESSAGE\n<message>\nEND-MESSAGE"
 
         Returns the message text, or an empty string if not found.
         """
-        match = re.search(
-            r"The commit message to use is:\s*(.*?)(?:\n\nIMPORTANT|\Z)",
-            instructions,
-            re.DOTALL,
-        )
+        match = re.search(r"BEGIN-MESSAGE\n(.*?)\nEND-MESSAGE", instructions, re.DOTALL)
         return match.group(1).strip() if match else ""
 
     def _run_strategic_approval(self) -> tuple[dict, dict]:
@@ -400,9 +394,8 @@ class TestCommitMessageShape(unittest.TestCase):
                     return { status: 'ok', acs_written: ['ACD-TEST-ITPO'] };
                 }
                 if (agentType === 'commit') {
-                    const msg = (call.input && call.input.instructions) || '';
-                    globalThis.__capturedCommitCalls.push({ instructions: msg });
-                    return { status: 'ok', message: 'mock commit ok' };
+                    globalThis.__capturedCommitCalls.push({ instructions });
+                    return { status: 'committed', commit_answer: { status: 'committed', sha: 'abc1234' } };
                 }
 
                 // resolveGate() consults the durable pause record before
@@ -712,7 +705,7 @@ class TestFinalGateTerminalElse(unittest.TestCase):
                 }}
                 if (agentType === 'commit') {{
                     globalThis.__capturedCommitCalls.push({{ instructions }});
-                    return {{ status: 'ok', message: 'mock commit ok' }};
+                    return {{ status: 'committed', commit_answer: {{ status: 'committed', sha: 'abc1234' }} }};
                 }}
                 if (label === 'pause-persist-verify') {{
                     return {{
@@ -780,7 +773,7 @@ class TestFinalGateTerminalElse(unittest.TestCase):
                 }
                 if (agentType === 'commit') {
                     globalThis.__capturedCommitCalls.push({ instructions });
-                    return { status: 'ok', message: 'mock commit ok' };
+                    return { status: 'committed', commit_answer: { status: 'committed', sha: 'abc1234' } };
                 }
 
                 // These branches exist for API-shape parity only. An

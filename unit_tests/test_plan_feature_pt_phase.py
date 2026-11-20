@@ -58,12 +58,8 @@ async function mockAgent(call) {
   // mock's generic { status: 'ok' } tail, which the harness recognises as
   // a non-override and replaces with its own real default response.
   if (agentType === 'worktree-agent') {
-    if (label === 'pause-persist') { return { status: 'ok' }; }
-    if (label === 'pause-persist-verify') { return { exists: true, stale: false }; }
-    if (label === 'peek-pause-record') { return { exists: true, stale: false }; }
-    if (label === 'read-pause-record') { return { exists: true, stale: false }; }
-    if (label === 'clear-pause-record') { return { ok: true }; }
-    if (label === 'clear-pause-record-verify') { return { exists: false }; }
+    const pauseReplies = { 'pause-persist': { status: 'ok' }, 'pause-persist-verify': { exists: true, stale: false }, 'peek-pause-record': { exists: true, stale: false }, 'read-pause-record': { exists: true, stale: false }, 'clear-pause-record': { ok: true }, 'clear-pause-record-verify': { exists: false } };
+    if (Object.prototype.hasOwnProperty.call(pauseReplies, label)) { return pauseReplies[label]; }
     // approval-holds (pre-gate report and the approval step's --dry-run) and approval-apply (ACD-300c-4) release every id they get.
     if (label === 'approval-holds' || label === 'approval-apply') { return { output: JSON.stringify({ approved: /--ids (\S*)/.exec(instructions)[1].split(',').filter(Boolean), held: [], already_approved: [] }), exit_code: 0 }; }
   }
@@ -120,15 +116,8 @@ async function mockAgent(call) {
   // test can prove the workflow tolerantly parses string-typed agent responses
   // (m5) instead of silently dropping fields off a string.
   const maybeStr = (obj, flag) => (CFG[flag] ? JSON.stringify(obj) : obj);
-  if (agentType === 'mock-data-author') {
-    return maybeStr({ status: 'ok', artifact_paths: ['docs/product-truth/mock-data/x.mock.json'] }, 'ptAuthorReturnsString');
-  }
-  if (agentType === 'mockup-author') {
-    return maybeStr({ status: 'ok', artifact_paths: ['docs/product-truth/mockups/x.mockup.json'] }, 'ptAuthorReturnsString');
-  }
-  if (agentType === 'flow-author') {
-    return maybeStr({ status: 'ok', artifact_paths: ['docs/product-truth/flows/x/y.flow.json'], flow_ref: 'flows/x/y.flow.json' }, 'ptAuthorReturnsString');
-  }
+  const ptAuthorReplies = { 'mock-data-author': { status: 'ok', artifact_paths: ['docs/product-truth/mock-data/x.mock.json'] }, 'mockup-author': { status: 'ok', artifact_paths: ['docs/product-truth/mockups/x.mockup.json'] }, 'flow-author': { status: 'ok', artifact_paths: ['docs/product-truth/flows/x/y.flow.json'], flow_ref: 'flows/x/y.flow.json' } };
+  if (Object.prototype.hasOwnProperty.call(ptAuthorReplies, agentType)) { return maybeStr(ptAuthorReplies[agentType], 'ptAuthorReturnsString'); }
   if (agentType === 'business-analyst') {
     return maybeStr({ status: 'ok', acs_written: ['ACD-BA'], flow_backlinks: { review: ['ACD-BA'] } }, 'acAuthorReturnsString');
   }
@@ -140,13 +129,12 @@ async function mockAgent(call) {
   if (agentType === 'commit') {
     globalThis.__capturedCommitCalls.push({ instructions });
     if (CFG.failCommitSubject && instructions.includes(CFG.failCommitSubject)) {
-      return { status: 'error', message: 'mock commit failure', hook_name: null, failing_files: [], is_conflict: false };
+      return { status: 'hook_failed', commit_answer: { status: 'hook_failed', reason_code: 'check_failed', reason: 'mock commit failure', sha: null, hook_name: null, failing_files: [] } };
     }
-    return { status: 'ok', message: 'committed successfully' };
+    // BO-4500a-5-ii: the commit agent relays the shared commit step's answer in a commit_answer envelope.
+    return { status: 'committed', commit_answer: { status: 'committed', reason_code: null, reason: null, sha: 'abc1234' } };
   }
-  if (agentType === 'pull-request') {
-    return { status: 'ok', message: 'PR opened', pr_url: 'https://github.com/o/r/pull/1' };
-  }
+  if (agentType === 'pull-request') { return { status: 'ok', message: 'PR opened', pr_url: 'https://github.com/o/r/pull/1' }; }
   return { status: 'ok' };
 }
 """
