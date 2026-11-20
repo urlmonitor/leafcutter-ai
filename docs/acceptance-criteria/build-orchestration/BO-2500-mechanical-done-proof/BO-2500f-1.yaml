@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -56,7 +56,7 @@ assigned_agent: python-coder
 estimated_complexity: M
 declared_files:
   - path: scripts/ac_store/_verification_record.py
-    state: to_be_created
+    state: existing
   - path: config/ac_store_schema.json
     state: existing
   - path: scripts/build_phases_ac_store.py
@@ -330,6 +330,10 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-25'
+- action: amended
+  agent: claude_code
+  date: '2026-11-05'
+  note: work_status in_progress; PR 1 scope noted (kernel run run-abe72d9d3c9e4e47).
 superseded_by: null
 covered_by:
   - BO-2500f-1-i
@@ -357,3 +361,14 @@ notes: |
 
   Only two of the IADT methods (inspection, analysis, demonstration, test) are in
   scope, per BO-2500f's notes.
+
+  Built in two PRs (user decision, kernel run run-abe72d9d3c9e4e47, 2026-11-05). PR 1
+  builds the validator (scripts/ac_store/_verification_record.py), the permissive
+  verified_by schema declaration and the deploy-map entry, with the specs that need no
+  switch: unknown method, check parts, inspection parts, cross-method part, no
+  verification record, write checks stay silent, schema seam and deployed import. The
+  four specs that run through check_done_proof.py with BO-2500f-4's switch on (refusal
+  at the hook names record id and part; never waives a record that owes a test; valid
+  record without the stated reason still refused; unknown method through the precommit
+  CLI) are written in the done-gate PR with BO-2500f-4. This record stays in progress
+  until then.

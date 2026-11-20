@@ -511,6 +511,9 @@
                 }
             ]
         },
+        "verified_by": {
+            "description": "How a test-free record is verified (BO-2500f-1): method check or inspection. Declared permissively; validity is decided at mark time, never at write time (user decision 2026-10-25). No type is set, so any shape is accepted."
+        },
         "test_rationale": {
             "description": "Prose with two meanings that depend on the record around it. With test_required false: the reason no test can prove the record (required there, and unique among test-free records; the commit-time record check refuses an absent or blank one, this schema stays permissive). Alongside test_spec: the justification for that test contract's shape, why this coverage is right and why a weaker shape (typically a direct-import unit test) would be insufficient. Must be a string, never a list. Optional when test_required is true or absent.",
             "oneOf": [
