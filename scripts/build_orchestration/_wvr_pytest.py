@@ -35,7 +35,7 @@ import _fl_common  # noqa: F401  (puts scripts/ac_store on sys.path)
 import done_proof_kind_support as kind_support
 from done_proof import _PYTEST_RUN_INCOMPLETE_SENTINEL, _resolve_pytest_timeout_seconds
 from pytest_outcome_reader import parse_pytest_outcomes
-from project_python import resolve_for_files  # TQ-500f-3-vi: the project's interpreter
+from project_python import ProjectPython, resolve_for_files  # TQ-500f-3-vi: the project's interpreter
 
 _LOG = logging.getLogger("wrong_version_runner")
 _PYTEST_FLAGS = ("-v", "--tb=no", "--no-header", "-p", "no:cacheprovider", "--continue-on-collection-errors", "-rs")
@@ -131,12 +131,14 @@ def _module_skipped(stdout: str, by_nodeid: dict[str, str], root: Path | None = 
     return named - reported
 
 
-def _child_env(kind_path: str, extra: tuple[str, dict[str, str]] | None = None) -> dict[str, str]:
+def _child_env(kind_path: str, extra: tuple[str, dict[str, str]] | None = None,
+               import_roots: tuple[Path, ...] = ()) -> dict[str, str]:
     """Environment of the pytest child: strict AC mode, the kind plugin, no bytecode.
 
     *extra* (TQ-500g-2-i) is ``(plugin module, its environment)``; this directory joins the import path for it.
+    *import_roots* go first on the import path, ahead of anything the interpreter's site-packages adds.
     """
-    plugin_dir = str(Path(kind_support.__file__).resolve().parent)
+    plugin_dir = os.pathsep.join([*(str(p) for p in import_roots), str(Path(kind_support.__file__).resolve().parent)])
     if extra is not None:
         plugin_dir += os.pathsep + str(Path(__file__).resolve().parent)
     existing = os.environ.get("PYTHONPATH", "")
@@ -150,7 +152,8 @@ def _child_env(kind_path: str, extra: tuple[str, dict[str, str]] | None = None) 
     }
 
 
-def run_selected(nodes: list[NodeSpec], extra: tuple[str, dict[str, str]] | None = None) -> PytestRun:
+def run_selected(nodes: list[NodeSpec], extra: tuple[str, dict[str, str]] | None = None,
+                 judge: ProjectPython | None = None, import_roots: tuple[Path, ...] = ()) -> PytestRun:
     """Run pytest once over *nodes* (selected by node id) and read it.
 
     The child runs in the nodes' ``cwd`` (the repo root, so tests that resolve the test database
@@ -161,6 +164,10 @@ def run_selected(nodes: list[NodeSpec], extra: tuple[str, dict[str, str]] | None
     Args:
         nodes: The in-scope tests to run; nothing else is selected.
         extra: ``(plugin module, environment)`` of a second plugin loaded into this same single run, or ``None``.
+        judge: The interpreter to run with; ``None`` resolves it from the files (a ``cwd`` without ``.git``,
+            such as a ``git archive`` export, resolves to nothing, so such a caller passes it in).
+        import_roots: Folders put first on the child's import path (the export's own code, ahead of an
+            editable install of the working tree's package in the judge's site-packages).
 
     Returns:
         The :class:`PytestRun`. Never raises for a timeout, a crash or an OSError.
@@ -170,7 +177,7 @@ def run_selected(nodes: list[NodeSpec], extra: tuple[str, dict[str, str]] | None
     fd, kind_path = tempfile.mkstemp(suffix=".json", prefix="leafcutter_wvr_kind_")
     os.close(fd)
     try:
-        return _run_and_read(nodes, kind_path, nodes[0].cwd, extra)
+        return _run_and_read(nodes, kind_path, nodes[0].cwd, extra, judge, import_roots)
     finally:
         try:
             os.unlink(kind_path)
@@ -192,11 +199,13 @@ def _rooted(outcomes: dict, cwd: Path | None) -> dict:
 
 
 def _run_and_read(nodes: list[NodeSpec], kind_path: str, cwd: Path | None = None,
-                  extra: tuple[str, dict[str, str]] | None = None) -> PytestRun:
+                  extra: tuple[str, dict[str, str]] | None = None, judge: ProjectPython | None = None,
+                  import_roots: tuple[Path, ...] = ()) -> PytestRun:
     """Launch pytest, classify how it ended, and read a finished run."""
     files = sorted({n.file for n in nodes})
     budget = _resolve_pytest_timeout_seconds(files)
-    judge = resolve_for_files([Path(cwd, f) if cwd else f for f in files])  # TQ-500f-3-vi: the project's interpreter
+    if judge is None:  # TQ-500f-3-vi: the project's interpreter
+        judge = resolve_for_files([Path(cwd, f) if cwd else f for f in files])
     cmd = [*judge.argv, "-m", "pytest", *_PYTEST_FLAGS, "-p", kind_support._KIND_PLUGIN_MODULE_NAME]
     if extra is not None:
         cmd.extend(["-p", extra[0]])
@@ -205,7 +214,7 @@ def _run_and_read(nodes: list[NodeSpec], kind_path: str, cwd: Path | None = None
     root = cwd if any(Path(n.file).is_absolute() for n in nodes) else None
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=budget,
-                              env=_child_env(kind_path, extra), cwd=cwd)
+                              env=_child_env(kind_path, extra, import_roots), cwd=cwd)
     except subprocess.TimeoutExpired:
         return PytestRun("timeout", f"pytest exceeded its {budget:.1f}s timeout budget")
     except OSError as exc:
@@ -230,3 +239,16 @@ def _run_and_read(nodes: list[NodeSpec], kind_path: str, cwd: Path | None = None
     by_nodeid = dict(kinds_path_outcomes)
     return PytestRun("ran", "", _merge_outcomes(kinds_path_outcomes), kinds, collected, by_nodeid,
                      module_skipped=_module_skipped(proc.stdout, by_nodeid, root))
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-11-23 [python-coder/TQ-500g-3-ii]: run_selected takes an optional
+#   judge and import_roots. The sweep's base side runs in a git archive
+#   export, which has no .git, so resolving the interpreter from its files
+#   fell back to sys.executable and every base run crashed on the adopter's
+#   conftest import (inconclusive forever). The caller now passes the
+#   interpreter it resolved from the live repo, plus the export's import
+#   roots so a venv editable install cannot shadow the base code.
+# ====================================================================

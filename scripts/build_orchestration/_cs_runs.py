@@ -10,7 +10,9 @@ BUSINESS CONTEXT: Weakening is a runtime fact, so the decision comes from runnin
 ARCHITECTURE: The base side runs in an export of the base ref (``git archive`` read by ``tarfile``) in a
     temp dir that is always removed; the working tree, the index, the stash and the worktree list are never
     touched. Both sides go through ``_wvr_pytest.run_selected`` (``NodeSpec.cwd`` = the side's root, repo
-    relative file arguments, so node ids compare equal). ``consumer_sweep.check`` calls :func:`run_checks`.
+    relative file arguments, so node ids compare equal) with ONE interpreter resolved from the live repo
+    root; the base side also gets the export's import roots first on its path. ``consumer_sweep.check``
+    calls :func:`run_checks`.
 """
 
 from __future__ import annotations
@@ -29,6 +31,7 @@ import _cs_edits as edits_mod
 import _wvr_gate as gate_mod
 from _wvr_pytest import NodeSpec, PytestRun, run_selected
 from _wvr_scope import is_test_path
+from project_python import ProjectPython, resolve_project_python  # on sys.path via _wvr_pytest's _fl_common
 
 _LOG = logging.getLogger("consumer_sweep")
 _CONFIG_NAMES = frozenset({"pytest.ini", "pyproject.toml", "setup.cfg", "tox.ini"})
@@ -142,12 +145,22 @@ def _export(root: Path, base_sha: str, dest: Path) -> None:
         raise ExportError(proc.returncode)
 
 
-def _run_side(files: list[str], side_root: Path) -> PytestRun:
-    """One pytest run of repo-relative *files* with *side_root* as the working directory.
+def _export_import_roots(export: Path) -> tuple[Path, ...]:
+    """The export's own import roots (``src/`` when present, then the export itself).
+
+    They go ahead of the judge's site-packages, so an editable install of the project in the live repo's
+    ``.venv`` (a ``.pth`` entry pointing at the WORKING TREE's package) never stands in for the base copy.
+    """
+    return tuple(p for p in (export / "src", export) if p.is_dir())
+
+
+def _run_side(files: list[str], side_root: Path, judge: ProjectPython,
+              import_roots: tuple[Path, ...] = ()) -> PytestRun:
+    """One pytest run of repo-relative *files* with *side_root* as the working directory, run by *judge*.
 
     Exit status 5 (no test collected at all, e.g. files holding only fixtures) is a run with nothing in it.
     """
-    run = run_selected([NodeSpec(Path(f), (), side_root) for f in files])
+    run = run_selected([NodeSpec(Path(f), (), side_root) for f in files], judge=judge, import_roots=import_roots)
     if run.status == "crash" and run.returncode == _NO_TESTS:
         return PytestRun("ran", module_skipped=run.module_skipped)
     return run
@@ -219,7 +232,12 @@ def _not_ran(side: str, run: PytestRun, files: list[str]) -> list[dict]:
 
 
 def _run_both(root: Path, base_sha: str, files: list[str], entries: list[dict]) -> RunsResult:
-    """Export the base, run both sides, compare; the export is removed whatever happened."""
+    """Export the base, run both sides, compare; the export is removed whatever happened.
+
+    Both sides run with the interpreter resolved from the LIVE repo *root*: the export has no ``.git``
+    (nor the ``.venv``), so resolving from it fell back to the bare running interpreter.
+    """
+    judge = resolve_project_python(root)
     export = Path(tempfile.mkdtemp(prefix="leafcutter_cs_base_"))
     try:
         try:
@@ -228,10 +246,10 @@ def _run_both(root: Path, base_sha: str, files: list[str], entries: list[dict]) 
             detail = f"the base ref {base_sha} could not be exported for the base run: {exc}"
             return RunsResult([], [], [{"file": f, "detail": detail} for f in files], True)
         base_files = [f for f in files if (export / f).is_file()]
-        base = _run_side(base_files, export)
+        base = _run_side(base_files, export, judge, _export_import_roots(export))
     finally:
         _rmtree(export)
-    now = _run_side([f for f in files if (root / f).is_file()], root)
+    now = _run_side([f for f in files if (root / f).is_file()], root, judge)
     bad = [i for side, run, fs in (("base", base, base_files), ("working-tree", now, files)) if run.status != "ran"
            for i in _not_ran(side, run, fs)]
     if bad:
@@ -265,3 +283,19 @@ def run_checks(root: Path, base_sha: str, pairs: list[tuple[str, str]], test_roo
     if not files:
         return RunsResult()
     return _run_both(root, base_sha, files, entries)
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-11-23 [python-coder/TQ-500g-3-ii]: The base side resolved its
+#   interpreter from the git archive export, which has no .git, so it ran
+#   under sys.executable and crashed on the conftest import in any adopter
+#   whose deps live in a per-worktree .venv (DIAGraph): every changed existing
+#   test came back inconclusive and the gate could never pass. The interpreter
+#   is now resolved once from the live root and used for both sides; cwd stays
+#   the export, and the export's src/ and root go first on PYTHONPATH so a
+#   .venv editable install of the working tree's package cannot shadow the
+#   base code. Rejected: `uv run --project <export>` (a fresh env sync per
+#   check, uv-only, and no help for a configured or plain .venv interpreter).
+# ====================================================================
