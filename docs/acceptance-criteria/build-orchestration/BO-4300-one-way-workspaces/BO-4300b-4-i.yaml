@@ -1,0 +1,107 @@
+id: BO-4300b-4-i
+title: "A project that commits its hook settings as a link into its own install still gets a ready workspace"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" that keeps its hook settings file in its version
+    history as a link, written relative to the file's own folder, to an
+    ordinary file inside shop's own install folder,
+  When a workspace for the work "alpha" is requested on a machine where links
+    are permitted,
+  Then the workspace is answered ready,
+  And the hook settings file in the workspace is the link exactly as shop
+    committed it, so the work starts from an unchanged tree,
+  And the protections declared through that link are shown to reject a
+    known-bad commit,
+  And a committed link that leads out of the workspace is refused as not
+    ready, naming the install and protection paths,
+  And a committed link written as an absolute location is refused the same way,
+    even when it names a file inside the workspace,
+  And a link the install build itself leaves behind, which shop never
+    committed, is still refused exactly as before.
+depends_on: [BO-4300b-4]
+doc_links:
+- path: templates/scripts/worktree_readiness.py
+  relationship: modifies
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300b-4
+  contract: Install and protection paths are ordinary files or folders, never a link the maker made.
+package_surface: false
+it_requirements:
+- 'install_paths_regular accepts a link under the install and protection paths only when ALL of these hold:
+  the path is a true symbolic link (S_ISLNK; a Windows junction or other reparse point never qualifies);
+  HEAD records it as a symbolic link (git mode 120000) whose recorded target equals the link''s target on
+  disk; that target is relative; the target, resolved from the link''s own folder, lies inside the
+  workspace; and it resolves, through no further link, to an ordinary file. Every other link is refused
+  as before.'
+- The maker still creates no link anywhere (BO-4300b-4 decision 2); on a machine without link permission
+  git checks such a path out as an ordinary file, so the BO-4300b-4 guarantee and its answers there are
+  unchanged.
+- Proof runs the DEPLOYED maker as a separate process against real temporary git repositories with a real
+  bare hub; the fixture build is a stub that, like the package build under LEAFCUTTER_SHIM_STRATEGY=copy,
+  replaces the committed link with an ordinary copy, so the maker's restore step puts the link back.
+  Never the package's own scripts/build.py.
+test_required: true
+test_spec:
+- name: test_committed_relative_shim_link_into_the_install_is_ready
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: Shop commits .pre-commit-config.yaml as a link to .leafcutter/pre-commit-config.yaml; ensure
+    answers ok, install_paths_regular is true, the restore put the link back and the canary was rejected.
+- name: test_committed_link_out_of_the_workspace_is_refused
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: The committed relative link climbs out of the workspace to the main checkout's file;
+    ensure is VERIFY_FAILED naming install_paths_regular, with no workspace_path.
+- name: test_committed_absolute_link_is_refused_even_inside_the_workspace
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: The committed link is the absolute location of the workspace's own install file; ensure is
+    VERIFY_FAILED naming install_paths_regular, with no workspace_path.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer and the state of the workspace afterwards. Only a real committed symbolic link, a
+  real build that replaces it and the maker's real restore reproduce the self-defeating sequence.
+origin_agent: Hendrik Henze
+created: 2026-11-23
+amended_by: []
+superseded_by: null
+covered_by: [unit_tests/build_orchestration/test_bo_4300b_4_i.py]
+implemented_by:
+- templates/scripts/worktree_readiness.py
+- docs/reference/workspace-maker-answer.md
+notes: |
+  Reproduced in the DIAGraph adopter (leafcutter v21.0.121, pin d4c0dde5, after #1445 fixed the
+  build location): DIAGraph commits .pre-commit-config.yaml as a git symlink (mode 120000) to
+  .leafcutter/pre-commit-config.yaml, created by an earlier build under the default "auto" shim
+  strategy. The maker builds with LEAFCUTTER_SHIM_STRATEGY=copy (an ordinary file), its restore step
+  then puts the committed link back to keep the tree clean, and install_paths_regular refused that
+  link: every ensure answered VERIFY_FAILED, so /build-feature could start no epic there.
