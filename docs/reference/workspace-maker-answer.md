@@ -156,7 +156,7 @@ hook-stage result that is false, or on an identity mismatch. It never refuses on
 | `same_project` | the workspace belongs to this project |
 | `origin_matches_hub` | the workspace's `origin` is the hub; a trailing `/`, a `.git` suffix and `file://` versus a plain local path do not count as differences; never `n/a` |
 | `gc_auto_disabled` | automatic garbage collection is off (`gc.auto` is 0); never `n/a` |
-| `install_paths_regular` | the installed paths are regular files and folders (BO-4300b-4); never `n/a` |
+| `install_paths_regular` | the installed paths are regular files and folders (BO-4300b-4), except a relative link the project committed that leads to an ordinary file inside the workspace (BO-4300b-4-i); never `n/a` |
 | `branch_matches` | the workspace is on its line of work |
 | `not_protected_branch` | the workspace is not on a protected branch |
 | `base_is_fresh` | the base is the shared project's current `origin/main` |

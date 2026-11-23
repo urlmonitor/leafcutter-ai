@@ -2,7 +2,7 @@
 MODULE: worktree_readiness
 GOAL: Decide, from the finished workspace as it exists, whether the workspace
     maker may answer "ready" -- and if not, which ingredient is false
-    (BO-4300c-1, c-1-i, c-1-ii, c-1-iii, b-4).
+    (BO-4300c-1, c-1-i, c-1-ii, c-1-iii, b-4, b-4-i).
 BUSINESS CONTEXT: "Ready" used to mean "the maker ran its steps". It now means
     the workspace is an independent copy on its own (non-main) line of work,
     based on the fresh shared tip (or, for a resumed line, holding every
@@ -181,14 +181,56 @@ def is_link(path: Path) -> bool:
     return stat.S_ISLNK(info.st_mode) or bool(getattr(info, "st_file_attributes", 0) & _REPARSE_POINT)
 
 
+def committed_inner_link(workspace: Path, path: Path) -> bool:
+    """True only for a link the project itself committed that stays on an ordinary file inside *workspace*.
+
+    All must hold (BO-4300b-4-i): a true symlink (a junction or other reparse
+    point never is); HEAD records *path* as a symlink (mode 120000) whose stored
+    target equals the one on disk; that target is relative; resolved from the
+    link's own folder it stays inside the workspace, through no further link;
+    and it is an ordinary file. The maker makes no link, and a machine without
+    link permission checks such a path out as an ordinary file, so this never
+    widens what BO-4300b-4 guarantees there.
+    """
+    try:
+        if not stat.S_ISLNK(path.lstat().st_mode):
+            return False
+        text = os.readlink(path)
+    except OSError:
+        return False
+    if os.path.isabs(text) or Path(text).drive:
+        return False
+    rel = path.relative_to(workspace).as_posix()
+    entry = wg.run_git(["ls-tree", "HEAD", "--", rel], workspace, encoding="utf-8").stdout.split()
+    if entry[:2] != ["120000", "blob"]:
+        return False
+    stored = wg.run_git(["cat-file", "blob", entry[2]], workspace, encoding="utf-8")
+    if stored.returncode != 0 or stored.stdout != text.replace(os.sep, "/"):
+        return False
+    target = os.path.normpath(os.path.join(os.path.realpath(str(path.parent)), text))
+    root = os.path.normcase(os.path.realpath(str(workspace)))
+    if os.path.realpath(target) != target or os.path.commonpath([root, os.path.normcase(target)]) != root:
+        return False
+    return not is_link(Path(target)) and Path(target).is_file()
+
+
 def install_paths_regular(workspace: Path) -> bool:
-    """True when nothing under the install and protection paths is a link (BO-4300b-4, lstat only)."""
+    """True when nothing under the install and protection paths is a link (BO-4300b-4, lstat only).
+
+    The one exception is a link the project committed into its own install
+    (``committed_inner_link``, BO-4300b-4-i): the maker's restore step puts such
+    a link back to keep the tree unchanged, so refusing it refused every such
+    project.
+    """
+    def refused(path: Path) -> bool:
+        return is_link(path) and not committed_inner_link(workspace, path)
+
     for rel in _INSTALL_PATHS:
         root = workspace / rel
-        if is_link(root):
+        if refused(root):
             return False
         for here, dirs, files in os.walk(root, followlinks=False):
-            if any(is_link(Path(here, name)) for name in (*dirs, *files)):
+            if any(refused(Path(here, name)) for name in (*dirs, *files)):
                 return False
     return True
 
@@ -352,6 +394,12 @@ def stored_checks(computed: dict[str, Any], marker: dict[str, Any]) -> dict[str,
 #   run_install_build no longer hard-codes <workspace>/scripts/build.py (refused every adopter that keeps
 #   the package in a submodule, e.g. DIAGraph); it runs worktree_install.install_command, and prove_ready
 #   passes project_root so the package submodule can be fetched first. (ADR-018)
+# - 2026-11-23 [python-coder/BO-4300b-4-i]: (#TICKETLESS reason=quick-fix-ac-first)
+#   install_paths_regular accepts a link the project itself committed (HEAD mode 120000, same target)
+#   that is relative and resolves, through no further link, to an ordinary file inside the workspace
+#   (committed_inner_link). The restore step puts such a link back after the copy-mode build, so
+#   refusing it refused every adopter that tracks its shims as links (DIAGraph). Junctions, absolute,
+#   escaping and uncommitted links are still refused. (ADR-018)
 # ===========================================================================
 # - 2026-10-01 00:30 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05]:
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)
