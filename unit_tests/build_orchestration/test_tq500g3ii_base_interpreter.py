@@ -55,6 +55,7 @@ def test_export_without_git_runs_with_the_live_roots_interpreter(tmp_path: Path,
     # must_catch: the two sides run with different interpreters
     runs, project_python = _modules()
     root, sha = _live_repo(tmp_path)
+    expected: tuple[str, ...]
     if kind == "venv":
         fx.write(root / ".venv" / "bin" / "python", "")
         expected = (str(root / ".venv" / "bin" / "python"),)
