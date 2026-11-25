@@ -1,0 +1,78 @@
+id: BO-1700h-4
+components:
+  - build_orchestration
+title: "The hook-freshness check judges the installed hook by its content, not by its age"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700h.yaml"
+criteria: |
+  Given the effective pre-commit hook is a pre-commit-generated shim for
+    `--hook-type=pre-commit`, its `--config=` argument names a config file that
+    exists relative to the project root, and its `INSTALL_PYTHON` interpreter
+    exists,
+  When the probe runs the hook-freshness check,
+  Then the check passes, even when the hook file is older than the resolved
+    pre-commit config (as it is in every freshly created linked worktree, which
+    shares one hook in the common git dir but checks out a newer config),
+  And the bug symptom ("hook_freshness in failing_checks for a byte-identical,
+    correctly installed hook") must not occur.
+  And given the hook is not a pre-commit-generated shim, or is a shim for a
+    different hook type, or names a config file that does not exist, or names an
+    INSTALL_PYTHON interpreter that does not exist, or the hook file is missing,
+  Then the check fails, so `hook_freshness` is reported in failing_checks.
+depends_on: [BO-1700h]
+doc_links:
+  - path: templates/scripts/commit_guardian/verify_precommit_active.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  pre-commit's hook shim reads its config at run time, relative to the commit's
+  cwd, so its bytes do not depend on the config's content. An mtime comparison of
+  hook vs config is therefore not a staleness signal: a re-install yields a
+  byte-identical hook. Freshness means "the installed hook would behave like a
+  freshly installed one": parse the templated INSTALL_PYTHON / ARGS lines and
+  check each referent. Fail closed on any read error (BO-1700b-1).
+delivers_to: null
+expects_from: null
+origin_agent: Hendrik Henze
+created: 2026-11-25
+amended_by: []
+superseded_by: null
+covered_by: [unit_tests/commit_guardian/test_verify_precommit_hook_freshness.py]
+implemented_by: [templates/scripts/commit_guardian/verify_precommit_active.py]
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_correct_shim_older_than_config_is_fresh
+    target_dir: unit_tests/commit_guardian
+    framework: unittest
+    type: unit
+    description: "A correct pre-commit shim whose mtime is older than the config passes the freshness check."
+  - name: test_non_shim_hook_is_stale
+    target_dir: unit_tests/commit_guardian
+    framework: unittest
+    type: unit
+    description: "A hook that is not a pre-commit-generated shim fails the freshness check even when newer than the config."
+  - name: test_shim_naming_missing_config_is_stale
+    target_dir: unit_tests/commit_guardian
+    framework: unittest
+    type: unit
+    description: "A shim whose --config= names a file absent from the project root fails the freshness check."
+  - name: test_shim_with_missing_interpreter_is_stale
+    target_dir: unit_tests/commit_guardian
+    framework: unittest
+    type: unit
+    description: "A shim whose INSTALL_PYTHON interpreter does not exist fails the freshness check."
+  - name: test_shim_for_other_hook_type_is_stale
+    target_dir: unit_tests/commit_guardian
+    framework: unittest
+    type: unit
+    description: "A shim generated for --hook-type=pre-push installed as pre-commit fails the freshness check."

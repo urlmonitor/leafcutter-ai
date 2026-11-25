@@ -17,6 +17,10 @@ DECISION HISTORY
   Expected RED states:
     - ImportError when module missing (import-based tests).
     - JSONDecodeError / self.fail() when script missing (subprocess tests).
+- 2026-11-25 [BO-1700h-4]: Removed TestCheckHookFreshness. Its mtime tests encoded
+  the linked-worktree false positive (a correct shim older than the config failed);
+  the content-based replacements live in test_verify_precommit_hook_freshness.py,
+  kept separate because this file is over its size limit.
 ====================================================================
 """
 
@@ -856,132 +860,8 @@ class TestValidateCanaryStage(unittest.TestCase):
         )
 
 
-class TestCheckHookFreshness(unittest.TestCase):
-    """h-1: Config freshness/drift detection. Hook must be at least as new as config."""
-
-    def test_hook_newer_than_config(self):
-        # covers: UNKNOWN
-        """check_hook_freshness returns True when hook mtime > config mtime.
-
-        Must implement check_hook_freshness(hook_path: Path, config_path: Path) -> bool
-        that returns True when hook_path.stat().st_mtime >= config_path.stat().st_mtime.
-        """
-        if not _IMPORT_OK:
-            self.fail("ImportError: cannot import verify_precommit_active.")
-        if not hasattr(_vpa, "check_hook_freshness"):
-            self.fail(
-                "AttributeError: verify_precommit_active does not expose check_hook_freshness(). "
-                "Implement check_hook_freshness(hook_path: Path, config_path: Path) -> bool."
-            )
-        import time
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
-            config_path = tmp_path / ".pre-commit-config.yaml"
-            config_path.write_text("repos: []", encoding="utf-8")
-            time.sleep(0.02)  # ensure strictly different filesystem mtime
-            hook_path = tmp_path / "pre-commit"
-            hook_path.write_text("#!/bin/sh\n", encoding="utf-8")
-            result = _vpa.check_hook_freshness(hook_path, config_path)
-        self.assertTrue(
-            result,
-            msg=(
-                "Expected check_hook_freshness to return True when hook is newer than config. "
-                f"Got: {result}"
-            ),
-        )
-
-    def test_hook_same_mtime_as_config(self):
-        # covers: UNKNOWN
-        """check_hook_freshness returns True when hook mtime == config mtime.
-
-        Equal mtime means the hook was regenerated at the same time as config — not stale.
-        """
-        if not _IMPORT_OK:
-            self.fail("ImportError: cannot import verify_precommit_active.")
-        if not hasattr(_vpa, "check_hook_freshness"):
-            self.fail(
-                "AttributeError: verify_precommit_active does not expose check_hook_freshness(). "
-                "Implement check_hook_freshness(hook_path: Path, config_path: Path) -> bool."
-            )
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
-            config_path = tmp_path / ".pre-commit-config.yaml"
-            hook_path = tmp_path / "pre-commit"
-            config_path.write_text("repos: []", encoding="utf-8")
-            hook_path.write_text("#!/bin/sh\n", encoding="utf-8")
-            # Force equal mtime by copying config's mtime onto hook
-            config_stat = config_path.stat()
-            os.utime(hook_path, (config_stat.st_atime, config_stat.st_mtime))
-            result = _vpa.check_hook_freshness(hook_path, config_path)
-        self.assertTrue(
-            result,
-            msg=(
-                "Expected check_hook_freshness to return True when hook mtime == config mtime. "
-                f"Got: {result}"
-            ),
-        )
-
-    def test_hook_older_than_config(self):
-        # covers: UNKNOWN
-        """check_hook_freshness returns False when hook mtime < config mtime (hook is stale).
-
-        A hook older than the config means the config was updated but the hook was not
-        regenerated — this is the stale/drift state that must fail.
-        """
-        if not _IMPORT_OK:
-            self.fail("ImportError: cannot import verify_precommit_active.")
-        if not hasattr(_vpa, "check_hook_freshness"):
-            self.fail(
-                "AttributeError: verify_precommit_active does not expose check_hook_freshness(). "
-                "Implement check_hook_freshness(hook_path: Path, config_path: Path) -> bool."
-            )
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
-            config_path = tmp_path / ".pre-commit-config.yaml"
-            hook_path = tmp_path / "pre-commit"
-            config_path.write_text("repos: []", encoding="utf-8")
-            hook_path.write_text("#!/bin/sh\n", encoding="utf-8")
-            # Force hook to be 100 seconds older than config
-            config_stat = config_path.stat()
-            os.utime(
-                hook_path,
-                (config_stat.st_atime - 100, config_stat.st_mtime - 100),
-            )
-            result = _vpa.check_hook_freshness(hook_path, config_path)
-        self.assertFalse(
-            result,
-            msg=(
-                "Expected check_hook_freshness to return False when hook mtime < config mtime. "
-                f"Got: {result}"
-            ),
-        )
-
-    def test_hook_missing_config_present(self):
-        # covers: UNKNOWN
-        """check_hook_freshness returns False when hook does not exist but config does.
-
-        A missing hook with a present config is a fail-closed state (hook not installed).
-        """
-        if not _IMPORT_OK:
-            self.fail("ImportError: cannot import verify_precommit_active.")
-        if not hasattr(_vpa, "check_hook_freshness"):
-            self.fail(
-                "AttributeError: verify_precommit_active does not expose check_hook_freshness(). "
-                "Implement check_hook_freshness(hook_path: Path, config_path: Path) -> bool."
-            )
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
-            config_path = tmp_path / ".pre-commit-config.yaml"
-            config_path.write_text("repos: []", encoding="utf-8")
-            hook_path = tmp_path / "pre-commit"  # intentionally never created
-            result = _vpa.check_hook_freshness(hook_path, config_path)
-        self.assertFalse(
-            result,
-            msg=(
-                "Expected check_hook_freshness to return False when hook file is absent. "
-                f"Got: {result}"
-            ),
-        )
+# h-1 / h-4: check_hook_freshness tests live in
+# unit_tests/commit_guardian/test_verify_precommit_hook_freshness.py (BO-1700h-4).
 
 
 class TestCheckDCanaryTimeout(unittest.TestCase):
