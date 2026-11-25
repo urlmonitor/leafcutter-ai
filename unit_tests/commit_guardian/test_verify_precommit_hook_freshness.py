@@ -35,7 +35,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import scripts.commit_guardian.verify_precommit_active as _vpa  # type: ignore[import]
+import scripts.commit_guardian.verify_precommit_active as _vpa
 
 
 def _write_precommit_shim(
