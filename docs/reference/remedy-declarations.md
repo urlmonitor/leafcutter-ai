@@ -72,7 +72,7 @@ Return shape, or `None` when neither table declares the hook:
 | (b) Addition to excused list | An id is in `undeclared_remedy_baseline` but in no parent's list. | Remove it from the list and give the check a declaration. |
 | (c) Declaration for an unregistered check | A rule with a `disposition`, in the committed package table, has a `hook_id` not in `hooks_manifest.hooks`. | Remove the declaration or register the check. |
 
-Which table each reader judges: the `check-hook-parity` registration and validity legs judge only the committed package table `templates/scripts/precommit-autofix.json` (package checkout only; not applicable where the canonical manifest is absent). They never read the local table, `skills_config.json` or the deployed `scripts/` copy; an absent committed table is could-not-check. `check-complexity`'s refusal text and the BO-3800 run read the shared loader, local table first, seed per missing declaration.
+Which table each reader judges: the `check-hook-parity` registration and validity legs judge only the committed package table `templates/scripts/precommit-autofix.json` (package checkout only, recognised by `templates/scripts/commit_guardian/commit_guardian.json` under the project root; not applicable where the canonical manifest is absent or is a vendored package copy, GE-132a-5). They never read the local table, `skills_config.json` or the deployed `scripts/` copy; an absent committed table is could-not-check. `check-complexity`'s refusal text and the BO-3800 run read the shared loader, local table first, seed per missing declaration.
 
 Reason (c) names the table the declaration came from. Reasons (a) and (b) have no declaration to source, so they name the manifest.
 
@@ -84,7 +84,7 @@ Reason (c) names the table the declaration came from. Reasons (a) and (b) have n
 
 Unreadable or malformed input raises `RemedyInputError`, which `run_leg` returns as a could-not-check reason instead of violations. `report()` then emits the GE-120 `could_not_check` outcome and exits 2. It is never a pass and never "no declaration". If real violations were also found, the exit is 1.
 
-Inputs that raise: the committed package table `templates/scripts/precommit-autofix.json` being absent (where the canonical manifest exists); for run-time readers of the shared loader, an existing `.claude/skills_config.json` that cannot be read, cannot be parsed, or is not a JSON object; an existing routing table that cannot be read or parsed, or whose `rules` is not a list of objects with string `hook_id`; a canonical manifest that exists but cannot be read, is not UTF-8, is not valid JSON, or has no `hooks_manifest` object; a malformed `hooks_manifest.hooks`; an excused list that is not a list of strings, in the working tree or a parent; git failing to run; a parent manifest that is not valid JSON.
+Inputs that raise: the committed package table `templates/scripts/precommit-autofix.json` being absent (in the package checkout); for run-time readers of the shared loader, an existing `.claude/skills_config.json` that cannot be read, cannot be parsed, or is not a JSON object; an existing routing table that cannot be read or parsed, or whose `rules` is not a list of objects with string `hook_id`; a canonical manifest that exists but cannot be read, is not UTF-8, is not valid JSON, or has no `hooks_manifest` object; a malformed `hooks_manifest.hooks`; an excused list that is not a list of strings, in the working tree or a parent; git failing to run; a parent manifest that is not valid JSON.
 
 ## Code versus AC
 
@@ -92,7 +92,7 @@ Differences between `GE-132a-1.yaml` and the code as it is now:
 
 - Disposition values: the AC names three; the loader accepts any truthy value and does not check membership.
 - Ratchet with no parent list: the AC says an id in no parent's list is an addition. The code skips the comparison only for the seeding commit, when no parent has ever carried the list. Once a parent carries it, removing the key is refused.
-- Absent canonical manifest: in a consumer install the package's canonical manifest does not exist, so there is no registry to judge. The leg prints that it is not applicable, naming the path, and exits 0. The AC does not state this case.
+- Absent canonical manifest: in a consumer install the package's canonical manifest does not exist, so there is no registry to judge. The leg prints that it is not applicable, naming the path, and exits 0. The AC does not state this case. GE-132a-5 states the related vendored case: a consumer whose `hook_parity.manifests.canonical` names a vendored copy (e.g. `leafcutter/templates/...`) and that has no `templates/scripts/commit_guardian/commit_guardian.json` of its own gets the same not-applicable line, naming both paths, instead of could-not-check. Script, manifest and deployed parity still run there.
 - Source named in refusals: the AC says every refusal states the declaration's file. Only reason (c) does (see Refusal reasons).
 
 ## See also

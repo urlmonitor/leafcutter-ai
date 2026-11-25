@@ -17,6 +17,11 @@ ARCHITECTURE: Population is derived from the canonical manifest at run time:
     MERGE_HEAD parent. FAIL CLOSED: any unreadable or malformed input raises
     ``RemedyInputError``, which the caller reports as could-not-check (never a
     pass, never "no declaration").
+    APPLICABILITY (GE-132a-5): the leg runs only in the package checkout, recognised
+    by templates/scripts/commit_guardian/commit_guardian.json under the project
+    root. Where the canonical manifest is absent, or is a vendored package copy in a
+    consumer (hook_parity.manifests.canonical = leafcutter/templates/...), it prints
+    a not-applicable line naming the paths and judges nothing.
 """
 
 from __future__ import annotations
@@ -32,6 +37,7 @@ from _remedy_declarations import SEED_RELS, RemedyInputError, declared_view
 from _remedy_declarations import _rules_of as rules_of
 
 COMMITTED_TABLE_REL = SEED_RELS[0]
+PACKAGE_MANIFEST_REL = "templates/scripts/commit_guardian/commit_guardian.json"
 _GIT_TIMEOUT = 30
 
 
@@ -256,6 +262,35 @@ def _committed_table(root: Path) -> list[tuple[Path, list[dict]]]:
     return [(path, rules_of(path))]
 
 
+def _not_applicable_reason(canonical_manifest: Path, root: Path) -> str | None:
+    """Say why the leg does not apply here, or None in the package checkout (GE-132a-5).
+
+    The leg judges the package's own declaration table, which only the package
+    checkout commits. That checkout is recognised by the package manifest at its
+    package path under the project root, not by the configured canonical manifest:
+    a consumer that vendors the package points the canonical manifest at the
+    vendored copy (e.g. ``leafcutter/templates/...``) and tracks neither it nor the
+    table. Inside the package checkout this returns None, so an absent or broken
+    committed table stays could-not-check.
+
+    Args:
+        canonical_manifest: Canonical commit_guardian.json from hook_parity config.
+        root: Project root (the process cwd).
+
+    Returns:
+        A one-line reason naming the paths, or None when the leg applies.
+    """
+    if not canonical_manifest.is_file():
+        return f"canonical manifest {canonical_manifest} is absent."
+    if not (root / PACKAGE_MANIFEST_REL).is_file():
+        return (
+            f"canonical manifest {canonical_manifest} is a vendored package copy; this "
+            f"repository has no {PACKAGE_MANIFEST_REL} of its own, so it is not the package "
+            f"checkout and commits no package declaration table."
+        )
+    return None
+
+
 def check_remedy_declarations(canonical_manifest: Path, root: Path) -> list[str]:
     """Judge the three GE-132a-1 reasons and return one refusal line group per finding.
 
@@ -271,13 +306,9 @@ def check_remedy_declarations(canonical_manifest: Path, root: Path) -> list[str]
     Raises:
         RemedyInputError: Any input is unreadable or malformed (could-not-check).
     """
-    if not canonical_manifest.is_file():
-        # Consumer layout: no package registry here, so the leg is not applicable.
-        print(
-            f"check-hook-parity: remedy-declaration check not applicable: canonical manifest "
-            f"{canonical_manifest} is absent.",
-            file=sys.stderr,
-        )
+    not_applicable = _not_applicable_reason(canonical_manifest, root)
+    if not_applicable is not None:
+        print(f"check-hook-parity: remedy-declaration check not applicable: {not_applicable}", file=sys.stderr)
         return []
     manifest = _read_manifest(canonical_manifest)
     if not isinstance(manifest.get("hooks_manifest"), dict):
@@ -360,3 +391,22 @@ def report(violations: list[str], could_not_check: str | None) -> int:
     if violations:
         return 1
     return 2 if could_not_check is not None else 0
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-10-12 [python-coder/GE-132a-1]: Created the FAIL-CLOSED remedy-declaration
+#   leg; GE-132a-4 narrowed the commit-time read to the committed package table.
+# - 2026-11-25 [quick-fix/GE-132a-5]: The leg keyed "package checkout" on the
+#   configured canonical manifest existing. A consumer that vendors the package
+#   (DIAGraph: hook_parity.manifests.canonical = leafcutter/templates/...) has that
+#   file, so every commit touching scripts/commit_guardian/ there was could_not_check
+#   on a templates/scripts/precommit-autofix.json the consumer does not track, and
+#   needed SKIP=check-hook-parity. The leg now applies only where
+#   templates/scripts/commit_guardian/commit_guardian.json exists under the project
+#   root (GE-132a-4's own definition) and prints a not-applicable line otherwise.
+#   Rejected: reading the vendored or deployed table (GE-132a-4 forbids the deployed
+#   fallback, and a consumer cannot fix package content). Inside the package checkout
+#   an absent or broken table stays could_not_check. (#GE-132a-5)
+# ====================================================================
