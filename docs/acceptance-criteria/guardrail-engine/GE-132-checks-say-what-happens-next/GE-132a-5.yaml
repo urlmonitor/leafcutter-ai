@@ -1,0 +1,114 @@
+id: GE-132a-5
+components:
+  - commit_guardian
+  - precommit_hooks
+title: "In a project that vendors the package, the commit-time remedy-declaration leg says it does not apply instead of could-not-check, while the package checkout still fails closed"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a consumer project that vendors the package in a subdirectory (leafcutter/),
+    whose check-hook-parity configuration names the vendored copy
+    leafcutter/templates/scripts/commit_guardian/commit_guardian.json as its
+    canonical manifest,
+  And the project tracks no templates/scripts/commit_guardian/commit_guardian.json
+    and no templates/scripts/precommit-autofix.json of its own,
+  When check-hook-parity runs for a commit that touches scripts/commit_guardian/,
+  Then the remedy-declaration leg prints that it is not applicable, naming the
+    canonical manifest and the package manifest path it looked for,
+  And the hook does not report could_not_check and exits 0 when the other legs hold,
+  And the bug symptom ("committed package declaration table
+    templates/scripts/precommit-autofix.json is missing", RESULT: could_not_check,
+    exit 2) must not occur.
+
+  Given the same consumer project with a script missing from its deployed
+    .leafcutter/scripts/commit_guardian/ copy,
+  When check-hook-parity runs,
+  Then it still refuses (exit 1), naming the missing script: the parity legs that
+    apply to a consumer keep running.
+
+  Given the package checkout itself (templates/scripts/commit_guardian/commit_guardian.json
+    exists under the project root),
+  When templates/scripts/precommit-autofix.json is absent, or present but not valid JSON,
+  Then check-hook-parity reports could_not_check and exits 2, never a pass and never
+    "not applicable".
+depends_on: [GE-132a, GE-132a-4]
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-132-checks-say-what-happens-next/GE-132a.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-132-checks-say-what-happens-next/GE-132a-4.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      GE-132a-4 defined a package checkout as "templates/scripts/commit_guardian/commit_guardian.json
+      exists under the project root" and flagged the consumer case as out of scope. The code
+      instead used "the configured canonical manifest exists", which is also true in a consumer
+      that points hook_parity.manifests.canonical at a vendored package copy. This record
+      decides the consumer case.
+  - path: templates/scripts/commit_guardian/_remedy_registration_parity.py
+    relationship: modifies
+    status: exists
+  - path: docs/reference/remedy-declarations.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  The remedy-declaration leg asks "is the package's own declaration table correct?",
+  of the file being committed. A consumer never commits the package's table or
+  manifest: a vendored copy is a submodule or a build input, so the consumer can
+  neither change a finding nor be the place it gets fixed. The leg also resolves the
+  agent and skill registries under the project root (config/), which in a consumer
+  are not the package's. So outside the package checkout the leg does not apply.
+  Reading the vendored or deployed table instead was rejected: GE-132a-4 forbids the
+  deployed fallback, and judging package content in every consumer moves the
+  package's defects into commits that cannot fix them.
+  The rule is explicit, not a silent pass: the leg applies exactly when
+  templates/scripts/commit_guardian/commit_guardian.json exists under the project
+  root, and prints a not-applicable line naming both paths otherwise. Inside the
+  package checkout an absent or unreadable committed table stays could-not-check.
+  Script, manifest and deployed parity are unchanged and still run in consumers.
+delivers_to: null
+expects_from: null
+origin_agent: Hendrik Henze
+created: 2026-11-25
+amended_by: []
+superseded_by: null
+covered_by: [unit_tests/commit_guardian/test_ge_132a_5_consumer_installs.py]
+implemented_by: [templates/scripts/commit_guardian/_remedy_registration_parity.py]
+change_target: code
+risk_surface: contract_boundary
+test_spec:
+  - name: test_ge132a5_vendored_consumer_reports_not_applicable
+    target_dir: unit_tests/commit_guardian
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "check_hook_parity.py run as a process from the consumer's deployed .leafcutter/scripts/commit_guardian/ copy, cwd at a DIAGraph-shaped consumer root"
+    description: "A consumer whose canonical manifest is the vendored leafcutter/ copy exits 0 with a not-applicable line and no could_not_check."
+    must_catch:
+      - "the package-checkout test keyed on the configured canonical manifest existing (today's code)"
+  - name: test_ge132a5_vendored_consumer_still_refuses_deployed_drift
+    target_dir: unit_tests/commit_guardian
+    framework: pytest
+    type: behavioral
+    angle: failure
+    surface_invoked: "same consumer layout with one script removed from the deployed copy"
+    description: "The consumer-applicable parity legs keep running: a missing deployed script still exits 1 naming it."
+    must_catch:
+      - "a fix that skips every check-hook-parity leg in a consumer"
+  - name: test_ge132a5_package_checkout_missing_or_broken_table_fails_closed
+    target_dir: unit_tests/commit_guardian
+    framework: pytest
+    type: behavioral
+    angle: failure
+    surface_invoked: "check_hook_parity.py run as a process in a package-shaped root"
+    description: "In the package checkout an absent or invalid templates/scripts/precommit-autofix.json is could_not_check, exit 2, never not-applicable."
+    must_catch:
+      - "a fix that reports not-applicable whenever the committed table is absent"
