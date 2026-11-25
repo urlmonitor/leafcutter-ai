@@ -238,33 +238,93 @@ def generate_filename(date: str, time_str: str, slug: str, output_dir: Path) -> 
 # ---------------------------------------------------------------------------
 
 
-def _yaml_value(value: Any) -> str:
-    """Serialise a single frontmatter value to a YAML-compatible string.
+#: A string matching this is written plain: it starts with a letter, holds only
+#: letters, digits, space and ``_ . / -``, and does not end in a space. Nothing
+#: in that set can start a YAML indicator, comment, mapping or flow collection,
+#: and a letter-first text can never resolve to a number or a date.
+_PLAIN_SAFE_RE: re.Pattern[str] = re.compile(r"[A-Za-z](?:[A-Za-z0-9 _./-]*[A-Za-z0-9_./-])?")
 
-    Handles strings, integers, and lists of strings. Other types are
-    converted via ``str()``.
+#: Letter-first words a YAML 1.1 reader resolves to a boolean or null.
+_YAML_RESERVED_WORDS: frozenset[str] = frozenset(
+    {"true", "false", "yes", "no", "on", "off", "y", "n", "null"}
+)
+
+#: Characters written as a named escape inside a double-quoted scalar.
+_NAMED_ESCAPES: dict[str, str] = {
+    "\\": "\\\\",
+    '"': '\\"',
+    "\n": "\\n",
+    "\r": "\\r",
+    "\t": "\\t",
+}
+
+#: Code points outside the C0/C1 control ranges that must still be escaped:
+#: the Unicode line and paragraph separators (a reader folds them like a line
+#: break), the byte-order mark, and the two non-characters a reader rejects.
+_EXTRA_ESCAPED_CODE_POINTS: frozenset[int] = frozenset({0x2028, 0x2029, 0xFEFF, 0xFFFE, 0xFFFF})
+
+
+def _escape_char(char: str) -> str:
+    """Return *char* as it must appear inside a YAML double-quoted scalar.
+
+    The escape character and the quote get their named escapes, as do line
+    feed, carriage return and tab. Every other C0/C1 control, surrogate, and
+    code point in :data:`_EXTRA_ESCAPED_CODE_POINTS` is written as a 4-digit
+    hex escape, so no raw line break or unprintable character reaches the
+    file. Everything else is written as is.
+    """
+    named = _NAMED_ESCAPES.get(char)
+    if named is not None:
+        return named
+    code = ord(char)
+    if code < 0x20 or 0x7F <= code <= 0x9F or 0xD800 <= code <= 0xDFFF or code in _EXTRA_ESCAPED_CODE_POINTS:
+        return "\\u" + format(code, "04X")
+    return char
+
+
+def _yaml_scalar(value: Any) -> str:
+    """Serialise one scalar so a YAML reader returns exactly *value*.
+
+    Booleans and integers are written bare. Every other value is treated as
+    text (``str()``): written plain only when :data:`_PLAIN_SAFE_RE` matches
+    and it is not a reserved word, otherwise as a double-quoted scalar with
+    each character passed through :func:`_escape_char`. The caller passes the
+    real text; it must not pre-escape anything.
 
     Args:
         value: The Python value to serialise.
 
     Returns:
-        A YAML-safe inline representation of the value.
+        A single-line YAML scalar.
     """
-    if isinstance(value, list):
-        if not value:
-            return "[]"
-        items = "\n".join(f"  - {item}" for item in value)
-        return f"\n{items}"
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, int):
         return str(value)
-    # String: quote if contains special chars or is empty
     text = str(value)
-    if not text or any(c in text for c in (':', '#', '{', '}', '[', ']', ',', '&', '*', '?', '|', '-', '<', '>', '=', '!', '%', '@', '`', '"', "'")):
-        escaped = text.replace('"', '\\"')
-        return f'"{escaped}"'
-    return text
+    if _PLAIN_SAFE_RE.fullmatch(text) and text.lower() not in _YAML_RESERVED_WORDS:
+        return text
+    return '"' + "".join(_escape_char(char) for char in text) + '"'
+
+
+def _yaml_value(value: Any) -> str:
+    """Serialise a single frontmatter value to a YAML-compatible string.
+
+    Lists become a block sequence whose items each go through
+    :func:`_yaml_scalar`; every other value is one :func:`_yaml_scalar`.
+
+    Args:
+        value: The Python value to serialise.
+
+    Returns:
+        A YAML representation that reads back as *value*.
+    """
+    if isinstance(value, list):
+        if not value:
+            return "[]"
+        items = "\n".join(f"  - {_yaml_scalar(item)}" for item in value)
+        return f"\n{items}"
+    return _yaml_scalar(value)
 
 
 def build_frontmatter(payload: dict[str, Any]) -> str:
@@ -522,4 +582,19 @@ if __name__ == "__main__":
 #   PostToolUse ruff hook (TRY003 violations were pre-existing). Regression
 #   tests added to test_emit_entry_cwd.py covering AC-1 (worktree file),
 #   AC-2 (standard directory), and a source-inspection guard.
+# - 2026-11-25 [python-coder/BO-700a-4]: (#TICKETLESS reason=quick-fix-ac-first)
+#   Every frontmatter string now reads back through yaml.safe_load as exactly
+#   the text passed in. _yaml_value double-quoted special strings but escaped
+#   only '"': a backslash ("C:\data") became an invalid escape, and a raw line
+#   break inside the quotes was folded to a space on read-back. List items were
+#   never quoted, so an item holding ": " became a mapping; "true", "123" or a
+#   date were written plain and read back typed. New _yaml_scalar writes a
+#   string plain only when it is letter-first and made of [A-Za-z0-9 _./-]
+#   with no trailing space and is not a YAML 1.1 bool/null word; everything
+#   else is double-quoted with backslash, quote, all C0/C1 controls, U+2028/9,
+#   BOM, surrogates and U+FFFE/F escaped. List items use the same rule. Stays
+#   stdlib-only: the module's no-dependency contract holds, and a YAML library
+#   would not help callers that pre-encode anyway. Callers must now pass real
+#   text: a pre-encoded "\n" or doubled backslash is written back literally.
+#   DIAGraph's changelog_emit_writer pre-encodes newlines and must drop that.
 # ====================================================================
