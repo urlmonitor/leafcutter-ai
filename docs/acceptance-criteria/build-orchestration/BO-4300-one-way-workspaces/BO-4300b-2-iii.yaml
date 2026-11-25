@@ -57,9 +57,11 @@ it_requirements:
   templates/scripts/worktree.py. When none is found, a top-level scripts/build.py is still used (the
   existing fixture and legacy layout).'
 - A submodule is initialised in the fresh workspace (git submodule update --init -- <path>, run in the
-  workspace) only when the main checkout's copy at that path is the package and the workspace's copy is
-  not yet populated; no other submodule is touched. A failed initialisation is BOOTSTRAP_FAILED quoting
-  git's own message.
+  workspace) only when the main checkout's copy at that path holds scripts/build.py and the workspace's
+  copy is not yet the package; no other submodule is touched. The main copy need not carry the full
+  package signature, because it may lag the recorded pin at a commit older than
+  templates/scripts/worktree.py. The fetched copy is still checked in full. A failed initialisation is
+  BOOTSTRAP_FAILED quoting git's own message.
 - When no build entry point is found anywhere, the refusal stays BOOTSTRAP_FAILED and its excerpt still
   says scripts/build.py is absent, naming the places searched.
 - Proof runs the DEPLOYED maker as a separate process against real temporary git repositories with real
@@ -74,6 +76,14 @@ test_spec:
   angle: criterion
   description: Shop holds the package as a submodule and has no scripts/build.py; ensure answers ok, the
     submodule is populated in the workspace, and the install marker carries the package's stamp.
+- name: test_submodule_is_fetched_when_the_main_checkouts_copy_predates_the_package_signature
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: The main checkout's submodule copy sits at a commit without templates/scripts/worktree.py
+    (it lags the recorded pin); ensure still fetches the submodule into the workspace and answers ok,
+    built by the package's build.
 - name: test_adopters_own_build_entry_point_is_not_mistaken_for_the_package
   target_dir: unit_tests/build_orchestration/
   framework: unittest
@@ -114,3 +124,7 @@ notes: |
   <workspace>/scripts/build.py, so `worktree.py ensure --kind epic --slug <x>` cloned the workspace and
   then refused with BOOTSTRAP_FAILED "scripts/build.py is absent"; the submodule was never initialised
   either. Same adopter-layout class as #1307 and #1408.
+  2026-11-24: DIAGraph's main checkout had leafcutter/ at dcd93781, older than the recorded pin
+  67a7b443 and without templates/scripts/worktree.py. The submodule-fetch gate required the full
+  package signature on that main copy, so it skipped the fetch and the same refusal came back. The
+  gate now asks only for scripts/build.py on the main copy.

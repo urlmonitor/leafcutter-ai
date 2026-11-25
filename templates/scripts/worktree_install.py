@@ -73,15 +73,18 @@ def _sub_folders(workspace: Path) -> list[str]:
 def init_package_submodule(workspace: Path, project_root: Path | None) -> list[str]:
     """Fetch the package submodule into *workspace*; return the paths initialised.
 
-    Only a submodule whose copy in the main checkout (*project_root*) is the
-    package, and whose copy in the workspace is not yet populated, is touched.
+    Only a submodule whose copy in the main checkout (*project_root*) holds a
+    ``scripts/build.py``, and whose copy in the workspace is not yet the package,
+    is touched. The main copy is NOT required to carry the full package
+    signature: it may lag the recorded pin at a commit older than the maker
+    source, and :func:`package_dir` still checks the fetched copy in full.
 
     Raises:
         InstallSetupError: ``git submodule update --init`` failed (git's own message quoted).
     """
     done: list[str] = []
     for rel in submodule_paths(workspace):
-        if project_root is None or is_package(workspace / rel) or not is_package(project_root / rel):
+        if project_root is None or is_package(workspace / rel) or not (project_root / rel / _BUILD).is_file():
             continue
         proc = wg.run_git(["submodule", "update", "--init", "--", rel], workspace, timeout=_SUBMODULE_TIMEOUT_SECONDS)
         if proc.returncode != 0:
@@ -169,4 +172,9 @@ def install_command(workspace: Path, config_path: Path, project_root: Path | Non
 #   and an adopter may declare workspace_install_command (BO-4300b-2-iv). Reproduced in
 #   DIAGraph (build v21.0.93): the hard-coded <workspace>/scripts/build.py refused every
 #   epic workspace. Own module so worktree_readiness.py does not grow. (ADR-018)
+# - 2026-11-24 [python-coder/BO-4300b-2-iii]: (#TICKETLESS reason=quick-fix-ac-first)
+#   The submodule-fetch gate asks only that the main checkout's copy holds scripts/build.py,
+#   not the full package signature. DIAGraph's main checkout had leafcutter/ at a commit older
+#   than its recorded pin, without templates/scripts/worktree.py, so the fetch was skipped and
+#   every workspace was refused "scripts/build.py is absent" again. (ADR-018)
 # ===========================================================================

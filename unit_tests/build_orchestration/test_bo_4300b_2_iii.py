@@ -10,6 +10,8 @@ leafcutter build v21.0.93, pin 67a7b443).
 DECISION HISTORY
 ====================================================================
 - 2026-11-17 [test-writer/BO-4300b-2-iii]: Created the red baseline. (#TICKETLESS reason=quick-fix-ac-first)
+- 2026-11-24 [test-writer/BO-4300b-2-iii]: Added the lagging-main-copy boundary: the main checkout's
+  submodule copy predates templates/scripts/worktree.py (DIAGraph). (#TICKETLESS reason=quick-fix-ac-first)
 ====================================================================
 """
 from __future__ import annotations
@@ -25,6 +27,7 @@ from unit_tests.build_orchestration._bo_4300b_2_adopter_fixtures import (
     PACKAGE_MARKER,
     PACKAGE_STAMP,
     ensure,
+    git,
     make_adopter,
     make_self_host,
 )
@@ -55,6 +58,27 @@ class TestBO4300b2iiiAdopterLayouts(unittest.TestCase):
         self.assertFalse((ws / "scripts" / "build.py").exists())
         self.assertIn(PACKAGE_STAMP, _installed(ws))
         self.assertTrue(ans["checks"]["hooks_canary_rejected"], ans["checks"])
+
+    def test_submodule_is_fetched_when_the_main_checkouts_copy_predates_the_package_signature(self):
+        # covers: BO-4300b-2-iii
+        # angle: boundary
+        """The main checkout's submodule copy lags the recorded pin and lacks the maker source: still fetched.
+
+        DIAGraph 2026-11-24: its main checkout's leafcutter/ sat at a commit older than the recorded
+        pin, one without templates/scripts/worktree.py, so the "is the main copy the package" gate
+        said no, the submodule was never fetched and ensure refused "scripts/build.py is absent".
+        """
+        shop = make_adopter(self.tmp / "stale")
+        main_copy = shop["project"] / PACKAGE_DIR
+        git(["checkout", "-q", "--detach"], main_copy)
+        git(["rm", "-q", PACKAGE_MARKER.as_posix()], main_copy)
+        git(["commit", "-q", "-m", "an older package copy, from before the maker source existed"], main_copy)
+        res = ensure(shop["project"])
+        ans = res["answer"]
+        self.assertEqual(ans.get("status"), "ok", f"{ans}\n{res['stderr'][-3000:]}")
+        ws = Path(ans["workspace_path"])
+        self.assertTrue((ws / PACKAGE_DIR / PACKAGE_MARKER).is_file(), "package submodule was not initialised")
+        self.assertIn(PACKAGE_STAMP, _installed(ws))
 
     def test_adopters_own_build_entry_point_is_not_mistaken_for_the_package(self):
         # covers: BO-4300b-2-iii
