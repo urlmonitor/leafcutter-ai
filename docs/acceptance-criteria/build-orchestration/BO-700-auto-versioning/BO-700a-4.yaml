@@ -1,0 +1,114 @@
+id: BO-700a-4
+title: "A changelog entry's frontmatter reads back exactly as it was written, whatever characters its text holds"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+criteria: |
+  Given a changelog entry whose text fields (title, summary, description, or an
+    item in a list field such as components) contain a backslash (for example a
+    Windows path "C:\data"), a double quote, a line break, a colon followed by a
+    space, or any mix of these,
+  When the entry is written by the changelog writer,
+  Then reading its frontmatter back with a standard YAML reader succeeds,
+  And every text field reads back as exactly the text that was passed in,
+    character for character, including each line break,
+  And text that merely looks like a number, a date, true/false or null still
+    reads back as that text, not as a number, date, boolean or empty value,
+  And the bug symptoms ("unknown escape character" on read-back; a multi-line
+    description collapsed into one line) do not occur,
+  And a caller does not have to pre-encode any character for this to hold.
+depends_on: [BO-700a]
+doc_links:
+- path: scripts/changelog/emit_entry.py
+  relationship: modifies
+  status: exists
+- path: docs/architecture/components/changelog.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the changelog writer.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+package_surface: false
+it_requirements:
+- _yaml_value in scripts/changelog/emit_entry.py writes a string plain only when it is a conservative
+  safe identifier-like text (starts with a letter; letters, digits, space, _ . / - only; no trailing
+  space; not a YAML 1.1 boolean or null word). Every other string is written as a YAML double-quoted
+  scalar in which a backslash, a double quote, every C0/C1 control character (line feed, carriage
+  return and tab included), U+2028, U+2029 and the non-characters are escaped. List items go through
+  the same rule.
+- The writer stays standard-library only (the module's documented contract); no YAML library is
+  imported by emit_entry.py.
+test_required: true
+test_spec:
+- name: test_backslash_round_trips
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: criterion
+  description: A summary holding Windows paths reads back unchanged through yaml.safe_load.
+- name: test_double_quote_round_trips
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: criterion
+  description: A summary holding double quotes, including one preceded by a backslash, reads back unchanged.
+- name: test_newline_round_trips
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: criterion
+  description: A multi-line description (one bullet per line) reads back with every line break intact.
+- name: test_colon_round_trips
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: criterion
+  description: 'Title and summary holding "key: value" read back unchanged.'
+- name: test_mixed_round_trips
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: boundary
+  description: One description mixing backslash, quotes, line breaks, colon, hash, tab and a Unicode line
+    separator reads back unchanged.
+- name: test_list_items_round_trip
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: boundary
+  description: List items holding a colon, a backslash or a quote read back as the same strings, not as
+    mappings or parse errors.
+- name: test_text_that_looks_typed_stays_text
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: discrimination
+  description: Strings such as "true", "null", "123", "2026-11-25" and " padded " read back as those exact
+    strings.
+test_rationale: The contract is the read-back, so every test writes a real entry file through emit_entry()
+  and parses its frontmatter with yaml.safe_load, the reader the consumers use; no assertion is made on
+  the writer's internal escaping.
+origin_agent: Hendrik Henze
+created: 2026-11-25
+amended_by: []
+superseded_by: null
+covered_by: [unit_tests/build_orchestration/test_bo_700a_4.py]
+implemented_by:
+- scripts/changelog/emit_entry.py
+notes: |
+  Reported from DIAGraph (2026-11-25). _yaml_value double-quoted strings holding special characters but
+  escaped only '"': a backslash ("C:\data") produced an invalid escape that yaml.safe_load rejects
+  ("found unknown escape character 'd'"), and a raw line break inside the double-quoted scalar was folded
+  to a space on read-back. List items were not quoted at all, so an item holding ": " became a mapping.
+  DIAGraph's scripts/changelog_emit_writer.py pre-encodes newlines to work around the second defect.
