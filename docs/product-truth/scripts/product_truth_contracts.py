@@ -7,6 +7,7 @@ ARCHITECTURE: Pure report API plus a read-only CLI; the existing generator is th
 """
 from __future__ import annotations
 import argparse
+import functools
 import json
 from pathlib import Path
 import jsonschema
@@ -47,14 +48,39 @@ def _check_applied(value, name, io, contracts, projection):
                         validate_value(payload, contracts[field["applies"]], projection)
 
 
+@functools.cache
+def _flow_schema_source():
+    return json.loads((Path(__file__).resolve().parent.parent / "schemas/flow.schema.json").read_text(encoding="utf-8"))
+
+
 def _metadata_schema(name):
-    source = json.loads((Path(__file__).resolve().parent.parent / "schemas/flow.schema.json").read_text(encoding="utf-8"))
+    source = _flow_schema_source()
     return {"$schema": source["$schema"], "definitions": source["definitions"], "$ref": "#/definitions/" + name}
+
+
+@functools.cache
+def _metadata_validator(name):
+    """Build (and schema-check) the validator for one metadata definition once.
+
+    jsonschema.validate() re-runs check_schema on every call -- ~60 ms each,
+    hundreds of calls per run -- so the checked validator is memoised per name.
+    """
+    schema = _metadata_schema(name)
+    cls = jsonschema.validators.validator_for(schema)
+    cls.check_schema(schema)
+    return cls(schema)
+
+
+def _validate_metadata(instance, name):
+    """Equivalent of jsonschema.validate(instance, _metadata_schema(name))."""
+    error = jsonschema.exceptions.best_match(_metadata_validator(name).iter_errors(instance))
+    if error is not None:
+        raise error
 
 
 def _check_node(flow, node, contracts, root, report, presentation):
     io = node["io_contracts"]
-    jsonschema.validate(io, _metadata_schema("io_contracts"))
+    _validate_metadata(io, "io_contracts")
     report["checked_nodes"] += 1
     used = set()
     for gap in io.get("missing_bindings", []):
@@ -159,7 +185,7 @@ def check_contracts(flows, repo_root, *, check_presentation=True, only_flow_ids=
         contracts = {}
         for name, definition in definitions.items():
             try:
-                jsonschema.validate(definition, _metadata_schema("contract_definition"))
+                _validate_metadata(definition, "contract_definition")
                 contracts[name] = load_contract(definition, root)
             except (OSError, ValueError, TypeError, KeyError, ImportError, jsonschema.ValidationError, jsonschema.SchemaError, Unresolvable) as exc:
                 report["errors"].append(f"contracts {flow_id}/{name}: {exc}")

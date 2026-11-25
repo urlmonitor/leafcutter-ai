@@ -1,0 +1,73 @@
+id: UXP-300-6
+title: A flow may carry an optional review-canvas diagram, and any other unknown top-level key is still refused
+component: ux-prototyping
+components:
+- ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a flow file that carries a top-level `diagram` object with a `canvas` (positive width
+    and height), `nodes` (each with id, kind, lane, x, y, summary and source_ref) and `edges`
+    (each with id, from and to, and optionally kind and label),
+  When validate_product_truth.py runs over the store,
+  Then the flow passes the schema check,
+  And a flow without `diagram` is unaffected,
+  And a `diagram` that misses a required member or carries an undeclared member is refused,
+  And a flow that carries any other top-level key the schema does not declare is still refused,
+    naming that key.
+depends_on:
+- UXP-300
+doc_links:
+- path: docs/product-truth/schemas/flow.schema.json
+  relationship: modifies
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  `diagram` is an optional, strictly-typed top-level property of flow.schema.json (additionalProperties
+  false at every level). It is a projection for review canvases; no package script reads it. It is
+  shipped in the package rather than as an adopter extension point because the build_product_truth
+  phase overwrites the target's schemas on every build, and an adopter already authors this exact
+  block: an extension point would force those flows to rename or nest the key.
+delivers_to: null
+expects_from: null
+origin_agent: Hendrik Henze
+created: '2026-11-25'
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/product_truth/test_uxp_300_6.py
+implemented_by:
+- docs/product-truth/schemas/flow.schema.json
+change_target: config
+risk_surface: internal
+test_spec:
+- name: test_flow_with_a_diagram_passes_the_validator
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: real_artifact
+  description: A generated fixture store whose flow carries a diagram block passes validate_product_truth.py.
+- name: test_unexpected_top_level_key_still_fails_the_validator
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: discrimination
+  description: The same store with an undeclared top-level key fails, and the failure names the key.
+- name: test_diagram_members_are_strict
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: unit
+  angle: boundary
+  description: A diagram node missing source_ref, a node carrying an undeclared member, and a zero-width
+    canvas are each refused by flow.schema.json.
+test_required: true
+declares_side_effect: false
+notes: Upstreamed from DIAGraph, whose flows a2a-langgraph-engine, a2a-langgraph-engine-v2 and
+  a2a-global-resolution-learning carry this block and whose site reads it. The block is copied
+  unchanged from DIAGraph's schema so those flows validate without edits.
