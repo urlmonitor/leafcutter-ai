@@ -46,6 +46,8 @@ covered_by:
 - UXP-300-2
 - UXP-300-3
 - UXP-300-4
+- UXP-300-5
+- UXP-300-6
 implemented_by:
 - docs/product-truth/scripts/validate_product_truth.py
 implemented_by:

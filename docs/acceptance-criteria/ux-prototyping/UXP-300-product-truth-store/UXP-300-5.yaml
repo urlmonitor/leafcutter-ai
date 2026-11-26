@@ -1,0 +1,93 @@
+id: UXP-300-5
+title: The product-truth validator and generator give the same answers, many times faster, on a large store
+component: ux-prototyping
+components:
+- ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a product-truth store with hundreds of flow nodes and contract definitions,
+  When validate_product_truth.py or generate_product_truth.py runs over it,
+  Then each flow-metadata definition (io_contracts, contract_definition) is schema-checked once
+    per run, not once per node,
+  And an invalid node or contract definition is still refused with the same error as
+    jsonschema.validate() raised before (same message, same path, same failing keyword),
+  And the generator reads YAML with libyaml's CSafeLoader when PyYAML provides it,
+    and with SafeLoader when it does not,
+  And either loader still refuses a YAML document that asks to construct a Python object,
+  And the validator report and the generator --check output are byte-identical to the
+    previous version's on the same store.
+depends_on:
+- UXP-300
+doc_links:
+- path: docs/product-truth/scripts/product_truth_contracts.py
+  relationship: modifies
+  status: exists
+- path: docs/product-truth/scripts/generate_product_truth.py
+  relationship: modifies
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements: |
+  jsonschema.validate() re-runs check_schema on every call (about 60 ms on the flow schema),
+  and the contracts checker calls it once per node and once per contract definition.
+  Memoise the checked validator per definition name (functools.cache) and raise
+  jsonschema.exceptions.best_match(iter_errors(...)) exactly as jsonschema.validate() does.
+  yaml.safe_load is the pure-Python SafeLoader; CSafeLoader is the same safe constructor in C.
+  On DIAGraph's store (31 flows, 420 nodes, 2283 ACs) the validator dropped from 15.9 s to 4.1 s
+  and the generator --check from 19.9 s to 2.1 s, with byte-identical output.
+delivers_to: null
+expects_from: null
+origin_agent: Hendrik Henze
+created: '2026-11-25'
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/product_truth/test_uxp_300_5.py
+implemented_by:
+- docs/product-truth/scripts/product_truth_contracts.py
+- docs/product-truth/scripts/generate_product_truth.py
+change_target: code
+risk_surface: internal
+test_spec:
+- name: test_cached_validator_raises_the_same_error_as_jsonschema_validate
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: unit
+  angle: discrimination
+  description: For invalid io_contracts and contract_definition instances, _validate_metadata raises a
+    ValidationError whose message, path and validator keyword equal those jsonschema.validate raises.
+- name: test_metadata_schema_is_checked_once_per_definition
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: unit
+  angle: boundary
+  description: Validating many instances against one definition calls check_schema once.
+- name: test_yaml_is_read_with_csafeloader_when_available
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: unit
+  angle: criterion
+  description: _load_yaml hands yaml.load the CSafeLoader when PyYAML provides it.
+- name: test_yaml_falls_back_to_safeloader_without_libyaml
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: unit
+  angle: boundary
+  description: With no CSafeLoader attribute, _load_yaml hands yaml.load the SafeLoader and still parses.
+- name: test_python_object_tags_are_refused
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: unit
+  angle: failure
+  description: A !!python/object/apply document raises yaml.YAMLError through _load_yaml.
+test_required: true
+declares_side_effect: false
+notes: Upstreamed from DIAGraph (roche-sandbox/dia-graph PR 465, commit 0965ca48), where the change
+  lived only in the adopter's deployed copy and every rebuild overwrote it, because the
+  build_product_truth phase copies the package's docs/product-truth/scripts over the target.

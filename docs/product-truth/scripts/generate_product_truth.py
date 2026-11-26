@@ -300,8 +300,8 @@ def _load_json(path: Path) -> dict:
 
 def _load_yaml(path: Path) -> object:
     try:
-        with path.open(encoding="utf-8") as handle:
-            return yaml.safe_load(handle)
+        with path.open(encoding="utf-8") as handle:  # libyaml safe loader: ~10x faster
+            return yaml.load(handle, Loader=getattr(yaml, "CSafeLoader", yaml.SafeLoader))  # noqa: S506
     except OSError:
         logger.exception("cannot read %s", path)
         raise
@@ -409,7 +409,7 @@ def write_ac_product_truth(ac_map: dict, by_ac: dict, check: bool, run_date: str
 
         if new_entries:
             # Preserve asof per entry from the stored product_truth block.
-            existing_data = yaml.safe_load(text) or {}
+            existing_data = yaml.load(text, Loader=getattr(yaml, "CSafeLoader", yaml.SafeLoader)) or {}  # noqa: S506
             existing_truth = existing_data.get("product_truth") or []
             new_entries = _preserve_entry_asof(new_entries, existing_truth, run_date)
 
